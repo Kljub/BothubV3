@@ -1,0 +1,34 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "trigger.slash",
+  "version": 1,
+  "category": "trigger",
+  "labelKey": "builder.node.trigger_slash.label",
+  "descriptionKey": "builder.node.trigger_slash.description",
+  "inputs": [],
+  "outputs": [
+    { "name": "next", "type": "flow", "labelKey": "builder.port.next" },
+    { "name": "user", "type": "user", "labelKey": "builder.port.user" },
+    { "name": "member", "type": "member", "labelKey": "builder.port.member" },
+    { "name": "channel", "type": "channel", "labelKey": "builder.port.channel" },
+    { "name": "guild", "type": "guild", "labelKey": "builder.port.guild" }
+  ],
+  "config": {
+    "type": "object",
+    "required": ["description"],
+    "additionalProperties": false,
+    "properties": {
+      "description": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 100,
+        "x-labelKey": "builder.node.trigger_slash.config.description"
+      },
+      "ephemeral": {
+        "type": "boolean",
+        "default": false,
+        "x-labelKey": "builder.node.trigger_slash.config.ephemeral"
+      }
+    }
+  }
+}

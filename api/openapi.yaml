@@ -1,0 +1,932 @@
+openapi: 3.1.0
+info:
+  title: BotHub API
+  version: 0.1.0
+  description: |
+    Contract between the Go dashboard and the PHP API.
+
+    Rules:
+    - The API is the only way to change configuration. The dashboard never touches the DB.
+    - Every route except `/api/health`, `GET /api/v1/setup`, `POST /api/v1/setup` and
+      `POST /api/v1/auth/login` needs a valid session. One central middleware checks this.
+    - Every changing request (POST, PUT, PATCH, DELETE) needs the header `X-CSRF-Token`.
+    - Errors never contain UI text. They contain an i18n key that the dashboard translates.
+    - Bot tokens are write-only. The API never returns them.
+    - Actions that need Discord return `202` with a job. Poll `GET /api/v1/jobs/{jobId}`.
+
+servers:
+  - url: /
+
+security:
+  - session: []
+
+tags:
+  - name: system
+  - name: auth
+  - name: settings
+  - name: bots
+  - name: guilds
+  - name: commands
+  - name: builder
+  - name: plugins
+  - name: jobs
+
+paths:
+  /api/health:
+    get:
+      operationId: getHealth
+      tags: [system]
+      summary: Liveness check
+      security: []
+      responses:
+        "200":
+          description: API is running
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: { type: string, const: ok }
+
+  /api/v1/setup:
+    get:
+      operationId: getSetupState
+      tags: [auth]
+      summary: Whether the first-start setup is still required
+      security: []
+      responses:
+        "200":
+          description: Setup state
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [required]
+                properties:
+                  required: { type: boolean }
+    post:
+      operationId: runSetup
+      tags: [auth]
+      summary: Create the single admin user (only while setup is required)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SetupRequest" }
+      responses:
+        "201":
+          description: Admin created and logged in
+          headers:
+            Set-Cookie: { $ref: "#/components/headers/SessionCookie" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Me" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /api/v1/auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Log in. Rotates the session ID. Rate-limited.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LoginRequest" }
+      responses:
+        "200":
+          description: Logged in
+          headers:
+            Set-Cookie: { $ref: "#/components/headers/SessionCookie" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Me" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
+  /api/v1/auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Log out and destroy the session
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      responses:
+        "204": { description: Logged out }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Current user and CSRF token
+      responses:
+        "200":
+          description: Current session
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Me" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/settings:
+    get:
+      operationId: getSettings
+      tags: [settings]
+      summary: Instance settings
+      responses:
+        "200":
+          description: Settings
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Settings" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    patch:
+      operationId: updateSettings
+      tags: [settings]
+      summary: Change instance settings
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Settings" }
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Settings" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /api/v1/bots:
+    get:
+      operationId: listBots
+      tags: [bots]
+      summary: List all bots
+      responses:
+        "200":
+          description: Bots
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/Bot" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      operationId: createBot
+      tags: [bots]
+      summary: Add a bot
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BotCreate" }
+      responses:
+        "201":
+          description: Bot created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Bot" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /api/v1/bots/{botId}:
+    parameters:
+      - $ref: "#/components/parameters/BotId"
+    get:
+      operationId: getBot
+      tags: [bots]
+      summary: Get one bot
+      responses:
+        "200":
+          description: Bot
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Bot" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      operationId: updateBot
+      tags: [bots]
+      summary: Change name, token or autostart
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BotUpdate" }
+      responses:
+        "200":
+          description: Bot
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Bot" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    delete:
+      operationId: deleteBot
+      tags: [bots]
+      summary: Delete a bot and all its data
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      responses:
+        "204": { description: Deleted }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/bots/{botId}/start:
+    post:
+      operationId: startBot
+      tags: [bots]
+      summary: Start a bot
+      parameters:
+        - $ref: "#/components/parameters/BotId"
+        - $ref: "#/components/parameters/CsrfToken"
+      responses:
+        "202": { $ref: "#/components/responses/JobAccepted" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/bots/{botId}/stop:
+    post:
+      operationId: stopBot
+      tags: [bots]
+      summary: Stop a bot
+      parameters:
+        - $ref: "#/components/parameters/BotId"
+        - $ref: "#/components/parameters/CsrfToken"
+      responses:
+        "202": { $ref: "#/components/responses/JobAccepted" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/bots/{botId}/guilds:
+    get:
+      operationId: listGuilds
+      tags: [guilds]
+      summary: Guilds the bot is a member of (from the bot's cache)
+      parameters:
+        - $ref: "#/components/parameters/BotId"
+      responses:
+        "200":
+          description: Guilds
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/Guild" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/bots/{botId}/guilds/{guildId}/modules:
+    get:
+      operationId: listGuildModules
+      tags: [guilds]
+      summary: Module status in one guild
+      parameters:
+        - $ref: "#/components/parameters/BotId"
+        - $ref: "#/components/parameters/GuildId"
+      responses:
+        "200":
+          description: Modules
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/ModuleState" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/bots/{botId}/guilds/{guildId}/modules/{moduleKey}:
+    put:
+      operationId: setGuildModule
+      tags: [guilds]
+      summary: Enable or disable a module in one guild
+      parameters:
+        - $ref: "#/components/parameters/BotId"
+        - $ref: "#/components/parameters/GuildId"
+        - $ref: "#/components/parameters/ModuleKey"
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabled]
+              properties:
+                enabled: { type: boolean }
+      responses:
+        "200":
+          description: Module state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ModuleState" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/bots/{botId}/commands:
+    get:
+      operationId: listCommands
+      tags: [commands]
+      summary: List commands of a bot (built-in and custom)
+      parameters:
+        - $ref: "#/components/parameters/BotId"
+      responses:
+        "200":
+          description: Commands without graph body
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/CommandSummary" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: createCommand
+      tags: [commands]
+      summary: Create a custom command
+      parameters:
+        - $ref: "#/components/parameters/BotId"
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CommandWrite" }
+      responses:
+        "201":
+          description: Command
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Command" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /api/v1/bots/{botId}/commands/{commandId}:
+    parameters:
+      - $ref: "#/components/parameters/BotId"
+      - $ref: "#/components/parameters/CommandId"
+    get:
+      operationId: getCommand
+      tags: [commands]
+      summary: Get one command with its graph
+      responses:
+        "200":
+          description: Command
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Command" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      operationId: saveCommand
+      tags: [commands]
+      summary: Save a command. The graph is validated against the node definitions.
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CommandWrite" }
+      responses:
+        "200":
+          description: Command
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Command" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    delete:
+      operationId: deleteCommand
+      tags: [commands]
+      summary: Delete a custom command. Built-in commands can only be disabled or reset.
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      responses:
+        "204": { description: Deleted }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /api/v1/bots/{botId}/commands/{commandId}/reset:
+    post:
+      operationId: resetCommand
+      tags: [commands]
+      summary: Reset a built-in command to its default graph
+      parameters:
+        - $ref: "#/components/parameters/BotId"
+        - $ref: "#/components/parameters/CommandId"
+        - $ref: "#/components/parameters/CsrfToken"
+      responses:
+        "200":
+          description: Command
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Command" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /api/v1/bots/{botId}/builder/nodes:
+    get:
+      operationId: listBuilderNodes
+      tags: [builder]
+      summary: Node definitions available for this bot (core, modules, installed plugins)
+      parameters:
+        - $ref: "#/components/parameters/BotId"
+      responses:
+        "200":
+          description: Node definitions, see shared/node-definition.schema.json
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { type: object }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/plugins/market:
+    get:
+      operationId: listMarketPlugins
+      tags: [plugins]
+      summary: Plugins available in the private market
+      responses:
+        "200":
+          description: Market index
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/MarketPlugin" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "502": { $ref: "#/components/responses/UpstreamError" }
+
+  /api/v1/bots/{botId}/plugins:
+    get:
+      operationId: listBotPlugins
+      tags: [plugins]
+      summary: Plugins installed for one bot
+      parameters:
+        - $ref: "#/components/parameters/BotId"
+      responses:
+        "200":
+          description: Installed plugins
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/InstalledPlugin" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: installBotPlugin
+      tags: [plugins]
+      summary: Install a plugin for one bot. The user must grant every requested permission.
+      parameters:
+        - $ref: "#/components/parameters/BotId"
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pluginId, version, grantedPermissions]
+              properties:
+                pluginId: { type: string }
+                version: { $ref: "#/components/schemas/PluginVersion" }
+                grantedPermissions:
+                  type: array
+                  items: { $ref: "#/components/schemas/PluginPermission" }
+      responses:
+        "202": { $ref: "#/components/responses/JobAccepted" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /api/v1/bots/{botId}/plugins/{pluginId}:
+    parameters:
+      - $ref: "#/components/parameters/BotId"
+      - $ref: "#/components/parameters/PluginId"
+    patch:
+      operationId: updateBotPlugin
+      tags: [plugins]
+      summary: Enable, disable or update a plugin for one bot
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                enabled: { type: boolean }
+                version: { $ref: "#/components/schemas/PluginVersion" }
+                grantedPermissions:
+                  type: array
+                  items: { $ref: "#/components/schemas/PluginPermission" }
+      responses:
+        "202": { $ref: "#/components/responses/JobAccepted" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    delete:
+      operationId: uninstallBotPlugin
+      tags: [plugins]
+      summary: Uninstall a plugin from one bot
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      responses:
+        "202": { $ref: "#/components/responses/JobAccepted" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/jobs/{jobId}:
+    get:
+      operationId: getJob
+      tags: [jobs]
+      summary: State of a job that the bot executes
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Job
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Job" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+components:
+  securitySchemes:
+    session:
+      type: apiKey
+      in: cookie
+      name: bothub_session
+
+  headers:
+    SessionCookie:
+      description: "`bothub_session`, HttpOnly, SameSite=Strict, Path=/"
+      schema: { type: string }
+
+  parameters:
+    CsrfToken:
+      name: X-CSRF-Token
+      in: header
+      required: true
+      description: Token from `GET /api/v1/auth/me`
+      schema: { type: string }
+    BotId:
+      name: botId
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+    GuildId:
+      name: guildId
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/Snowflake" }
+    ModuleKey:
+      name: moduleKey
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/ModuleKey" }
+    CommandId:
+      name: commandId
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+    PluginId:
+      name: pluginId
+      in: path
+      required: true
+      schema: { type: string, pattern: "^[a-z0-9][a-z0-9-]{1,63}$" }
+
+  responses:
+    Unauthorized:
+      description: No valid session (`error.auth.required`, `error.auth.invalid_credentials`)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Forbidden:
+      description: CSRF token missing or wrong (`error.csrf.invalid`)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    NotFound:
+      description: Resource not found (`error.<resource>.not_found`)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Conflict:
+      description: State does not allow this action
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    ValidationError:
+      description: Request body invalid
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    TooManyRequests:
+      description: Rate limit hit (`error.auth.rate_limited`)
+      headers:
+        Retry-After:
+          schema: { type: integer }
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    UpstreamError:
+      description: External service (GitHub, Discord) failed
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    JobAccepted:
+      description: Job queued for the bot
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Job" }
+
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [key]
+          properties:
+            key:
+              type: string
+              description: i18n key, e.g. `error.bot.not_found`
+              examples: [error.bot.not_found]
+            params:
+              type: object
+              description: Values for placeholders in the translated text
+              additionalProperties: true
+            fields:
+              type: object
+              description: Per-field i18n keys for validation errors
+              additionalProperties: { type: string }
+
+    Snowflake:
+      type: string
+      pattern: "^[0-9]{17,20}$"
+
+    Locale:
+      type: string
+      pattern: "^[a-z]{2}(-[A-Z]{2})?$"
+      default: en
+
+    SetupRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username: { type: string, minLength: 3, maxLength: 32 }
+        password: { type: string, minLength: 12, maxLength: 256 }
+        locale: { $ref: "#/components/schemas/Locale" }
+
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username: { type: string }
+        password: { type: string }
+
+    Me:
+      type: object
+      required: [username, locale, csrfToken]
+      properties:
+        username: { type: string }
+        locale: { $ref: "#/components/schemas/Locale" }
+        csrfToken: { type: string }
+
+    Settings:
+      type: object
+      properties:
+        locale: { $ref: "#/components/schemas/Locale" }
+        theme:
+          type: string
+          enum: [system, light, dark]
+
+    BotStatus:
+      type: string
+      enum: [stopped, starting, running, stopping, error]
+
+    Bot:
+      type: object
+      required: [id, name, status, tokenSet, autostart, createdAt]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        applicationId: { oneOf: [{ $ref: "#/components/schemas/Snowflake" }, { type: "null" }] }
+        avatarUrl: { type: [string, "null"], format: uri }
+        status: { $ref: "#/components/schemas/BotStatus" }
+        statusErrorKey:
+          type: [string, "null"]
+          description: i18n key when status is `error`
+        tokenSet: { type: boolean }
+        autostart: { type: boolean }
+        guildCount: { type: integer }
+        createdAt: { type: string, format: date-time }
+
+    BotCreate:
+      type: object
+      required: [name, token]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 64 }
+        token: { type: string, writeOnly: true }
+        autostart: { type: boolean, default: true }
+
+    BotUpdate:
+      type: object
+      minProperties: 1
+      properties:
+        name: { type: string, minLength: 1, maxLength: 64 }
+        token: { type: string, writeOnly: true }
+        autostart: { type: boolean }
+
+    Guild:
+      type: object
+      required: [id, name, memberCount]
+      properties:
+        id: { $ref: "#/components/schemas/Snowflake" }
+        name: { type: string }
+        iconUrl: { type: [string, "null"], format: uri }
+        memberCount: { type: integer }
+
+    ModuleKey:
+      type: string
+      pattern: "^[a-z][a-z0-9-]{1,63}$"
+      examples: [economy, leveling, ticket]
+
+    ModuleState:
+      type: object
+      required: [key, enabled]
+      properties:
+        key: { $ref: "#/components/schemas/ModuleKey" }
+        enabled: { type: boolean }
+
+    CommandSummary:
+      type: object
+      required: [id, name, builtin, modified, enabled]
+      properties:
+        id: { type: integer }
+        name:
+          type: string
+          pattern: "^[a-z0-9_-]{1,32}$"
+        module:
+          description: Owning module for built-in commands
+          oneOf: [{ $ref: "#/components/schemas/ModuleKey" }, { type: "null" }]
+        builtin: { type: boolean }
+        modified:
+          type: boolean
+          description: Built-in command whose graph differs from the default
+        enabled: { type: boolean }
+        updatedAt: { type: string, format: date-time }
+
+    Command:
+      allOf:
+        - $ref: "#/components/schemas/CommandSummary"
+        - type: object
+          required: [graph]
+          properties:
+            graph:
+              type: object
+              description: See shared/graph.schema.json
+
+    CommandWrite:
+      type: object
+      required: [name, enabled, graph]
+      properties:
+        name:
+          type: string
+          pattern: "^[a-z0-9_-]{1,32}$"
+        enabled: { type: boolean }
+        graph:
+          type: object
+          description: See shared/graph.schema.json
+
+    PluginVersion:
+      type: string
+      description: "BotHub scheme: feature X.0.0, bugfix 0.X.0, patch 0.0.X"
+      pattern: "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+
+    PluginPermission:
+      type: string
+      enum:
+        - discord.read_messages
+        - discord.send_messages
+        - discord.manage_messages
+        - discord.manage_roles
+        - discord.manage_channels
+        - discord.moderate_members
+        - discord.voice
+        - db.own_tables
+        - http.outbound
+        - builder.nodes
+        - dashboard.pages
+
+    MarketPlugin:
+      type: object
+      required: [id, name, latestVersion, permissions, sha256]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        descriptionKey: { type: string }
+        latestVersion: { $ref: "#/components/schemas/PluginVersion" }
+        permissions:
+          type: array
+          items: { $ref: "#/components/schemas/PluginPermission" }
+        sha256:
+          type: string
+          pattern: "^[a-f0-9]{64}$"
+
+    InstalledPlugin:
+      type: object
+      required: [id, version, enabled, grantedPermissions]
+      properties:
+        id: { type: string }
+        version: { $ref: "#/components/schemas/PluginVersion" }
+        enabled: { type: boolean }
+        grantedPermissions:
+          type: array
+          items: { $ref: "#/components/schemas/PluginPermission" }
+        updateAvailable: { type: [string, "null"] }
+
+    Job:
+      type: object
+      required: [id, type, status, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        type:
+          type: string
+          enum: [bot.start, bot.stop, plugin.install, plugin.update, plugin.uninstall]
+        status:
+          type: string
+          enum: [queued, running, done, failed]
+        errorKey: { type: [string, "null"] }
+        createdAt: { type: string, format: date-time }
+        finishedAt: { type: [string, "null"], format: date-time }

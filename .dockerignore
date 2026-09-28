@@ -1,0 +1,9 @@
+.git
+data
+**/node_modules
+**/vendor
+**/dist
+dashboard/bin
+.env
+context
+*.md

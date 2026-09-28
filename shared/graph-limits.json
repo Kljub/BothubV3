@@ -1,0 +1,8 @@
+{
+  "maxNodes": 500,
+  "maxEdges": 2000,
+  "maxSteps": 1000,
+  "maxLoopIterations": 100,
+  "maxRuntimeMs": 10000,
+  "maxDiscordCallsPerRun": 50
+}

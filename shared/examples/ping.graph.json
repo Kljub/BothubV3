@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "nodes": [
+    {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": { "description": "Replies with pong" },
+      "position": { "x": 0, "y": 0 }
+    },
+    {
+      "id": "reply",
+      "type": "action.reply",
+      "typeVersion": 1,
+      "config": { "content": "Pong!", "ephemeral": true },
+      "position": { "x": 320, "y": 0 }
+    }
+  ],
+  "edges": [
+    { "from": { "node": "trigger", "port": "next" }, "to": { "node": "reply", "port": "in" } }
+  ]
+}

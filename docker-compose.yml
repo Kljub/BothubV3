@@ -1,0 +1,73 @@
+# Development stack. Each service is its own container here; later all of them
+# run in one image under a process manager. Services find each other only via
+# ENV, and all persistent data lives in ./data (mounted as /data).
+
+name: bothub
+
+services:
+  dashboard:
+    build:
+      context: .
+      dockerfile: dashboard/Dockerfile
+    ports:
+      - "${DASHBOARD_PORT:-8080}:8080"
+    environment:
+      LISTEN_ADDR: ":8080"
+      API_URL: "http://api:9000"
+      BOTHUB_DEFAULT_LOCALE: "${BOTHUB_DEFAULT_LOCALE:-en}"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    environment:
+      SERVER_NAME: ":9000"
+      DATA_DIR: "/data"
+      REDIS_URL: "redis://redis:6379"
+      BOTHUB_ADMIN_USER: "${BOTHUB_ADMIN_USER:-}"
+      BOTHUB_ADMIN_PASSWORD: "${BOTHUB_ADMIN_PASSWORD:-}"
+    volumes:
+      - ./data:/data
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1:9000/api/health') === false ? 1 : 0);"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
+  bot:
+    build:
+      context: .
+      dockerfile: bot/Dockerfile
+    environment:
+      DATA_DIR: "/data"
+      REDIS_URL: "redis://redis:6379"
+    volumes:
+      - ./data:/data
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  redis:
+    image: redis:8-alpine
+    command: ["redis-server", "--appendonly", "yes", "--dir", "/data/redis"]
+    volumes:
+      - ./data:/data
+    # Bypass the image entrypoint: it drops to the redis user, which cannot
+    # write to a Windows bind mount. The dev stack runs Redis as root.
+    entrypoint: ["sh", "-c", "mkdir -p /data/redis && exec \"$$@\"", "--"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped

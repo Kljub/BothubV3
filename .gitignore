@@ -1,0 +1,18 @@
+# Runtime data (SQLite, Redis AOF, plugins, uploads, logs)
+/data/
+
+# Local environment
+.env
+
+# Dependencies and build output
+node_modules/
+vendor/
+dist/
+/dashboard/bin/
+
+# Editors and OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db

@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bothub.local/schemas/graph.schema.json",
+  "title": "BotHub command graph",
+  "description": "Format of every command (built-in and custom). Structure only: port types, required fields and cycle checks need the node definitions and happen in the API validator. Limits live in shared/graph-limits.json.",
+  "type": "object",
+  "required": ["schemaVersion", "nodes", "edges"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "description": "Graph format version. Older graphs are migrated by the API before they are saved or executed.",
+      "const": 1
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 500,
+      "items": { "$ref": "#/$defs/node" }
+    },
+    "edges": {
+      "type": "array",
+      "maxItems": 2000,
+      "items": { "$ref": "#/$defs/edge" }
+    },
+    "editor": {
+      "description": "Editor-only state (zoom, pan). Ignored by the interpreter.",
+      "type": "object",
+      "properties": {
+        "zoom": { "type": "number", "minimum": 0.1, "maximum": 4 },
+        "panX": { "type": "number" },
+        "panY": { "type": "number" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "$defs": {
+    "nodeId": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9_-]{1,64}$"
+    },
+    "portName": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,63}$"
+    },
+    "node": {
+      "type": "object",
+      "required": ["id", "type", "typeVersion", "config"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/nodeId" },
+        "type": {
+          "description": "Node definition key, e.g. `trigger.slash`, `economy.add_balance`, `plugin.casino.spin`.",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*(\\.[a-z0-9_]+)+$"
+        },
+        "typeVersion": {
+          "description": "Version of the node definition this node was created with. Used for node-level migrations.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "config": {
+          "description": "Values for the definition's `config` schema. Validated against the node definition by the API.",
+          "type": "object"
+        },
+        "position": {
+          "type": "object",
+          "required": ["x", "y"],
+          "additionalProperties": false,
+          "properties": {
+            "x": { "type": "number" },
+            "y": { "type": "number" }
+          }
+        },
+        "disabled": {
+          "description": "Disabled nodes are skipped; their flow output continues directly.",
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "required": ["from", "to"],
+      "additionalProperties": false,
+      "properties": {
+        "from": { "$ref": "#/$defs/endpoint" },
+        "to": { "$ref": "#/$defs/endpoint" }
+      }
+    },
+    "endpoint": {
+      "type": "object",
+      "required": ["node", "port"],
+      "additionalProperties": false,
+      "properties": {
+        "node": { "$ref": "#/$defs/nodeId" },
+        "port": { "$ref": "#/$defs/portName" }
+      }
+    }
+  }
+}

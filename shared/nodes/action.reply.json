@@ -1,0 +1,34 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.reply",
+  "version": 1,
+  "category": "action",
+  "labelKey": "builder.node.action_reply.label",
+  "descriptionKey": "builder.node.action_reply.description",
+  "inputs": [
+    { "name": "in", "type": "flow", "labelKey": "builder.port.in", "multiple": true },
+    { "name": "content", "type": "string", "labelKey": "builder.port.content" },
+    { "name": "embeds", "type": "list<embed>", "labelKey": "builder.port.embeds" }
+  ],
+  "outputs": [
+    { "name": "next", "type": "flow", "labelKey": "builder.port.next" },
+    { "name": "message", "type": "message", "labelKey": "builder.port.message" }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "content": {
+        "description": "Fallback when the `content` input is not connected. Supports {placeholders}.",
+        "type": "string",
+        "maxLength": 2000,
+        "x-labelKey": "builder.node.action_reply.config.content"
+      },
+      "ephemeral": {
+        "type": "boolean",
+        "default": false,
+        "x-labelKey": "builder.node.action_reply.config.ephemeral"
+      }
+    }
+  }
+}

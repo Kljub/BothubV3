@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bothub.local/schemas/node-definition.schema.json",
+  "title": "BotHub builder node definition",
+  "description": "One file per node type in shared/nodes/. Read by the dashboard (editor), the API (validation) and the bot (interpreter). Modules and plugins ship their own definitions in the same format.",
+  "type": "object",
+  "required": ["type", "version", "category", "labelKey", "inputs", "outputs"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "type": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*(\\.[a-z0-9_]+)+$"
+    },
+    "version": {
+      "description": "Increase when inputs, outputs or config change incompatibly.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "category": {
+      "type": "string",
+      "enum": ["trigger", "option", "action", "condition", "data", "flow", "utility"]
+    },
+    "labelKey": {
+      "description": "i18n key for the node title.",
+      "type": "string"
+    },
+    "descriptionKey": { "type": "string" },
+    "module": {
+      "description": "Owning module. The node is only available when the module is enabled in the guild.",
+      "type": "string"
+    },
+    "requires": {
+      "description": "Plugin permissions needed to use this node (plugin nodes only).",
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "inputs": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/port" }
+    },
+    "outputs": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/port" }
+    },
+    "config": {
+      "description": "JSON Schema for the node's `config` object. Every property needs `x-labelKey` for the editor.",
+      "type": "object"
+    }
+  },
+  "$defs": {
+    "portType": {
+      "description": "`flow` carries execution order. All other types carry data. `list<T>` is a list of T. `any` accepts every data type.",
+      "type": "string",
+      "pattern": "^(flow|any|string|number|integer|boolean|user|member|role|channel|guild|message|embed|attachment|duration|timestamp|list<(any|string|number|integer|boolean|user|member|role|channel|message|embed|attachment)>)$"
+    },
+    "port": {
+      "type": "object",
+      "required": ["name", "type", "labelKey"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,63}$"
+        },
+        "type": { "$ref": "#/$defs/portType" },
+        "labelKey": { "type": "string" },
+        "required": {
+          "description": "Inputs only: a data input that must be connected or have a config fallback.",
+          "type": "boolean",
+          "default": false
+        },
+        "multiple": {
+          "description": "Inputs: accept several edges. Outputs of type `flow` always allow several edges.",
+          "type": "boolean",
+          "default": false
+        }
+      }
+    }
+  }
+}
