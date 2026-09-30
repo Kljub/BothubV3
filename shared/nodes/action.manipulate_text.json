@@ -1,0 +1,209 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.manipulate_text",
+  "version": 1,
+  "category": "action",
+  "group": "other",
+  "order": 860,
+  "color": "teal",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_manipulate_text.label",
+  "descriptionKey": "builder.node.action_manipulate_text.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": "",
+      "labelKey": "builder.result.manipulate_text.0"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "input": {
+        "type": "string",
+        "maxLength": 4000,
+        "x-labelKey": "builder.cfg.input",
+        "x-multiline": true
+      },
+      "operation": {
+        "type": "string",
+        "enum": [
+          "uppercase",
+          "lowercase",
+          "capitalize",
+          "title_case",
+          "trim",
+          "trim_start",
+          "trim_end",
+          "replace",
+          "replace_all",
+          "regex_replace",
+          "concat",
+          "pad_start",
+          "pad_end",
+          "repeat",
+          "reverse",
+          "slugify",
+          "slice",
+          "substring",
+          "char_at",
+          "split",
+          "match",
+          "length",
+          "includes",
+          "starts_with",
+          "ends_with",
+          "index_of",
+          "last_index_of",
+          "search",
+          "url_encode",
+          "url_decode",
+          "base64_encode",
+          "base64_decode",
+          "json_stringify",
+          "sanitize",
+          "unsanitize"
+        ],
+        "default": "uppercase",
+        "x-labelKey": "builder.cfg.operation",
+        "x-enumKey": "builder.enum.operation"
+      },
+      "find": {
+        "type": "string",
+        "maxLength": 500,
+        "x-labelKey": "builder.cfg.find",
+        "x-showIf": {
+          "operation": [
+            "replace",
+            "replace_all",
+            "regex_replace",
+            "includes",
+            "starts_with",
+            "ends_with",
+            "index_of",
+            "last_index_of",
+            "search",
+            "match"
+          ]
+        }
+      },
+      "replace_with": {
+        "type": "string",
+        "maxLength": 500,
+        "x-labelKey": "builder.cfg.replace_with",
+        "x-showIf": {
+          "operation": [
+            "replace",
+            "replace_all",
+            "regex_replace"
+          ]
+        }
+      },
+      "other": {
+        "type": "string",
+        "maxLength": 2000,
+        "x-labelKey": "builder.cfg.other",
+        "x-showIf": {
+          "operation": [
+            "concat"
+          ]
+        }
+      },
+      "start": {
+        "type": "number",
+        "minimum": -100000,
+        "x-labelKey": "builder.cfg.start_from_position",
+        "maximum": 100000,
+        "default": 0,
+        "x-showIf": {
+          "operation": [
+            "slice",
+            "substring",
+            "char_at"
+          ]
+        }
+      },
+      "end": {
+        "type": "number",
+        "minimum": -100000,
+        "x-labelKey": "builder.cfg.end_to_position",
+        "maximum": 100000,
+        "x-showIf": {
+          "operation": [
+            "slice",
+            "substring"
+          ]
+        }
+      },
+      "pad_length": {
+        "type": "number",
+        "minimum": 0,
+        "x-labelKey": "builder.cfg.pad_length",
+        "maximum": 2000,
+        "default": 10,
+        "x-showIf": {
+          "operation": [
+            "pad_start",
+            "pad_end"
+          ]
+        }
+      },
+      "pad_with": {
+        "type": "string",
+        "maxLength": 10,
+        "x-labelKey": "builder.cfg.pad_with",
+        "x-placeholder": "0",
+        "x-showIf": {
+          "operation": [
+            "pad_start",
+            "pad_end"
+          ]
+        }
+      },
+      "times": {
+        "type": "number",
+        "minimum": 1,
+        "x-labelKey": "builder.cfg.times",
+        "maximum": 100,
+        "default": 2,
+        "x-showIf": {
+          "operation": [
+            "repeat"
+          ]
+        }
+      },
+      "separator": {
+        "type": "string",
+        "maxLength": 20,
+        "x-labelKey": "builder.cfg.separator",
+        "x-placeholder": ",",
+        "x-showIf": {
+          "operation": [
+            "split"
+          ]
+        }
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  }
+}

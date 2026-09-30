@@ -1,0 +1,47 @@
+/* bh-form: Forms, fields, inputs, hints. */
+
+.form { display: flex; flex-direction: column; gap: 14px; }
+.form label { display: flex; flex-direction: column; gap: 8px; font-weight: 600; }
+.form label.check { flex-direction: row; align-items: center; font-weight: 400; }
+input, select {
+  font: inherit;
+  color: var(--text);
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  min-width: 0;
+}
+input::placeholder { color: var(--muted); }
+input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+input[type="checkbox"] { padding: 0; width: 16px; height: 16px; accent-color: var(--accent); }
+.hint { display: block; margin-top: 8px; font-size: 12px; color: var(--muted); font-weight: 400; text-transform: none; letter-spacing: 0; }
+.hint-top { margin: 0 0 12px; }
+.hint-right { text-align: right; }
+.inline-form { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.input-wide { width: min(420px, 100%); }
+.input-medium { width: min(320px, 100%); }
+.input-small { width: 120px; }
+.field { display: flex; flex-direction: column; gap: 8px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+.field-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+.field input, .field textarea, .field select { text-transform: none; letter-spacing: 0; font-weight: 400; }
+textarea { font: inherit; color: var(--text); padding: 10px 12px; background: var(--bg); border: 1px solid var(--border-strong); border-radius: 8px; resize: vertical; }
+.preview { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); }
+.preview .hint { margin: 0; font-size: 11px; }
+.rows { display: flex; flex-direction: column; gap: 8px; }
+.row-entry { display: flex; gap: 8px; }
+.row-entry input { flex: 1; }
+.input-name { font-size: 16px; font-weight: 700; width: 240px; }
+
+/* Read-only value with a copy button (URLs, keys): <div class="copy-field"><code>…</code><button class="btn btn-sm" data-copy="…"> */
+.copy-field { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 6px 6px 6px 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; }
+.copy-field code { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: ui-monospace, monospace; font-size: 12px; color: var(--text); }
+.copy-field-secret code { color: var(--green); }
+
+/* Code example (requests, snippets); keeps line breaks, scrolls sideways. */
+.code-block { margin: 0; padding: 12px 14px; overflow-x: auto; font-family: ui-monospace, monospace; font-size: 12px; line-height: 1.6; color: var(--text-2); white-space: pre; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; }
+.code-block-title { display: block; margin-bottom: 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+
+/* Two columns that stack on small screens (form left, preview right). */
+.split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 900px) { .split { grid-template-columns: 1fr; } }

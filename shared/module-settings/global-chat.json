@@ -1,0 +1,47 @@
+{
+  "module": "global-chat",
+  "fields": [
+    {
+      "key": "channels",
+      "type": "channels",
+      "channelTypes": [
+        "text"
+      ],
+      "max": 20,
+      "hint": true
+    },
+    {
+      "key": "cooldown",
+      "type": "number",
+      "min": 1,
+      "max": 600,
+      "default": 3
+    },
+    {
+      "key": "attachments",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "showServer",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "reaction",
+      "type": "emojis",
+      "max": 1
+    },
+    {
+      "key": "blockedWords",
+      "type": "words",
+      "max": 200,
+      "maxLength": 100
+    },
+    {
+      "key": "blacklist",
+      "type": "roles",
+      "max": 50
+    }
+  ]
+}

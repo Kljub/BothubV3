@@ -1,0 +1,69 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "component.select_menu",
+  "version": 1,
+  "category": "component",
+  "group": "component",
+  "palette": false,
+  "color": "blue",
+  "icon": "☰",
+  "labelKey": "builder.node.component_select_menu.label",
+  "descriptionKey": "builder.node.component_select_menu.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.picked"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "placeholder": {
+        "type": "string",
+        "maxLength": 150,
+        "x-labelKey": "builder.cfg.menu_placeholder",
+        "x-placeholder": "Make a selection"
+      },
+      "min_values": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 25,
+        "default": 1,
+        "x-labelKey": "builder.cfg.menu_min"
+      },
+      "max_values": {
+        "type": "number",
+        "minimum": 1,
+        "maximum": 25,
+        "default": 1,
+        "x-labelKey": "builder.cfg.menu_max"
+      },
+      "only_invoker": {
+        "type": "boolean",
+        "default": false,
+        "x-labelKey": "builder.cfg.only_invoker",
+        "x-hintKey": "builder.cfg.only_invoker_hint"
+      },
+      "disabled": {
+        "type": "boolean",
+        "default": false,
+        "x-labelKey": "builder.cfg.menu_disabled"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  }
+}

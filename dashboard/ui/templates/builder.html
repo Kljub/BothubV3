@@ -1,0 +1,80 @@
+{{define "title"}}{{if not .Data.IsEvent}}/{{end}}{{.Data.Command.Name}}{{end}}
+{{define "content"}}{{end}}
+
+{{/* Full-screen node editor (reference design). The app is builder.js; this
+     page only provides the frame and the JSON islands. */}}
+{{define "builder_layout"}}<!doctype html>
+<html lang="{{.Locale}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="htmx-config" content='{"includeIndicatorStyles":false,"allowEval":false,"allowScriptTags":false}'>
+<meta name="csrf-token" content="{{.CSRF}}">
+<title>{{if not .Data.IsEvent}}/{{end}}{{.Data.Command.Name}} · BotHub</title>
+<link rel="stylesheet" href="/static/css/bothub.css?v={{.AssetVersion}}">
+<script type="application/json" id="builder-nodes">{{.Data.Nodes}}</script>
+<script type="application/json" id="builder-graph">{{.Data.Graph}}</script>
+<script type="application/json" id="builder-texts">{{.Data.Texts}}</script>
+<script type="application/json" id="builder-meta">{{.Data.Meta}}</script>
+<script type="application/json" id="builder-events">{{.Data.Events}}</script>
+<script type="application/json" id="builder-variables">{{.Data.Variables}}</script>
+<script src="/static/js/icons.js?v={{.AssetVersion}}" defer></script>
+<script src="/static/js/var-picker.js?v={{.AssetVersion}}" defer></script>
+<script src="/static/js/builder-form.js?v={{.AssetVersion}}" defer></script>
+<script src="/static/js/builder-message.js?v={{.AssetVersion}}" defer></script>
+<script src="/static/js/builder.js?v={{.AssetVersion}}" defer></script>
+</head>
+<body class="builder-body" data-theme="{{.Theme}}">
+<div class="builder" id="builder">
+  <header class="builder-top">
+    <a class="builder-back" href="{{.Data.BackURL}}" data-builder-back>← {{t "builder.back"}}</a>
+    <span class="builder-divider" aria-hidden="true"></span>
+    <strong class="builder-title">{{if .Data.IsEvent}}{{t "builder.custom_event"}} <span class="muted" data-command-name>{{.Data.Command.Name}}</span>{{else}}{{t "builder.custom_command"}} <span class="mono muted" data-command-name>/{{.Data.Command.Name}}</span>{{end}}</strong>
+    <span class="builder-divider" aria-hidden="true"></span>
+    <button type="button" class="builder-tool" data-action="import" data-top>{{if .Data.IsEvent}}{{t "builder.import.button_event"}}{{else}}{{t "builder.import.button"}}{{end}}</button>
+    <a class="builder-tool" href="/bots/docs" target="_blank" rel="noopener">{{t "builder.docs"}}</a>
+    <button type="button" class="builder-tool" data-action="settings" data-top>{{t "builder.settings.button"}}</button>
+    <button type="button" class="builder-tool" data-action="history" data-top>{{t "builder.history.button"}}</button>
+    <span class="builder-spacer"></span>
+    <span class="builder-lastsaved" data-last-saved></span>
+    <button type="button" class="builder-icon-btn" data-action="undo" title="{{t "builder.undo"}}" aria-label="{{t "builder.undo"}}" disabled>↶</button>
+    <button type="button" class="builder-icon-btn" data-action="redo" title="{{t "builder.redo"}}" aria-label="{{t "builder.redo"}}" disabled>↷</button>
+    <button type="button" class="builder-test" data-action="test">▶ {{t "builder.test"}}</button>
+    <span class="builder-spacer"></span>
+    <button type="button" class="builder-tool builder-problems" data-action="problems" data-top><span class="builder-problems-count" data-problems-count>✓</span> {{t "builder.problems.button"}}</button>
+    <button type="button" class="builder-tool" data-action="discard" data-top>↺ {{t "builder.discard.button"}}</button>
+    <span class="autosave" title="{{t "builder.autosave"}}" aria-label="{{t "builder.autosave"}}">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><circle class="autosave-track" cx="10" cy="10" r="8"/><circle class="autosave-ring" cx="10" cy="10" r="8" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/></svg>
+    </span>
+    <span class="builder-status" data-status role="status">{{t "builder.saved"}}</span>
+    <button type="button" class="btn btn-primary btn-sm" data-action="save">💾 {{t "builder.save"}}</button>
+  </header>
+
+  <div class="builder-main">
+    <nav class="builder-rail" aria-label="{{t "builder.panels"}}">
+      <button type="button" data-panel="nodes" aria-pressed="true" title="{{t "builder.rail.nodes"}}" aria-label="{{t "builder.rail.nodes"}}">▦</button>
+      <button type="button" data-panel="variables" title="{{t "builder.rail.variables"}}" aria-label="{{t "builder.rail.variables"}}">{ }</button>
+      <button type="button" data-panel="errors" class="rail-red" title="{{t "builder.rail.errors"}}" aria-label="{{t "builder.rail.errors"}}">⚠</button>
+      <button type="button" data-panel="commands" class="rail-green" title="{{t "builder.rail.commands"}}" aria-label="{{t "builder.rail.commands"}}">⌨</button>
+      <button type="button" data-panel="timed" class="rail-yellow" title="{{t "builder.rail.timed"}}" aria-label="{{t "builder.rail.timed"}}">◷</button>
+      <button type="button" data-panel="templates" class="rail-purple" title="{{t "builder.rail.templates"}}" aria-label="{{t "builder.rail.templates"}}">⌂</button>
+      <button type="button" data-panel="transfer" class="rail-teal" title="{{t "builder.rail.transfer"}}" aria-label="{{t "builder.rail.transfer"}}">⇪</button>
+    </nav>
+    <aside class="builder-panel" data-panel-body></aside>
+    <section class="builder-canvas" data-canvas tabindex="0" aria-label="{{t "builder.canvas"}}">
+      <svg class="builder-edges" data-edges aria-hidden="true"></svg>
+      <div class="builder-world" data-world></div>
+      <div class="builder-zoom">
+        <button type="button" data-action="zoom-out" title="{{t "builder.zoom_out"}}" aria-label="{{t "builder.zoom_out"}}">−</button>
+        <span data-zoom>100%</span>
+        <button type="button" data-action="zoom-in" title="{{t "builder.zoom_in"}}" aria-label="{{t "builder.zoom_in"}}">+</button>
+        <button type="button" data-action="fit" title="{{t "builder.fit"}}" aria-label="{{t "builder.fit"}}">⊡</button>
+      </div>
+      <div class="builder-sim" data-sim hidden></div>
+    </section>
+    <aside class="builder-inspector" data-inspector hidden></aside>
+  </div>
+</div>
+</body>
+</html>
+{{end}}

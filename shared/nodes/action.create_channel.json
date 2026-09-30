@@ -1,0 +1,158 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.create_channel",
+  "version": 1,
+  "category": "action",
+  "group": "channel",
+  "order": 500,
+  "color": "blue",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_create_channel.label",
+  "descriptionKey": "builder.node.action_create_channel.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": "",
+      "labelKey": "builder.result.create_channel.0"
+    },
+    {
+      "suffix": ".id",
+      "labelKey": "builder.result.create_channel.1"
+    },
+    {
+      "suffix": ".name",
+      "labelKey": "builder.result.create_channel.2"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "name": {
+        "type": "string",
+        "maxLength": 100,
+        "x-labelKey": "builder.cfg.name"
+      },
+      "channel_type": {
+        "type": "string",
+        "enum": [
+          "text",
+          "voice",
+          "category",
+          "announcement",
+          "forum",
+          "stage"
+        ],
+        "default": "text",
+        "x-labelKey": "builder.cfg.channel_type",
+        "x-enumKey": "builder.enum.channel_type"
+      },
+      "parent": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.parent",
+        "x-hintKey": "builder.cfg.ref_optional_hint",
+        "x-ref": "category"
+      },
+      "topic": {
+        "type": "string",
+        "maxLength": 1024,
+        "x-labelKey": "builder.cfg.topic",
+        "x-multiline": true
+      },
+      "access": {
+        "type": "string",
+        "enum": [
+          "default",
+          "private",
+          "staff",
+          "read_only",
+          "hidden"
+        ],
+        "default": "default",
+        "x-labelKey": "builder.cfg.access",
+        "x-enumKey": "builder.enum.access"
+      },
+      "staff_role": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.staff_role",
+        "x-hintKey": "builder.cfg.ref_hint",
+        "x-ref": "role",
+        "x-showIf": {
+          "access": [
+            "staff"
+          ]
+        }
+      },
+      "user": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.user",
+        "x-hintKey": "builder.cfg.ref_hint",
+        "x-ref": "member",
+        "x-showIf": {
+          "access": [
+            "private"
+          ]
+        },
+        "default": "{user.id}"
+      },
+      "nsfw": {
+        "type": "boolean",
+        "default": false,
+        "x-labelKey": "builder.cfg.nsfw"
+      },
+      "slowmode": {
+        "type": "number",
+        "minimum": 0,
+        "x-labelKey": "builder.cfg.slowmode",
+        "maximum": 21600,
+        "default": 0
+      },
+      "undo_after": {
+        "type": "string",
+        "maxLength": 20,
+        "pattern": "^[0-9]+[smhd]$",
+        "x-widget": "undo",
+        "x-labelKey": "builder.undo.title",
+        "x-undoTitleKey": "builder.undo.create_channel",
+        "x-undoHintKey": "builder.undo.create_channel_hint"
+      },
+      "reason": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.reason",
+        "x-hintKey": "builder.cfg.reason_hint"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      },
+      "guild": {
+        "type": "string",
+        "maxLength": 40,
+        "x-advanced": true,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.guild",
+        "x-hintKey": "builder.cfg.guild_hint"
+      }
+    }
+  }
+}

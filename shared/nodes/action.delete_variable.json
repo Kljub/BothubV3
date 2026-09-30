@@ -1,0 +1,53 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.delete_variable",
+  "version": 1,
+  "category": "action",
+  "group": "variables",
+  "order": 110,
+  "color": "red",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_delete_variable.label",
+  "descriptionKey": "builder.node.action_delete_variable.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "var_name": {
+        "type": "string",
+        "maxLength": 64,
+        "x-labelKey": "builder.cfg.var_name",
+        "x-mono": true,
+        "x-placeholder": "coins",
+        "x-hintKey": "builder.cfg.var_name_hint"
+      },
+      "scope": {
+        "type": "string",
+        "enum": [
+          "run",
+          "user",
+          "server",
+          "global"
+        ],
+        "default": "run",
+        "x-labelKey": "builder.cfg.scope",
+        "x-enumKey": "builder.enum.scope"
+      }
+    }
+  }
+}

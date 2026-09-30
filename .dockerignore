@@ -1,7 +1,7 @@
 .git
 data
 **/node_modules
-**/vendor
+api/vendor
 **/dist
 dashboard/bin
 .env

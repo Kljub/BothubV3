@@ -1,0 +1,765 @@
+// One Discord bot: login, slash command registration, running command and
+// event graphs, buttons and menus of sent messages. All bots of the instance
+// run in this one process (context/decisions.md, decision 5).
+
+import { createHash, randomUUID } from 'node:crypto';
+import {
+  Client,
+  Events,
+  GatewayIntentBits,
+  Partials,
+  Routes,
+  type ChatInputCommandInteraction,
+  type UserContextMenuCommandInteraction,
+  type MessageContextMenuCommandInteraction,
+  type Guild,
+  type GuildMember,
+  type Interaction,
+  type MessageComponentInteraction,
+  type RepliableInteraction,
+  type SendableChannels,
+  type User,
+} from 'discord.js';
+import type { GraphLimits } from '../core/config.js';
+import { log } from '../core/log.js';
+import type { CommandRow, Repo } from '../core/repo.js';
+import { GraphError, Run, type Engine, type Handler, type RunResult } from '../graph/interpreter.js';
+import { cronMatches, parseCron, type Cron } from '../graph/cron.js';
+import { coreHandlers, helperValue, lookupVariable } from '../graph/handlers-core.js';
+import { dataStore } from '../core/datastore.js';
+import type { PluginManager } from '../sdk/manager.js';
+import type { Graph, GraphNode, NodeDefinition } from '../graph/types.js';
+import { buildCommands, denied, settingsOf } from './commands.js';
+import { discordHandlers, type DiscordData } from './handlers.js';
+import { buildMessage, hasBody } from './message.js';
+import { Moderation } from './moderation.js';
+import { matchState } from './match.js';
+import { bindEvents, type EventContext } from './events.js';
+import { bindModules, ModuleContext } from '../modules/index.js';
+import { Bucket, warn } from '../modules/guard.js';
+import { moduleHandlers } from './handlers-modules.js';
+import { parsePresence, PresenceRunner } from './presence.js';
+import { isDue, nextRun, type TimedEvent } from '../core/timed.js';
+import { botVars, channelVars, guildVars, userVars, type Vars } from './vars.js';
+
+const PRIVILEGED = [GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildPresences, GatewayIntentBits.MessageContent];
+const BASE_INTENTS = [
+  GatewayIntentBits.Guilds,
+  GatewayIntentBits.GuildModeration,
+  GatewayIntentBits.GuildMessages,
+  GatewayIntentBits.GuildMessageReactions,
+  GatewayIntentBits.GuildVoiceStates,
+  GatewayIntentBits.GuildInvites,
+  GatewayIntentBits.GuildExpressions,
+  GatewayIntentBits.GuildScheduledEvents,
+  GatewayIntentBits.DirectMessages,
+  GatewayIntentBits.AutoModerationExecution,
+];
+/** Buttons and menus keep their run this long. */
+const PENDING_TTL_MS = 15 * 60_000;
+/** Command list changes are sent to Discord this long after the last change. */
+const REGISTER_DEBOUNCE_MS = 2000;
+
+/** Payload of bothub:events webhook.called (shared/streams.json). */
+export interface WebhookCall {
+  eventId: string;
+  name: string;
+  body: string;
+  variables: Record<string, string>;
+}
+
+export interface InstanceDeps {
+  repo: Repo;
+  defs: Map<string, NodeDefinition>;
+  limits: GraphLimits;
+  /** SDK manager: sandboxed plugins (installed globally, plugin_installs). */
+  plugins?: PluginManager;
+}
+
+interface Pending {
+  run: Run;
+  command: CommandRow;
+  invokerId: string | null;
+  expires: number;
+}
+
+export class BotInstance {
+  private client: Client | null = null;
+  private commands = new Map<string, CommandRow>();
+  private events = new Map<string, CommandRow[]>();
+  private timed: { cmd: CommandRow; cron: Cron }[] = [];
+  private ticker: NodeJS.Timeout | undefined;
+  /** Timed events (table timed_events) and the bot's time settings. */
+  private schedules: TimedEvent[] = [];
+  private timeSettings: { timezone: string; defaultGuildId: string | null } = { timezone: '', defaultGuildId: null };
+  private scheduleTimer: NodeJS.Timeout | undefined;
+  private lastCheckMs = 0;
+  private startedMs = 0;
+  private readonly presence = new PresenceRunner();
+  /** Ready-made modules (bot/src/modules), settings cached for a few seconds. */
+  private readonly modules: ModuleContext;
+  /** Custom, timed and webhook events: at most 20 runs per 10 seconds per bot. */
+  private readonly runBudget = new Bucket(20, 10_000);
+  private registerTimer: NodeJS.Timeout | undefined;
+  private pending = new Map<string, Pending>();
+  private registeredHash = '';
+  private sweeper: NodeJS.Timeout | undefined;
+  private jobTimer: NodeJS.Timeout | undefined;
+  private jobsRunning = false;
+  private readonly engine: Engine;
+  private readonly moderation: Moderation;
+
+  constructor(
+    readonly botId: number,
+    private readonly deps: InstanceDeps,
+  ) {
+    this.modules = new ModuleContext(botId, deps.repo);
+    const vars = deps.repo.varStore(botId);
+    const core = {
+      vars,
+      data: dataStore(deps.repo.db, botId),
+      logError: (run: Run, text: string) => this.logRun(run, 'ERR-1007', { text }),
+      resetCooldown: (command: string, scopeKey: string) => {
+        const cmd = this.commands.get(command.trim().split(/\s+/).join(' '));
+        if (!cmd) throw new GraphError('error.run.unknown_command', { value: command });
+        deps.repo.clearCooldown(cmd.id, scopeKey);
+      },
+    };
+    this.moderation = new Moderation(botId, deps.repo, () => this.client);
+    const handlers = new Map<string, Handler>([...coreHandlers(core), ...discordHandlers(deps.repo, this.moderation), ...moduleHandlers(deps.repo, botId)]);
+    // Own copy of the definitions: plugin blocks exist only for this bot.
+    this.engine = { defs: new Map(deps.defs), handlers, limits: deps.limits, match: matchState, lookup: (name, run) => lookupVariable(core, name, run) };
+  }
+
+  get running(): boolean {
+    return this.client?.isReady() ?? false;
+  }
+
+  // ---------- lifecycle ----------
+
+  async start(token: string): Promise<void> {
+    await this.stop();
+    this.deps.repo.setBotStatus(this.botId, 'starting');
+    this.reloadGraphs();
+    try {
+      this.client = await this.login(token, [...BASE_INTENTS, ...PRIVILEGED]);
+    } catch (err) {
+      if ((err as { code?: number }).code === 4014 || /disallowed intents/i.test(String((err as Error).message))) {
+        // Privileged intents are off in the Discord developer portal: run
+        // without member, presence and message content data.
+        this.deps.repo.logCode(this.botId, 'WAR-2002', { intent: 'GuildMembers, GuildPresences, MessageContent' });
+        this.client = await this.login(token, BASE_INTENTS);
+      } else {
+        const tokenInvalid = /token/i.test(String((err as Error).message)) || (err as { code?: string }).code === 'TokenInvalid';
+        this.deps.repo.setBotStatus(this.botId, 'error', tokenInvalid ? 'log.code.ERR-1001' : 'error.bot.start_failed');
+        if (tokenInvalid) this.deps.repo.logCode(this.botId, 'ERR-1001', {});
+        throw err;
+      }
+    }
+    this.sweeper = setInterval(() => this.sweepPending(), 60_000);
+    this.sweeper.unref();
+    this.scheduleTick();
+    this.startedMs = this.lastCheckMs = Date.now();
+    this.scheduleTimer = setInterval(() => this.checkSchedules(), 1000);
+    this.scheduleTimer.unref();
+    this.jobTimer = setInterval(() => void this.runJobs().catch((err) => log.error('scheduled jobs failed', { botId: this.botId, err })), 15_000);
+    this.jobTimer.unref();
+    await this.startPlugins();
+  }
+
+  /** Starts the bot's plugins and adds their blocks (plugin.<id>.<name>) to the engine. */
+  async startPlugins(): Promise<void> {
+    const plugins = this.deps.plugins;
+    if (!plugins) return;
+    for (const key of [...this.engine.handlers.keys()]) if (key.startsWith('plugin.')) this.engine.handlers.delete(key);
+    for (const key of [...this.engine.defs.keys()]) if (key.startsWith('plugin.')) this.engine.defs.delete(key);
+    try {
+      await plugins.startBot(this.botId);
+    } catch (err) {
+      log.error('plugins failed', { botId: this.botId, err });
+      return;
+    }
+    for (const [type, def] of plugins.blockDefs(this.botId)) this.engine.defs.set(type, def);
+    for (const [type, handler] of plugins.blockHandlers(this.botId)) this.engine.handlers.set(type, handler);
+  }
+
+  /** SDK call discord.sendMessage: a message in the shape of the send block. */
+  async pluginSend(channelId: string, message: unknown): Promise<string> {
+    if (!this.client?.isReady()) throw new GraphError('error.bot.not_running');
+    const channel = await this.client.channels.fetch(channelId).catch(() => null);
+    if (!channel || !channel.isSendable()) throw new GraphError('error.run.channel_not_found', { value: channelId });
+    const guild = 'guild' in channel ? (channel.guild as Guild) : null;
+    const node: GraphNode = { id: 'plugin', type: 'action.send_message', typeVersion: 1, config: { message } };
+    // Placeholders are not filled in: plugin text is sent as written.
+    const run = new Run({ schemaVersion: 1, nodes: [node], edges: [] }, this.engine, this.data({ runKey: 'plugin', guild, channel }) as never, {});
+    const payload = buildMessage(run, node, () => '');
+    if (!hasBody(payload)) throw new GraphError('error.run.empty_message');
+    const sent = await channel.send({ ...payload, allowedMentions: { parse: [] } } as never);
+    return sent.id;
+  }
+
+  /** SDK call discord.guildInfo: only servers the bot is in. */
+  pluginGuildInfo(guildId: string): { id: string; name: string; memberCount: number } {
+    const g = this.client?.guilds.cache.get(guildId);
+    if (!g) throw new GraphError('error.run.server_not_found', { value: guildId });
+    return { id: g.id, name: g.name, memberCount: g.memberCount };
+  }
+
+  /** Checks the timed events at the start of every minute. */
+  private scheduleTick(): void {
+    clearTimeout(this.ticker);
+    this.ticker = setTimeout(() => {
+      this.scheduleTick();
+      void this.runTimed(new Date());
+    }, 60_000 - (Date.now() % 60_000) + 50);
+    this.ticker.unref();
+  }
+
+  async stop(): Promise<void> {
+    clearInterval(this.sweeper);
+    clearTimeout(this.registerTimer);
+    clearTimeout(this.ticker);
+    clearInterval(this.scheduleTimer);
+    clearInterval(this.jobTimer);
+    this.presence.stop();
+    this.deps.plugins?.stopBot(this.botId);
+    this.pending.clear();
+    if (this.client) {
+      const c = this.client;
+      this.client = null;
+      await c.destroy();
+      this.deps.repo.setBotStatus(this.botId, 'stopped');
+      this.deps.repo.logUpdate(this.botId, 'log.update.bot_stopped');
+    }
+  }
+
+  private async login(token: string, intents: GatewayIntentBits[]): Promise<Client> {
+    const client = new Client({
+      intents,
+      partials: [Partials.Message, Partials.Channel, Partials.Reaction, Partials.User, Partials.GuildMember],
+    });
+    client.once(Events.ClientReady, (c) => void this.onReady(c.user, [...c.guilds.cache.values()]));
+    client.on(Events.InteractionCreate, (i) => void this.onInteraction(i).catch((err) => log.error('interaction failed', { botId: this.botId, err })));
+    client.on(Events.GuildCreate, (g) => void this.syncGuilds());
+    client.on(Events.GuildDelete, (g) => this.deps.repo.guildLeft(this.botId, g.id));
+    client.on(Events.ShardDisconnect, (e) => this.deps.repo.logCode(this.botId, 'ERR-1006', { code: e.code }));
+    client.on(Events.Error, (err) => log.error('discord client error', { botId: this.botId, err }));
+    bindEvents(client, (ctx) => void this.runEvent(ctx));
+    bindModules(client, this.modules, () => this.timeSettings.timezone);
+    try {
+      await client.login(token);
+    } catch (err) {
+      await client.destroy().catch(() => undefined);
+      throw err;
+    }
+    return client;
+  }
+
+  private async onReady(user: User, guilds: Guild[]): Promise<void> {
+    log.info('bot ready', { botId: this.botId, user: user.tag, guilds: guilds.length });
+    this.deps.repo.setBotIdentity(this.botId, user.username, user.id, user.displayAvatarURL());
+    this.deps.repo.setBotStatus(this.botId, 'running');
+    this.deps.repo.logUpdate(this.botId, 'log.update.bot_started', { name: user.username });
+    this.applyPresence();
+    await this.syncGuilds();
+    await this.registerCommands();
+    void this.runEvent({ type: 'bot_ready', vars: {}, guild: null, channel: null, member: null, user: null });
+  }
+
+  private async syncGuilds(): Promise<void> {
+    const c = this.client;
+    if (!c) return;
+    this.deps.repo.syncGuilds(
+      this.botId,
+      [...c.guilds.cache.values()].map((g) => ({ id: g.id, name: g.name, iconUrl: g.iconURL(), memberCount: g.memberCount })),
+    );
+  }
+
+  // ---------- graphs ----------
+
+  /** Reloads commands and events from the database (after bothub:events). */
+  reloadGraphs(): void {
+    this.modules?.invalidate();
+    const disabled = this.deps.repo.disabledModules(this.botId);
+    this.moderation.reload(disabled);
+    this.commands.clear();
+    for (const cmd of this.deps.repo.commands(this.botId, 'command')) {
+      if (cmd.builtin && cmd.moduleKey && disabled.has(cmd.moduleKey)) continue;
+      const s = settingsOf(cmd);
+      const key = s.commandType === 'slash' ? s.name.trim().split(/\s+/).join(' ') : `${s.commandType}:${s.menuName}`;
+      if (!this.commands.has(key)) this.commands.set(key, cmd);
+    }
+    this.events.clear();
+    for (const ev of this.deps.repo.commands(this.botId, 'event')) {
+      if (!ev.eventType) continue;
+      const list = this.events.get(ev.eventType) ?? [];
+      list.push(ev);
+      this.events.set(ev.eventType, list);
+    }
+    this.reloadTimed();
+    this.timed = [];
+    for (const t of this.deps.repo.commands(this.botId, 'timed')) {
+      const expr = String(t.graph.nodes.find((n) => n.type === 'trigger.timed')?.config.cron ?? '').trim();
+      try {
+        this.timed.push({ cmd: t, cron: parseCron(expr) });
+      } catch {
+        this.deps.repo.logCode(this.botId, 'ERR-1008', { event: t.name, reason: 'error.run.bad_cron' });
+      }
+    }
+  }
+
+  /** Sets the dashboard presence on Discord (on ready and after bot.presence). */
+  applyPresence(): void {
+    if (!this.client?.isReady()) return;
+    this.presence.apply(this.client, parsePresence(this.deps.repo.presence(this.botId)), (text) => this.renderStatus(text));
+  }
+
+  /**
+   * Placeholders of the status texts: bot counts, helpers ({random:1-10})
+   * and Data Storage variables that have one value for all servers.
+   */
+  private renderStatus(text: string): string {
+    const client = this.client;
+    if (!client?.isReady() || !text.includes('{')) return text;
+    const guilds = [...client.guilds.cache.values()];
+    const values: Record<string, string> = {
+      'bot.name': client.user.username,
+      'bot.id': client.user.id,
+      'bot.servers': String(guilds.length),
+      'bot.members': String(guilds.reduce((n, g) => n + (g.memberCount || 0), 0)),
+      'bot.channels': String(client.channels.cache.size),
+    };
+    const store = dataStore(this.deps.repo.db, this.botId);
+    return text.replace(/\{([A-Za-z0-9_][A-Za-z0-9_.:-]{0,99})\}/g, (whole, name: string) => {
+      if (name in values) return values[name]!;
+      if (name.startsWith('var.')) {
+        try {
+          return store.get(name.slice(4), { guildId: '', userId: '', channelId: '' }) ?? whole;
+        } catch {
+          return whole;
+        }
+      }
+      return helperValue(name) ?? whole;
+    });
+  }
+
+  /**
+   * Message Builder: sends a saved message (message_templates) to a channel
+   * or a Discord webhook URL. Placeholders get the channel and server of the
+   * target; buttons and menus are blocks, so a template has none.
+   */
+  async sendTemplate(templateId: number, target: string): Promise<void> {
+    const row = this.deps.repo.db.prepare('SELECT message FROM message_templates WHERE id = ? AND bot_id = ?').get(templateId, this.botId) as { message: string } | undefined;
+    if (!row) throw new GraphError('error.template.unknown');
+    if (!this.client?.isReady()) throw new GraphError('error.bot.not_running');
+    const node: GraphNode = { id: 'send', type: 'action.send_message', typeVersion: 1, config: { message: JSON.parse(row.message) as unknown } };
+    const graph: Graph = { schemaVersion: 1, nodes: [node], edges: [] };
+
+    if (target.startsWith('https://')) {
+      const run = new Run(graph, this.engine, this.data({ runKey: 'template' }) as never, this.baseVars(null, null, null, null));
+      const payload = buildMessage(run, node, () => '');
+      if (!hasBody(payload)) throw new GraphError('error.run.empty_message');
+      const res = await fetch(`${target}?wait=true`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload), signal: AbortSignal.timeout(10_000) });
+      if (!res.ok) throw new GraphError('error.template.webhook_failed', { status: res.status });
+      return;
+    }
+    const channel = await this.client.channels.fetch(target).catch(() => null);
+    if (!channel || !channel.isSendable()) throw new GraphError('error.run.channel_not_found', { value: target });
+    const guild = 'guild' in channel ? (channel.guild as Guild) : null;
+    const run = new Run(graph, this.engine, this.data({ runKey: 'template', guild, channel }) as never, this.baseVars(guild, channel, null, null));
+    const payload = buildMessage(run, node, () => '');
+    if (!hasBody(payload)) throw new GraphError('error.run.empty_message');
+    await channel.send(payload as never);
+  }
+
+  /**
+   * Graphs apply at once; the Discord command list is sent 2 s after the
+   * last change, so quick toggles cause one registration, not a rate limit.
+   */
+  async reload(): Promise<void> {
+    this.reloadGraphs();
+    clearTimeout(this.registerTimer);
+    this.registerTimer = setTimeout(() => {
+      this.registerTimer = undefined;
+      void this.registerCommands().catch((err) => log.warn('command registration failed', { botId: this.botId, err }));
+    }, REGISTER_DEBOUNCE_MS);
+    this.registerTimer.unref();
+  }
+
+  /** PUT the full command list; skipped when nothing changed. */
+  private async registerCommands(): Promise<void> {
+    const c = this.client;
+    if (!c?.application) return;
+    const body = buildCommands([...this.commands.values()], (dropped) =>
+      this.deps.repo.logCode(this.botId, 'WAR-2008', { module: 'commands', problem: `Discord allows 100 commands; ${dropped} were not registered` }),
+    );
+    const hash = createHash('sha256').update(JSON.stringify(body)).digest('hex');
+    if (hash === this.registeredHash) return;
+    try {
+      await c.rest.put(Routes.applicationCommands(c.application.id), { body });
+      this.registeredHash = hash;
+      log.info('commands registered', { botId: this.botId, count: body.length });
+      this.deps.repo.logUpdate(this.botId, 'log.update.commands_sync_done');
+    } catch (err) {
+      this.deps.repo.logCode(this.botId, 'ERR-1003', { reason: (err as Error).message });
+      log.error('command registration failed', { botId: this.botId, err });
+    }
+  }
+
+  // ---------- running ----------
+
+  private data(parts: Partial<DiscordData> & { runKey: string }): DiscordData {
+    const { runKey, ...rest } = parts;
+    return {
+      client: this.client!,
+      botId: this.botId,
+      guild: null,
+      channel: null,
+      member: null,
+      user: null,
+      messages: new Map(),
+      customId: (component: GraphNode) => `bh:${runKey}:${component.id}`,
+      ...rest,
+    };
+  }
+
+  private baseVars(guild: Guild | null, channel: SendableChannels | null, user: User | null, member: GuildMember | null): Vars {
+    return {
+      ...botVars(this.client?.user, this.client?.guilds.cache.size ?? 0),
+      DEFAULT_SERVER: this.timeSettings.defaultGuildId ?? '',
+      ...guildVars(guild),
+      ...channelVars(channel),
+      ...userVars(user, member),
+    };
+  }
+
+  private async onInteraction(i: Interaction): Promise<void> {
+    if (i.isChatInputCommand()) return this.onCommand(i, [i.commandName, i.options.getSubcommandGroup(false), i.options.getSubcommand(false)].filter(Boolean).join(' '));
+    if (i.isUserContextMenuCommand()) return this.onCommand(i, `user:${i.commandName}`);
+    if (i.isMessageContextMenuCommand()) return this.onCommand(i, `message:${i.commandName}`);
+    if (i.isButton() || i.isStringSelectMenu()) return this.onComponent(i);
+  }
+
+  private async onCommand(i: ChatInputCommandInteraction | UserContextMenuCommandInteraction | MessageContextMenuCommandInteraction, key: string): Promise<void> {
+    const cmd = this.commands.get(key);
+    if (!cmd) {
+      await i.reply({ content: 'This command is not available right now.', flags: 64 }).catch(() => undefined);
+      return;
+    }
+    const s = settingsOf(cmd);
+    const member = (i.member && 'roles' in i.member && typeof i.member.roles !== 'string' && 'cache' in i.member.roles ? i.member : null) as GuildMember | null;
+    if (denied(s.permissions, member, i.channelId, (id, m) => this.moderation.hasPseudoRole(id, m))) {
+      await i.reply({ content: 'You are not allowed to use this command here.', flags: 64 }).catch(() => undefined);
+      return;
+    }
+    if (s.cooldownType !== 'none') {
+      const scope = s.cooldownType === 'global' ? '' : s.cooldownType === 'server' ? `g:${i.guildId ?? ''}` : `g:${i.guildId ?? ''}:u:${i.user.id}`;
+      const until = this.deps.repo.cooldownUntil(cmd.id, scope);
+      if (until > Date.now()) {
+        await i.reply({ content: `Slow down! Try again <t:${Math.ceil(until / 1000)}:R>.`, flags: 64 }).catch(() => undefined);
+        return;
+      }
+      this.deps.repo.setCooldown(cmd.id, scope, new Date(Date.now() + s.cooldownSeconds * 1000));
+    }
+
+    const channel = i.channel?.isSendable() ? i.channel : null;
+    const vars: Vars = {
+      ...this.baseVars(i.guild, channel, i.user, member),
+      'command.name': cmd.name,
+      'command.id': String(cmd.id),
+      'command.subcommand': i.isChatInputCommand() ? (i.options.getSubcommand(false) ?? '') : '',
+    };
+    if (i.isChatInputCommand()) {
+      for (const opt of optionNodes(cmd)) {
+        const name = String(opt.config.name ?? '');
+        // An optional option left out is empty text, so {option_reason} never shows up literally.
+        const value = optionValue(i, opt.type, name) ?? '';
+        vars[`option_${name}`] = value;
+        const v = typeof opt.config.variable === 'string' ? opt.config.variable : '';
+        if (v && !(v in vars)) vars[v] = value;
+      }
+    } else if (i.isUserContextMenuCommand()) {
+      Object.assign(vars, userVars(i.targetUser, (i.targetMember as GuildMember | null) ?? null, 'target'));
+    } else if (i.isMessageContextMenuCommand()) {
+      Object.assign(vars, { 'message.id': i.targetMessage.id, 'message.content': i.targetMessage.content, 'message.url': i.targetMessage.url });
+    }
+
+    const runKey = randomUUID().slice(0, 12);
+    const run = new Run(cmd.graph, this.engine, this.data({ runKey, guild: i.guild, channel, member, user: i.user, interaction: i, hideReplies: s.hideReplies }) as never, vars);
+    const result = await run.start();
+    this.keepIfInteractive(runKey, run, cmd, i.user.id);
+    await this.finishInteraction(i, run, cmd, result);
+  }
+
+  private async onComponent(i: MessageComponentInteraction): Promise<void> {
+    const [prefix, runKey, nodeId] = i.customId.split(':');
+    if (prefix !== 'bh' || !runKey || !nodeId) return;
+    const p = this.pending.get(runKey);
+    if (!p || p.expires < Date.now()) {
+      await i.reply({ content: 'This button has expired. Run the command again.', flags: 64 }).catch(() => undefined);
+      return;
+    }
+    const node = p.run.node(nodeId);
+    if (!node) return;
+    if (node.config.only_invoker === true && p.invokerId && i.user.id !== p.invokerId) {
+      await i.reply({ content: 'Only the person who used the command can use this.', flags: 64 }).catch(() => undefined);
+      return;
+    }
+    const d = p.run.data as unknown as DiscordData;
+    d.interaction = i as RepliableInteraction;
+    // {clicker} is who pressed; {user} stays the member who ran the command.
+    for (const [k, v] of Object.entries(userVars(i.user, (i.member as GuildMember | null) ?? null, 'clicker'))) p.run.vars.set(k, v);
+    if (i.isStringSelectMenu()) {
+      // The menu's next block is the option question; it reads __selected.
+      p.run.vars.set('__selected', i.values.join('\u0000'));
+      p.run.setResult(node, '', i.values.join(', '));
+    }
+    p.expires = Date.now() + PENDING_TTL_MS;
+    const result = await p.run.continueFrom(node.id, 'next');
+    await this.finishInteraction(i as RepliableInteraction, p.run, p.command, result, true);
+  }
+
+  /** Runs whose messages have buttons or menus wait for clicks. */
+  private keepIfInteractive(runKey: string, run: Run, command: CommandRow, invokerId: string | null): void {
+    const hasComponents = run.graph.nodes.some((n) => n.type === 'component.button' || n.type === 'component.select_menu');
+    if (hasComponents) this.pending.set(runKey, { run, command, invokerId, expires: Date.now() + PENDING_TTL_MS });
+  }
+
+  private sweepPending(): void {
+    const t = Date.now();
+    for (const [k, p] of this.pending) if (p.expires < t) this.pending.delete(k);
+  }
+
+  /** Discord needs an answer within 3 s; answer when the graph did not. */
+  private async finishInteraction(i: RepliableInteraction, run: Run, cmd: CommandRow, result: RunResult, component = false): Promise<void> {
+    if (!result.ok) this.logRun(run, result.errorKey === 'error.run.too_many_steps' ? 'WAR-2005' : 'ERR-1005', { reason: result.errorKey ?? '' }, cmd);
+    if (i.replied || i.deferred) return;
+    if (component && i.isMessageComponent()) {
+      await i.deferUpdate().catch(() => undefined);
+      return;
+    }
+    await i.reply({ content: result.ok ? '✅' : 'Something went wrong while running this command.', flags: 64 }).catch(() => undefined);
+  }
+
+  /** Takes one event run from the budget; logs (throttled) when it is used up. */
+  private mayRun(kind: string): boolean {
+    if (this.runBudget.take()) return true;
+    warn(this.modules, 'WAR-2008', { module: 'events', problem: `too many ${kind} runs, some were skipped (limit 20 per 10 seconds)` });
+    return false;
+  }
+
+  private async runEvent(ctx: EventContext): Promise<void> {
+    const list = this.events.get(ctx.type);
+    if (!list?.length || !this.client) return;
+    for (const ev of list) {
+      if (!this.mayRun(`event ${ctx.type}`)) return;
+      const runKey = randomUUID().slice(0, 12);
+      const vars = { ...this.baseVars(ctx.guild, ctx.channel, ctx.user, ctx.member), ...ctx.vars, 'event.name': ev.name };
+      const run = new Run(ev.graph, this.engine, this.data({ runKey, guild: ctx.guild, channel: ctx.channel, member: ctx.member, user: ctx.user, message: ctx.message }) as never, vars);
+      const result = await run.start().catch((err: Error) => ({ ok: false, steps: [], errorKey: err.message }) as RunResult);
+      this.keepIfInteractive(runKey, run, ev, null);
+      if (!result.ok) this.deps.repo.logCode(this.botId, 'ERR-1008', { event: ev.name, reason: result.errorKey ?? '' });
+    }
+  }
+
+  /** Reloads timed events, time zone and default server (after timed.changed). */
+  reloadTimed(): void {
+    const known = new Set(this.schedules.map((e) => e.id));
+    const now = Date.now();
+    this.schedules = this.deps.repo.timedEvents(this.botId);
+    // An interval event created while the bot runs counts from now, not
+    // from the bot start (else it would fire at once).
+    if (this.startedMs) for (const e of this.schedules) if (!known.has(e.id) && e.lastRunAt === null) e.lastRunAt = now;
+    this.timeSettings = this.deps.repo.timeSettings(this.botId);
+  }
+
+  /** Called every second: starts the custom events of each due timed event. */
+  private checkSchedules(): void {
+    const now = Date.now();
+    const prev = this.lastCheckMs;
+    this.lastCheckMs = now;
+    if (!this.client?.isReady()) return;
+    for (const ev of this.schedules) {
+      if (!isDue(ev, prev, now, this.startedMs, this.timeSettings.timezone)) continue;
+      ev.lastRunAt = now;
+      this.deps.repo.setTimedLastRun(ev.id, new Date(now));
+      void this.runSchedule(ev).catch((err) => log.error('timed event failed', { botId: this.botId, timedEvent: ev.id, err }));
+    }
+  }
+
+  /**
+   * Runs the custom events of type "timed" that picked this timed event
+   * (trigger config timed_event). Server context: the default server.
+   */
+  async runSchedule(ev: TimedEvent): Promise<void> {
+    const list = (this.events.get('timed') ?? []).filter((c) => String(c.graph.nodes.find((n) => n.type === 'trigger.event')?.config.timed_event ?? '') === String(ev.id));
+    if (!list.length || !this.client) return;
+    const guildId = this.timeSettings.defaultGuildId;
+    const guild = guildId ? (this.client.guilds.cache.get(guildId) ?? null) : null;
+    for (const cmd of list) {
+      if (!this.mayRun('timed event')) return;
+      const runKey = randomUUID().slice(0, 12);
+      const vars = {
+        ...this.baseVars(guild, null, null, null),
+        'event.name': cmd.name,
+        'schedule.name': ev.name,
+        'schedule.next': nextRun(ev, Date.now(), this.timeSettings.timezone),
+      };
+      const run = new Run(cmd.graph, this.engine, this.data({ runKey, guild }) as never, vars);
+      const result = await run.start().catch((err: Error) => ({ ok: false, steps: [], errorKey: err.message }) as RunResult);
+      this.keepIfInteractive(runKey, run, cmd, null);
+      if (!result.ok) this.deps.repo.logCode(this.botId, 'ERR-1008', { event: cmd.name, reason: result.errorKey ?? '' });
+    }
+  }
+
+  /**
+   * A webhook was called: runs the custom events of type "webhook" whose
+   * trigger picked this webhook (config webhook = eventId) or none.
+   */
+  async runWebhook(call: WebhookCall): Promise<void> {
+    if (!this.client?.isReady()) return;
+    const list = (this.events.get('webhook') ?? []).filter((c) => {
+      const picked = String(c.graph.nodes.find((n) => n.type === 'trigger.event')?.config.webhook ?? '');
+      return picked === '' || picked === call.eventId;
+    });
+    if (!list.length) return;
+    const guildId = this.timeSettings.defaultGuildId;
+    const guild = guildId ? (this.client.guilds.cache.get(guildId) ?? null) : null;
+    let json = '';
+    try {
+      json = JSON.stringify(JSON.parse(call.body));
+    } catch {
+      json = '';
+    }
+    const vars: Record<string, string> = {
+      ...this.baseVars(guild, null, null, null),
+      'webhook.name': call.name,
+      'webhook.id': call.eventId,
+      'webhook.body': String(call.body ?? '').slice(0, 4000),
+      'webhook.json': json.slice(0, 4000),
+    };
+    for (const [k, v] of Object.entries(call.variables ?? {})) if (/^[A-Za-z0-9_]{1,32}$/.test(k)) vars[`webhook.${k}`] = String(v).slice(0, 1000);
+    for (const cmd of list) {
+      if (!this.mayRun('webhook')) return;
+      const runKey = randomUUID().slice(0, 12);
+      const run = new Run(cmd.graph, this.engine, this.data({ runKey, guild }) as never, { ...vars, 'event.name': cmd.name });
+      const result = await run.start().catch((err: Error) => ({ ok: false, steps: [], errorKey: err.message }) as RunResult);
+      this.keepIfInteractive(runKey, run, cmd, null);
+      if (!result.ok) this.deps.repo.logCode(this.botId, 'ERR-1008', { event: cmd.name, reason: result.errorKey ?? '' });
+    }
+  }
+
+  /** Runs every timed event whose schedule matches this minute (no server context). */
+  async runTimed(at: Date): Promise<void> {
+    if (!this.client?.isReady()) return;
+    for (const { cmd, cron } of this.timed) {
+      if (!cronMatches(cron, at)) continue;
+      const runKey = randomUUID().slice(0, 12);
+      const vars = { ...this.baseVars(null, null, null, null), 'event.name': cmd.name };
+      const run = new Run(cmd.graph, this.engine, this.data({ runKey }) as never, vars);
+      const result = await run.start().catch((err: Error) => ({ ok: false, steps: [], errorKey: err.message }) as RunResult);
+      this.keepIfInteractive(runKey, run, cmd, null);
+      if (!result.ok) this.deps.repo.logCode(this.botId, 'ERR-1008', { event: cmd.name, reason: result.errorKey ?? '' });
+    }
+  }
+
+  /**
+   * Due undo jobs (scheduled_jobs kind 'undo'): end of a temp ban or temp
+   * role, undo of a deafen. A failed job is closed with its error key.
+   */
+  async runJobs(): Promise<void> {
+    const c = this.client;
+    // A slow run (many Discord calls) must not overlap the next tick: jobs would run twice.
+    if (!c?.isReady() || this.jobsRunning) return;
+    this.jobsRunning = true;
+    try {
+      await this.runDueJobs(c);
+    } finally {
+      this.jobsRunning = false;
+    }
+  }
+
+  private async runDueJobs(c: Client<true>): Promise<void> {
+    for (const job of this.deps.repo.dueJobs(this.botId, ['undo'], new Date())) {
+      const p = job.payload;
+      const guild = c.guilds.cache.get(String(p.guild ?? ''));
+      const user = String(p.user ?? '');
+      if (!guild || !user) {
+        this.deps.repo.finishJob(job.id, 'error.run.server_not_found');
+        continue;
+      }
+      try {
+        switch (p.op) {
+          case 'unban': {
+            const handle = await this.moderation.begin({ guild, userId: user, moderatorId: c.user.id, action: 'unban', reason: 'Temporary ban expired', duration: '', auto: true });
+            try {
+              await guild.members.unban(user, 'Temporary ban expired');
+            } catch (err) {
+              handle.fail();
+              throw err;
+            }
+            await handle.finish();
+            break;
+          }
+          case 'remove_roles':
+          case 'add_roles': {
+            const roles = Array.isArray(p.roles) ? p.roles.map(String) : [];
+            const m = await guild.members.fetch(user);
+            await (p.op === 'remove_roles' ? m.roles.remove(roles, 'Temporary role expired') : m.roles.add(roles, 'Undo after'));
+            break;
+          }
+          case 'deafen':
+          case 'undeafen': {
+            const m = await guild.members.fetch(user);
+            if (m.voice.channelId) {
+              await m.voice.setDeaf(p.op === 'deafen');
+              await m.voice.setMute(p.op === 'deafen');
+            }
+            break;
+          }
+          default:
+            this.deps.repo.finishJob(job.id, 'error.run.unsupported_option');
+            continue;
+        }
+        this.deps.repo.finishJob(job.id);
+      } catch (err) {
+        // Unknown ban / member left: nothing left to undo.
+        const code = (err as { code?: number }).code;
+        this.deps.repo.finishJob(job.id, code === 10026 || code === 10007 ? null : 'error.run.discord');
+        if (code !== 10026 && code !== 10007) this.deps.repo.logCode(this.botId, 'ERR-1008', { event: `undo ${String(p.op)}`, reason: (err as Error).message });
+      }
+    }
+  }
+
+  private logRun(run: Run, code: 'ERR-1005' | 'ERR-1007' | 'WAR-2005', params: Record<string, unknown>, cmd?: CommandRow): void {
+    const command = cmd?.name ?? run.vars.get('command.name') ?? run.vars.get('event.name') ?? '';
+    this.deps.repo.logCode(this.botId, code, { command, steps: this.deps.limits.maxSteps, ...params });
+  }
+}
+
+function optionNodes(cmd: CommandRow): GraphNode[] {
+  const trig = cmd.graph.nodes.find((n) => n.type === 'trigger.slash');
+  if (!trig) return [];
+  const ids = new Set(cmd.graph.edges.filter((e) => e.to.node === trig.id && e.to.port === 'options').map((e) => e.from.node));
+  return cmd.graph.nodes.filter((n) => ids.has(n.id));
+}
+
+function optionValue(i: ChatInputCommandInteraction, type: string, name: string): string | null {
+  const o = i.options;
+  switch (type) {
+    case 'option.user':
+      return o.getUser(name)?.id ?? null;
+    case 'option.channel':
+      return o.getChannel(name)?.id ?? null;
+    case 'option.role':
+      return o.getRole(name)?.id ?? null;
+    case 'option.number': {
+      const n = o.getNumber(name);
+      return n === null ? null : String(n);
+    }
+    case 'option.attachment':
+      return o.getAttachment(name)?.url ?? null;
+    default:
+      return o.getString(name);
+  }
+}

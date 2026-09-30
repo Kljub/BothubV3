@@ -1,0 +1,47 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.suggestion_create",
+  "version": 1,
+  "category": "action",
+  "group": "suggestions",
+  "order": 1170,
+  "color": "purple",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_suggestion_create.label",
+  "descriptionKey": "builder.node.action_suggestion_create.description",
+  "module": "suggestions",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "content": {
+        "type": "string",
+        "maxLength": 2000,
+        "x-labelKey": "builder.cfg.content",
+        "x-multiline": true
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  },
+  "produces": "message"
+}

@@ -1,0 +1,16 @@
+{
+  "module": "counting",
+  "fields": [
+    { "key": "channels", "type": "channels", "channelTypes": ["text"], "max": 10 },
+    { "key": "mode", "type": "select", "options": ["normal", "webhook"], "default": "normal" },
+    { "key": "react", "type": "bool", "default": true, "showIf": { "mode": ["normal"] } },
+    { "key": "emoji", "type": "emojis", "max": 1, "showIf": { "mode": ["normal"] } },
+    { "key": "allowTwice", "type": "bool", "default": false },
+    { "key": "cooldown", "type": "bool", "default": false },
+    { "key": "resetOnFail", "type": "bool", "default": false },
+    { "key": "errors", "type": "bool", "default": true },
+    { "key": "wrongMessage", "type": "text", "max": 300, "showIf": { "errors": ["true"] }, "default": "{user.mention}, wrong number! The next number is **{count.next}**." },
+    { "key": "twiceMessage", "type": "text", "max": 300, "showIf": { "errors": ["true"] }, "default": "{user.mention}, you cannot count twice in a row." },
+    { "key": "cooldownMessage", "type": "text", "max": 300, "showIf": { "errors": ["true"] }, "default": "{user.mention}, slow down! Wait a few seconds." }
+  ]
+}

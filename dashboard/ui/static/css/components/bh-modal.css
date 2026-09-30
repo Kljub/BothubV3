@@ -1,0 +1,83 @@
+/* bh-modal: Dialogs: add bot, settings, admin settings. */
+
+.modal {
+  width: min(430px, calc(100vw - 32px));
+  padding: 24px 28px 20px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 14px;
+}
+.modal::backdrop { background: rgb(0 0 0 / 0.6); }
+.modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.modal-header h2 { font-size: 17px; }
+.modal > .muted { margin-bottom: 16px; }
+.modal .form label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+.modal-actions { display: flex; gap: 10px; }
+.settings-dialog { width: min(680px, calc(100vw - 32px)); height: min(600px, calc(100vh - 32px)); padding: 0; color: var(--text); background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: 16px; }
+.settings-dialog::backdrop { background: rgb(0 0 0 / 0.6); }
+.settings-shell { display: grid; grid-template-columns: 208px 1fr; height: 100%; }
+.settings-nav { display: flex; flex-direction: column; gap: 6px; padding: 10px 8px; background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto; }
+.settings-close { position: absolute; top: 12px; right: 12px; z-index: 1; width: 32px; height: 32px; font-size: 20px; background: transparent; border-color: transparent; color: var(--text-2); }
+.settings-close:hover { background: var(--surface); border-color: var(--border-strong); }
+.settings-search { border-radius: 999px; padding: 7px 12px; margin-bottom: 4px; }
+.settings-nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; font: inherit; color: var(--text); background: none; border: 0; border-radius: 8px; text-align: left; cursor: pointer; }
+.settings-nav-item[aria-current="page"] { background: var(--surface-2); }
+.settings-content { padding: 16px 56px 16px 16px; overflow-y: auto; }
+.settings-content h2 { font-size: 17px; font-weight: 500; padding-bottom: 14px; border-bottom: 1px solid var(--border-strong); }
+.settings-content form { margin: 0; }
+.settings-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 0; border-bottom: 1px solid var(--border-strong); }
+.settings-row[hidden] { display: none; }
+.select-plain { padding: 4px 6px; background: none; border: 0; color: var(--text); cursor: pointer; }
+@media (max-width: 640px) {
+  .settings-shell { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+  .settings-nav { border-right: 0; border-bottom: 1px solid var(--border); }
+}
+.admin-dialog { width: min(1280px, calc(100vw - 32px)); height: min(760px, calc(100vh - 32px)); }
+.settings-nav-item[hidden] { display: none; }
+.settings-content > h2 + * { margin-top: 16px; }
+.admin-memory .chart-header h3 { font-size: 14px; }
+.admin-placeholder { padding-top: 16px; }
+.range-dialog { width: fit-content; max-width: calc(100vw - 32px); }
+
+/* A side panel (e.g. the date picker) may sit right of a settings popup:
+   the popup lets it overflow and moves left to make room. */
+.settings-dialog { overflow: visible; }
+.settings-shell { border-radius: inherit; overflow: hidden; }
+.settings-dialog.side-open { translate: calc(-1 * (var(--side-width, 334px) + 12px) / 2) 0; }
+
+/* Users & Roles */
+.role-details > summary { list-style: none; cursor: pointer; }
+.role-details > summary::-webkit-details-marker { display: none; }
+.role-details[open] > .form { padding: 12px 0 4px; }
+#role-list li { display: block; }
+#role-list li[hidden], #user-list tr[hidden] { display: none; }
+.modal.modal-wide { width: min(760px, calc(100vw - 32px)); max-width: none; }
+
+/* User settings: cards with rows (label + description left, value/action
+   right); rows with a form open in place (<details class="settings-expand">). */
+.settings-dialog { width: min(760px, calc(100vw - 32px)); height: min(640px, calc(100vh - 32px)); }
+.settings-main { min-width: 0; padding: 16px 56px 24px 20px; overflow-y: auto; }
+.settings-main .settings-content { padding: 0; overflow: visible; }
+/* Messages stay in view while the tab scrolls. */
+.settings-main #account-flash { position: sticky; top: -16px; z-index: 2; }
+.settings-main #account-flash:not(:empty) { margin: -16px -4px 12px; padding-top: 16px; background: var(--surface-2); }
+.settings-no-match { margin: 24px 0; text-align: center; }
+.settings-group { margin: 22px 0 8px; font-size: 13px; font-weight: 600; color: var(--text-2); }
+.settings-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.settings-card + .settings-card { margin-top: 12px; }
+.settings-card > .settings-row { padding: 12px 14px; border-bottom: 1px solid var(--border); }
+.settings-card > .settings-row:last-child { border-bottom: 0; }
+.settings-row-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.settings-row-text strong { font-size: 13px; font-weight: 600; }
+.settings-row-text .hint { margin: 0; }
+.settings-value { color: var(--text-2); font-size: 13px; }
+.settings-action { display: inline-flex; align-items: center; gap: 6px; flex: none; font-size: 13px; color: var(--text-2); white-space: nowrap; }
+.settings-expand { display: block; }
+.settings-expand > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; list-style: none; }
+.settings-expand > summary::-webkit-details-marker { display: none; }
+.settings-expand > summary:hover .settings-action { color: var(--text); }
+.settings-expand[open] > summary .settings-action { color: var(--text); }
+.settings-expand-body { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--border); }
+/* While searching, several tabs show one below the other. */
+.settings-dialog.is-searching .settings-content:not([hidden]) ~ .settings-content:not([hidden]) { margin-top: 24px; }

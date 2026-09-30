@@ -16,3 +16,6 @@ dist/
 *.swp
 .DS_Store
 Thumbs.db
+
+# Generated knowledge graph (graphify)
+graphify-out/

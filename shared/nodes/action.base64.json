@@ -1,0 +1,61 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.base64",
+  "version": 1,
+  "category": "action",
+  "group": "other",
+  "order": 850,
+  "color": "teal",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_base64.label",
+  "descriptionKey": "builder.node.action_base64.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": "",
+      "labelKey": "builder.result.base64.0"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "direction": {
+        "type": "string",
+        "enum": [
+          "encode",
+          "decode"
+        ],
+        "default": "encode",
+        "x-labelKey": "builder.cfg.direction",
+        "x-enumKey": "builder.enum.direction"
+      },
+      "input": {
+        "type": "string",
+        "maxLength": 8000,
+        "x-labelKey": "builder.cfg.input",
+        "x-multiline": true
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  }
+}

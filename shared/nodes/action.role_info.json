@@ -1,0 +1,60 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.role_info",
+  "version": 1,
+  "category": "action",
+  "group": "roles",
+  "order": 1130,
+  "color": "orange",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_role_info.label",
+  "descriptionKey": "builder.node.action_role_info.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": ".name",
+      "labelKey": "builder.result.role_info.0"
+    },
+    {
+      "suffix": ".color",
+      "labelKey": "builder.result.role_info.1"
+    },
+    {
+      "suffix": ".members",
+      "labelKey": "builder.result.role_info.2"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "role": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.role",
+        "x-hintKey": "builder.cfg.ref_hint",
+        "x-ref": "role"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  }
+}

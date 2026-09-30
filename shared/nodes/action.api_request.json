@@ -1,0 +1,97 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.api_request",
+  "version": 1,
+  "category": "action",
+  "group": "api",
+  "order": 120,
+  "color": "orange",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_api_request.label",
+  "descriptionKey": "builder.node.action_api_request.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": ".status",
+      "labelKey": "builder.result.api_request.0"
+    },
+    {
+      "suffix": ".body",
+      "labelKey": "builder.result.api_request.1"
+    },
+    {
+      "suffix": ".json",
+      "labelKey": "builder.result.api_request.2"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "method": {
+        "type": "string",
+        "enum": [
+          "GET",
+          "POST",
+          "PUT",
+          "PATCH",
+          "DELETE"
+        ],
+        "default": "GET",
+        "x-labelKey": "builder.cfg.method",
+        "x-enumKey": "builder.enum.method"
+      },
+      "url": {
+        "type": "string",
+        "maxLength": 2000,
+        "x-labelKey": "builder.cfg.url",
+        "x-mono": true,
+        "x-placeholder": "https://api.example.com/items"
+      },
+      "headers": {
+        "type": "string",
+        "maxLength": 2000,
+        "x-labelKey": "builder.cfg.headers",
+        "x-multiline": true,
+        "x-mono": true,
+        "x-placeholder": "Authorization: Bearer …",
+        "x-hintKey": "builder.cfg.headers_hint"
+      },
+      "body": {
+        "type": "string",
+        "maxLength": 8000,
+        "x-labelKey": "builder.cfg.body",
+        "x-multiline": true,
+        "x-mono": true,
+        "x-showIf": {
+          "method": [
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        }
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  }
+}

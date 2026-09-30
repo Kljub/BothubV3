@@ -1,0 +1,17 @@
+{
+  "module": "polls-filter",
+  "fields": [
+    { "key": "delete", "type": "bool", "default": true },
+    { "key": "timeout", "type": "bool", "default": false },
+    { "key": "timeoutSeconds", "type": "number", "min": 5, "max": 2419200, "default": 300, "showIf": { "timeout": ["true"] } },
+    { "key": "notify", "type": "bool", "default": true },
+    { "key": "notifyMessage", "type": "text", "max": 500, "showIf": { "notify": ["true"] }, "default": "{user.mention}, polls are not allowed here." },
+    { "key": "notifyDelete", "type": "number", "min": 0, "max": 3600, "default": 10, "showIf": { "notify": ["true"] } },
+    { "key": "dm", "type": "bool", "default": false },
+    { "key": "dmMessage", "type": "text", "max": 1000, "showIf": { "dm": ["true"] }, "default": "Your poll in {server} was removed: polls are not allowed in that channel." },
+    { "key": "channelMode", "type": "select", "options": ["all", "except", "only"], "default": "all" },
+    { "key": "channels", "type": "channels", "channelTypes": ["text", "announcement", "forum"], "max": 50, "showIf": { "channelMode": ["except", "only"] } },
+    { "key": "roleMode", "type": "select", "options": ["all", "except", "only"], "default": "all" },
+    { "key": "roles", "type": "roles", "max": 50, "showIf": { "roleMode": ["except", "only"] } }
+  ]
+}

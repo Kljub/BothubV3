@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bothub.local/schemas/plugin-manifest.json",
+  "title": "BotHub plugin manifest (bothub-plugin.json)",
+  "description": "Describes a plugin: who it is, which SDK it needs, which permissions it asks for and which builder blocks it adds. Checked by the API on install and by the SDK manager in the bot on start.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "name", "version", "sdk", "main", "permissions"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,63}$" },
+    "name": { "type": "string", "minLength": 1, "maxLength": 60 },
+    "version": { "type": "string", "pattern": "^\\d{1,4}\\.\\d{1,4}\\.\\d{1,6}$" },
+    "description": { "type": "string", "maxLength": 300 },
+    "author": { "type": "string", "maxLength": 60 },
+    "sdk": { "const": 1, "description": "SDK version (shared/sdk-permissions.json sdkVersion)" },
+    "main": { "type": "string", "pattern": "^[A-Za-z0-9_./-]{1,100}\\.m?js$", "description": "Entry file inside the plugin folder; must not leave it" },
+    "permissions": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 20,
+      "items": { "enum": ["storage", "discord.send_messages", "discord.guild_info", "log"] }
+    },
+    "blocks": {
+      "type": "array",
+      "maxItems": 50,
+      "description": "Builder blocks; each is a node definition (shared/node-definition.schema.json) whose type is plugin.<id>.<name>",
+      "items": {
+        "type": "object",
+        "required": ["name", "definition"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,31}$" },
+          "definition": { "type": "object" }
+        }
+      }
+    }
+  }
+}

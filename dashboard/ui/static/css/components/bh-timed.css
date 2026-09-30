@@ -1,0 +1,38 @@
+/* Timed events module page (module_item.html, "timed_events"). */
+
+.timed-form fieldset {
+  border: 1px solid var(--border);
+  border-radius: var(--radius, 8px);
+  padding: 10px 12px 12px;
+  margin: 0;
+}
+.timed-form legend { padding: 0 6px; }
+
+/* Show only the fields of the chosen kind. */
+.timed-form:has(select[name="kind"] option[value="interval"]:checked) .timed-schedule,
+.timed-form:has(select[name="kind"] option[value="schedule"]:checked) .timed-interval { display: none; }
+
+.timed-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; }
+
+.timed-days { display: flex; flex-wrap: wrap; gap: 6px; }
+.timed-form .chip-check {
+  position: relative;
+  display: inline-flex; flex-direction: row; align-items: center;
+  padding: 5px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  font-size: 12px; font-weight: 600; text-transform: none; letter-spacing: 0;
+  color: var(--text-2);
+  cursor: pointer;
+  user-select: none;
+}
+/* The checkbox stays in the form and keyboard focus, the pill shows its state. */
+.chip-check input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; }
+.chip-check:has(input:checked) { border-color: var(--accent); background: var(--accent); color: var(--accent-text); }
+.chip-check:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.timed-item { border-top: 1px solid var(--border); padding: 10px 0; }
+.timed-item:first-child { border-top: 0; }
+.timed-item > summary { display: flex; align-items: center; gap: 10px; cursor: pointer; list-style: none; }
+.timed-item > summary::-webkit-details-marker { display: none; }
+.timed-item[open] > summary { margin-bottom: 12px; }

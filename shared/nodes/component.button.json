@@ -1,0 +1,90 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "component.button",
+  "version": 1,
+  "category": "component",
+  "group": "component",
+  "palette": false,
+  "color": "blue",
+  "icon": "▢",
+  "labelKey": "builder.node.component_button.label",
+  "descriptionKey": "builder.node.component_button.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.clicked"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "label"
+    ],
+    "properties": {
+      "label": {
+        "type": "string",
+        "maxLength": 80,
+        "x-labelKey": "builder.cfg.button_label"
+      },
+      "style": {
+        "type": "string",
+        "enum": [
+          "primary",
+          "secondary",
+          "success",
+          "danger",
+          "link"
+        ],
+        "default": "primary",
+        "x-labelKey": "builder.cfg.button_style",
+        "x-enumKey": "builder.enum.button_style"
+      },
+      "emoji": {
+        "type": "string",
+        "maxLength": 64,
+        "x-labelKey": "builder.cfg.button_emoji",
+        "x-placeholder": "👍"
+      },
+      "url": {
+        "type": "string",
+        "maxLength": 512,
+        "x-labelKey": "builder.cfg.button_url",
+        "x-mono": true,
+        "x-placeholder": "https://",
+        "x-showIf": {
+          "style": [
+            "link"
+          ]
+        }
+      },
+      "only_invoker": {
+        "type": "boolean",
+        "default": false,
+        "x-labelKey": "builder.cfg.only_invoker",
+        "x-hintKey": "builder.cfg.only_invoker_hint",
+        "x-showIf": {
+          "style": [
+            "primary",
+            "secondary",
+            "success",
+            "danger"
+          ]
+        }
+      },
+      "disabled": {
+        "type": "boolean",
+        "default": false,
+        "x-labelKey": "builder.cfg.button_disabled"
+      }
+    }
+  }
+}

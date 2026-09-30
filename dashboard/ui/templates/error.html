@@ -1,0 +1,7 @@
+{{define "title"}}{{t "error.page.title"}}{{end}}
+
+{{define "content"}}
+<h1>{{t "error.page.title"}}</h1>
+{{template "flash_error" .Data.Message}}
+<p><a href="/bots">{{t "error.page.back"}}</a></p>
+{{end}}

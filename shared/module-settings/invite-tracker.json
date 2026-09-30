@@ -1,0 +1,69 @@
+{
+  "module": "invite-tracker",
+  "fields": [
+    {
+      "key": "channel",
+      "type": "channel",
+      "channelTypes": [
+        "text",
+        "announcement"
+      ],
+      "hint": true
+    },
+    {
+      "key": "joinMessage",
+      "type": "text",
+      "max": 1000,
+      "default": "{user.mention} joined, invited by **{inviter.name}** ({invites} invites)."
+    },
+    {
+      "key": "unknownMessage",
+      "type": "text",
+      "max": 1000,
+      "default": "{user.mention} joined. I could not find out who invited them."
+    },
+    {
+      "key": "registerLeaves",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "leaveMessage",
+      "type": "text",
+      "max": 1000,
+      "showIf": {
+        "registerLeaves": [
+          "true"
+        ]
+      },
+      "default": "{user.name} left. They were invited by **{inviter.name}** ({invites} invites)."
+    },
+    {
+      "key": "minAccountAge",
+      "type": "number",
+      "min": 0,
+      "max": 365,
+      "default": 3
+    },
+    {
+      "key": "rewards",
+      "type": "list",
+      "max": 50,
+      "titleField": "count",
+      "item": [
+        {
+          "key": "count",
+          "type": "number",
+          "min": 1,
+          "max": 100000,
+          "default": 5
+        },
+        {
+          "key": "role",
+          "type": "role"
+        }
+      ],
+      "hint": true
+    }
+  ]
+}

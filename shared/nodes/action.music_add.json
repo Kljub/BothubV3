@@ -1,0 +1,74 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.music_add",
+  "version": 1,
+  "category": "action",
+  "group": "music",
+  "order": 170,
+  "color": "teal",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_music_add.label",
+  "descriptionKey": "builder.node.action_music_add.description",
+  "module": "music",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": ".title",
+      "labelKey": "builder.result.music_add.0"
+    },
+    {
+      "suffix": ".position",
+      "labelKey": "builder.result.music_add.1"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "query": {
+        "type": "string",
+        "maxLength": 500,
+        "x-labelKey": "builder.cfg.query",
+        "x-placeholder": "never gonna give you up"
+      },
+      "queue_position": {
+        "type": "string",
+        "enum": [
+          "end",
+          "next"
+        ],
+        "default": "end",
+        "x-labelKey": "builder.cfg.queue_position",
+        "x-enumKey": "builder.enum.queue_position"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      },
+      "guild": {
+        "type": "string",
+        "maxLength": 40,
+        "x-advanced": true,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.guild",
+        "x-hintKey": "builder.cfg.guild_hint"
+      }
+    }
+  }
+}

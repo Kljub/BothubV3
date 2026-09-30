@@ -1,0 +1,62 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.timeout",
+  "version": 1,
+  "category": "action",
+  "group": "server",
+  "order": 680,
+  "color": "orange",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_timeout.label",
+  "descriptionKey": "builder.node.action_timeout.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "user": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.user",
+        "x-hintKey": "builder.cfg.ref_hint",
+        "x-ref": "member",
+        "default": "{user.id}"
+      },
+      "duration": {
+        "type": "string",
+        "maxLength": 20,
+        "x-labelKey": "builder.cfg.duration",
+        "x-placeholder": "10m",
+        "x-hintKey": "builder.cfg.duration_hint"
+      },
+      "reason": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.reason",
+        "x-hintKey": "builder.cfg.reason_hint"
+      },
+      "guild": {
+        "type": "string",
+        "maxLength": 40,
+        "x-advanced": true,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.guild",
+        "x-hintKey": "builder.cfg.guild_hint"
+      }
+    }
+  }
+}

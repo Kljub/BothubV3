@@ -1,0 +1,32 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "condition.chance",
+  "version": 1,
+  "category": "condition",
+  "group": "general",
+  "order": 20,
+  "icon": "⇒",
+  "conditionKind": "chance",
+  "labelKey": "builder.node.condition_chance.label",
+  "descriptionKey": "builder.node.condition_chance.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "branches",
+      "type": "flow",
+      "labelKey": "builder.port.branches"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}

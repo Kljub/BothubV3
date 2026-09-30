@@ -1,0 +1,98 @@
+{
+  "$comment": "Redis Streams between API and bot (plan.md, section 1). Entries have one field 'data' holding JSON. The API writes events through the outbox relay; the bot reads with consumer group 'bot' and acknowledges (XACK) after handling.",
+  "streams": {
+    "bothub:events": {
+      "writer": "api (outbox relay)",
+      "reader": "bot, group 'bot'",
+      "types": {
+        "bot.created": {
+          "botId": "integer"
+        },
+        "bot.updated": {
+          "botId": "integer",
+          "$comment": "name, token, autostart or profile changed"
+        },
+        "bot.deleted": {
+          "botId": "integer"
+        },
+        "command.saved": {
+          "botId": "integer",
+          "commandId": "integer"
+        },
+        "command.deleted": {
+          "botId": "integer",
+          "commandId": "integer"
+        },
+        "commands.changed": {
+          "botId": "integer",
+          "$comment": "several commands, groups or enabled states at once"
+        },
+        "module.changed": {
+          "botId": "integer",
+          "module": "string"
+        },
+        "bot.presence": {
+          "botId": "integer",
+          "$comment": "status, activity, custom status or rotation changed; the bot reads bot_profiles.presence and applies it"
+        },
+        "timed.changed": {
+          "botId": "integer",
+          "$comment": "timed events, bot time zone or default server changed; the bot reloads its schedules"
+        },
+        "webhook.called": {
+          "botId": "integer",
+          "eventId": "string",
+          "name": "string",
+          "body": "string",
+          "variables": "object",
+          "$comment": "a webhook was called (or tested); the bot runs the custom events of type webhook with config webhook = eventId or empty"
+        },
+        "sdk.policies.changed": {
+          "$comment": "admin switched an SDK permission on or off (sdk_policies); the bot restarts the plugins of every running bot"
+        },
+        "plugins.changed": {
+          "$comment": "a plugin was installed, removed, switched on or off globally or for a bot (plugin_installs, bot_plugin_disabled); the bot restarts the plugins of every running bot"
+        }
+      }
+    },
+    "bothub:jobs": {
+      "writer": "api",
+      "reader": "bot, group 'bot'",
+      "types": {
+        "bot.start": {
+          "jobId": "string",
+          "botId": "integer"
+        },
+        "bot.stop": {
+          "jobId": "string",
+          "botId": "integer"
+        },
+        "bot.restart": {
+          "jobId": "string",
+          "botId": "integer"
+        },
+        "core.restart": {
+          "jobId": "string",
+          "requestedAt": "integer",
+          "$comment": "Resource overview: the NodeCore stops all bots and exits; Docker/supervisord starts it again. Ignored when older than 60 s (redelivered after the restart)."
+        },
+        "message.send": {
+          "jobId": "string",
+          "botId": "integer",
+          "templateId": "integer",
+          "target": "string",
+          "$comment": "Message Builder: the bot sends saved message templateId (message_templates) to target, a channel ID or a Discord webhook URL (https://discord.com/api/webhooks/...)"
+        }
+      }
+    },
+    "bothub:results": {
+      "writer": "bot",
+      "reader": "api",
+      "entry": {
+        "jobId": "string",
+        "ok": "boolean",
+        "errorKey": "string, only when ok is false"
+      }
+    }
+  }
+}

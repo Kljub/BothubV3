@@ -1,0 +1,78 @@
+{
+  "module": "temp-voice",
+  "fields": [
+    {
+      "key": "hub",
+      "type": "channel",
+      "channelTypes": [
+        "voice"
+      ],
+      "hint": true
+    },
+    {
+      "key": "category",
+      "type": "channel",
+      "channelTypes": [
+        "category"
+      ],
+      "hint": true
+    },
+    {
+      "key": "name",
+      "type": "text",
+      "max": 90,
+      "default": "🔊 {user}'s channel"
+    },
+    {
+      "key": "userLimit",
+      "type": "number",
+      "min": 0,
+      "max": 99,
+      "default": 0
+    },
+    {
+      "key": "ownerManage",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "lock",
+      "type": "select",
+      "options": [
+        "server",
+        "unlocked",
+        "locked"
+      ],
+      "default": "server",
+      "hint": true
+    },
+    {
+      "key": "deleteAfter",
+      "type": "number",
+      "min": 0,
+      "max": 3600,
+      "default": 5
+    },
+    {
+      "key": "roleMode",
+      "type": "select",
+      "options": [
+        "all",
+        "except",
+        "only"
+      ],
+      "default": "all"
+    },
+    {
+      "key": "roles",
+      "type": "roles",
+      "max": 50,
+      "showIf": {
+        "roleMode": [
+          "except",
+          "only"
+        ]
+      }
+    }
+  ]
+}

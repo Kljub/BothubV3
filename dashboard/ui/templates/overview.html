@@ -1,0 +1,26 @@
+{{define "title"}}{{t "overview.title"}}{{end}}
+
+{{define "content"}}
+{{template "overview_tiles" .Data.Tiles}}
+{{template "bot_grid" .Data.Grid}}
+{{end}}
+
+{{define "overview_tiles_fragment"}}{{template "overview_tiles" .Data}}{{end}}
+
+{{/* Stat tiles. The average is always over 24 hours. */}}
+{{define "overview_tiles"}}
+<section id="overview-tiles" class="tiles" hx-get="/overview/tiles" hx-trigger="every 15s" hx-swap="outerHTML">
+  <article class="tile">
+    <p class="tile-value tile-value-green">{{.Bots.Online}}</p>
+    <h2 class="tile-label">{{t "overview.bots_online"}}</h2>
+  </article>
+  <article class="tile">
+    <p class="tile-value">{{bytes .Memory.CurrentBytes}}</p>
+    <h2 class="tile-label">{{t "overview.memory_current"}}</h2>
+  </article>
+  <article class="tile">
+    <p class="tile-value tile-value-blue">{{bytes .Memory.AverageBytes}}</p>
+    <h2 class="tile-label">{{t "overview.memory_average.24h"}}</h2>
+  </article>
+</section>
+{{end}}

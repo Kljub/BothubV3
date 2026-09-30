@@ -1,0 +1,16 @@
+{{define "title"}}{{t "login.totp.title"}}{{end}}
+
+{{define "content"}}
+<h2>{{t "login.totp.title"}}</h2>
+<p class="muted">{{t "login.totp.intro"}}</p>
+{{with .Data.Error}}{{template "flash_error" .}}{{end}}
+<form method="post" action="/login/totp" class="form">
+  <input type="hidden" name="ticket" value="{{.Data.Ticket}}">
+  <label>{{t "login.totp.code"}}
+    <input name="code" inputmode="numeric" autocomplete="one-time-code" required autofocus maxlength="20" placeholder="123456">
+  </label>
+  <span class="hint">{{t "login.totp.recovery_hint"}}</span>
+  <button type="submit" class="btn btn-primary">{{t "login.submit"}}</button>
+</form>
+<p class="hint"><a href="/login">{{t "login.totp.back"}}</a></p>
+{{end}}

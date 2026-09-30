@@ -1,0 +1,43 @@
+{
+  "module": "youtube-notifs",
+  "fields": [
+    {
+      "key": "feeds",
+      "type": "list",
+      "max": 25,
+      "titleField": "youtubeChannel",
+      "item": [
+        {
+          "key": "youtubeChannel",
+          "type": "text",
+          "max": 24,
+          "pattern": "^UC[A-Za-z0-9_-]{22}$"
+        },
+        {
+          "key": "channel",
+          "type": "channel",
+          "channelTypes": [
+            "text",
+            "announcement"
+          ]
+        },
+        {
+          "key": "mentionRoles",
+          "type": "roles",
+          "max": 5
+        },
+        {
+          "key": "message",
+          "type": "text",
+          "max": 1000,
+          "multiline": true,
+          "default": "📺 **{video.author}** uploaded a new video: **{video.title}**\n{video.url}"
+        }
+      ],
+      "unique": [
+        "youtubeChannel",
+        "channel"
+      ]
+    }
+  ]
+}

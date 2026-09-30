@@ -1,0 +1,157 @@
+{{define "head"}}
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="htmx-config" content='{"includeIndicatorStyles":false,"allowEval":false,"allowScriptTags":false}'>
+<meta name="csrf-token" content="{{.CSRF}}">
+<title>{{template "title" .}} · BotHub</title>
+<link rel="stylesheet" href="/static/css/bothub.css?v={{.AssetVersion}}">
+<script src="/static/vendor/htmx.min.js?v={{.AssetVersion}}" defer></script>
+<script src="/static/app.js?v={{.AssetVersion}}" defer></script>
+<script type="application/json" id="i18n-client">{{clientI18n}}</script>
+{{end}}
+
+{{define "layout"}}<!doctype html>
+<html lang="{{.Locale}}">
+<head>{{template "head" .}}</head>
+<body hx-boost="true">
+<div class="app" data-theme="{{.Theme}}" data-locale="{{.Locale}}">
+<div class="shell">
+  <aside class="sidebar">
+    <a class="brand" href="/home" title="{{t "nav.home"}}">
+      <span class="brand-logo">BH</span>
+      <span class="brand-name">BotHub</span>
+    </a>
+
+    <div class="sidebar-block">
+      {{if .Bots}}
+      <details class="bot-switch">
+        <summary>
+          {{with .SelectedBot}}
+          {{template "avatar" .}}
+          <span class="bot-switch-text">
+            <span class="bot-switch-name">{{.Name}}</span>
+            <span class="bot-switch-status">{{t (printf "bot.status.%s" .Status)}}</span>
+          </span>
+          <span class="status-dot status-dot-{{.Status}}" aria-hidden="true"{{with uptime .}} title="{{t "bot.uptime" "time" .}}"{{end}}></span>
+          {{else}}
+          <span class="avatar avatar-fallback" aria-hidden="true">?</span>
+          <span class="bot-switch-text"><span class="bot-switch-name muted">{{t "sidebar.select_bot"}}</span></span>
+          {{template "icon_chevron"}}
+          {{end}}
+        </summary>
+        <ul class="bot-switch-list">
+          {{range $.Bots}}
+          <li><a href="/select-bot/{{.ID}}">{{template "avatar" .}}<span>{{.Name}}</span><span class="status-dot status-dot-{{.Status}}" aria-hidden="true"{{with uptime .}} title="{{t "bot.uptime" "time" .}}"{{end}}></span></a></li>
+          {{end}}
+        </ul>
+      </details>
+      {{else}}
+      <button type="button" class="bot-switch bot-switch-empty" data-open-dialog="add-bot-dialog">{{t "sidebar.no_bot"}}</button>
+      {{end}}
+    </div>
+
+    <div class="sidebar-block">
+      <input type="search" class="sidebar-search" placeholder="{{t "sidebar.search"}}" aria-label="{{t "sidebar.search"}}" data-nav-filter>
+    </div>
+
+    <nav class="sidebar-nav">
+      {{with .SelectedBot}}
+      <details class="nav-group" open>
+        <summary class="nav-group-title">{{.Name}} {{template "icon_chevron"}}</summary>
+        {{range $.BotSections}}
+        {{if and (eq . "invite") $.SelectedBot.ApplicationID}}
+        <a class="nav-item" href="{{inviteURL $.SelectedBot.ApplicationID}}" target="_blank" rel="noopener noreferrer" hx-boost="false">
+        {{else}}
+        <a class="nav-item" href="/bots{{if ne . "overview"}}/{{.}}{{end}}" {{if eq (printf "bot_%s" .) $.Nav}}aria-current="page"{{end}}>
+        {{end}}
+          {{template "bot_icon" .}}<span>{{t (printf "bot.nav.%s" .)}}</span>
+        </a>
+        {{end}}
+      </details>
+      {{end}}
+    </nav>
+
+
+    <details class="user-menu">
+      <summary class="sidebar-user">
+        <span class="user-avatar" aria-hidden="true">{{initial .Me.Username}}</span>
+        <span class="user-name">{{.Me.Username}}<span class="user-sub">{{t "user.role"}}</span></span>
+      </summary>
+      <div class="menu" role="menu">
+        <div class="menu-user">
+          <span class="user-avatar" aria-hidden="true">{{initial .Me.Username}}</span>
+          <span class="user-name">{{.Me.Username}}<span class="user-sub">{{t "user.role"}}</span></span>
+        </div>
+        <hr>
+        <button type="button" class="menu-item" role="menuitem" data-open-dialog="settings-dialog">{{template "icon_gear"}}<span>{{t "admin.nav.settings"}}</span></button>
+        <button type="button" class="menu-item" role="menuitem" data-open-dialog="admin-dialog"
+          hx-get="/admin/overview" hx-target="#admin-panel">{{template "icon_chip"}}<span>{{t "admin.menu"}}</span></button>
+        <hr>
+        <form method="post" action="/logout" hx-boost="false">
+          <input type="hidden" name="csrf_token" value="{{.CSRF}}">
+          <button type="submit" class="menu-item" role="menuitem">{{template "icon_logout"}}<span>{{t "nav.logout"}}</span></button>
+        </form>
+      </div>
+    </details>
+  </aside>
+
+  <div class="page">
+    <header class="topbar">
+      <h1 class="topbar-title">{{template "title" .}}</h1>
+      <div class="topbar-actions">
+        <button type="button" class="topbar-btn">{{template "icon_compass"}}<span>{{t "topbar.start_tour"}}</span></button>
+        <details class="lang-switch">
+          <summary class="topbar-btn">{{template "icon_globe"}}<span>{{upper .Locale}}</span></summary>
+          <div class="lang-menu">
+            {{range .Locales}}
+            <button type="button" hx-post="/settings" hx-vals='{"locale": "{{.}}"}' {{if eq . $.Locale}}aria-current="true"{{end}}>{{t (printf "locale.%s" .)}}</button>
+            {{end}}
+          </div>
+        </details>
+        <button type="button" class="topbar-btn" title="{{t "topbar.notifications"}}" aria-label="{{t "topbar.notifications"}}">{{template "icon_bell"}}</button>
+      </div>
+    </header>
+    <main class="main">
+      <div id="flash" role="status" aria-live="polite"></div>
+      {{template "content" .}}
+    </main>
+  </div>
+</div>
+{{template "add_bot_dialog" .}}
+{{template "settings_dialog" .}}
+{{template "admin_dialog" .}}
+</div>
+<div id="savebar" class="savebar" role="region" aria-label="{{t "savebar.title"}}" hidden>
+  <span class="savebar-icon" aria-hidden="true">{{template "icon_save"}}</span>
+  <div class="savebar-text"><strong>{{t "savebar.title"}}</strong><span>{{t "savebar.hint"}}</span></div>
+  <button type="button" class="btn" data-savebar-discard>↺ {{t "savebar.discard"}}</button>
+  <button type="button" class="btn btn-primary" data-savebar-save>{{t "savebar.save"}}</button>
+</div>
+</body>
+</html>
+{{end}}
+
+{{define "auth_layout"}}<!doctype html>
+<html lang="{{.Locale}}">
+<head>{{template "head" .}}</head>
+<body class="auth" data-theme="{{.Theme}}">
+  <main class="auth-card">
+    <div class="brand">
+      <span class="brand-logo">BH</span>
+      <span class="brand-name">BotHub</span>
+    </div>
+    {{template "content" .}}
+  </main>
+</body>
+</html>
+{{end}}
+
+{{define "flash_error"}}<div class="alert alert-error">{{.}}</div>{{end}}
+
+{{define "flash_success"}}<div class="alert alert-success">{{.}}</div>{{end}}
+
+{{/* Fragments for htmx responses; they receive a Page with the message in .Data. */}}
+{{define "flash_error_fragment"}}{{template "flash_error" .Data}}{{end}}
+{{define "flash_success_fragment"}}{{template "flash_success" .Data}}{{end}}
+
+{{define "status_badge"}}<span class="badge badge-{{.}}"><span class="badge-dot" aria-hidden="true"></span>{{t (printf "bot.status.%s" .)}}</span>{{end}}

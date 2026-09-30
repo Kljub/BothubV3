@@ -27,9 +27,12 @@ tags:
   - name: bots
   - name: guilds
   - name: commands
+  - name: events
   - name: builder
+  - name: data-storage
   - name: plugins
   - name: jobs
+  - name: stats
 
 paths:
   /api/health:
@@ -302,14 +305,76 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
 
-  /api/v1/bots/{botId}/guilds/{guildId}/modules:
+  /api/v1/bots/{botId}/guilds/{guildId}/roles:
     get:
-      operationId: listGuildModules
+      operationId: listGuildRoles
       tags: [guilds]
-      summary: Module status in one guild
+      summary: Roles of a guild, highest first, without @everyone (from the bot's cache)
       parameters:
         - $ref: "#/components/parameters/BotId"
         - $ref: "#/components/parameters/GuildId"
+      responses:
+        "200":
+          description: Roles
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/GuildRole" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /api/v1/bots/{botId}/guilds/{guildId}/channels:
+    get:
+      operationId: listGuildChannels
+      tags: [guilds]
+      summary: Channels of a guild in display order (from the bot's cache)
+      parameters:
+        - $ref: "#/components/parameters/BotId"
+        - $ref: "#/components/parameters/GuildId"
+      responses:
+        "200":
+          description: Channels
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/GuildChannel" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /api/v1/bots/{botId}/guilds/{guildId}:
+    delete:
+      tags: [guilds]
+      operationId: leaveGuild
+      summary: Make the bot leave a guild
+      parameters:
+        - $ref: "#/components/parameters/BotId"
+        - $ref: "#/components/parameters/GuildId"
+        - $ref: "#/components/parameters/CsrfToken"
+      responses:
+        "202": { $ref: "#/components/responses/JobAccepted" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/bots/{botId}/modules:
+    get:
+      operationId: listBotModules
+      tags: [guilds]
+      summary: Module status of a bot (applies to all its guilds)
+      parameters:
+        - $ref: "#/components/parameters/BotId"
       responses:
         "200":
           description: Modules
@@ -325,14 +390,13 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
 
-  /api/v1/bots/{botId}/guilds/{guildId}/modules/{moduleKey}:
+  /api/v1/bots/{botId}/modules/{moduleKey}:
     put:
-      operationId: setGuildModule
+      operationId: setBotModule
       tags: [guilds]
-      summary: Enable or disable a module in one guild
+      summary: Enable or disable a module for a bot (all its guilds)
       parameters:
         - $ref: "#/components/parameters/BotId"
-        - $ref: "#/components/parameters/GuildId"
         - $ref: "#/components/parameters/ModuleKey"
         - $ref: "#/components/parameters/CsrfToken"
       requestBody:
@@ -353,6 +417,46 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/bots/{botId}/modules/{moduleKey}/config:
+    get:
+      operationId: getModuleConfig
+      tags: [guilds]
+      summary: Settings of a module (only modules with a settings page, so far moderation)
+      parameters:
+        - $ref: "#/components/parameters/BotId"
+        - $ref: "#/components/parameters/ModuleKey"
+      responses:
+        "200":
+          description: Settings with defaults filled in
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ModerationConfig" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      operationId: setModuleConfig
+      tags: [guilds]
+      summary: Replace the settings of a module; the bot reloads them (module.changed)
+      parameters:
+        - $ref: "#/components/parameters/BotId"
+        - $ref: "#/components/parameters/ModuleKey"
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ModerationConfig" }
+      responses:
+        "200":
+          description: Stored settings
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ModerationConfig" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   /api/v1/bots/{botId}/commands:
     get:
@@ -398,6 +502,153 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
+  /api/v1/bots/{botId}/commands/deleted:
+    parameters:
+      - $ref: "#/components/parameters/BotId"
+    get:
+      operationId: listDeletedCommands
+      tags: [commands]
+      summary: Custom commands deleted in the last 30 days, newest first
+      responses:
+        "200":
+          description: Deleted commands
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/DeletedCommand" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/bots/{botId}/commands/deleted/{commandId}/restore:
+    parameters:
+      - $ref: "#/components/parameters/BotId"
+      - $ref: "#/components/parameters/CommandId"
+    post:
+      operationId: restoreDeletedCommand
+      tags: [commands]
+      summary: Bring a deleted command back
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      responses:
+        "200":
+          description: Command
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Command" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /api/v1/bots/{botId}/command-groups:
+    parameters:
+      - $ref: "#/components/parameters/BotId"
+    get:
+      operationId: listCommandGroups
+      tags: [commands]
+      summary: Groups (folders) of the custom commands, by position
+      responses:
+        "200":
+          description: Groups
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/CommandGroup" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      operationId: createCommandGroup
+      tags: [commands]
+      summary: Create a group (max. 50 per bot)
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CommandGroupWrite" }
+      responses:
+        "201":
+          description: Group
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CommandGroup" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /api/v1/bots/{botId}/command-groups/{groupId}:
+    parameters:
+      - $ref: "#/components/parameters/BotId"
+      - name: groupId
+        in: path
+        required: true
+        schema: { type: integer, minimum: 1 }
+    put:
+      operationId: updateCommandGroup
+      tags: [commands]
+      summary: Rename or move a group
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CommandGroupWrite" }
+      responses:
+        "200":
+          description: Group
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CommandGroup" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    delete:
+      operationId: deleteCommandGroup
+      tags: [commands]
+      summary: Delete a group; its commands become ungrouped
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      responses:
+        "204": { description: Deleted }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/bots/{botId}/commands/{commandId}/versions/{versionId}/restore:
+    parameters:
+      - $ref: "#/components/parameters/BotId"
+      - $ref: "#/components/parameters/CommandId"
+      - name: versionId
+        in: path
+        required: true
+        schema: { type: integer, minimum: 1 }
+    post:
+      operationId: restoreCommandVersion
+      tags: [commands]
+      summary: Make a saved version the current graph (stored as a new version)
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      responses:
+        "200":
+          description: Command
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Command" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api/v1/bots/{botId}/commands/{commandId}:
     parameters:
       - $ref: "#/components/parameters/BotId"
@@ -438,7 +689,7 @@ paths:
     delete:
       operationId: deleteCommand
       tags: [commands]
-      summary: Delete a custom command. Built-in commands can only be disabled or reset.
+      summary: Delete a custom command (kept 30 days under recently deleted). Built-in commands can only be disabled or reset.
       parameters:
         - $ref: "#/components/parameters/CsrfToken"
       responses:
@@ -447,6 +698,77 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
+    patch:
+      operationId: patchCommand
+      tags: [commands]
+      summary: Enable or disable a command, or move it into a group
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled: { type: boolean }
+                groupId:
+                  description: Group ID, or null for no group
+                  oneOf: [{ type: integer }, { type: "null" }]
+      responses:
+        "200":
+          description: Command
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CommandSummary" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /api/v1/bots/{botId}/commands/{commandId}/versions:
+    parameters:
+      - $ref: "#/components/parameters/BotId"
+      - $ref: "#/components/parameters/CommandId"
+    get:
+      operationId: listCommandVersions
+      tags: [commands]
+      summary: Saved versions of a command (the last 3 saves), newest first, without graphs
+      responses:
+        "200":
+          description: Versions
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/CommandVersion" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/bots/{botId}/commands/{commandId}/versions/{versionId}:
+    parameters:
+      - $ref: "#/components/parameters/BotId"
+      - $ref: "#/components/parameters/CommandId"
+      - name: versionId
+        in: path
+        required: true
+        schema: { type: integer, minimum: 1 }
+    get:
+      operationId: getCommandVersion
+      tags: [commands]
+      summary: One saved version with its graph
+      responses:
+        "200":
+          description: Version
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CommandVersion" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /api/v1/bots/{botId}/commands/{commandId}/reset:
     post:
@@ -467,6 +789,349 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
+
+  /api/v1/bots/{botId}/events:
+    parameters:
+      - $ref: "#/components/parameters/BotId"
+    get:
+      operationId: listEvents
+      tags: [events]
+      summary: Custom events of a bot, without graph body
+      responses:
+        "200":
+          description: Events
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/EventSummary" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: createEvent
+      tags: [events]
+      summary: Create a custom event with a starter graph (event trigger + error handler)
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 100 }
+                enabled: { type: boolean }
+                eventType: { $ref: "#/components/schemas/EventType" }
+      responses:
+        "201":
+          description: Event
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Event" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /api/v1/bots/{botId}/events/deleted:
+    parameters:
+      - $ref: "#/components/parameters/BotId"
+    get:
+      operationId: listDeletedEvents
+      tags: [events]
+      summary: Custom events deleted in the last 30 days, newest first
+      responses:
+        "200":
+          description: Deleted events
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/DeletedCommand" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/bots/{botId}/events/deleted/{eventId}/restore:
+    parameters:
+      - $ref: "#/components/parameters/BotId"
+      - $ref: "#/components/parameters/EventId"
+    post:
+      operationId: restoreDeletedEvent
+      tags: [events]
+      summary: Bring a deleted event back
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      responses:
+        "200":
+          description: Event
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Event" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/bots/{botId}/events/{eventId}:
+    parameters:
+      - $ref: "#/components/parameters/BotId"
+      - $ref: "#/components/parameters/EventId"
+    get:
+      operationId: getEvent
+      tags: [events]
+      summary: Get one custom event with its graph
+      responses:
+        "200":
+          description: Event
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Event" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      operationId: saveEvent
+      tags: [events]
+      summary: Save a custom event. The event type is read from the trigger.event block of the graph.
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, enabled, graph]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 100 }
+                enabled: { type: boolean }
+                graph:
+                  type: object
+                  description: See shared/graph.schema.json
+      responses:
+        "200":
+          description: Event
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Event" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    patch:
+      operationId: patchEvent
+      tags: [events]
+      summary: Enable or disable an event, or move it into a group (groups are shared with commands)
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled: { type: boolean }
+                groupId:
+                  description: Group ID, or null for no group
+                  oneOf: [{ type: integer }, { type: "null" }]
+      responses:
+        "200":
+          description: Event
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EventSummary" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    delete:
+      operationId: deleteEvent
+      tags: [events]
+      summary: Delete a custom event (kept 30 days under recently deleted)
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      responses:
+        "204": { description: Deleted }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/bots/{botId}/events/{eventId}/versions:
+    parameters:
+      - $ref: "#/components/parameters/BotId"
+      - $ref: "#/components/parameters/EventId"
+    get:
+      operationId: listEventVersions
+      tags: [events]
+      summary: Saved versions of an event (the last 3 saves), newest first, without graphs
+      responses:
+        "200":
+          description: Versions
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/CommandVersion" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/bots/{botId}/events/{eventId}/versions/{versionId}/restore:
+    parameters:
+      - $ref: "#/components/parameters/BotId"
+      - $ref: "#/components/parameters/EventId"
+      - name: versionId
+        in: path
+        required: true
+        schema: { type: integer, minimum: 1 }
+    post:
+      operationId: restoreEventVersion
+      tags: [events]
+      summary: Make a saved version the current graph (stored as a new version)
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      responses:
+        "200":
+          description: Event
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Event" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/bots/{botId}/message-templates:
+    parameters:
+      - $ref: "#/components/parameters/BotId"
+    get:
+      operationId: listMessageTemplates
+      tags: [commands]
+      summary: Saved messages of the message builder
+      responses:
+        "200":
+          description: Templates
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/MessageTemplate" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      operationId: createMessageTemplate
+      tags: [commands]
+      summary: Save a message as a template (max. 100 per bot)
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, message]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 60 }
+                message: { type: object, description: "The `message` config of action.send_message" }
+      responses:
+        "201":
+          description: Template
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MessageTemplate" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /api/v1/bots/{botId}/message-templates/{templateId}:
+    parameters:
+      - $ref: "#/components/parameters/BotId"
+      - name: templateId
+        in: path
+        required: true
+        schema: { type: integer, minimum: 1 }
+    delete:
+      operationId: deleteMessageTemplate
+      tags: [commands]
+      summary: Delete a template
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      responses:
+        "204": { description: Deleted }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      operationId: updateMessageTemplate
+      tags: [commands]
+      summary: Rename a template and/or replace its message
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, minLength: 1, maxLength: 60 }
+                message: { type: object, description: "The `message` config of action.send_message" }
+      responses:
+        "200":
+          description: Template
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MessageTemplate" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /api/v1/bots/{botId}/message-templates/{templateId}/send:
+    parameters:
+      - $ref: "#/components/parameters/BotId"
+      - name: templateId
+        in: path
+        required: true
+        schema: { type: integer, minimum: 1 }
+    post:
+      operationId: sendMessageTemplate
+      tags: [commands]
+      summary: The bot sends the template to a channel or a Discord webhook (job message.send). At most 5 sends per bot in 10 seconds (429 error.template.rate_limited).
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Exactly one of channelId and webhookUrl
+              properties:
+                channelId: { $ref: "#/components/schemas/Snowflake" }
+                webhookUrl: { type: string, pattern: "^https://(?:(?:canary|ptb)\\.)?discord(?:app)?\\.com/api/webhooks/" }
+      responses:
+        "202": { $ref: "#/components/responses/JobAccepted" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+        "503": { description: Redis unavailable }
 
   /api/v1/bots/{botId}/builder/nodes:
     get:
@@ -489,6 +1154,190 @@ paths:
                     items: { type: object }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/bots/{botId}/data/variables:
+    parameters:
+      - $ref: "#/components/parameters/BotId"
+    get:
+      operationId: listDataVariables
+      tags: [data-storage]
+      summary: Variables of the Data Storage module, with value count and usage
+      responses:
+        "200":
+          description: Variables
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/DataVariable" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      operationId: createDataVariable
+      tags: [data-storage]
+      summary: Create a variable (max. 200 per bot)
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DataVariableWrite" }
+      responses:
+        "201":
+          description: Variable
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DataVariable" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /api/v1/bots/{botId}/data/variables/{variableId}:
+    parameters:
+      - $ref: "#/components/parameters/BotId"
+      - $ref: "#/components/parameters/VariableId"
+    put:
+      operationId: updateDataVariable
+      tags: [data-storage]
+      summary: Change a variable. The key stays; a new type, owner or perServer deletes the stored values.
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DataVariableWrite" }
+      responses:
+        "200":
+          description: Variable
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DataVariable" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    delete:
+      operationId: deleteDataVariable
+      tags: [data-storage]
+      summary: Delete a variable and all its values
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      responses:
+        "204": { description: Deleted }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/bots/{botId}/data/variables/{variableId}/values:
+    parameters:
+      - $ref: "#/components/parameters/BotId"
+      - $ref: "#/components/parameters/VariableId"
+    get:
+      operationId: listDataValues
+      tags: [data-storage]
+      summary: Stored values of a variable, 25 per page
+      parameters:
+        - { name: q, in: query, schema: { type: string, maxLength: 40 }, description: "Server, member or channel ID (prefix)" }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: sort, in: query, schema: { type: string, enum: [updated, value], default: updated } }
+      responses:
+        "200":
+          description: Values
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, total, page, pageSize]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/DataValue" }
+                  total: { type: integer }
+                  page: { type: integer }
+                  pageSize: { type: integer }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      operationId: setDataValue
+      tags: [data-storage]
+      summary: Add or change one value; the bot reads it on its next run. At most 100,000 values per variable (422 error.data.limit_values).
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DataValueWrite" }
+      responses:
+        "200":
+          description: Value
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DataValue" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    delete:
+      operationId: deleteDataValues
+      tags: [data-storage]
+      summary: Delete one value (serverId and ownerId) or reset all values (all=true)
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+        - { name: serverId, in: query, schema: { type: string, maxLength: 20 } }
+        - { name: ownerId, in: query, schema: { type: string, maxLength: 20 } }
+        - { name: all, in: query, schema: { type: boolean } }
+      responses:
+        "204": { description: Deleted }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/bots/{botId}/data/variables/{variableId}/values.csv:
+    parameters:
+      - $ref: "#/components/parameters/BotId"
+      - $ref: "#/components/parameters/VariableId"
+    get:
+      operationId: exportDataValues
+      tags: [data-storage]
+      summary: The newest 5,000 values as CSV (server, owner, value, updated)
+      responses:
+        "200":
+          description: CSV file
+          content:
+            text/csv:
+              schema: { type: string }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/bots/{botId}/data/lookup:
+    parameters:
+      - $ref: "#/components/parameters/BotId"
+    get:
+      operationId: lookupDataValues
+      tags: [data-storage]
+      summary: Every stored value of one member or channel, across all variables
+      parameters:
+        - { name: id, in: query, required: true, schema: { $ref: "#/components/schemas/Snowflake" } }
+      responses:
+        "200":
+          description: Values
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/DataLookupValue" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
 
   /api/v1/plugins/market:
     get:
@@ -600,6 +1449,100 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /api/v1/bots/{botId}/stats:
+    get:
+      tags: [stats]
+      operationId: getBotStats
+      summary: Activity of one bot over all its guilds
+      description: |
+        The bot counts events per guild in 1-hour buckets. `series` has one point
+        per bucket (24h: hourly, 7d: every 2 hours, 30d: every 6 hours).
+        `previous` holds the totals of the period before, for the change indicator.
+      parameters:
+        - $ref: "#/components/parameters/BotId"
+        - name: range
+          in: query
+          schema:
+            type: string
+            enum: [24h, 7d, 30d]
+            default: 7d
+      responses:
+        "200":
+          description: Bot stats
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BotStats" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/bots/{botId}/logs:
+    parameters:
+      - $ref: "#/components/parameters/BotId"
+    get:
+      tags: [bots]
+      operationId: listBotLogs
+      summary: Log entries of one bot, oldest first
+      description: |
+        Errors and warnings carry a stable code from shared/log-codes.json
+        (ERR-1xxx, WAR-2xxx). Changes carry the changed field with old and new
+        value. Messages are i18n keys with params, never finished text.
+      parameters:
+        - name: level
+          in: query
+          schema: { type: string, enum: [error, warning, change, update] }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 500, default: 200 }
+      responses:
+        "200":
+          description: Log entries
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/LogEntry" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [bots]
+      operationId: clearBotLogs
+      summary: Delete all log entries of one bot
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      responses:
+        "204": { description: Cleared }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/stats/overview:
+    get:
+      tags: [stats]
+      operationId: getOverviewStats
+      summary: Bot counts and memory usage of all BotHub processes
+      description: |
+        Every BotHub process (dashboard, api, bot, redis) writes its RSS to Redis
+        every 15 seconds. The API aggregates the samples into 1-minute buckets
+        and keeps them for 7 days. `series` has at most 120 points.
+      parameters:
+        - name: range
+          in: query
+          schema:
+            type: string
+            enum: [1h, 24h, 7d]
+            default: 24h
+      responses:
+        "200":
+          description: Overview stats
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OverviewStats" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
   /api/v1/jobs/{jobId}:
     get:
       operationId: getJob
@@ -655,6 +1598,16 @@ components:
       schema: { $ref: "#/components/schemas/ModuleKey" }
     CommandId:
       name: commandId
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+    EventId:
+      name: eventId
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+    VariableId:
+      name: variableId
       in: path
       required: true
       schema: { type: integer, minimum: 1 }
@@ -757,10 +1710,13 @@ components:
 
     Me:
       type: object
-      required: [username, locale, csrfToken]
+      required: [username, locale, theme, csrfToken]
       properties:
         username: { type: string }
         locale: { $ref: "#/components/schemas/Locale" }
+        theme:
+          type: string
+          enum: [system, light, dark]
         csrfToken: { type: string }
 
     Settings:
@@ -791,10 +1747,17 @@ components:
         autostart: { type: boolean }
         guildCount: { type: integer }
         createdAt: { type: string, format: date-time }
+        startedAt:
+          type: [string, "null"]
+          format: date-time
+          description: When the bot went online; null unless status is `running` (uptime)
 
     BotCreate:
       type: object
-      required: [name, token]
+      required: [token]
+      description: |
+        The API validates the token against Discord (`GET /users/@me`) and takes
+        name, application ID and avatar from there. `name` overrides the Discord name.
       properties:
         name: { type: string, minLength: 1, maxLength: 64 }
         token: { type: string, writeOnly: true }
@@ -817,11 +1780,158 @@ components:
         iconUrl: { type: [string, "null"], format: uri }
         memberCount: { type: integer }
 
+    CommandGroup:
+      type: object
+      required: [id, name, position, commands]
+      properties:
+        id: { type: integer }
+        name: { type: string, maxLength: 40 }
+        description: { type: string, maxLength: 200 }
+        position: { type: integer, minimum: 0, maximum: 999, description: Lower numbers show first }
+        commands: { type: integer, description: Number of commands in the group }
+
+    CommandGroupWrite:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 40 }
+        description: { type: string, maxLength: 200 }
+        position: { type: integer, minimum: 0, maximum: 999 }
+
+    DeletedCommand:
+      type: object
+      required: [id, name, deletedAt]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        description: { type: string }
+        deletedAt: { type: string, format: date-time }
+
+    CommandVersion:
+      type: object
+      required: [id, savedAt, nodes]
+      properties:
+        id: { type: integer }
+        savedAt: { type: string, format: date-time }
+        nodes: { type: integer, description: Number of blocks }
+        graph: { type: object, description: "Only in GET .../versions/{versionId}" }
+
+    MessageTemplate:
+      type: object
+      required: [id, name, message, createdAt]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        message: { type: object }
+        createdAt: { type: string, format: date-time }
+
+    DataVariableWrite:
+      type: object
+      required: [name, type, owner, perServer]
+      properties:
+        key: { type: string, pattern: "^[a-z][a-z0-9_]{0,31}$", description: "Only on create; derived from the name when missing" }
+        name: { type: string, minLength: 1, maxLength: 32 }
+        description: { type: string, maxLength: 200 }
+        type: { type: string, enum: [text, number, list, object, object_list] }
+        owner: { type: string, enum: [shared, member, channel] }
+        perServer: { type: boolean }
+        defaultValue: { type: string, maxLength: 4000, description: "Text, a number, or JSON for list and object types" }
+        group: { type: string, maxLength: 40 }
+
+    DataVariable:
+      allOf:
+        - $ref: "#/components/schemas/DataVariableWrite"
+        - type: object
+          required: [id, key, values, usedIn, updatedAt]
+          properties:
+            id: { type: integer }
+            key: { type: string }
+            values: { type: integer, description: Number of stored values }
+            usedIn: { type: integer, description: "Commands and events that reference {var.<key>}" }
+            updatedAt: { type: string, format: date-time }
+
+    DataValueWrite:
+      type: object
+      required: [value]
+      properties:
+        serverId: { type: string, maxLength: 20, description: "Empty when the variable is not per server" }
+        ownerId: { type: string, maxLength: 20, description: "Empty for owner shared" }
+        value: { type: string, maxLength: 4000 }
+
+    DataValue:
+      allOf:
+        - $ref: "#/components/schemas/DataValueWrite"
+        - type: object
+          required: [serverId, ownerId, updatedAt]
+          properties:
+            updatedAt: { type: string, format: date-time }
+
+    DataLookupValue:
+      allOf:
+        - $ref: "#/components/schemas/DataValue"
+        - type: object
+          required: [variableId, key]
+          properties:
+            variableId: { type: integer }
+            key: { type: string }
+
+    GuildRole:
+      type: object
+      required: [id, name, position]
+      properties:
+        id: { $ref: "#/components/schemas/Snowflake" }
+        name: { type: string }
+        color: { type: [string, "null"], pattern: "^#[0-9a-fA-F]{6}$" }
+        position: { type: integer }
+        managed: { type: boolean, description: "Role of an integration (bot role)" }
+
+    GuildChannel:
+      type: object
+      required: [id, name, type]
+      properties:
+        id: { $ref: "#/components/schemas/Snowflake" }
+        name: { type: string }
+        type: { type: string, enum: [category, text, voice, announcement, forum, stage] }
+        parentId: { oneOf: [{ $ref: "#/components/schemas/Snowflake" }, { type: "null" }] }
+        position: { type: integer }
+
     ModuleKey:
       type: string
       pattern: "^[a-z][a-z0-9-]{1,63}$"
       examples: [economy, leveling, ticket]
 
+    GuildRef:
+      type: object
+      required: [id, guild]
+      properties:
+        id: { $ref: "#/components/schemas/Snowflake" }
+        guild: { $ref: "#/components/schemas/Snowflake" }
+    ModerationConfig:
+      type: object
+      description: Settings of the moderation module (bot_modules.config). Missing fields keep their defaults.
+      properties:
+        defaultPermissions: { type: boolean, description: "Manage Messages counts as moderator, Administrator as admin" }
+        moderatorRoles: { type: array, maxItems: 100, items: { $ref: "#/components/schemas/GuildRef" } }
+        adminRoles: { type: array, maxItems: 100, items: { $ref: "#/components/schemas/GuildRef" } }
+        logEnabled: { type: boolean }
+        logChannels: { type: array, maxItems: 100, description: "One log channel per server", items: { $ref: "#/components/schemas/GuildRef" } }
+        punishmentColor: { type: string, pattern: "^#[0-9a-f]{6}$" }
+        logColor: { type: string, pattern: "^#[0-9a-f]{6}$" }
+        dmEnabled: { type: boolean }
+        dmMode: { type: string, enum: [text, embed] }
+        dmMessage: { type: string, maxLength: 2000, description: "Variables {action} {moderator} {time} {case} {reason} {server}" }
+        banDeleteMessages: { type: string, enum: [none, 1h, 6h, 12h, 24h, 3d, 7d] }
+        autoPunishments:
+          type: array
+          maxItems: 20
+          items:
+            type: object
+            required: [trigger, count, action, duration]
+            properties:
+              trigger: { type: string, enum: [warnings, timeouts] }
+              count: { type: integer, minimum: 1, maximum: 100 }
+              action: { type: string, enum: [timeout, kick, ban] }
+              duration: { type: string, pattern: "^([1-9][0-9]{0,4}[smhd])?$", description: "Required for timeout; ban with duration = temp ban" }
     ModuleState:
       type: object
       required: [key, enabled]
@@ -836,7 +1946,7 @@ components:
         id: { type: integer }
         name:
           type: string
-          pattern: "^[a-z0-9_-]{1,32}$"
+          pattern: "^[a-z0-9_-]{1,32}( [a-z0-9_-]{1,32}){0,2}$"
         module:
           description: Owning module for built-in commands
           oneOf: [{ $ref: "#/components/schemas/ModuleKey" }, { type: "null" }]
@@ -845,11 +1955,44 @@ components:
           type: boolean
           description: Built-in command whose graph differs from the default
         enabled: { type: boolean }
+        groupId:
+          description: Command group (folder), or null
+          oneOf: [{ type: integer }, { type: "null" }]
         updatedAt: { type: string, format: date-time }
 
     Command:
       allOf:
         - $ref: "#/components/schemas/CommandSummary"
+        - type: object
+          required: [graph]
+          properties:
+            graph:
+              type: object
+              description: See shared/graph.schema.json
+
+    EventType:
+      type: string
+      description: Key from shared/events.json (e.g. member_join)
+      pattern: "^[a-z_]{2,40}$"
+
+    EventSummary:
+      type: object
+      required: [id, name, enabled]
+      properties:
+        id: { type: integer }
+        name: { type: string, minLength: 1, maxLength: 100 }
+        eventType:
+          description: Picked in the editor; missing until then
+          $ref: "#/components/schemas/EventType"
+        enabled: { type: boolean }
+        groupId:
+          description: Command group (folder), or null
+          oneOf: [{ type: integer }, { type: "null" }]
+        updatedAt: { type: string, format: date-time }
+
+    Event:
+      allOf:
+        - $ref: "#/components/schemas/EventSummary"
         - type: object
           required: [graph]
           properties:
@@ -863,7 +2006,8 @@ components:
       properties:
         name:
           type: string
-          pattern: "^[a-z0-9_-]{1,32}$"
+          pattern: "^[a-z0-9_-]{1,32}( [a-z0-9_-]{1,32}){0,2}$"
+        description: { type: string, maxLength: 100 }
         enabled: { type: boolean }
         graph:
           type: object
@@ -906,15 +2050,143 @@ components:
 
     InstalledPlugin:
       type: object
-      required: [id, version, enabled, grantedPermissions]
+      required: [id, name, version, enabled, grantedPermissions]
       properties:
         id: { type: string }
+        name: { type: string }
+        description:
+          type: string
+          description: Plugin-provided text in the plugin's default language
+        icon: { type: string, description: "One emoji" }
+        beta: { type: boolean }
         version: { $ref: "#/components/schemas/PluginVersion" }
         enabled: { type: boolean }
         grantedPermissions:
           type: array
           items: { $ref: "#/components/schemas/PluginPermission" }
         updateAvailable: { type: [string, "null"] }
+
+    BotMetric:
+      type: string
+      enum: [newMembers, activeUsers, messages, voiceMinutes, moderation, commands, pluginUsages]
+
+    BotStats:
+      type: object
+      required: [range, totals, previous, series, top]
+      properties:
+        range: { type: string, enum: [24h, 7d, 30d] }
+        totals:
+          description: Sum per metric over the range (activeUsers = distinct users)
+          type: object
+          additionalProperties: { type: integer }
+          propertyNames: { $ref: "#/components/schemas/BotMetric" }
+        previous:
+          description: Same as totals for the period before the range
+          type: object
+          additionalProperties: { type: integer }
+          propertyNames: { $ref: "#/components/schemas/BotMetric" }
+        series:
+          description: Per metric, oldest first
+          type: object
+          propertyNames: { $ref: "#/components/schemas/BotMetric" }
+          additionalProperties:
+            type: array
+            items:
+              type: object
+              required: [t, v]
+              properties:
+                t: { type: string, format: date-time }
+                v: { type: integer }
+        top:
+          type: object
+          required: [commands, plugins, modActions]
+          properties:
+            commands: { $ref: "#/components/schemas/TopList" }
+            plugins: { $ref: "#/components/schemas/TopList" }
+            modActions:
+              description: "`name` is an action key: ban, kick, timeout, warn, purge"
+              allOf: [{ $ref: "#/components/schemas/TopList" }]
+
+    LogEntry:
+      type: object
+      required: [id, time, level, key]
+      properties:
+        id: { type: integer }
+        time: { type: string, format: date-time }
+        level: { type: string, enum: [error, warning, change, update] }
+        code:
+          type: [string, "null"]
+          description: ERR-1xxx for errors, WAR-2xxx for warnings, null otherwise
+          pattern: "^(ERR-1|WAR-2)[0-9]{3}$"
+        key:
+          type: string
+          description: "i18n key: log.code.<code> for errors and warnings, log.change.* or log.update.* otherwise"
+        params:
+          type: object
+          additionalProperties: true
+        change:
+          description: Only for level change
+          type: [object, "null"]
+          required: [field, old, new]
+          properties:
+            field: { type: string }
+            old: { type: [string, "null"] }
+            new: { type: [string, "null"] }
+
+    TopList:
+      type: array
+      maxItems: 10
+      items:
+        type: object
+        required: [name, count]
+        properties:
+          name: { type: string }
+          count: { type: integer }
+
+    OverviewStats:
+      type: object
+      required: [bots, memory]
+      properties:
+        bots:
+          type: object
+          required: [total, online]
+          properties:
+            total: { type: integer }
+            online:
+              type: integer
+              description: Bots with status `running`
+        memory:
+          type: object
+          required: [range, currentBytes, averageBytes, peakBytes, services, series]
+          properties:
+            range: { type: string, enum: [1h, 24h, 7d] }
+            currentBytes:
+              type: integer
+              description: Sum of the latest sample of every process
+            averageBytes:
+              type: integer
+              description: Average of the total over the range
+            peakBytes: { type: integer }
+            limitBytes:
+              type: [integer, "null"]
+              description: Container memory limit, null when unlimited
+            services:
+              type: array
+              items:
+                type: object
+                required: [name, currentBytes]
+                properties:
+                  name: { type: string, enum: [dashboard, api, bot, redis] }
+                  currentBytes: { type: integer }
+            series:
+              type: array
+              description: Total memory over the range, oldest first
+              items:
+                type: object
+                required: [t, bytes]
+                properties:
+                  t: { type: string, format: date-time }
+                  bytes: { type: integer }
 
     Job:
       type: object
@@ -923,7 +2195,7 @@ components:
         id: { type: string, format: uuid }
         type:
           type: string
-          enum: [bot.start, bot.stop, plugin.install, plugin.update, plugin.uninstall]
+          enum: [bot.start, bot.stop, bot.restart, guild.leave, plugin.install, plugin.update, plugin.uninstall]
         status:
           type: string
           enum: [queued, running, done, failed]

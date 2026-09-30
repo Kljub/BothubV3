@@ -1,0 +1,1004 @@
+// Command mockapi is an in-memory stand-in for the PHP API during phase 1.
+// It implements the parts of api/openapi.yaml the dashboard uses so far.
+// Development only: data is lost on restart.
+package main
+
+import (
+	"context"
+	"crypto/rand"
+	"crypto/subtle"
+	"encoding/hex"
+	"encoding/json"
+	"log/slog"
+	"net/http"
+	"os"
+	"path/filepath"
+	"slices"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+)
+
+type bot struct {
+	ID            int64      `json:"id"`
+	Name          string     `json:"name"`
+	ApplicationID *string    `json:"applicationId"`
+	AvatarURL     *string    `json:"avatarUrl"`
+	Status        string     `json:"status"`
+	StatusErrKey  *string    `json:"statusErrorKey"`
+	TokenSet      bool       `json:"tokenSet"`
+	Autostart     bool       `json:"autostart"`
+	GuildCount    int        `json:"guildCount"`
+	CreatedAt     time.Time  `json:"createdAt"`
+	StartedAt     *time.Time `json:"startedAt"` // set while running (bot goes online)
+	token         string
+}
+
+type guild struct {
+	ID          string  `json:"id"`
+	Name        string  `json:"name"`
+	IconURL     *string `json:"iconUrl"`
+	MemberCount int     `json:"memberCount"`
+}
+
+type sessionData struct {
+	csrf      string
+	id        string // public ID for the sessions list (never the cookie value)
+	createdAt time.Time
+	lastSeen  time.Time
+	userAgent string
+	ip        string
+}
+
+type store struct {
+	mu       sync.Mutex
+	user     string
+	password string
+	locale   string
+	theme    string
+	sessions map[string]*sessionData
+	bots     map[int64]*bot
+	nextID   int64
+	modules  map[string]bool // "<botID>/<key>"
+	known    map[string]bool // valid module keys
+
+	discord *discordClient
+	php     *phpBots // nil: bots stay in memory
+
+	secEvents   []securityEvent
+	webhooks    map[int64][]*webhook
+	webhookSeq  int64
+	webhookKeys map[int64]webhookKey
+	profiles    map[int64]*profileData
+	presences   map[int64]*presenceData
+	plugins     map[int64][]*installedPlugin
+	logs        map[int64][]logEntry
+	logSeq      int64
+
+	srvSettings    serverSettings
+	started        time.Time
+	roles          []*role
+	passkeys       *passkeyStore
+	cmdStates      map[string]bool // "<botID>/<module>/<command>"
+	commandCatalog map[string][]string
+	customCmds     map[int64][]*customCommand
+	cmdSeq         int64
+	templates      map[int64][]*msgTemplate
+	eventTypes     map[string]bool
+	cmdGroups      map[int64][]*cmdGroup
+	groupSeq       int64
+	presets        []commandPreset
+	data           dataStore
+	deletedCmds    map[int64][]deletedCmd
+	tplSeq         int64
+	users          []*mockUser
+	roleSeq        int64
+	userSeq        int64
+	account        accountData
+	smtp           smtpData
+	activePorts    [3]int // ports the running instance uses (public, api, redis)
+}
+
+func main() {
+	s := &store{
+		user:     os.Getenv("BOTHUB_ADMIN_USER"),
+		password: os.Getenv("BOTHUB_ADMIN_PASSWORD"),
+		locale:   "en",
+		theme:    "system",
+		sessions: map[string]*sessionData{},
+		bots:     map[int64]*bot{},
+		nextID:   1,
+		modules:  map[string]bool{},
+		known:    loadModuleKeys(),
+	}
+	s.srvSettings = defaultServerSettings()
+	s.started = time.Now()
+	s.smtp = smtpData{Port: 587, Security: "starttls", FromName: "BotHub"}
+	s.activePorts = [3]int{s.srvSettings.PublicPort, s.srvSettings.APIPort, s.srvSettings.RedisPort}
+	s.customCmds = map[int64][]*customCommand{}
+	s.templates = map[int64][]*msgTemplate{}
+	s.eventTypes = loadEventTypes()
+	s.cmdGroups = map[int64][]*cmdGroup{}
+	s.presets = loadCommandPresets()
+	s.deletedCmds = map[int64][]deletedCmd{}
+	s.seedUsers()
+	s.discord = newDiscordClient(envOr("DISCORD_API_URL", discordAPI))
+	if s.php = newPHPBots(); s.php != nil {
+		slog.Info("mockapi: bots are stored in the PHP API", "url", s.php.base)
+	}
+	s.passkeys = newPasskeyStore()
+	s.cmdStates, s.commandCatalog = map[string]bool{}, loadCommandCatalog()
+	if s.user != "" && s.password != "" {
+		slog.Warn("mockapi: admin user taken from ENV", "user", s.user)
+	}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, 200, map[string]string{"status": "ok"})
+	})
+	mux.HandleFunc("GET /api/v1/setup", s.setupState)
+	mux.HandleFunc("POST /api/v1/setup", s.setup)
+	mux.HandleFunc("POST /api/v1/auth/login", s.audited("login", "login_failed", []string{"error.auth.invalid_credentials"}, s.login))
+	mux.HandleFunc("POST /api/v1/auth/login/totp", s.audited("login", "login_failed", []string{"error.auth.totp_invalid"}, s.loginTOTP))
+	mux.HandleFunc("POST /api/v1/auth/passkeys/login/begin", s.loginPasskeyBegin)
+	mux.HandleFunc("POST /api/v1/auth/passkeys/login/finish", s.audited("login_passkey", "", nil, s.loginPasskeyFinish))
+	mux.HandleFunc("GET /api/v1/auth/passkeys", s.auth(s.listPasskeys))
+	mux.HandleFunc("DELETE /api/v1/auth/passkeys/{id}", s.auth(s.auditedAuth("passkey_removed", s.deletePasskey)))
+	mux.HandleFunc("POST /api/v1/auth/passkeys/register/begin", s.auth(s.registerPasskeyBegin))
+	mux.HandleFunc("POST /api/v1/auth/passkeys/register/finish", s.auth(s.auditedAuth("passkey_added", s.registerPasskeyFinish)))
+	mux.HandleFunc("POST /api/v1/auth/password", s.auth(s.auditedAuth("password_changed", s.changePassword)))
+	mux.HandleFunc("PUT /api/v1/auth/email", s.auth(s.auditedAuth("email_changed", s.changeEmail)))
+	mux.HandleFunc("POST /api/v1/auth/2fa/setup", s.auth(s.setupTwoFactor))
+	mux.HandleFunc("POST /api/v1/auth/2fa/enable", s.auth(s.auditedAuth("twofa_enabled", s.enableTwoFactor)))
+	mux.HandleFunc("POST /api/v1/auth/2fa/disable", s.auth(s.auditedAuth("twofa_disabled", s.disableTwoFactor)))
+	mux.HandleFunc("GET /api/v1/admin/email", s.auth(s.getSMTP))
+	mux.HandleFunc("PUT /api/v1/admin/email", s.auth(s.putSMTP))
+	mux.HandleFunc("POST /api/v1/admin/email/test", s.auth(s.testSMTP))
+	mux.HandleFunc("POST /api/v1/auth/logout", s.auth(s.logout))
+	mux.HandleFunc("GET /api/v1/auth/me", s.auth(s.me))
+	mux.HandleFunc("GET /api/v1/auth/sessions", s.auth(s.listSessions))
+	mux.HandleFunc("DELETE /api/v1/auth/sessions/{sessionId}", s.auth(s.auditedAuth("session_revoked", s.revokeSession)))
+	mux.HandleFunc("POST /api/v1/auth/sessions/revoke-others", s.auth(s.auditedAuth("sessions_revoked", s.revokeOtherSessions)))
+	mux.HandleFunc("GET /api/v1/auth/activity", s.auth(s.securityActivity))
+	mux.HandleFunc("GET /api/v1/settings", s.auth(s.settings))
+	mux.HandleFunc("PATCH /api/v1/settings", s.auth(s.updateSettings))
+	mux.HandleFunc("GET /api/v1/bots", s.auth(s.listBots))
+	mux.HandleFunc("POST /api/v1/bots", s.auth(s.createBot))
+	mux.HandleFunc("GET /api/v1/bots/{id}", s.auth(s.withBot(s.getBot)))
+	mux.HandleFunc("PATCH /api/v1/bots/{id}", s.auth(s.withBot(s.updateBot)))
+	mux.HandleFunc("DELETE /api/v1/bots/{id}", s.auth(s.withBot(s.deleteBot)))
+	mux.HandleFunc("POST /api/v1/bots/{id}/start", s.auth(s.withBot(s.startBot)))
+	mux.HandleFunc("POST /api/v1/bots/{id}/stop", s.auth(s.withBot(s.stopBot)))
+	mux.HandleFunc("GET /api/v1/bots/{id}/guilds", s.auth(s.withBot(s.listGuilds)))
+	mux.HandleFunc("GET /api/v1/bots/{id}/guilds/{guildId}/roles", s.auth(s.withBot(s.listGuildRoles)))
+	mux.HandleFunc("GET /api/v1/bots/{id}/guilds/{guildId}/channels", s.auth(s.withBot(s.listGuildChannels)))
+	mux.HandleFunc("GET /api/v1/bots/{id}/modules", s.auth(s.withBot(s.modulesFromPHP(s.listModules))))
+	mux.HandleFunc("PUT /api/v1/bots/{id}/modules/{key}", s.auth(s.withBot(s.viaPHP(s.setModule))))
+	mux.HandleFunc("GET /api/v1/bots/{id}/modules/{key}/config", s.auth(s.withBot(s.viaPHP(phpRequired))))
+	mux.HandleFunc("PUT /api/v1/bots/{id}/modules/{key}/config", s.auth(s.withBot(s.viaPHP(phpRequired))))
+	mux.HandleFunc("GET /api/v1/stats/overview", s.auth(s.overviewStats))
+	mux.HandleFunc("GET /api/v1/admin/server-settings", s.auth(s.getServerSettings))
+	mux.HandleFunc("GET /api/v1/admin/processes", s.auth(s.processes))
+	mux.HandleFunc("POST /api/v1/admin/processes/{key}/restart", s.auth(s.restartProcess))
+	mux.HandleFunc("GET /api/v1/admin/logs", s.auth(s.listServerLogs))
+	mux.HandleFunc("GET /api/v1/bots/{id}/modules/{key}/commands", s.auth(s.withBot(s.listModuleCommands)))
+	mux.HandleFunc("GET /api/v1/bots/{id}/commands", s.auth(s.withBot(s.viaPHP(s.listCommands))))
+	mux.HandleFunc("GET /api/v1/bots/{id}/commands/deleted", s.auth(s.withBot(s.viaPHP(s.listDeleted))))
+	mux.HandleFunc("POST /api/v1/bots/{id}/commands/deleted/{cid}/restore", s.auth(s.withBot(s.viaPHP(s.restoreDeleted))))
+	mux.HandleFunc("POST /api/v1/bots/{id}/commands/{cid}/versions/{vid}/restore", s.auth(s.withBot(s.viaPHP(s.restoreVersion))))
+	mux.HandleFunc("GET /api/v1/bots/{id}/command-groups", s.auth(s.withBot(s.viaPHP(s.listGroups))))
+	mux.HandleFunc("POST /api/v1/bots/{id}/command-groups", s.auth(s.withBot(s.viaPHP(s.createGroup))))
+	mux.HandleFunc("PUT /api/v1/bots/{id}/command-groups/{gid}", s.auth(s.withBot(s.viaPHP(s.updateGroup))))
+	mux.HandleFunc("DELETE /api/v1/bots/{id}/command-groups/{gid}", s.auth(s.withBot(s.viaPHP(s.deleteGroup))))
+	mux.HandleFunc("POST /api/v1/bots/{id}/commands", s.auth(s.withBot(s.viaPHP(s.createCommand))))
+	mux.HandleFunc("GET /api/v1/bots/{id}/commands/{cid}", s.auth(s.withBot(s.viaPHP(s.getCommand))))
+	mux.HandleFunc("PATCH /api/v1/bots/{id}/commands/{cid}", s.auth(s.withBot(s.viaPHP(s.patchCommand))))
+	mux.HandleFunc("PUT /api/v1/bots/{id}/commands/{cid}", s.auth(s.withBot(s.viaPHP(s.saveCommand))))
+	mux.HandleFunc("POST /api/v1/bots/{id}/commands/{cid}/simulate", s.auth(s.withBot(s.simulateCommand)))
+	mux.HandleFunc("GET /api/v1/bots/{id}/message-templates", s.auth(s.withBot(s.viaPHP(s.listTemplates))))
+	mux.HandleFunc("GET /api/v1/bots/{id}/message-templates/{tid}", s.auth(s.withBot(s.viaPHP(s.getTemplate))))
+	mux.HandleFunc("GET /api/v1/jobs/{jid}", s.auth(s.jobStatus))
+	mux.HandleFunc("PUT /api/v1/bots/{id}/message-templates/{tid}", s.auth(s.withBot(s.viaPHP(s.updateTemplate))))
+	mux.HandleFunc("POST /api/v1/bots/{id}/message-templates/{tid}/send", s.auth(s.withBot(s.viaPHP(phpRequired))))
+	mux.HandleFunc("GET /api/v1/bots/{id}/commands/{cid}/versions", s.auth(s.withBot(s.viaPHP(s.listVersions))))
+	mux.HandleFunc("GET /api/v1/bots/{id}/commands/{cid}/versions/{vid}", s.auth(s.withBot(s.viaPHP(s.getVersion))))
+	mux.HandleFunc("POST /api/v1/bots/{id}/message-templates", s.auth(s.withBot(s.viaPHP(s.createTemplate))))
+	mux.HandleFunc("DELETE /api/v1/bots/{id}/message-templates/{tid}", s.auth(s.withBot(s.viaPHP(s.deleteTemplate))))
+	mux.HandleFunc("GET /api/v1/bots/{id}/data/variables", s.auth(s.withBot(s.viaPHP(s.listDataVariables))))
+	mux.HandleFunc("POST /api/v1/bots/{id}/data/variables", s.auth(s.withBot(s.viaPHP(s.createDataVariable))))
+	mux.HandleFunc("PUT /api/v1/bots/{id}/data/variables/{vid}", s.auth(s.withBot(s.viaPHP(s.updateDataVariable))))
+	mux.HandleFunc("DELETE /api/v1/bots/{id}/data/variables/{vid}", s.auth(s.withBot(s.viaPHP(s.deleteDataVariable))))
+	mux.HandleFunc("GET /api/v1/bots/{id}/data/variables/{vid}/values", s.auth(s.withBot(s.viaPHP(s.listDataValues))))
+	mux.HandleFunc("PUT /api/v1/bots/{id}/data/variables/{vid}/values", s.auth(s.withBot(s.viaPHP(s.setDataValue))))
+	mux.HandleFunc("DELETE /api/v1/bots/{id}/data/variables/{vid}/values", s.auth(s.withBot(s.viaPHP(s.deleteDataValues))))
+	mux.HandleFunc("GET /api/v1/bots/{id}/data/variables/{vid}/values.csv", s.auth(s.withBot(s.exportDataValues)))
+	mux.HandleFunc("GET /api/v1/bots/{id}/data/lookup", s.auth(s.withBot(s.viaPHP(s.lookupDataValues))))
+	mux.HandleFunc("DELETE /api/v1/bots/{id}/commands/{cid}", s.auth(s.withBot(s.viaPHP(s.deleteCommand))))
+	mux.HandleFunc("GET /api/v1/bots/{id}/events", s.auth(s.withBot(s.viaPHP(s.listCommands))))
+	mux.HandleFunc("GET /api/v1/bots/{id}/events/deleted", s.auth(s.withBot(s.viaPHP(s.listDeleted))))
+	mux.HandleFunc("POST /api/v1/bots/{id}/events/deleted/{cid}/restore", s.auth(s.withBot(s.viaPHP(s.restoreDeleted))))
+	mux.HandleFunc("POST /api/v1/bots/{id}/events/{cid}/versions/{vid}/restore", s.auth(s.withBot(s.viaPHP(s.restoreVersion))))
+	mux.HandleFunc("POST /api/v1/bots/{id}/events", s.auth(s.withBot(s.viaPHP(s.createCommand))))
+	mux.HandleFunc("GET /api/v1/bots/{id}/events/{cid}", s.auth(s.withBot(s.viaPHP(s.getCommand))))
+	mux.HandleFunc("PATCH /api/v1/bots/{id}/events/{cid}", s.auth(s.withBot(s.viaPHP(s.patchCommand))))
+	mux.HandleFunc("PUT /api/v1/bots/{id}/events/{cid}", s.auth(s.withBot(s.viaPHP(s.saveCommand))))
+	mux.HandleFunc("POST /api/v1/bots/{id}/events/{cid}/simulate", s.auth(s.withBot(s.simulateCommand)))
+	mux.HandleFunc("GET /api/v1/bots/{id}/events/{cid}/versions", s.auth(s.withBot(s.viaPHP(s.listVersions))))
+	mux.HandleFunc("GET /api/v1/bots/{id}/events/{cid}/versions/{vid}", s.auth(s.withBot(s.viaPHP(s.getVersion))))
+	mux.HandleFunc("DELETE /api/v1/bots/{id}/events/{cid}", s.auth(s.withBot(s.viaPHP(s.deleteCommand))))
+	mux.HandleFunc("PUT /api/v1/bots/{id}/modules/{key}/commands/{name}", s.auth(s.withBot(s.setModuleCommand)))
+	mux.HandleFunc("GET /api/v1/admin/roles", s.auth(s.listRoles))
+	mux.HandleFunc("POST /api/v1/admin/roles", s.auth(s.createRole))
+	mux.HandleFunc("PUT /api/v1/admin/roles/{id}", s.auth(s.updateRole))
+	mux.HandleFunc("DELETE /api/v1/admin/roles/{id}", s.auth(s.deleteRole))
+	mux.HandleFunc("GET /api/v1/admin/users", s.auth(s.listUsers))
+	mux.HandleFunc("POST /api/v1/admin/users", s.auth(s.createUser))
+	mux.HandleFunc("PATCH /api/v1/admin/users/{id}", s.auth(s.patchUser))
+	mux.HandleFunc("DELETE /api/v1/admin/users/{id}", s.auth(s.deleteUser))
+	mux.HandleFunc("PUT /api/v1/admin/server-settings", s.auth(s.putServerSettings))
+	mux.HandleFunc("POST /api/v1/bots/{id}/restart", s.auth(s.withBot(s.restartBot)))
+	mux.HandleFunc("GET /api/v1/bots/{id}/profile", s.auth(s.withBot(s.getProfile)))
+	mux.HandleFunc("PATCH /api/v1/bots/{id}/profile", s.auth(s.withBot(s.patchProfile)))
+	mux.HandleFunc("POST /api/v1/bots/{id}/profile/sync", s.auth(s.withBot(s.syncProfile)))
+	mux.HandleFunc("PUT /api/v1/bots/{id}/profile/{kind}", s.auth(s.withBot(s.uploadProfile)))
+	mux.HandleFunc("GET /api/v1/bots/{id}/presence", s.auth(s.withBot(s.viaPHP(s.getPresence))))
+	mux.HandleFunc("PATCH /api/v1/bots/{id}/presence", s.auth(s.withBot(s.viaPHP(s.patchPresence))))
+	mux.HandleFunc("GET /api/v1/bots/{id}/stats", s.auth(s.withBot(s.botStats)))
+	mux.HandleFunc("GET /api/v1/bots/{id}/logs", s.auth(s.withBot(s.listLogs)))
+	mux.HandleFunc("DELETE /api/v1/bots/{id}/logs", s.auth(s.withBot(s.clearLogs)))
+	mux.HandleFunc("GET /api/v1/bots/{id}/plugins", s.auth(s.withBot(s.listPlugins)))
+	mux.HandleFunc("PATCH /api/v1/bots/{id}/plugins/{plugin}", s.auth(s.withBot(s.patchPlugin)))
+	mux.HandleFunc("DELETE /api/v1/bots/{id}/guilds/{guildId}", s.auth(s.withBot(s.leaveGuild)))
+	// Webhooks (module page) and the public receiver for external services.
+	mux.HandleFunc("GET /api/v1/bots/{id}/webhooks", s.auth(s.withBot(s.viaPHP(s.listWebhooks))))
+	mux.HandleFunc("POST /api/v1/bots/{id}/webhooks", s.auth(s.withBot(s.viaPHP(s.createWebhook))))
+	mux.HandleFunc("PATCH /api/v1/bots/{id}/webhooks/{wid}", s.auth(s.withBot(s.viaPHP(s.patchWebhook))))
+	mux.HandleFunc("DELETE /api/v1/bots/{id}/webhooks/{wid}", s.auth(s.withBot(s.viaPHP(s.deleteWebhook))))
+	mux.HandleFunc("POST /api/v1/bots/{id}/webhooks/{wid}/test", s.auth(s.withBot(s.viaPHP(s.testWebhook))))
+	mux.HandleFunc("POST /api/v1/bots/{id}/webhook-key", s.auth(s.withBot(s.viaPHP(s.createWebhookKey))))
+	mux.HandleFunc("POST /api/hooks/{botId}/{eventId}", s.hookToPHP)
+	// Timed events live only in the PHP API (no in-memory fallback).
+	mux.HandleFunc("GET /api/v1/bots/{id}/timed-events", s.auth(s.withBot(s.viaPHP(phpRequired))))
+	mux.HandleFunc("POST /api/v1/bots/{id}/timed-events", s.auth(s.withBot(s.viaPHP(phpRequired))))
+	mux.HandleFunc("GET /api/v1/bots/{id}/timed-events/{tid}", s.auth(s.withBot(s.viaPHP(phpRequired))))
+	mux.HandleFunc("PUT /api/v1/bots/{id}/timed-events/{tid}", s.auth(s.withBot(s.viaPHP(phpRequired))))
+	mux.HandleFunc("DELETE /api/v1/bots/{id}/timed-events/{tid}", s.auth(s.withBot(s.viaPHP(phpRequired))))
+	mux.HandleFunc("GET /api/v1/bots/{id}/timed-settings", s.auth(s.withBot(s.viaPHP(phpRequired))))
+	mux.HandleFunc("PATCH /api/v1/bots/{id}/timed-settings", s.auth(s.withBot(s.viaPHP(phpRequired))))
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { apiError(w, 404, "error.not_found") })
+
+	addr := envOr("LISTEN_ADDR", ":9000")
+	slog.Info("mockapi listening", "addr", addr)
+	if err := http.ListenAndServe(addr, mux); err != nil {
+		slog.Error("mockapi stopped", "err", err)
+		os.Exit(1)
+	}
+}
+
+// --- auth ---
+
+type authed func(w http.ResponseWriter, r *http.Request, sid string)
+
+// auth is the one central check: session for every route, CSRF for every
+// changing method.
+func (s *store) auth(next authed) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c, err := r.Cookie("bothub_session")
+		s.mu.Lock()
+		var sess *sessionData
+		if err == nil {
+			sess = s.sessions[c.Value]
+		}
+		if sess != nil {
+			touchSession(sess, r)
+		}
+		s.mu.Unlock()
+		if sess == nil {
+			apiError(w, 401, "error.auth.required")
+			return
+		}
+		if r.Method != http.MethodGet {
+			got := r.Header.Get("X-CSRF-Token")
+			if subtle.ConstantTimeCompare([]byte(got), []byte(sess.csrf)) != 1 {
+				apiError(w, 403, "error.csrf.invalid")
+				return
+			}
+		}
+		next(w, r, c.Value)
+	}
+}
+
+func (s *store) setupState(w http.ResponseWriter, r *http.Request) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	writeJSON(w, 200, map[string]bool{"required": s.user == ""})
+}
+
+func (s *store) setup(w http.ResponseWriter, r *http.Request) {
+	var in struct{ Username, Password, Locale string }
+	if !readJSON(w, r, &in) {
+		return
+	}
+	s.mu.Lock()
+	if s.user != "" {
+		s.mu.Unlock()
+		apiError(w, 409, "error.setup.already_done")
+		return
+	}
+	if len(in.Username) < 3 || len(in.Password) < 12 {
+		s.mu.Unlock()
+		apiError(w, 422, "error.field.too_short")
+		return
+	}
+	s.user, s.password = in.Username, in.Password
+	if in.Locale != "" {
+		s.locale = in.Locale
+	}
+	s.mu.Unlock()
+	s.startSession(w, r, 201)
+}
+
+func (s *store) login(w http.ResponseWriter, r *http.Request) {
+	var in struct{ Username, Password string }
+	if !readJSON(w, r, &in) {
+		return
+	}
+	s.mu.Lock()
+	ok := s.user != "" &&
+		subtle.ConstantTimeCompare([]byte(in.Username), []byte(s.user)) == 1 &&
+		subtle.ConstantTimeCompare([]byte(in.Password), []byte(s.password)) == 1
+	if ok && s.account.totpSecret != "" {
+		// Password right, 2FA on: hand out a short-lived ticket for the second step.
+		ticket := s.newTicket()
+		s.mu.Unlock()
+		apiErrorParams(w, 401, "error.auth.totp_required", map[string]any{"ticket": ticket})
+		return
+	}
+	s.mu.Unlock()
+	if !ok {
+		apiError(w, 401, "error.auth.invalid_credentials")
+		return
+	}
+	s.startSession(w, r, 200)
+}
+
+// startSession always creates a new session ID (no fixation).
+func (s *store) startSession(w http.ResponseWriter, r *http.Request, status int) {
+	sid, csrf := randomHex(32), randomHex(32)
+	s.mu.Lock()
+	sess := &sessionData{csrf: csrf, id: randomHex(8), createdAt: time.Now().UTC()}
+	touchSession(sess, r)
+	s.sessions[sid] = sess
+	s.mu.Unlock()
+	http.SetCookie(w, &http.Cookie{
+		Name: "bothub_session", Value: sid, Path: "/",
+		HttpOnly: true, SameSite: http.SameSiteStrictMode,
+	})
+	writeJSON(w, status, s.meFor(csrf))
+}
+
+func (s *store) logout(w http.ResponseWriter, r *http.Request, sid string) {
+	s.mu.Lock()
+	delete(s.sessions, sid)
+	s.mu.Unlock()
+	http.SetCookie(w, &http.Cookie{Name: "bothub_session", Value: "", Path: "/", MaxAge: -1, HttpOnly: true, SameSite: http.SameSiteStrictMode})
+	w.WriteHeader(204)
+}
+
+func (s *store) me(w http.ResponseWriter, r *http.Request, sid string) {
+	s.mu.Lock()
+	csrf := s.sessions[sid].csrf
+	s.mu.Unlock()
+	writeJSON(w, 200, s.meFor(csrf))
+}
+
+func (s *store) meFor(csrf string) map[string]any {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return map[string]any{"username": s.user, "email": s.account.email, "twoFactorEnabled": s.account.totpSecret != "",
+		"locale": s.locale, "theme": s.theme, "csrfToken": csrf}
+}
+
+// --- settings ---
+
+func (s *store) settings(w http.ResponseWriter, r *http.Request, _ string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	writeJSON(w, 200, map[string]string{"locale": s.locale, "theme": s.theme})
+}
+
+func (s *store) updateSettings(w http.ResponseWriter, r *http.Request, sid string) {
+	var in struct{ Locale, Theme string }
+	if !readJSON(w, r, &in) {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	switch in.Theme {
+	case "", "system", "light", "dark":
+	default:
+		apiError(w, 422, "error.settings.invalid")
+		return
+	}
+	if in.Locale != "" {
+		s.locale = in.Locale
+	}
+	if in.Theme != "" {
+		s.theme = in.Theme
+	}
+	writeJSON(w, 200, map[string]string{"locale": s.locale, "theme": s.theme})
+}
+
+// --- bots ---
+
+type botHandler func(w http.ResponseWriter, r *http.Request, b *bot)
+
+func (s *store) withBot(next botHandler) authed {
+	return func(w http.ResponseWriter, r *http.Request, _ string) {
+		id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+		s.mu.Lock()
+		b := s.bots[id]
+		s.mu.Unlock()
+		if s.php != nil {
+			// Status and name come from the API (the NodeCore writes the status).
+			if err := s.syncBots(r.Context()); err != nil {
+				pe := asPHPError(err)
+				apiError(w, pe.Status, pe.Key)
+				return
+			}
+			s.mu.Lock()
+			b = s.bots[id]
+			s.mu.Unlock()
+		}
+		if b == nil {
+			apiError(w, 404, "error.bot.not_found")
+			return
+		}
+		next(w, r, b)
+	}
+}
+
+func (s *store) listBots(w http.ResponseWriter, r *http.Request, _ string) {
+	if s.php != nil {
+		if err := s.syncBots(r.Context()); err != nil {
+			pe := asPHPError(err)
+			apiError(w, pe.Status, pe.Key)
+			return
+		}
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	items := make([]bot, 0, len(s.bots))
+	for id := int64(1); id < s.nextID; id++ {
+		if b, ok := s.bots[id]; ok {
+			items = append(items, *b)
+		}
+	}
+	writeJSON(w, 200, map[string]any{"items": items})
+}
+
+func (s *store) createBot(w http.ResponseWriter, r *http.Request, _ string) {
+	var in struct {
+		Name      string `json:"name"`
+		Token     string `json:"token"`
+		Autostart bool   `json:"autostart"`
+	}
+	if !readJSON(w, r, &in) {
+		return
+	}
+	if strings.TrimSpace(in.Token) == "" {
+		apiError(w, 422, "error.field.required")
+		return
+	}
+	// Discord tells whether the token is valid and whose bot it is.
+	id, err := s.discord.checkToken(r.Context(), in.Token)
+	if err != nil {
+		de := asDiscordError(err)
+		apiError(w, de.Status, de.Key)
+		return
+	}
+	token := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(in.Token), "Bot "))
+	if s.php != nil {
+		s.createStoredBot(w, r, in.Name, token, in.Autostart, id)
+		return
+	}
+	s.mu.Lock()
+	for _, other := range s.bots {
+		if other.ApplicationID != nil && *other.ApplicationID == id.Application.ID {
+			s.mu.Unlock()
+			apiError(w, 409, "error.bot.duplicate")
+			return
+		}
+	}
+	name := strings.TrimSpace(in.Name)
+	if name == "" {
+		name = id.User.Username
+		if id.User.GlobalName != nil && *id.User.GlobalName != "" {
+			name = *id.User.GlobalName
+		}
+	}
+	appID, avatar := id.Application.ID, avatarURL(id.User)
+	b := &bot{ID: s.nextID, Name: name, ApplicationID: &appID, AvatarURL: &avatar, Status: "stopped", TokenSet: true, Autostart: in.Autostart, CreatedAt: time.Now().UTC(), token: token}
+	s.bots[b.ID] = b
+	s.nextID++
+	s.seedPresets(b.ID)
+	p := s.profileOf(b.ID)
+	p.avatar, p.banner, p.bio = &avatar, bannerURL(id.User), id.Application.Description
+	if missing := missingIntents(id.Application.Flags); len(missing) > 0 {
+		s.addLog(b.ID, time.Now(), "warning", "WAR-2002", "", map[string]any{"intent": strings.Join(missing, ", ")}, nil)
+	}
+	out := *b
+	s.mu.Unlock()
+	s.refreshGuildCount(r.Context(), b)
+	s.mu.Lock()
+	out.GuildCount = b.GuildCount
+	s.mu.Unlock()
+	writeJSON(w, 201, out)
+}
+
+// createStoredBot saves a checked bot in the PHP API (token encrypted there).
+func (s *store) createStoredBot(w http.ResponseWriter, r *http.Request, name, token string, autostart bool, id botIdentity) {
+	if strings.TrimSpace(name) == "" {
+		name = id.User.Username
+		if id.User.GlobalName != nil && *id.User.GlobalName != "" {
+			name = *id.User.GlobalName
+		}
+	}
+	created, err := s.php.create(r.Context(), map[string]any{
+		"name": name, "token": token, "applicationId": id.Application.ID, "avatarUrl": avatarURL(id.User), "autostart": autostart,
+	})
+	if err != nil {
+		pe := asPHPError(err)
+		apiError(w, pe.Status, pe.Key)
+		return
+	}
+	b := created
+	b.token = token
+	s.mu.Lock()
+	s.bots[b.ID] = &b
+	s.nextID = max(s.nextID, b.ID+1)
+	p := s.profileOf(b.ID)
+	avatar := avatarURL(id.User)
+	p.avatar, p.banner, p.bio = &avatar, bannerURL(id.User), id.Application.Description
+	if missing := missingIntents(id.Application.Flags); len(missing) > 0 {
+		s.addLog(b.ID, time.Now(), "warning", "WAR-2002", "", map[string]any{"intent": strings.Join(missing, ", ")}, nil)
+	}
+	out := b
+	s.mu.Unlock()
+	writeJSON(w, 201, out)
+}
+
+// refreshGuildCount asks Discord how many servers the bot is in.
+func (s *store) refreshGuildCount(ctx context.Context, b *bot) {
+	s.mu.Lock()
+	token := b.token
+	s.mu.Unlock()
+	guilds, err := s.discord.guilds(ctx, token)
+	if err != nil {
+		return
+	}
+	s.mu.Lock()
+	b.GuildCount = len(guilds)
+	s.mu.Unlock()
+}
+
+func (s *store) getBot(w http.ResponseWriter, r *http.Request, b *bot) {
+	s.mu.Lock()
+	out := *b
+	s.mu.Unlock()
+	writeJSON(w, 200, out)
+}
+
+func (s *store) updateBot(w http.ResponseWriter, r *http.Request, b *bot) {
+	var in struct {
+		Name      *string `json:"name"`
+		Token     *string `json:"token"`
+		Autostart *bool   `json:"autostart"`
+	}
+	if !readJSON(w, r, &in) {
+		return
+	}
+	s.mu.Lock()
+	if in.Name != nil && *in.Name != "" && *in.Name != b.Name {
+		s.addLog(b.ID, time.Now(), "change", "", "log.change.name", nil, &logChange{Field: "name", Old: strp(b.Name), New: strp(*in.Name)})
+		b.Name = *in.Name
+	}
+	if in.Token != nil && *in.Token != "" {
+		// A new token must be valid and belong to the same Discord application.
+		s.mu.Unlock()
+		id, err := s.discord.checkToken(r.Context(), *in.Token)
+		s.mu.Lock()
+		if err != nil {
+			s.mu.Unlock()
+			de := asDiscordError(err)
+			apiError(w, de.Status, de.Key)
+			return
+		}
+		if b.ApplicationID != nil && *b.ApplicationID != id.Application.ID {
+			s.mu.Unlock()
+			apiError(w, 422, "error.bot.token_other_bot")
+			return
+		}
+		s.discord.forget(b.token)
+		// Never log token values, only that it changed.
+		s.addLog(b.ID, time.Now(), "change", "", "log.change.token", nil, &logChange{Field: "token"})
+		b.token, b.TokenSet = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(*in.Token), "Bot ")), true
+	}
+	if in.Autostart != nil {
+		b.Autostart = *in.Autostart
+	}
+	out := *b
+	s.mu.Unlock()
+	if s.php != nil {
+		fields := map[string]any{"name": out.Name, "autostart": out.Autostart}
+		if in.Token != nil && *in.Token != "" {
+			fields["token"] = s.botToken(b)
+		}
+		saved, err := s.php.update(r.Context(), b.ID, fields)
+		if err != nil {
+			pe := asPHPError(err)
+			apiError(w, pe.Status, pe.Key)
+			return
+		}
+		out = saved
+	}
+	writeJSON(w, 200, out)
+}
+
+func (s *store) deleteBot(w http.ResponseWriter, r *http.Request, b *bot) {
+	if s.php != nil {
+		if err := s.php.remove(r.Context(), b.ID); err != nil {
+			pe := asPHPError(err)
+			apiError(w, pe.Status, pe.Key)
+			return
+		}
+	}
+	s.mu.Lock()
+	delete(s.bots, b.ID)
+	s.mu.Unlock()
+	w.WriteHeader(204)
+}
+
+// storedJob hands start/stop/restart to the NodeCore via the API.
+func (s *store) storedJob(w http.ResponseWriter, r *http.Request, b *bot, action string) bool {
+	if s.php == nil {
+		return false
+	}
+	job, err := s.php.job(r.Context(), b.ID, action)
+	if err != nil {
+		pe := asPHPError(err)
+		apiError(w, pe.Status, pe.Key)
+		return true
+	}
+	writeJSON(w, 202, job)
+	return true
+}
+
+func (s *store) startBot(w http.ResponseWriter, r *http.Request, b *bot) {
+	// The gateway login belongs to the NodeCore; here Discord only confirms
+	// that the token still works, the status change itself is simulated.
+	if _, err := s.discord.me(r.Context(), s.botToken(b)); err != nil {
+		if de := asDiscordError(err); de.Key == "error.bot.token_invalid" {
+			s.transition(w, b, "bot.start", "starting", "error")
+			return
+		}
+		de := asDiscordError(err)
+		apiError(w, de.Status, de.Key)
+		return
+	}
+	if s.storedJob(w, r, b, "start") {
+		return
+	}
+	s.transition(w, b, "bot.start", "starting", "running")
+	go s.refreshGuildCount(context.WithoutCancel(r.Context()), b)
+}
+
+func (s *store) stopBot(w http.ResponseWriter, r *http.Request, b *bot) {
+	if s.storedJob(w, r, b, "stop") {
+		return
+	}
+	s.transition(w, b, "bot.stop", "stopping", "stopped")
+}
+
+// transition simulates the NodeCore executing a job: the status changes after a delay.
+func (s *store) transition(w http.ResponseWriter, b *bot, jobType, during, after string) {
+	s.mu.Lock()
+	b.Status, b.StatusErrKey = during, nil
+	s.mu.Unlock()
+	time.AfterFunc(2*time.Second, func() {
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		b.Status = after
+		b.StartedAt = nil
+		if after == "running" {
+			now := time.Now().UTC()
+			b.StartedAt = &now
+		}
+		switch after {
+		case "running":
+			s.addLog(b.ID, time.Now(), "update", "", "log.update.bot_started", map[string]any{"name": b.Name}, nil)
+		case "stopped":
+			s.addLog(b.ID, time.Now(), "update", "", "log.update.bot_stopped", nil, nil)
+		case "error":
+			s.addLog(b.ID, time.Now(), "error", "ERR-1001", "", nil, nil)
+		}
+		if after == "error" {
+			key := "error.bot.token_invalid"
+			b.StatusErrKey = &key
+		}
+	})
+	writeJSON(w, 202, map[string]any{
+		"id": randomUUID(), "type": jobType, "status": "queued", "createdAt": time.Now().UTC(),
+	})
+}
+
+// --- stats ---
+
+// overviewStats counts the bots. Memory numbers come from the real
+// processes later; until then they are 0 (no invented values).
+func (s *store) overviewStats(w http.ResponseWriter, r *http.Request, _ string) {
+	rng := r.URL.Query().Get("range")
+	if rng == "" {
+		rng = "24h"
+	}
+	s.mu.Lock()
+	total, online := len(s.bots), 0
+	for _, b := range s.bots {
+		if b.Status == "running" {
+			online++
+		}
+	}
+	s.mu.Unlock()
+	writeJSON(w, 200, map[string]any{
+		"bots": map[string]int{"total": total, "online": online},
+		"memory": map[string]any{
+			"range": rng, "currentBytes": 0, "averageBytes": 0, "peakBytes": 0, "limitBytes": 0,
+			"services": []map[string]any{}, "series": []map[string]any{},
+		},
+	})
+}
+
+// --- guilds and modules ---
+
+// botToken reads the token under the lock.
+func (s *store) botToken(b *bot) string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return b.token
+}
+
+func (s *store) listGuilds(w http.ResponseWriter, r *http.Request, b *bot) {
+	list, err := s.discord.guilds(r.Context(), s.botToken(b))
+	if err != nil {
+		de := asDiscordError(err)
+		apiError(w, de.Status, de.Key)
+		return
+	}
+	items := make([]guild, 0, len(list))
+	for _, g := range list {
+		items = append(items, guild{ID: g.ID, Name: g.Name, IconURL: guildIconURL(g), MemberCount: g.MemberCount})
+	}
+	s.mu.Lock()
+	b.GuildCount = len(items)
+	s.mu.Unlock()
+	writeJSON(w, 200, map[string]any{"items": items})
+}
+
+// guildOf returns the guild from the path when the bot is in it.
+func (s *store) guildOf(w http.ResponseWriter, r *http.Request, b *bot) (guild, bool) {
+	gid := r.PathValue("guildId")
+	list, err := s.discord.guilds(r.Context(), s.botToken(b))
+	if err != nil {
+		de := asDiscordError(err)
+		apiError(w, de.Status, de.Key)
+		return guild{}, false
+	}
+	for _, g := range list {
+		if g.ID == gid {
+			return guild{ID: g.ID, Name: g.Name, IconURL: guildIconURL(g), MemberCount: g.MemberCount}, true
+		}
+	}
+	apiError(w, 404, "error.guild.not_found")
+	return guild{}, false
+}
+
+// listGuildRoles returns the guild's roles, highest first, without @everyone.
+func (s *store) listGuildRoles(w http.ResponseWriter, r *http.Request, b *bot) {
+	g, ok := s.guildOf(w, r, b)
+	if !ok {
+		return
+	}
+	roles, err := s.discord.roles(r.Context(), s.botToken(b), g.ID)
+	if err != nil {
+		de := asDiscordError(err)
+		apiError(w, de.Status, de.Key)
+		return
+	}
+	slices.SortFunc(roles, func(x, y discordRole) int { return y.Position - x.Position })
+	items := []map[string]any{}
+	for _, role := range roles {
+		if role.ID == g.ID { // @everyone
+			continue
+		}
+		items = append(items, map[string]any{"id": role.ID, "name": role.Name, "color": roleColor(role.Color), "position": role.Position, "managed": role.Managed})
+	}
+	writeJSON(w, 200, map[string]any{"items": items})
+}
+
+// listGuildChannels returns the guild's channels in display order: channels
+// without a category first, then each category followed by its channels.
+func (s *store) listGuildChannels(w http.ResponseWriter, r *http.Request, b *bot) {
+	g, ok := s.guildOf(w, r, b)
+	if !ok {
+		return
+	}
+	chans, err := s.discord.channels(r.Context(), s.botToken(b), g.ID)
+	if err != nil {
+		de := asDiscordError(err)
+		apiError(w, de.Status, de.Key)
+		return
+	}
+	// Categories first in Discord's order, their channels right after them.
+	slices.SortFunc(chans, func(x, y discordChannel) int {
+		if x.Position != y.Position {
+			return x.Position - y.Position
+		}
+		return strings.Compare(x.ID, y.ID)
+	})
+	items := []map[string]any{}
+	for _, c := range chans {
+		typ, known := channelTypes[c.Type]
+		if !known {
+			continue
+		}
+		var parent any
+		if c.ParentID != nil {
+			parent = *c.ParentID
+		}
+		items = append(items, map[string]any{"id": c.ID, "name": c.Name, "type": typ, "parentId": parent, "position": c.Position})
+	}
+	writeJSON(w, 200, map[string]any{"items": items})
+}
+
+func (s *store) listModules(w http.ResponseWriter, r *http.Request, b *bot) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	items := []map[string]any{}
+	for key := range s.known {
+		items = append(items, map[string]any{"key": key, "enabled": s.modules[moduleID(b.ID, key)]})
+	}
+	writeJSON(w, 200, map[string]any{"items": items})
+}
+
+func (s *store) setModule(w http.ResponseWriter, r *http.Request, b *bot) {
+	key := r.PathValue("key")
+	var in struct {
+		Enabled bool `json:"enabled"`
+	}
+	if !readJSON(w, r, &in) {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !s.known[key] {
+		apiError(w, 404, "error.module.unknown")
+		return
+	}
+	if s.modules[moduleID(b.ID, key)] != in.Enabled {
+		logKey := "log.change.module_disabled"
+		if in.Enabled {
+			logKey = "log.change.module_enabled"
+		}
+		s.addLog(b.ID, time.Now(), "change", "", logKey, map[string]any{"module": key}, nil)
+	}
+	s.modules[moduleID(b.ID, key)] = in.Enabled
+	writeJSON(w, 200, map[string]any{"key": key, "enabled": in.Enabled})
+}
+
+func (s *store) leaveGuild(w http.ResponseWriter, r *http.Request, b *bot) {
+	gid := r.PathValue("guildId")
+	if _, ok := s.guildOf(w, r, b); !ok {
+		return
+	}
+	if err := s.discord.leaveGuild(r.Context(), s.botToken(b), gid); err != nil {
+		de := asDiscordError(err)
+		apiError(w, de.Status, de.Key)
+		return
+	}
+	s.mu.Lock()
+	if b.GuildCount > 0 {
+		b.GuildCount--
+	}
+	s.mu.Unlock()
+	writeJSON(w, 202, map[string]any{"id": randomUUID(), "type": "guild.leave", "status": "done", "createdAt": time.Now().UTC()})
+}
+
+func moduleID(botID int64, key string) string {
+	return strconv.FormatInt(botID, 10) + "/" + key
+}
+
+// --- helpers ---
+
+// loadEventTypes reads the event keys from shared/events.json.
+func loadEventTypes() map[string]bool {
+	keys := map[string]bool{}
+	raw, err := os.ReadFile(filepath.Join(envOr("SHARED_DIR", "/shared"), "events.json"))
+	if err != nil {
+		slog.Warn("mockapi: event catalog not found", "err", err)
+		return keys
+	}
+	var catalog struct {
+		Categories []struct {
+			Events []struct {
+				Key string `json:"key"`
+			} `json:"events"`
+		} `json:"categories"`
+	}
+	_ = json.Unmarshal(raw, &catalog)
+	for _, c := range catalog.Categories {
+		for _, e := range c.Events {
+			keys[e.Key] = true
+		}
+	}
+	return keys
+}
+
+func loadModuleKeys() map[string]bool {
+	keys := map[string]bool{}
+	raw, err := os.ReadFile(filepath.Join(envOr("SHARED_DIR", "/shared"), "modules.json"))
+	if err != nil {
+		slog.Warn("mockapi: module catalog not found", "err", err)
+		return keys
+	}
+	var catalog struct {
+		Modules []struct {
+			Key string `json:"key"`
+		} `json:"modules"`
+	}
+	_ = json.Unmarshal(raw, &catalog)
+	for _, m := range catalog.Modules {
+		keys[m.Key] = true
+	}
+	return keys
+}
+
+func readJSON(w http.ResponseWriter, r *http.Request, v any) bool {
+	if !strings.HasPrefix(r.Header.Get("Content-Type"), "application/json") {
+		apiError(w, 422, "error.validation.failed")
+		return false
+	}
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(v); err != nil {
+		apiError(w, 422, "error.validation.failed")
+		return false
+	}
+	return true
+}
+
+func writeJSON(w http.ResponseWriter, status int, v any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(v)
+}
+
+func apiError(w http.ResponseWriter, status int, key string) {
+	writeJSON(w, status, map[string]any{"error": map[string]string{"key": key}})
+}
+
+func randomHex(n int) string {
+	b := make([]byte, n)
+	_, _ = rand.Read(b)
+	return hex.EncodeToString(b)
+}
+
+func randomUUID() string {
+	h := randomHex(16)
+	return h[0:8] + "-" + h[8:12] + "-" + h[12:16] + "-" + h[16:20] + "-" + h[20:32]
+}
+
+func envOr(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
+}

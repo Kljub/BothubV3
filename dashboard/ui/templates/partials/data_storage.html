@@ -1,0 +1,253 @@
+{{/* Data Storage module: variables and their stored values. Data: dataStorageView. */}}
+{{define "data_storage"}}
+<section class="box">
+  <header class="box-head">
+    {{template "data_storage_counts" .}}
+    <button type="button" class="btn btn-primary btn-sm" data-open-dialog="data-dialog"
+      hx-get="/bot/{{.BotID}}/data/variables/new" hx-target="#data-form-body">+ {{t "data.new"}}</button>
+  </header>
+  <div class="box-body">
+    <form class="inline-form" hx-get="/bot/{{.BotID}}/data/variables" hx-target="#data-vars" hx-swap="outerHTML"
+      hx-trigger="input changed delay:250ms from:find input[name=q], change">
+      <input type="search" name="q" class="input-medium" value="{{.Q}}" placeholder="{{t "data.search"}}" aria-label="{{t "data.search"}}">
+      <div class="chips" role="radiogroup" aria-label="{{t "data.filter"}}">
+        <label class="chip"><input type="radio" name="type" value="" {{if eq .Type ""}}checked{{end}}> {{t "data.type.all"}} <span class="pill-count" id="data-count-all">{{.Total}}</span></label>
+        {{range .TypeCounts}}<label class="chip"><input type="radio" name="type" value="{{.Type}}" {{if eq $.Type .Type}}checked{{end}}> {{t (printf "data.type.%s" .Type)}} <span class="pill-count" id="data-count-{{.Type}}">{{.Count}}</span></label>{{end}}
+      </div>
+    </form>
+    {{template "data_storage_list" .}}
+  </div>
+</section>
+
+<section class="box">
+  <header class="box-head"><h2>{{t "data.lookup.title"}}</h2></header>
+  <div class="box-body">
+    <p class="hint">{{t "data.lookup.hint"}}</p>
+    <form class="inline-form" hx-get="/bot/{{.BotID}}/data/lookup" hx-target="#data-lookup" hx-swap="outerHTML">
+      <input name="id" class="input-medium mono" inputmode="numeric" placeholder="{{t "data.lookup.placeholder"}}" aria-label="{{t "data.lookup.placeholder"}}" required>
+      <button type="submit" class="btn">{{t "data.lookup.search"}}</button>
+    </form>
+    <div id="data-lookup"></div>
+  </div>
+</section>
+
+<dialog id="data-dialog" class="modal modal-wide" aria-label="{{t "data.new"}}">
+  <div id="data-form-body"><p class="muted">{{t "cmdhub.loading"}}</p></div>
+</dialog>
+{{end}}
+
+{{/* After a change the counts in the head and the type chips follow (out of band). */}}
+{{define "data_storage_list_fragment"}}{{template "data_storage_list" .Data}}
+<span id="data-head" hx-swap-oob="true">{{template "data_storage_head" .Data}}</span>
+<span class="pill-count" id="data-count-all" hx-swap-oob="true">{{.Data.Total}}</span>
+{{range .Data.TypeCounts}}<span class="pill-count" id="data-count-{{.Type}}" hx-swap-oob="true">{{.Count}}</span>{{end}}
+{{end}}
+
+{{define "data_storage_counts"}}<span id="data-head">{{template "data_storage_head" .}}</span>{{end}}
+{{define "data_storage_head"}}<h2>{{t "data.title"}} <span class="box-count">{{.Total}}</span></h2> <span class="box-meta">{{t "data.meta" "unused" .Unused}}</span>{{end}}
+
+{{define "data_storage_list"}}
+<div id="data-vars">
+  {{if eq .Total 0}}
+  <div class="empty-state">
+    <span class="empty-state-icon">{{template "icon_server"}}</span>
+    <strong>{{t "data.empty.title"}}</strong>
+    <span class="muted">{{t "data.empty.hint"}}</span>
+  </div>
+  {{else if eq .Shown 0}}
+  <p class="muted">{{t "data.no_match"}}</p>
+  {{else}}
+  {{range .Groups}}
+  <section class="section">
+    <header class="section-head"><h3>{{if .Name}}{{.Name}}{{else}}{{t "data.ungrouped"}}{{end}}</h3><span class="section-meta">{{len .Vars}}</span></header>
+    {{range .Vars}}{{template "data_storage_row" (list $.BotID .)}}{{end}}
+  </section>
+  {{end}}
+  {{end}}
+</div>
+{{end}}
+
+{{/* One variable: head row, values panel loads when opened. Arg: (list botID var). */}}
+{{define "data_storage_row"}}
+{{$bot := index . 0}}{{$v := index . 1}}
+<details class="command-details" hx-get="/bot/{{$bot}}/data/variables/{{$v.ID}}/values" hx-trigger="toggle once" hx-target="find .command-panel">
+  <summary class="command-row">
+    <span class="command-text">
+      <span class="command-line">
+        <strong>{{$v.Name}}</strong>
+        <code class="command-usage">{var.{{$v.Key}}}</code>
+        <span class="badge-soft">{{t (printf "data.type.%s" $v.Type)}}</span>
+      </span>
+      <span class="command-desc">
+        {{t (printf "data.shape.%s_%t" $v.Owner $v.PerServer)}}
+        · {{if $v.UsedIn}}{{t "data.used_in" "count" $v.UsedIn}}{{else}}{{t "data.not_used"}}{{end}}
+        · {{t "data.values_count" "count" $v.Values}}
+        {{if $v.Description}}· {{$v.Description}}{{end}}
+      </span>
+    </span>
+    <span class="command-actions">
+      <button type="button" class="btn btn-sm" data-copy="{var.{{$v.Key}}}" data-copy-done="{{t "data.copied"}}">{{template "icon_copy"}} <span>{{t "data.copy"}}</span></button>
+      <button type="button" class="btn btn-sm" data-open-dialog="data-dialog"
+        hx-get="/bot/{{$bot}}/data/variables/{{$v.ID}}/edit" hx-target="#data-form-body">{{t "data.settings"}}</button>
+      {{template "icon_chevron"}}
+    </span>
+  </summary>
+  <div class="command-panel"><p class="muted">{{t "cmdhub.loading"}}</p></div>
+</details>
+{{end}}
+
+{{define "data_storage_form_fragment"}}{{template "data_storage_form" .Data}}{{end}}
+
+{{/* New/edit dialog. Data: dataFormView. */}}
+{{define "data_storage_form"}}
+<header class="modal-header">
+  <h2>{{if .Edit}}{{t "data.form.edit_title" "name" .Var.Name}}{{else}}{{t "data.form.new_title"}}{{end}}</h2>
+  <button type="button" class="icon-btn" data-close-dialog aria-label="{{t "admin.close"}}">×</button>
+</header>
+<div id="data-form-error"></div>
+<form class="form" {{if .Edit}}hx-put="/bot/{{.BotID}}/data/variables/{{.Var.ID}}"{{else}}hx-post="/bot/{{.BotID}}/data/variables"{{end}} hx-target="#data-vars" hx-swap="outerHTML">
+  <label class="field">{{t "data.form.name"}}
+    <input name="name" class="input-wide" maxlength="32" value="{{.Var.Name}}" required autofocus>
+  </label>
+  {{if .Edit}}
+  <div><span class="field-label">{{t "data.form.key"}}</span> <code class="command-usage">{var.{{.Var.Key}}}</code><span class="hint">{{t "data.form.key_fixed"}}</span></div>
+  {{else}}
+  <label class="field">{{t "data.form.key"}}
+    <input name="key" class="input-medium mono" maxlength="32" pattern="[a-z][a-z0-9_]{0,31}" placeholder="coins">
+    <span class="hint">{{t "data.form.key_hint"}}</span>
+  </label>
+  {{end}}
+  <label class="field">{{t "data.form.description"}}
+    <input name="description" class="input-wide" maxlength="200" value="{{.Var.Description}}">
+  </label>
+
+  <div>
+    <span class="field-label">{{t "data.form.type"}}</span>
+    <div class="chips" role="radiogroup" aria-label="{{t "data.form.type"}}">
+      {{range .Types}}<label class="chip" title="{{t (printf "data.type_hint.%s" .)}}"><input type="radio" name="type" value="{{.}}" {{if eq . $.Var.Type}}checked{{end}}> {{t (printf "data.type.%s" .)}}</label>{{end}}
+    </div>
+    <span class="hint">{{t "data.form.type_hint"}}</span>
+  </div>
+
+  <div>
+    <span class="field-label">{{t "data.form.owner"}}</span>
+    <div class="chips" role="radiogroup" aria-label="{{t "data.form.owner"}}">
+      {{range list "shared" "member" "channel"}}<label class="chip"><input type="radio" name="owner" value="{{.}}" {{if eq . $.Var.Owner}}checked{{end}}> {{t (printf "data.owner.%s" .)}}</label>{{end}}
+    </div>
+    <span class="hint">{{t "data.form.owner_hint"}}</span>
+  </div>
+
+  <label class="toggle-row">
+    <span><strong>{{t "data.form.per_server"}}</strong><span class="hint">{{t "data.form.per_server_hint"}}</span></span>
+    <input type="checkbox" class="toggle" name="per_server" value="true" {{if .Var.PerServer}}checked{{end}}>
+  </label>
+
+  <label class="field">{{t "data.form.default"}}
+    <textarea name="default_value" class="input-wide mono" rows="3" maxlength="4000">{{.Var.DefaultValue}}</textarea>
+    <span class="hint">{{t "data.form.default_hint"}}</span>
+  </label>
+
+  <label class="field">{{t "data.form.group"}}
+    <input name="group" class="input-medium" maxlength="40" value="{{.Var.Group}}" list="data-groups">
+    <datalist id="data-groups">{{range .Groups}}<option value="{{.}}"></option>{{end}}</datalist>
+  </label>
+
+  {{if .Edit}}<p class="hint">{{t "data.form.shape_warning"}}</p>{{end}}
+
+  <div class="inline-form">
+    <button type="submit" class="btn btn-primary">{{if .Edit}}{{t "action.save"}}{{else}}{{t "data.form.create"}}{{end}}</button>
+    <button type="button" class="btn" data-close-dialog>{{t "action.cancel"}}</button>
+    {{if .Edit}}<button type="button" class="btn btn-danger-soft" hx-delete="/bot/{{.BotID}}/data/variables/{{.Var.ID}}" hx-target="#data-vars" hx-swap="outerHTML"
+      hx-confirm="{{t "data.form.delete_confirm" "name" .Var.Name}}">{{template "icon_trash"}} {{t "data.form.delete"}}</button>{{end}}
+  </div>
+</form>
+{{end}}
+
+{{define "data_storage_values_fragment"}}{{template "data_storage_values" .Data}}{{end}}
+
+{{/* Values of one variable. Data: dataValuesView. */}}
+{{define "data_storage_values"}}
+{{$base := printf "/bot/%d/data/variables/%d/values" .BotID .Var.ID}}
+<div id="data-values-{{.Var.ID}}">
+  <div id="data-values-error-{{.Var.ID}}"></div>
+  <form class="inline-form" hx-get="{{$base}}" hx-target="#data-values-{{.Var.ID}}" hx-swap="outerHTML">
+    <input type="search" name="q" class="input-medium mono" value="{{.Q}}" placeholder="{{t "data.values.search"}}" aria-label="{{t "data.values.search"}}">
+    <select name="sort" aria-label="{{t "data.values.sort"}}">
+      <option value="updated" {{if eq .Sort "updated"}}selected{{end}}>{{t "data.values.sort_updated"}}</option>
+      <option value="value" {{if eq .Sort "value"}}selected{{end}}>{{t "data.values.sort_value"}}</option>
+    </select>
+    <button type="submit" class="btn btn-sm">{{t "data.lookup.search"}}</button>
+    <a class="btn btn-sm" href="/api/v1/bots/{{.BotID}}/data/variables/{{.Var.ID}}/values.csv" download>{{t "data.values.export"}}</a>
+    {{if .Page.Total}}<button type="button" class="btn btn-sm btn-danger-soft" hx-delete="{{$base}}?all=true" hx-target="#data-values-{{.Var.ID}}" hx-swap="outerHTML"
+      hx-confirm="{{t "data.values.reset_confirm" "name" .Var.Name}}">{{t "data.values.reset"}}</button>{{end}}
+  </form>
+
+  <form class="inline-form" hx-put="{{$base}}" hx-target="#data-values-{{.Var.ID}}" hx-swap="outerHTML">
+    <input type="hidden" name="q" value="{{.Q}}"><input type="hidden" name="sort" value="{{.Sort}}">
+    {{if .NeedServer}}<input name="server_id" class="input-small mono" inputmode="numeric" placeholder="{{t "data.values.server_id"}}" aria-label="{{t "data.values.server_id"}}" required>{{end}}
+    {{if .NeedOwner}}<input name="owner_id" class="input-small mono" inputmode="numeric" placeholder="{{if .OwnerIsUser}}{{t "data.values.member_id"}}{{else}}{{t "data.values.channel_id"}}{{end}}" aria-label="{{if .OwnerIsUser}}{{t "data.values.member_id"}}{{else}}{{t "data.values.channel_id"}}{{end}}" required>{{end}}
+    <input name="value" class="input-medium mono" maxlength="4000" placeholder="{{t (printf "data.type_hint.%s" .Var.Type)}}" aria-label="{{t "data.values.value"}}">
+    <button type="submit" class="btn btn-sm btn-primary">{{t "data.values.save"}}</button>
+  </form>
+  <p class="hint">{{t "data.values.save_hint"}}</p>
+
+  {{if .Page.Items}}
+  <table class="table">
+    <thead><tr>
+      {{if .NeedServer}}<th>{{t "data.values.server"}}</th>{{end}}
+      {{if .NeedOwner}}<th>{{if .OwnerIsUser}}{{t "data.values.member"}}{{else}}{{t "data.values.channel"}}{{end}}</th>{{end}}
+      <th>{{t "data.values.value"}}</th><th>{{t "data.values.updated"}}</th><th></th>
+    </tr></thead>
+    <tbody>
+    {{range .Page.Items}}
+      <tr>
+        {{if $.NeedServer}}<td class="mono">{{.ServerID}}</td>{{end}}
+        {{if $.NeedOwner}}<td class="mono">{{if $.OwnerIsUser}}&lt;@{{.OwnerID}}&gt;{{else}}&lt;#{{.OwnerID}}&gt;{{end}}</td>{{end}}
+        <td class="mono">{{.Value}}</td>
+        <td class="muted">{{.UpdatedAt.Format "2006-01-02 15:04"}}</td>
+        <td class="num"><button type="button" class="icon-btn icon-btn-plain" title="{{t "data.values.delete"}}" aria-label="{{t "data.values.delete"}}"
+          hx-delete="{{$base}}?server_id={{.ServerID}}&owner_id={{.OwnerID}}&q={{$.Q}}&sort={{$.Sort}}" hx-target="#data-values-{{$.Var.ID}}" hx-swap="outerHTML">×</button></td>
+      </tr>
+    {{end}}
+    </tbody>
+  </table>
+  {{if gt .Pages 1}}
+  <nav class="pagination" aria-label="{{t "pagination.label"}}">
+    <button type="button" class="page-btn" hx-get="{{$base}}?q={{.Q}}&sort={{.Sort}}&page={{.Prev}}" hx-target="#data-values-{{.Var.ID}}" hx-swap="outerHTML" {{if eq .Page.Page 1}}disabled{{end}} aria-label="{{t "pagination.prev"}}">‹</button>
+    <span class="muted">{{t "data.values.page" "page" .Page.Page "pages" .Pages}}</span>
+    <button type="button" class="page-btn" hx-get="{{$base}}?q={{.Q}}&sort={{.Sort}}&page={{.Next}}" hx-target="#data-values-{{.Var.ID}}" hx-swap="outerHTML" {{if eq .Page.Page .Pages}}disabled{{end}} aria-label="{{t "pagination.next"}}">›</button>
+  </nav>
+  {{end}}
+  {{else}}
+  <div class="empty-state">
+    <strong>{{if .Q}}{{t "data.values.no_match"}}{{else}}{{t "data.values.empty"}}{{end}}</strong>
+    <span class="muted">{{t "data.values.empty_hint" "default" (or .Var.DefaultValue "–")}}</span>
+  </div>
+  {{end}}
+</div>
+{{end}}
+
+{{define "data_storage_lookup_fragment"}}{{template "data_storage_lookup" .Data}}{{end}}
+
+{{/* Every value of one member or channel. Data: dataLookupView. */}}
+{{define "data_storage_lookup"}}
+<div id="data-lookup">
+  {{if .Error}}<div class="alert alert-error">{{t "error.data.ids"}}</div>
+  {{else if not .Items}}<p class="muted">{{t "data.lookup.none" "id" .ID}}</p>
+  {{else}}
+  <table class="table">
+    <thead><tr><th>{{t "data.lookup.variable"}}</th><th>{{t "data.values.server"}}</th><th>{{t "data.values.value"}}</th><th>{{t "data.values.updated"}}</th></tr></thead>
+    <tbody>
+    {{range .Items}}
+      <tr>
+        <td>{{index $.Names .VariableID}} <code class="command-usage">{var.{{.Key}}}</code></td>
+        <td class="mono">{{or .ServerID "–"}}</td>
+        <td class="mono">{{.Value}}</td>
+        <td class="muted">{{.UpdatedAt.Format "2006-01-02 15:04"}}</td>
+      </tr>
+    {{end}}
+    </tbody>
+  </table>
+  {{end}}
+</div>
+{{end}}

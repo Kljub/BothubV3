@@ -1,0 +1,106 @@
+{
+  "module": "ticket",
+  "fields": [
+    {
+      "key": "panels",
+      "type": "list",
+      "max": 10,
+      "titleField": "name",
+      "item": [
+        {
+          "key": "name",
+          "type": "text",
+          "max": 60,
+          "default": "Support"
+        },
+        {
+          "key": "channel",
+          "type": "channel",
+          "channelTypes": [
+            "text",
+            "announcement"
+          ]
+        },
+        {
+          "key": "panel",
+          "type": "message",
+          "default": {
+            "mode": "embed",
+            "title": "🎫 Support",
+            "description": "Press the button to open a ticket. Our team will help you soon.",
+            "color": "#a78bfa"
+          }
+        },
+        {
+          "key": "buttonLabel",
+          "type": "text",
+          "max": 80,
+          "default": "Open ticket"
+        },
+        {
+          "key": "buttonEmoji",
+          "type": "emojis",
+          "max": 1
+        },
+        {
+          "key": "category",
+          "type": "channel",
+          "channelTypes": [
+            "category"
+          ]
+        },
+        {
+          "key": "supportRoles",
+          "type": "roles",
+          "max": 10
+        },
+        {
+          "key": "channelName",
+          "type": "text",
+          "max": 90,
+          "default": "ticket-{number}"
+        },
+        {
+          "key": "welcome",
+          "type": "message",
+          "default": {
+            "mode": "embed",
+            "title": "Ticket #{number}",
+            "description": "Hi {user.mention}, please describe your request. The team will answer here.",
+            "color": "#a78bfa"
+          }
+        },
+        {
+          "key": "pingSupport",
+          "type": "bool",
+          "default": true
+        },
+        {
+          "key": "maxPerUser",
+          "type": "number",
+          "min": 1,
+          "max": 10,
+          "default": 1
+        }
+      ],
+      "hint": true
+    },
+    {
+      "key": "logChannel",
+      "type": "channel",
+      "channelTypes": [
+        "text"
+      ]
+    },
+    {
+      "key": "transcript",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "dmCreator",
+      "type": "bool",
+      "default": false
+    }
+  ]
+}

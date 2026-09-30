@@ -1,0 +1,49 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.music_skip",
+  "version": 1,
+  "category": "action",
+  "group": "music",
+  "order": 230,
+  "color": "teal",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_music_skip.label",
+  "descriptionKey": "builder.node.action_music_skip.description",
+  "module": "music",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "to_position": {
+        "type": "number",
+        "minimum": 0,
+        "x-labelKey": "builder.cfg.to_position",
+        "maximum": 1000,
+        "default": 0
+      },
+      "guild": {
+        "type": "string",
+        "maxLength": 40,
+        "x-advanced": true,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.guild",
+        "x-hintKey": "builder.cfg.guild_hint"
+      }
+    }
+  }
+}

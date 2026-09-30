@@ -1,0 +1,163 @@
+{{/* Bot status tab: presence, activity, custom status, rotation, profile.
+   Every form saves on its own: on change and after a short typing pause. */}}
+
+{{define "bot_status"}}
+{{$pr := .Presence}}
+{{template "presence_status" .}}
+
+<section class="box">
+  <header class="box-head"><h2>{{t "status.activity.title"}}</h2></header>
+  <div class="box-body">
+    <form class="form activity-form" hx-post="/bot/{{.BotID}}/presence/activity" hx-target="#flash" hx-trigger="change, input changed delay:800ms">
+      <div class="chips" role="radiogroup" aria-label="{{t "status.activity.title"}}">
+        {{range .ActivityTypes}}
+        <label class="chip"><input type="radio" name="type" value="{{.}}" {{if eq . $pr.Activity.Type}}checked{{end}}>{{t (printf "status.activity.type.%s" .)}}</label>
+        {{end}}
+      </div>
+      <label class="field activity-name">{{t "status.activity.name"}}
+        <input name="name" maxlength="128" value="{{$pr.Activity.Name}}" data-vars-target>
+      </label>
+      {{template "status_placeholders"}}
+      <label class="field activity-url">{{t "status.activity.url"}}
+        <input name="url" type="url" placeholder="https://twitch.tv/…" value="{{$pr.Activity.URL}}">
+      </label>
+    </form>
+  </div>
+</section>
+
+{{template "presence_show" .}}
+
+{{template "custom_status" .}}
+
+<section class="box">
+  <header class="box-head">
+    <h2>{{t "status.rotation.title"}}</h2>
+    <span class="box-meta">{{t "status.rotation.meta"}}</span>
+  </header>
+  <div class="box-body">
+    <form class="form" hx-post="/bot/{{.BotID}}/presence/rotation" hx-target="#flash" hx-trigger="change, input changed delay:800ms">
+      <label class="toggle-row">
+        <span><strong>{{t "status.rotation.enable"}}</strong><span class="hint">{{t "status.rotation.enable_hint"}}</span></span>
+        <input type="checkbox" class="toggle" name="enabled" value="true" {{if $pr.Rotation.Enabled}}checked{{end}}>
+      </label>
+      <label class="field">{{t "status.rotation.interval"}}
+        <span class="inline-form"><input type="number" name="interval" min="30" max="3600" value="{{$pr.Rotation.IntervalSeconds}}" class="input-small"><span class="hint">{{t "status.rotation.interval_hint"}}</span></span>
+      </label>
+      <div class="field">
+        <span class="field-label">{{t "status.rotation.entries"}}</span>
+        <div class="rows" data-rows>
+          {{range $pr.Rotation.Entries}}{{template "rotation_row" (list $.ActivityTypes .)}}{{end}}
+        </div>
+        <template data-row-template>{{template "rotation_row" (list .ActivityTypes nil)}}</template>
+        <div><button type="button" class="btn btn-primary btn-sm" data-add-row>+ {{t "status.rotation.add"}}</button></div>
+        {{template "status_placeholders"}}
+      </div>
+    </form>
+  </div>
+</section>
+
+<section class="box">
+  <header class="box-head">
+    <h2>{{t "status.profile.title"}}</h2>
+    <span class="box-meta">{{t "status.profile.meta"}}</span>
+  </header>
+  <div class="box-body">
+    <form class="form" hx-post="/bot/{{.BotID}}/profile" hx-target="#flash" hx-trigger="change, input changed delay:800ms">
+      <label class="field">{{t "status.profile.pronouns"}}
+        <input name="pronouns" maxlength="40" value="{{.Profile.Pronouns}}" placeholder="{{t "status.profile.pronouns_placeholder"}}" class="input-medium">
+        <span class="hint">{{t "status.profile.pronouns_hint"}}</span>
+      </label>
+      <label class="field">{{t "status.profile.bio"}}
+        <textarea name="bio" maxlength="190" rows="3" placeholder="{{t "status.profile.bio_placeholder"}}" data-counter="bio-count">{{.Profile.Bio}}</textarea>
+        <span class="hint hint-right" id="bio-count"></span>
+      </label>
+      <p class="hint">{{t "status.profile.note"}}</p>
+    </form>
+  </div>
+</section>
+{{end}}
+
+{{/* rotation_row receives [activityTypes, *entry or nil]. */}}
+{{define "rotation_row"}}
+{{$types := index . 0}}{{$e := index . 1}}
+<div class="row-entry">
+  <select name="entry_type" aria-label="{{t "status.activity.title"}}">
+    {{range $types}}{{if ne . "none"}}<option value="{{.}}" {{if $e}}{{if eq . $e.Type}}selected{{end}}{{end}}>{{t (printf "status.activity.type.%s" .)}}</option>{{end}}{{end}}
+  </select>
+  <input name="entry_name" maxlength="128" value="{{if $e}}{{$e.Name}}{{end}}" aria-label="{{t "status.activity.name"}}" data-vars-target>
+  <button type="button" class="icon-btn" data-remove-row aria-label="{{t "action.remove"}}">×</button>
+</div>
+{{end}}
+
+{{define "presence_status_fragment"}}{{template "presence_status" .Data}}{{end}}
+
+{{define "presence_status"}}
+<section class="box" id="presence-status">
+  <header class="box-head"><h2>{{t "status.presence.title"}}</h2></header>
+  <div class="box-body">
+    <form class="presence-grid" hx-post="/bot/{{.BotID}}/presence/status" hx-trigger="change" hx-target="#presence-status" hx-swap="outerHTML">
+      {{range .PresenceStatuses}}
+      <label class="presence-card">
+        <input type="radio" name="status" value="{{.}}" {{if eq . $.Presence.Status}}checked{{end}}>
+        <span class="presence-dot presence-dot-{{.}}" aria-hidden="true"></span>
+        <strong>{{t (printf "status.presence.%s" .)}}</strong>
+        <span class="hint">{{t (printf "status.presence.%s_hint" .)}}</span>
+      </label>
+      {{end}}
+    </form>
+  </div>
+</section>
+{{end}}
+
+{{define "custom_status_fragment"}}{{template "custom_status" .Data}}{{end}}
+
+{{define "custom_status"}}
+<section class="box" id="custom-status">
+  <header class="box-head">
+    <h2>{{t "status.custom.title"}}</h2>
+    <span class="box-meta">💭 {{t "status.custom.meta"}}</span>
+  </header>
+  <div class="box-body">
+    <form class="form" hx-post="/bot/{{.BotID}}/presence/custom" hx-target="#flash" hx-trigger="change, input changed delay:800ms">
+      <label class="field">{{t "status.custom.text"}}
+        <input name="text" maxlength="128" value="{{.Presence.CustomStatus}}" data-preview="custom-preview" data-vars-target>
+      </label>
+      {{template "status_placeholders"}}
+      <div class="preview">
+        <span class="hint">{{t "status.custom.preview"}}</span>
+        <span>💭 <span id="custom-preview">{{.Presence.CustomStatus}}</span></span>
+      </div>
+      <div class="inline-form">
+        <button type="button" class="btn" hx-delete="/bot/{{.BotID}}/presence/custom" hx-target="#custom-status" hx-swap="outerHTML">{{t "action.remove"}}</button>
+      </div>
+    </form>
+  </div>
+</section>
+{{end}}
+
+{{/* Placeholders of the status texts; a click inserts into the last status
+   field (data-vars-target), the bot fills them in and refreshes every 5 min. */}}
+{{define "status_placeholders"}}
+<div>
+  <div class="chips" role="group" aria-label="{{t "status.vars.title"}}">
+    {{range list "bot.members" "bot.servers" "bot.channels" "bot.name" "random:1-100"}}<button type="button" class="chip mono" data-insert="{{"{"}}{{.}}{{"}"}}">{{"{"}}{{.}}{{"}"}}</button>{{end}}
+  </div>
+  <span class="hint">{{t "status.vars.hint"}}</span>
+</div>
+{{end}}
+
+{{/* Discord shows one activity of a bot: pick the activity (or rotation) or the custom status. */}}
+{{define "presence_show"}}
+<section class="box">
+  <header class="box-head"><h2>{{t "status.show.title"}}</h2></header>
+  <div class="box-body">
+    <p class="hint">{{t "status.show.hint"}}</p>
+    <form class="form" hx-post="/bot/{{.BotID}}/presence/show" hx-target="#flash" hx-trigger="change">
+      <div class="chips" role="radiogroup" aria-label="{{t "status.show.title"}}">
+        <label class="chip"><input type="radio" name="show" value="activity" {{if ne .Presence.Show "custom"}}checked{{end}}> {{t "status.show.activity"}}</label>
+        <label class="chip"><input type="radio" name="show" value="custom" {{if eq .Presence.Show "custom"}}checked{{end}}> {{t "status.show.custom"}}</label>
+      </div>
+    </form>
+  </div>
+</section>
+{{end}}

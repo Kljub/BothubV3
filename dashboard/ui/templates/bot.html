@@ -1,0 +1,53 @@
+{{define "title"}}{{t (printf "bot.title.%s" .Data.Section)}}{{end}}
+
+{{define "content"}}
+{{$d := .Data}}
+{{$bot := $d.Bot}}
+
+{{if eq $d.Section "overview"}}
+{{template "bot_stats" $d.Stats}}
+{{template "stats_range_dialog" $d.Stats}}
+
+{{else if eq $d.Section "settings"}}
+{{template "bot_settings" $d}}
+
+{{else if eq $d.Section "logs"}}
+{{template "bot_logs" $d.Logs}}
+
+{{else if eq $d.Section "status"}}
+{{template "bot_status" $d.Presence}}
+
+{{else if eq $d.Section "invite"}}
+<section class="panel">
+  <h2>{{t "bot.nav.invite"}}</h2>
+  {{with $d.InviteURL}}
+  <p class="muted">{{t "invite.text"}}</p>
+  <div class="section-gap-sm"><a class="btn btn-primary" href="{{.}}" target="_blank" rel="noopener noreferrer" hx-boost="false">{{t "invite.button"}}</a></div>
+  {{else}}
+  <p class="muted">{{t "invite.no_app_id"}}</p>
+  {{end}}
+</section>
+
+{{else if eq $d.Section "server"}}
+{{if eq $bot.Status "running"}}
+{{template "server_list" $d}}
+{{else}}
+<section class="box"><div class="box-body"><p class="muted">{{t "guilds.bot_offline"}}</p></div></section>
+{{end}}
+
+{{else if eq $d.Section "modules"}}
+{{range $d.Categories}}{{template "module_group" .}}{{end}}
+
+{{else if eq $d.Section "plugins"}}
+{{if $d.Plugins}}
+<section class="module-grid">
+  {{range $d.Plugins}}{{template "plugin_card" .}}{{end}}
+</section>
+{{else}}
+<section class="box"><div class="box-body"><p class="muted">{{t "plugins.empty"}}</p></div></section>
+{{end}}
+
+{{else}}
+<section class="panel"><p class="muted">{{t "admin.placeholder"}}</p></section>
+{{end}}
+{{end}}

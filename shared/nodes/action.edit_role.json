@@ -1,0 +1,75 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.edit_role",
+  "version": 1,
+  "category": "action",
+  "group": "role",
+  "order": 410,
+  "color": "purple",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_edit_role.label",
+  "descriptionKey": "builder.node.action_edit_role.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "role": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.role",
+        "x-hintKey": "builder.cfg.ref_hint",
+        "x-ref": "role"
+      },
+      "name": {
+        "type": "string",
+        "maxLength": 100,
+        "x-labelKey": "builder.cfg.name"
+      },
+      "color": {
+        "type": "string",
+        "maxLength": 7,
+        "x-labelKey": "builder.cfg.color",
+        "x-placeholder": "#5865f2"
+      },
+      "hoist": {
+        "type": "boolean",
+        "default": false,
+        "x-labelKey": "builder.cfg.hoist"
+      },
+      "mentionable": {
+        "type": "boolean",
+        "default": false,
+        "x-labelKey": "builder.cfg.mentionable"
+      },
+      "reason": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.reason",
+        "x-hintKey": "builder.cfg.reason_hint"
+      },
+      "guild": {
+        "type": "string",
+        "maxLength": 40,
+        "x-advanced": true,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.guild",
+        "x-hintKey": "builder.cfg.guild_hint"
+      }
+    }
+  }
+}

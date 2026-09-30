@@ -1,0 +1,68 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.set_variable",
+  "version": 1,
+  "category": "action",
+  "group": "variables",
+  "order": 90,
+  "color": "teal",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_set_variable.label",
+  "descriptionKey": "builder.node.action_set_variable.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "var_name": {
+        "type": "string",
+        "maxLength": 64,
+        "x-labelKey": "builder.cfg.var_name",
+        "x-mono": true,
+        "x-placeholder": "coins",
+        "x-hintKey": "builder.cfg.var_name_hint"
+      },
+      "value": {
+        "type": "string",
+        "maxLength": 500,
+        "x-labelKey": "builder.cfg.value",
+        "x-multiline": true
+      },
+      "scope": {
+        "type": "string",
+        "enum": [
+          "run",
+          "user",
+          "server",
+          "global"
+        ],
+        "default": "run",
+        "x-labelKey": "builder.cfg.scope",
+        "x-enumKey": "builder.enum.scope"
+      },
+      "undo_after": {
+        "type": "string",
+        "maxLength": 20,
+        "pattern": "^[0-9]+[smhd]$",
+        "x-widget": "undo",
+        "x-labelKey": "builder.undo.title",
+        "x-undoTitleKey": "builder.undo.set_variable",
+        "x-undoHintKey": "builder.undo.set_variable_hint"
+      }
+    }
+  }
+}

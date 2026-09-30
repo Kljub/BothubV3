@@ -1,0 +1,56 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.set_unique_variable",
+  "version": 1,
+  "category": "action",
+  "group": "other",
+  "order": 790,
+  "color": "teal",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_set_unique_variable.label",
+  "descriptionKey": "builder.node.action_set_unique_variable.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": "",
+      "labelKey": "builder.result.set_unique_variable.0"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "unique_kind": {
+        "type": "string",
+        "enum": [
+          "uuid",
+          "number",
+          "short"
+        ],
+        "default": "uuid",
+        "x-labelKey": "builder.cfg.unique_kind",
+        "x-enumKey": "builder.enum.unique_kind"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  }
+}

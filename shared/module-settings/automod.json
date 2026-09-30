@@ -1,0 +1,123 @@
+{
+  "module": "automod",
+  "fields": [
+    {
+      "key": "words",
+      "type": "words",
+      "max": 1000,
+      "maxLength": 60,
+      "hint": true
+    },
+    {
+      "key": "allowed",
+      "type": "words",
+      "max": 100,
+      "maxLength": 60
+    },
+    {
+      "key": "profanity",
+      "type": "bool",
+      "default": false
+    },
+    {
+      "key": "sexual",
+      "type": "bool",
+      "default": false
+    },
+    {
+      "key": "slurs",
+      "type": "bool",
+      "default": false
+    },
+    {
+      "key": "invites",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "links",
+      "type": "bool",
+      "default": false
+    },
+    {
+      "key": "mentionLimit",
+      "type": "number",
+      "min": 0,
+      "max": 50,
+      "default": 5
+    },
+    {
+      "key": "spam",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "blockMessage",
+      "type": "text",
+      "max": 150,
+      "default": "This message was blocked by the server's rules."
+    },
+    {
+      "key": "alertChannel",
+      "type": "channel",
+      "channelTypes": [
+        "text"
+      ]
+    },
+    {
+      "key": "timeoutSeconds",
+      "type": "number",
+      "min": 0,
+      "max": 2419200,
+      "default": 0
+    },
+    {
+      "key": "exemptRoles",
+      "type": "roles",
+      "max": 20
+    },
+    {
+      "key": "exemptChannels",
+      "type": "channels",
+      "channelTypes": [
+        "text",
+        "announcement",
+        "forum",
+        "voice"
+      ],
+      "max": 50
+    },
+    {
+      "key": "punishments",
+      "type": "list",
+      "max": 10,
+      "titleField": "count",
+      "item": [
+        {
+          "key": "count",
+          "type": "number",
+          "min": 1,
+          "max": 100,
+          "default": 3
+        },
+        {
+          "key": "action",
+          "type": "select",
+          "options": [
+            "timeout",
+            "kick",
+            "ban"
+          ],
+          "default": "timeout"
+        },
+        {
+          "key": "minutes",
+          "type": "number",
+          "min": 1,
+          "max": 40320,
+          "default": 60
+        }
+      ]
+    }
+  ]
+}

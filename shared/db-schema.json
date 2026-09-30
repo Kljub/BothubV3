@@ -1,0 +1,4 @@
+{
+  "$comment": "Schema version of the main SQLite database (PRAGMA user_version). The API migrates up to it (api/migrations); the bot starts only when the database has exactly this version.",
+  "version": 12
+}

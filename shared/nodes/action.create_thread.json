@@ -1,0 +1,105 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.create_thread",
+  "version": 1,
+  "category": "action",
+  "group": "thread",
+  "order": 530,
+  "color": "blue",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_create_thread.label",
+  "descriptionKey": "builder.node.action_create_thread.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": "",
+      "labelKey": "builder.result.create_thread.0"
+    },
+    {
+      "suffix": ".id",
+      "labelKey": "builder.result.create_thread.1"
+    },
+    {
+      "suffix": ".name",
+      "labelKey": "builder.result.create_thread.2"
+    },
+    {
+      "suffix": ".archived",
+      "labelKey": "builder.result.create_thread.3"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "channel": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.channel",
+        "x-hintKey": "builder.cfg.ref_hint",
+        "x-ref": "channel",
+        "default": "{channel.id}"
+      },
+      "start_message": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.start_message",
+        "x-hintKey": "builder.cfg.ref_optional_hint",
+        "x-ref": "message"
+      },
+      "name": {
+        "type": "string",
+        "maxLength": 100,
+        "x-labelKey": "builder.cfg.name"
+      },
+      "private": {
+        "type": "boolean",
+        "default": false,
+        "x-labelKey": "builder.cfg.private"
+      },
+      "undo_after": {
+        "type": "string",
+        "maxLength": 20,
+        "pattern": "^[0-9]+[smhd]$",
+        "x-widget": "undo",
+        "x-labelKey": "builder.undo.title",
+        "x-undoTitleKey": "builder.undo.create_thread",
+        "x-undoHintKey": "builder.undo.create_thread_hint"
+      },
+      "reason": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.reason",
+        "x-hintKey": "builder.cfg.reason_hint"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      },
+      "guild": {
+        "type": "string",
+        "maxLength": 40,
+        "x-advanced": true,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.guild",
+        "x-hintKey": "builder.cfg.guild_hint"
+      }
+    }
+  }
+}

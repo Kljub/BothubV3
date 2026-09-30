@@ -17,3 +17,42 @@ Stand: 2026-09-28. Quelle: Antworten des Users auf `HANDOVER_NEUBAU.md` Abschnit
 | C | Dashboard-Rendering | User unsicher, Claude schlägt vor (siehe `plan.md`) |
 
 Reihenfolge laut User: erst Dashboard, dann API, dann Bot.
+
+## Dashboard-UI (2026-09-28)
+
+- Vorlage ist der Screenshot des Users. Stil 1:1 übernehmen, nichts Neues erfinden.
+- Layout: Sidebar mit Logo „BH“, Bot-Auswahl, Suche, einklappbarem ADMIN-Bereich
+  (Overview, Plugin Manager, Core Runner, Users & Roles, Logs, SDK Policies, Settings), unten User + Logout.
+  Topbar mit Titel, Start Tour, Sprache, Glocke.
+- Das vorher gewünschte Admin-Popup ist durch den Screenshot ersetzt (Admin-Bereich direkt in der Sidebar).
+- Dashboard: Kacheln „Bots online“, „RAM aktuell“, „Ø RAM (24 h)“, darunter Bot-Kacheln und eine leere Kachel „Bot hinzufügen“.
+- Bot-Farben: läuft = grün, offline = rot, Fehler = gelb.
+- Bot hinzufügen: Popup nur mit Token. Name und ID holt die API von Discord.
+- Keine vollen Reloads: `hx-boost` für Navigation, Änderungen tauschen nur Teile der Seite aus, Kacheln aktualisieren sich per Polling.
+- RAM-Diagramm liegt unter Admin → Overview.
+
+## Secrets (2026-09-28)
+
+- User-Vorgabe: Bot-Tokens dürfen über die Webseite niemals sichtbar sein.
+- Bot-Tokens werden **verschlüsselt** gespeichert (AES-256-GCM, Schlüssel aus ENV `BOTHUB_SECRET_KEY` oder `/data/secret.key`).
+  Hashen geht nicht: Der Bot braucht den Klartext für den Discord-Login.
+- Zusätzlich ein Fingerabdruck als HMAC-SHA-256 mit Salt, um doppelte Tokens zu erkennen, ohne zu entschlüsseln.
+- Die API gibt Tokens nie zurück (`tokenSet: true`), loggt sie nicht, und sie landen nie in Cookies, HTML oder URLs.
+- Das Admin-Passwort wird mit Argon2id gehasht (mit Salt).
+- Die Session speichert nur die ID des gewählten Bots, nie den Token.
+
+## Plugin-Market (2026-09-29)
+
+- Market: `github.com/Kljub/bothub_market` (privat), 18 Plugins im v2-Format.
+- Entscheidung: **nicht 1:1 übernehmen** (Weg B). Jedes Plugin wird auf V3 umgebaut:
+  - Migrationen nach SQLite.
+  - Dashboard-Seiten als Templates **nur mit den globalen Klassen** (`dashboard/ui/DESIGN.md`), damit alles einheitlich aussieht.
+  - `index.js` gegen das V3-Plugin-SDK (Child-Prozess, RPC, Permissions).
+- `manifest.json` bleibt die Grundlage (Name, Version, Icon, Beschreibung, Changelog, `requires`, `moduleGroup`).
+
+## Cores und Nutzer (2026-09-28)
+
+- Cores bleiben weg. Kein „Core Runner“ im UI (Entscheidung 5 gilt weiter).
+- Ändert die Vorgabe „genau ein User“: Es dürfen weitere Nutzer angelegt werden (Admin → Users & Roles).
+  Der erste Nutzer entsteht weiter über Setup-Wizard oder ENV. Keine Selbstregistrierung.
+- Offen: Umfang der Rollen (siehe `context/questions.md`).

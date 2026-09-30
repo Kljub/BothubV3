@@ -1,0 +1,16 @@
+/* bh-page: Page header, list header, auth pages. */
+
+.auth-card {
+  width: 100%; max-width: 400px;
+  padding: 28px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.auth-card .brand { padding: 0 0 20px; border: 0; }
+.auth-card h2 { margin-bottom: 6px; }
+.auth-card .muted { margin-bottom: 16px; }
+.back-link { display: inline-block; margin-bottom: 14px; }
+.item-head { justify-content: flex-start; gap: 16px; }
+.item-head h2 { font-size: 16px; }
+.item-head .beta, .item-head .badge-plugin { margin-left: 6px; }

@@ -1,0 +1,24 @@
+{{define "title"}}{{t "setup.title"}}{{end}}
+
+{{define "content"}}
+<h2>{{t "setup.title"}}</h2>
+<p class="muted">{{t "setup.intro"}}</p>
+{{with .Data.Error}}{{template "flash_error" .}}{{end}}
+<form method="post" action="/setup" class="form">
+  <label>{{t "field.username"}}
+    <input name="username" autocomplete="username" required minlength="3" maxlength="32" value="{{.Data.Username}}">
+  </label>
+  <label>{{t "field.password"}}
+    <input type="password" name="password" autocomplete="new-password" required minlength="12">
+  </label>
+  <label>{{t "field.password_confirm"}}
+    <input type="password" name="password_confirm" autocomplete="new-password" required minlength="12">
+  </label>
+  <label>{{t "field.language"}}
+    <select name="locale">
+      {{range .Locales}}<option value="{{.}}" {{if eq . $.Locale}}selected{{end}}>{{t (printf "locale.%s" .)}}</option>{{end}}
+    </select>
+  </label>
+  <button type="submit" class="btn btn-primary">{{t "setup.submit"}}</button>
+</form>
+{{end}}

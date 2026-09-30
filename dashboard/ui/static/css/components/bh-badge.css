@@ -1,0 +1,25 @@
+/* bh-badge: Badges, counters, beta marker. */
+
+.badge-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.badge-soft { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; background: var(--surface-2); color: var(--muted); }
+.badge-soft-running { background: color-mix(in srgb, var(--green) 15%, transparent); color: var(--green); }
+.badge-soft-stopped { background: color-mix(in srgb, var(--red) 15%, transparent); color: var(--red); }
+.badge-soft-error { background: color-mix(in srgb, var(--yellow) 15%, transparent); color: var(--yellow); }
+.pill-count { padding: 1px 7px; border-radius: 6px; font-size: 10px; font-weight: 700; color: var(--group, var(--accent)); background: color-mix(in srgb, var(--group, var(--accent)) 15%, transparent); }
+.beta { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 10px; font-weight: 700; line-height: 1.5; vertical-align: middle; color: #fff; background: var(--red); }
+.badge-plugin { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 10px; font-weight: 700; line-height: 1.5; vertical-align: middle; color: #1a1a1a; background: #a3e635; }
+.status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex: none; }
+.status-dot-running { background: var(--green); }
+.status-dot-stopped { background: var(--red); }
+.status-dot-error { background: var(--yellow); }
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px; font-weight: 700;
+  background: var(--surface-2); color: var(--text-2);
+  white-space: nowrap;
+}
+.badge-running { background: var(--green); color: #0f0f0f; }
+.badge-stopped { background: var(--red); color: #0f0f0f; }
+.badge-error { background: var(--yellow); color: #0f0f0f; }

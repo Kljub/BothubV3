@@ -1,0 +1,32 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.stop_loop",
+  "version": 1,
+  "category": "action",
+  "group": "loop",
+  "order": 140,
+  "color": "orange",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_stop_loop.label",
+  "descriptionKey": "builder.node.action_stop_loop.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}

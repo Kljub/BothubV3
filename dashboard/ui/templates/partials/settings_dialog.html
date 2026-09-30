@@ -1,0 +1,52 @@
+{{/* User settings popup (only the signed-in user's own settings, never admin
+     settings): General, Account, Security & sign-in. Tabs switch in the
+     browser; the search looks through every tab. Each tab is a list of cards
+     with rows: label and description left, value or action right; rows with
+     a form open in place (<details>). */}}
+{{define "settings_dialog"}}
+<dialog id="settings-dialog" class="settings-dialog" aria-label="{{t "admin.nav.settings"}}">
+  <button type="button" class="icon-btn settings-close" data-close-dialog aria-label="{{t "admin.close"}}">×</button>
+  <div class="settings-shell">
+    <nav class="settings-nav">
+      <input type="search" class="sidebar-search settings-search" placeholder="{{t "settings.search"}}" aria-label="{{t "settings.search"}}" data-settings-filter>
+      <button type="button" class="settings-nav-item" data-settings-tab="settings-general" aria-current="page">{{template "icon_gear"}}<span>{{t "settings.general"}}</span></button>
+      <button type="button" class="settings-nav-item" data-settings-tab="settings-account">{{template "icon_users"}}<span>{{t "settings.account"}}</span></button>
+      <button type="button" class="settings-nav-item" data-settings-tab="settings-security">{{template "icon_shield"}}<span>{{t "settings.security"}}</span></button>
+    </nav>
+    <div class="settings-main">
+      <div id="account-flash"></div>
+      <p class="muted settings-no-match" data-settings-empty hidden>{{t "settings.no_match"}}</p>
+
+      <section class="settings-content" id="settings-general">
+        <h2>{{t "settings.general"}}</h2>
+        <form hx-post="/settings" hx-trigger="change" hx-swap="none">
+          <div class="settings-card">
+            <label class="settings-row" data-setting>
+              <span class="settings-row-text"><strong>{{t "field.language"}}</strong><span class="hint">{{t "settings.language_hint"}}</span></span>
+              <select name="locale" class="select-plain">
+                {{range .Locales}}<option value="{{.}}" {{if eq . $.Locale}}selected{{end}}>{{t (printf "locale.%s" .)}}</option>{{end}}
+              </select>
+            </label>
+            <label class="settings-row" data-setting>
+              <span class="settings-row-text"><strong>{{t "field.theme"}}</strong><span class="hint">{{t "settings.theme_hint"}}</span></span>
+              <select name="theme" class="select-plain" data-theme-select>
+                {{range .Themes}}<option value="{{.}}" {{if eq . $.Theme}}selected{{end}}>{{t (printf "theme.%s" .)}}</option>{{end}}
+              </select>
+            </label>
+          </div>
+        </form>
+      </section>
+
+      <section class="settings-content" id="settings-account" hidden>
+        <h2>{{t "settings.account"}}</h2>
+        {{template "account_panel" .Me}}
+      </section>
+
+      <section class="settings-content" id="settings-security" hidden>
+        <h2>{{t "settings.security"}}</h2>
+        {{template "security_panel" .Me}}
+      </section>
+    </div>
+  </div>
+</dialog>
+{{end}}

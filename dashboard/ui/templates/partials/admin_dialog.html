@@ -1,0 +1,17 @@
+{{/* Admin settings popup: same layout as the settings popup; the right pane
+     loads each section via htmx from /admin/{section}. */}}
+{{define "admin_dialog"}}
+<dialog id="admin-dialog" class="settings-dialog admin-dialog" aria-label="{{t "admin.title"}}">
+  <button type="button" class="icon-btn settings-close" data-close-dialog aria-label="{{t "admin.close"}}">×</button>
+  <div class="settings-shell">
+    <nav class="settings-nav">
+      <input type="search" class="sidebar-search settings-search" placeholder="{{t "settings.search"}}" aria-label="{{t "settings.search"}}" data-dialog-nav-filter>
+      {{range .AdminSections}}
+      <button type="button" class="settings-nav-item" data-dialog-section hx-get="/admin/{{.}}" hx-target="#admin-panel"
+        {{if eq . "overview"}}aria-current="page"{{end}}>{{template "admin_icon" .}}<span>{{t (printf "admin.nav.%s" .)}}</span></button>
+      {{end}}
+    </nav>
+    <section class="settings-content" id="admin-panel" aria-live="polite"></section>
+  </div>
+</dialog>
+{{end}}

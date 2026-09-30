@@ -1,0 +1,78 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.music_search",
+  "version": 1,
+  "category": "action",
+  "group": "music",
+  "order": 340,
+  "color": "teal",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_music_search.label",
+  "descriptionKey": "builder.node.action_music_search.description",
+  "module": "music",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": ".count",
+      "labelKey": "builder.result.music_search.0"
+    },
+    {
+      "suffix": ".list",
+      "labelKey": "builder.result.music_search.1"
+    },
+    {
+      "suffix": "[0].title",
+      "labelKey": "builder.result.music_search.2"
+    },
+    {
+      "suffix": "[0].url",
+      "labelKey": "builder.result.music_search.3"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "query": {
+        "type": "string",
+        "maxLength": 500,
+        "x-labelKey": "builder.cfg.query"
+      },
+      "limit": {
+        "type": "number",
+        "minimum": 1,
+        "x-labelKey": "builder.cfg.limit_entries",
+        "maximum": 50,
+        "default": 10
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      },
+      "guild": {
+        "type": "string",
+        "maxLength": 40,
+        "x-advanced": true,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.guild",
+        "x-hintKey": "builder.cfg.guild_hint"
+      }
+    }
+  }
+}

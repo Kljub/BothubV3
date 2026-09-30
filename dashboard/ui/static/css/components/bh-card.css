@@ -1,0 +1,26 @@
+/* bh-card: Card, box (card with head row), panel. */
+
+.box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 20px; }
+.box-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 20px; border-bottom: 1px solid var(--border); }
+.box-head h2 { font-size: 14px; font-weight: 700; }
+.box-meta { display: inline-flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted); }
+.box-body { padding: 20px; }
+.box-danger { border-color: color-mix(in srgb, var(--red) 55%, var(--border)); }
+.box-danger .box-head h2 { color: var(--red); }
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.card-title { font-size: 14px; font-weight: 700; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card-title:hover { color: var(--text); }
+.panel { padding: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.panel + .panel { margin-top: 16px; }
+.panel h2 { margin-bottom: 14px; }
+
+/* Empty state inside a box: icon, title, hint, centered. */
+.empty-state { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 48px 16px; text-align: center; }
+.empty-state-icon { color: var(--muted); }
+.empty-state-icon .icon { width: 30px; height: 30px; }
+.empty-state strong { font-size: 14px; }
+.box-count { font-size: 12px; font-weight: 400; margin-left: 6px; }

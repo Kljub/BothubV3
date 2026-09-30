@@ -1,0 +1,121 @@
+// Package i18n loads the dashboard's translation files and resolves keys.
+//
+// Files are flat JSON objects (`"nav.bots": "Bots"`) named `<locale>.json`.
+// Placeholders use `{name}`. English is the fallback for missing keys.
+package i18n
+
+import (
+	"encoding/json"
+	"fmt"
+	"io/fs"
+	"log/slog"
+	"path"
+	"sort"
+	"strings"
+	"sync"
+
+	"golang.org/x/text/language"
+)
+
+// Fallback is the locale used when a key or locale is missing.
+const Fallback = "en"
+
+// Bundle holds all loaded locales.
+type Bundle struct {
+	messages map[string]map[string]string
+	locales  []string
+	matcher  language.Matcher
+
+	warned sync.Map // missing keys already logged
+}
+
+// Load reads every `*.json` file in dir of fsys.
+func Load(fsys fs.FS, dir string) (*Bundle, error) {
+	files, err := fs.Glob(fsys, path.Join(dir, "*.json"))
+	if err != nil {
+		return nil, err
+	}
+
+	b := &Bundle{messages: map[string]map[string]string{}}
+	for _, f := range files {
+		raw, err := fs.ReadFile(fsys, f)
+		if err != nil {
+			return nil, err
+		}
+		msgs := map[string]string{}
+		if err := json.Unmarshal(raw, &msgs); err != nil {
+			return nil, fmt.Errorf("%s: %w", f, err)
+		}
+		locale := strings.TrimSuffix(path.Base(f), ".json")
+		b.messages[locale] = msgs
+		b.locales = append(b.locales, locale)
+	}
+	if _, ok := b.messages[Fallback]; !ok {
+		return nil, fmt.Errorf("i18n: fallback locale %q missing in %s", Fallback, dir)
+	}
+
+	// Fallback first, so the matcher prefers it on ties.
+	sort.Slice(b.locales, func(i, j int) bool {
+		if b.locales[i] == Fallback {
+			return true
+		}
+		if b.locales[j] == Fallback {
+			return false
+		}
+		return b.locales[i] < b.locales[j]
+	})
+	tags := make([]language.Tag, len(b.locales))
+	for i, l := range b.locales {
+		tags[i] = language.Make(l)
+	}
+	b.matcher = language.NewMatcher(tags)
+	return b, nil
+}
+
+// Locales returns all loaded locale codes, fallback first.
+func (b *Bundle) Locales() []string { return b.locales }
+
+// Has reports whether locale is loaded.
+func (b *Bundle) Has(locale string) bool {
+	_, ok := b.messages[locale]
+	return ok
+}
+
+// Match picks the best loaded locale for an Accept-Language header.
+func (b *Bundle) Match(acceptLanguage string) string {
+	tags, _, err := language.ParseAcceptLanguage(acceptLanguage)
+	if err != nil || len(tags) == 0 {
+		return Fallback
+	}
+	_, idx, _ := b.matcher.Match(tags...)
+	return b.locales[idx]
+}
+
+// T translates key. args are name/value pairs for `{name}` placeholders.
+// A missing key returns the key itself and is logged once.
+func (b *Bundle) T(locale, key string, args ...any) string {
+	msg, ok := b.messages[locale][key]
+	if !ok {
+		msg, ok = b.messages[Fallback][key]
+	}
+	if !ok {
+		if _, seen := b.warned.LoadOrStore(key, true); !seen {
+			slog.Warn("i18n key missing", "key", key)
+		}
+		return key
+	}
+	for i := 0; i+1 < len(args); i += 2 {
+		msg = strings.ReplaceAll(msg, "{"+fmt.Sprint(args[i])+"}", fmt.Sprint(args[i+1]))
+	}
+	return msg
+}
+
+// Keys returns all keys of locale. Used by tests.
+func (b *Bundle) Keys(locale string) []string {
+	keys := make([]string, 0, len(b.messages[locale]))
+	for k := range b.messages[locale] {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}

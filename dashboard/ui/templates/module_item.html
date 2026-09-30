@@ -1,0 +1,508 @@
+{{define "title"}}{{if eq .Data.Kind "modules"}}{{t (printf "module.%s.name" .Data.Module.Key)}}{{else if eq .Data.Kind "command"}}/{{.Data.Command.Name}}{{else}}{{.Data.Plugin.Name}}{{end}}{{end}}
+
+{{define "content"}}
+{{$d := .Data}}
+{{if eq $d.Kind "modules"}}
+<div class="module-page module-group-{{$d.Category}}">
+  <nav class="module-breadcrumb" aria-label="{{t "module_page.breadcrumb"}}">
+    <a href="/bots/modules">{{t "module_page.breadcrumb"}}</a> › <span>{{t (printf "module.category.%s" $d.Category)}}</span> › <strong>{{t (printf "module.%s.name" $d.Module.Key)}}</strong>
+  </nav>
+  {{if $d.Custom}}
+  {{/* Command builder: header without toggle (reference design), custom commands. */}}
+  {{template "module_header_static" $d.Header}}
+  {{template "custom_commands" $d.Custom}}
+  {{else if $d.Webhooks}}
+  {{template "module_header_static" $d.Header}}
+  <div id="webhooks-error"></div>
+  <div id="webhooks-body">{{template "webhooks" $d.Webhooks}}</div>
+  {{else if $d.MsgBuilder}}
+  {{template "module_header_static" $d.Header}}
+  {{template "message_builder" $d.MsgBuilder}}
+  {{else if $d.Storage}}
+  {{template "module_header" $d.Header}}
+  {{template "data_storage" $d.Storage}}
+  {{else if $d.Timed}}
+  {{template "module_header_static" $d.Header}}
+  <div id="timed-error"></div>
+  <div id="timed-body">{{template "timed_events" $d.Timed}}</div>
+  {{else}}
+  {{template "module_header" $d.Header}}
+  {{with $d.Moderation}}{{template "moderation_settings" .}}{{end}}
+  {{with $d.Settings}}
+  <div id="modset-error"></div>
+  <div id="modset-body">{{template "module_settings" .}}</div>
+  <script src="/static/js/modsettings.js?v={{$.AssetVersion}}" defer></script>
+  {{end}}
+  <section class="box">
+    <header class="box-head"><h2>{{t "module_page.commands" "module" (t (printf "module.%s.name" $d.Module.Key)) "count" (len $d.Commands)}}</h2></header>
+    <div class="box-body">
+      {{range $d.Commands}}{{template "command_row" .}}{{else}}<p class="muted">{{t "module_page.no_commands"}}</p>{{end}}
+    </div>
+  </section>
+  {{end}}
+</div>
+{{else if eq $d.Kind "command"}}
+<div class="module-page module-group-{{$d.Category}}">
+  <nav class="module-breadcrumb" aria-label="{{t "module_page.breadcrumb"}}">
+    <a href="/bots/modules">{{t "module_page.breadcrumb"}}</a> › <a href="/bots/modules/{{$d.Module.Key}}">{{t (printf "module.%s.name" $d.Module.Key)}}</a> › <strong class="mono">{{$d.Command.Usage}}</strong>
+  </nav>
+  <section class="box"><div class="box-body"><p class="muted">{{t "command_page.placeholder"}}</p></div></section>
+</div>
+{{else}}
+<a class="back-link muted" href="/bots/plugins">{{t "plugins.back"}}</a>
+<section class="box">
+  <header class="box-head item-head">
+    <span class="module-card-icon" aria-hidden="true">{{$d.Plugin.Icon}}</span>
+    <span>
+      <h2>{{$d.Plugin.Name}} <span class="badge-plugin">{{t "plugins.badge"}}</span>{{if $d.Plugin.Beta}}<span class="beta">{{t "modules.beta"}}</span>{{end}}</h2>
+      <span class="muted">{{$d.Plugin.Description}} · {{t "plugins.version" "version" $d.Plugin.Version}}</span>
+    </span>
+  </header>
+  <div class="box-body"><p class="muted">{{t "plugins.content_placeholder"}}</p></div>
+</section>
+{{end}}
+{{end}}
+
+{{define "module_header_fragment"}}{{template "module_header" .Data}}{{end}}
+
+{{/* Module header: icon, name, description, the big module toggle. */}}
+{{define "module_header"}}
+<section class="box module-head" id="module-head">
+  <span class="module-head-icon" aria-hidden="true">{{.Icon}}</span>
+  <div class="module-head-text">
+    <h2>{{t (printf "module.%s.name" .Key)}}{{if .Beta}} <span class="beta">{{t "modules.beta"}}</span>{{end}}</h2>
+    <p class="muted">{{t (printf "module.%s.description" .Key)}}</p>
+  </div>
+  <form hx-put="/bot/{{.BotID}}/modules/{{.Key}}/state" hx-trigger="change" hx-target="#module-head" hx-swap="outerHTML swap:250ms">
+    <input type="checkbox" class="toggle toggle-lg" name="enabled" value="true" {{if .Enabled}}checked{{end}} aria-label="{{t "module_page.toggle" "name" (t (printf "module.%s.name" .Key))}}">
+  </form>
+</section>
+{{end}}
+
+{{/* Module header without toggle (command builder). */}}
+{{define "module_header_static"}}
+<section class="box module-head">
+  <span class="module-head-icon" aria-hidden="true">{{.Icon}}</span>
+  <div class="module-head-text">
+    <h2>{{t (printf "module.%s.name" .Key)}}</h2>
+    <p class="muted">{{if eq .Key "custom-events"}}{{t "events.header_description"}}{{else if eq .Key "command-builder"}}{{t "builder.header_description"}}{{else}}{{t (printf "module.%s.description" .Key)}}{{end}}</p>
+  </div>
+</section>
+{{end}}
+
+{{define "custom_commands_fragment"}}{{template "custom_commands" .Data}}{{end}}
+
+{{/* Custom commands page: start card, toolbar, commands in groups, dialogs. */}}
+{{define "custom_commands"}}
+<section class="cmdhub" id="custom-commands">
+  <header class="cmdhub-head">
+    <div class="cmdhub-title">
+      <h2>{{t (.Hub.Text "active")}}</h2>
+      <span class="badge-soft">{{t "cmdhub.total" "count" .Total}}</span>
+    </div>
+    <div class="cmdhub-toolbar" id="cmd-toolbar">
+      <input type="search" name="q" class="sidebar-search" value="{{.Query}}" placeholder="{{t (.Hub.Text "search")}}" aria-label="{{t (.Hub.Text "search")}}"
+        hx-get="/bot/{{.BotID}}/{{.Hub.Base}}" hx-trigger="input changed delay:250ms, search" hx-target="#cmd-list" hx-swap="outerHTML" hx-include="#cmd-toolbar">
+      {{if .Hub.Event}}
+      <select name="type" aria-label="{{t "events.type_filter"}}" hx-get="/bot/{{.BotID}}/{{.Hub.Base}}" hx-trigger="change" hx-target="#cmd-list" hx-swap="outerHTML" hx-include="#cmd-toolbar">
+        <option value="">{{t "events.all_types"}}</option>
+        {{range .Types}}<option value="{{.Key}}" {{if eq .Key $.Type}}selected{{end}}>{{t (printf "builder.eventcat.%s" .Key)}} ({{.Count}})</option>{{end}}
+      </select>
+      {{end}}
+      <select name="status" aria-label="{{t "cmdhub.status"}}" hx-get="/bot/{{.BotID}}/{{.Hub.Base}}" hx-trigger="change" hx-target="#cmd-list" hx-swap="outerHTML" hx-include="#cmd-toolbar">
+        {{range list "all" "enabled" "disabled"}}<option value="{{.}}" {{if eq . $.Status}}selected{{end}}>{{t (printf "cmdhub.status.%s" .)}}</option>{{end}}
+      </select>
+      <button type="button" class="btn btn-sm" data-open-dialog="cmd-groups-dialog" hx-get="/bot/{{.BotID}}/command-groups" hx-target="#cmd-groups-body" hx-swap="innerHTML">{{template "icon_layers"}} {{t "cmdhub.groups"}}</button>
+      <button type="button" class="btn btn-sm" data-open-dialog="cmd-deleted-dialog" hx-get="/bot/{{.BotID}}/{{.Hub.Base}}/deleted" hx-target="#cmd-deleted-body" hx-swap="innerHTML">{{template "icon_trash"}} {{t "cmdhub.deleted"}}</button>
+      <button type="button" class="btn btn-sm btn-primary" hx-post="/bot/{{.BotID}}/{{.Hub.Base}}" hx-swap="none" hx-disabled-elt="this">+ {{if .Hub.Event}}{{t "events.new"}}{{else}}{{t "builder.new_command"}}{{end}}</button>
+    </div>
+  </header>
+
+  {{template "custom_commands_list" .}}
+
+  <dialog id="cmd-groups-dialog" class="modal modal-wide" aria-labelledby="cmd-groups-title">
+    <header class="modal-header">
+      <h2 id="cmd-groups-title">{{t "cmdhub.groups.title"}}</h2>
+      <button type="button" class="icon-btn" data-close-dialog aria-label="{{t "admin.close"}}">×</button>
+    </header>
+    <p class="muted">{{t "cmdhub.groups.hint"}}</p>
+    <div id="groups-error"></div>
+    <div id="cmd-groups-body"><p class="muted">{{t "cmdhub.loading"}}</p></div>
+  </dialog>
+
+  <dialog id="cmd-deleted-dialog" class="modal modal-wide" aria-labelledby="cmd-deleted-title">
+    <header class="modal-header">
+      <h2 id="cmd-deleted-title">{{t (.Hub.Text "deleted.title")}}</h2>
+      <button type="button" class="icon-btn" data-close-dialog aria-label="{{t "admin.close"}}">×</button>
+    </header>
+    <p class="muted">{{t (.Hub.Text "deleted.hint")}}</p>
+    <div id="deleted-error"></div>
+    <div id="cmd-deleted-body"><p class="muted">{{t "cmdhub.loading"}}</p></div>
+  </dialog>
+</section>
+{{end}}
+
+{{define "custom_commands_list_fragment"}}{{template "custom_commands_list" .Data}}{{end}}
+
+{{define "custom_commands_list"}}
+<div id="cmd-list" class="cmdhub-list" hx-get="/bot/{{.BotID}}/{{.Hub.Base}}" hx-trigger="bothub:commands-changed from:body" hx-include="#cmd-toolbar" hx-swap="outerHTML">
+  {{range .Groups}}
+  <div class="cmdhub-group">
+    <div class="cmdhub-group-head">
+      {{template "icon_folder"}}
+      <strong>{{if .ID}}{{.Name}}{{else}}{{t "cmdhub.ungrouped"}}{{end}}</strong>
+      <span class="badge-soft">{{len .Commands}}</span>
+      {{with .Description}}<span class="muted">{{.}}</span>{{end}}
+    </div>
+    {{range .Commands}}{{template "custom_command_row" (list $ .)}}{{else}}<p class="muted cmdhub-group-empty">{{t ($.Hub.Text "group_empty")}}</p>{{end}}
+  </div>
+  {{else}}
+  <div class="empty-state">
+    <span class="empty-state-icon">{{template "icon_gear"}}</span>
+    {{if .Filtered}}
+    <strong>{{t (.Hub.Text "no_match")}}</strong>
+    <span class="muted">{{t "cmdhub.no_match_hint"}}</span>
+    {{else}}
+    {{if .Hub.Event}}
+    <strong>{{t "events.empty.title"}}</strong>
+    <span class="muted">{{t "events.empty.hint"}}</span>
+    {{else}}
+    <strong>{{t "builder.empty.title"}}</strong>
+    <span class="muted">{{t "builder.empty.hint"}}</span>
+    {{end}}
+    {{end}}
+  </div>
+  {{end}}
+</div>
+{{end}}
+
+{{/* Receives [list view, command]. */}}
+{{define "custom_command_row"}}
+{{$v := index . 0}}{{$c := index . 1}}
+<div class="cmdhub-row{{if not $c.Enabled}} is-off{{end}}">
+  <div class="cmdhub-main">
+    <a class="cmdhub-icon" href="{{$v.Hub.BuilderURL $c.ID}}" hx-boost="false" title="{{t "cmdhub.open"}}" aria-label="{{t "cmdhub.open"}}">
+      {{if $v.Hub.Event}}{{template "icon_activity"}}{{else}}{{template "icon_terminal"}}{{end}}<span class="cmdhub-dot"></span>
+    </a>
+    <div class="cmdhub-text">
+      {{if $v.Hub.Event}}
+      <a class="cmdhub-name" href="{{$v.Hub.BuilderURL $c.ID}}" hx-boost="false">{{$c.Name}}</a>
+      <span class="muted">{{with $c.EventType}}{{t (printf "builder.event.%s" .)}}{{else}}{{t "events.no_type"}}{{end}}</span>
+      {{else}}
+      <a class="mono cmdhub-name" href="{{$v.Hub.BuilderURL $c.ID}}" hx-boost="false">/{{$c.Name}}</a>
+      <span class="muted">{{with $c.Description}}{{.}}{{else}}{{t "cmdhub.no_description"}}{{end}}</span>
+      {{end}}
+    </div>
+    <div class="cmdhub-actions">
+      <button type="button" class="btn btn-sm btn-danger-soft" hx-delete="/bot/{{$v.BotID}}/{{$v.Hub.Base}}/{{$c.ID}}" hx-target="#cmd-list" hx-swap="outerHTML" hx-include="#cmd-toolbar"
+        hx-confirm="{{t ($v.Hub.Text "delete_confirm") "name" $c.Name}}">{{template "icon_trash"}} {{t "cmdhub.delete"}}</button>
+      <button type="button" class="btn btn-sm" data-share-url="/api/v1/bots/{{$v.BotID}}/{{$v.Hub.Kind}}/{{$c.ID}}" data-share-done="{{t "cmdhub.share_copied"}}">{{template "icon_copy"}} <span>{{t "cmdhub.share"}}</span></button>
+      <form class="cmdhub-toggle" hx-put="/bot/{{$v.BotID}}/{{$v.Hub.Base}}/{{$c.ID}}" hx-trigger="change" hx-target="#cmd-list" hx-swap="outerHTML" hx-include="#cmd-toolbar">
+        <input type="checkbox" class="toggle" name="enabled" value="true" {{if $c.Enabled}}checked{{end}} aria-label="{{t "command.toggle" "name" $c.Name}}">
+      </form>
+      <select name="group" aria-label="{{t ($v.Hub.Text "group_of") "name" $c.Name}}" hx-put="/bot/{{$v.BotID}}/{{$v.Hub.Base}}/{{$c.ID}}/group" hx-trigger="change" hx-target="#cmd-list" hx-swap="outerHTML" hx-include="#cmd-toolbar">
+        <option value="0">{{t "cmdhub.no_group"}}</option>
+        {{range $v.AllGroups}}<option value="{{.ID}}" {{if and $c.GroupID (eq .ID (deref $c.GroupID))}}selected{{end}}>{{.Name}}</option>{{end}}
+      </select>
+      <button type="button" class="icon-btn cmdhub-expand" data-expand aria-expanded="false" aria-label="{{t ($v.Hub.Text "expand") "name" $c.Name}}">{{template "icon_chevron"}}</button>
+    </div>
+  </div>
+  <div class="cmdhub-details" hidden hx-get="/bot/{{$v.BotID}}/{{$v.Hub.Base}}/{{$c.ID}}/details" hx-trigger="bothub:expand once" hx-swap="innerHTML">
+    <p class="muted">{{t "cmdhub.loading"}}</p>
+  </div>
+</div>
+{{end}}
+
+{{define "custom_command_details_fragment"}}{{template "custom_command_details" .Data}}{{end}}
+
+{{define "custom_command_details"}}
+<div class="cmdhub-preview">
+  <div class="cmdhub-preview-card">
+    {{if .Hub.Event}}
+    <span class="cmdhub-start-icon">{{template "icon_activity"}}</span>
+    <span class="cmdhub-text"><strong>{{.Command.Name}}</strong><span class="muted">{{with .Command.EventType}}{{t (printf "builder.event.%s" .)}}{{else}}{{t "events.no_type"}}{{end}}</span></span>
+    {{else}}
+    <span class="cmdhub-start-icon">{{template "icon_hammer"}}</span>
+    <span class="cmdhub-text"><strong class="mono">/{{.Command.Name}}</strong><span class="muted">{{with .Command.Description}}{{.}}{{else}}{{t "cmdhub.no_description"}}{{end}}</span></span>
+    {{end}}
+    <a class="btn btn-sm btn-primary" href="{{.Hub.BuilderURL .Command.ID}}" hx-boost="false">{{t "cmdhub.open"}} →</a>
+  </div>
+  <span class="cmdhub-plus" aria-hidden="true">+</span>
+  <span class="cmdhub-more">{{t (.Hub.Text "open_hint")}}</span>
+</div>
+<div class="cmdhub-history">
+  <div class="cmdhub-history-head">
+    <span class="cmdhub-history-icon">{{template "icon_history"}}</span>
+    <div><strong>{{t "cmdhub.history.title"}}</strong><span class="muted">{{t "cmdhub.history.hint"}}</span></div>
+  </div>
+  {{range .Versions}}
+  <div class="cmdhub-version">
+    <span class="cmdhub-version-icon">{{template "icon_history"}}</span>
+    <div class="cmdhub-text"><strong>{{t "cmdhub.history.saved"}} <span class="muted">{{.SavedAt}}</span></strong><span class="muted">{{t "cmdhub.history.blocks" "count" .Nodes}}</span></div>
+    {{if .Current}}<span class="badge-soft badge-soft-running">{{t "cmdhub.history.current"}}</span>
+    {{else}}<button type="button" class="btn btn-sm" hx-post="/bot/{{$.BotID}}/{{$.Hub.Base}}/{{$.Command.ID}}/versions/{{.ID}}/restore" hx-target="closest .cmdhub-details" hx-swap="innerHTML"
+      hx-confirm="{{t "cmdhub.history.restore_confirm"}}">{{t "cmdhub.history.restore"}}</button>{{end}}
+  </div>
+  {{else}}
+  <p class="muted">{{t "cmdhub.history.empty"}}</p>
+  {{end}}
+</div>
+{{end}}
+
+{{define "command_groups_fragment"}}{{template "command_groups" .Data}}{{end}}
+
+{{define "command_groups"}}
+<form class="form cmdhub-groupform" hx-post="/bot/{{.BotID}}/command-groups" hx-target="#cmd-groups-body" hx-swap="innerHTML">
+  <strong>{{t "cmdhub.groups.new"}}</strong>
+  <div class="cmdhub-groupfields">
+    <label class="field">{{t "cmdhub.groups.name"}}<input name="name" required maxlength="40" placeholder="{{t "cmdhub.groups.name_placeholder"}}"></label>
+    <label class="field">{{t "cmdhub.groups.description"}}<input name="description" maxlength="200"></label>
+    <label class="field">{{t "cmdhub.groups.position"}}<input name="position" type="number" min="0" max="999" value="{{len .Groups}}"></label>
+  </div>
+  <button type="submit" class="btn btn-primary btn-sm">+ {{t "cmdhub.groups.create"}}</button>
+</form>
+<div class="cmdhub-grouplist">
+  {{range .Groups}}
+  <form class="form cmdhub-groupform" hx-put="/bot/{{$.BotID}}/command-groups/{{.ID}}" hx-target="#cmd-groups-body" hx-swap="innerHTML">
+    <div class="cmdhub-group-head">{{template "icon_folder"}}<strong>{{.Name}}</strong><span class="badge-soft">{{t "cmdhub.groups.count" "count" .Commands}}</span></div>
+    <div class="cmdhub-groupfields">
+      <label class="field">{{t "cmdhub.groups.name"}}<input name="name" required maxlength="40" value="{{.Name}}"></label>
+      <label class="field">{{t "cmdhub.groups.description"}}<input name="description" maxlength="200" value="{{.Description}}"></label>
+      <label class="field">{{t "cmdhub.groups.position"}}<input name="position" type="number" min="0" max="999" value="{{.Position}}"></label>
+    </div>
+    <div class="modal-actions">
+      <button type="submit" class="btn btn-primary btn-sm">{{t "cmdhub.groups.save"}}</button>
+      <button type="button" class="btn btn-sm btn-danger-soft" hx-delete="/bot/{{$.BotID}}/command-groups/{{.ID}}" hx-target="#cmd-groups-body" hx-swap="innerHTML"
+        hx-confirm="{{t "cmdhub.groups.delete_confirm" "name" .Name}}">{{t "cmdhub.groups.delete"}}</button>
+    </div>
+  </form>
+  {{else}}
+  <p class="muted">{{t "cmdhub.groups.empty"}}</p>
+  {{end}}
+</div>
+{{end}}
+
+{{define "deleted_commands_fragment"}}{{template "deleted_commands" .Data}}{{end}}
+
+{{define "deleted_commands"}}
+<div class="cmdhub-grouplist">
+  {{range .Commands}}
+  <div class="cmdhub-version">
+    <span class="cmdhub-version-icon">{{template "icon_trash"}}</span>
+    <div class="cmdhub-text">{{if $.Hub.Event}}<strong>{{.Name}}</strong>{{else}}<strong class="mono">/{{.Name}}</strong>{{end}}<span class="muted">{{t "cmdhub.deleted.when" "when" .When}}</span></div>
+    <button type="button" class="btn btn-sm" hx-post="/bot/{{$.BotID}}/{{$.Hub.Base}}/deleted/{{.ID}}/restore" hx-target="#cmd-deleted-body" hx-swap="innerHTML">{{t "cmdhub.deleted.restore"}}</button>
+  </div>
+  {{else}}
+  <p class="muted">{{t "cmdhub.deleted.empty"}}</p>
+  {{end}}
+</div>
+{{end}}
+
+{{define "timed_events_fragment"}}{{template "timed_events" .Data}}{{end}}
+
+{{/* Timed events: settings, new event, list. Receives a timedView. */}}
+{{define "timed_events"}}
+<section class="box">
+  <header class="box-head"><h2>{{t "module_page.timed.settings"}}</h2></header>
+  <form class="box-body form" hx-put="/bot/{{.BotID}}/timed-settings" hx-target="#timed-body" hx-swap="innerHTML">
+    <label class="field">{{t "module_page.timed.timezone"}}
+      <select name="timezone">
+        <option value="" {{if not .Settings.Timezone}}selected{{end}}>{{t "module_page.timed.timezone_server"}}</option>
+        {{range .Zones}}<option value="{{.}}" {{if eq . $.Settings.Timezone}}selected{{end}}>{{.}}</option>{{end}}
+      </select>
+      <span class="hint">{{t "module_page.timed.timezone_hint"}}</span>
+    </label>
+    <label class="field">{{t "module_page.timed.default_server"}}
+      <select name="default_server">
+        <option value="">{{t "module_page.timed.default_server_none"}}</option>
+        {{range .Guilds}}<option value="{{.ID}}" {{if eq .ID $.DefaultServer}}selected{{end}}>{{.Name}}</option>{{end}}
+      </select>
+      <span class="hint">{{t "module_page.timed.default_server_hint"}}</span>
+    </label>
+    <div><button type="submit" class="btn btn-primary btn-sm">{{t "module_page.timed.save_settings"}}</button></div>
+  </form>
+</section>
+
+<section class="box">
+  <header class="box-head"><h2>{{t "module_page.timed.new"}}</h2></header>
+  <div class="box-body">
+    <p class="muted">{{t "module_page.timed.intro"}} <a href="/bots/modules/custom-events">{{t "module_page.timed.intro_link"}}</a></p>
+    <form class="form timed-form" hx-post="/bot/{{.BotID}}/timed-events" hx-target="#timed-body" hx-swap="innerHTML">
+      {{template "timed_event_fields" (list $ .New)}}
+      <div><button type="submit" class="btn btn-primary btn-sm">+ {{t "module_page.timed.create"}}</button></div>
+    </form>
+  </div>
+</section>
+
+<section class="box">
+  <header class="box-head"><h2>{{t "module_page.timed.list" "count" (len .Events)}}</h2></header>
+  <div class="box-body">
+    {{range .Events}}
+    <details class="timed-item">
+      <summary>
+        <strong>{{.Name}}</strong>
+        <span class="badge-soft">{{t (printf "module_page.timed.kind_%s" .Kind)}}</span>
+        {{if not .Enabled}}<span class="badge-soft">{{t "module_page.timed.off"}}</span>{{end}}
+        <span class="muted mono">#{{.ID}}</span>
+      </summary>
+      <form class="form timed-form" hx-put="/bot/{{$.BotID}}/timed-events/{{.ID}}" hx-target="#timed-body" hx-swap="innerHTML">
+        {{template "timed_event_fields" (list $ .)}}
+        <div class="modal-actions">
+          <button type="submit" class="btn btn-primary btn-sm">{{t "module_page.timed.save"}}</button>
+          <button type="button" class="btn btn-sm btn-danger-soft" hx-delete="/bot/{{$.BotID}}/timed-events/{{.ID}}" hx-target="#timed-body" hx-swap="innerHTML"
+            hx-confirm="{{t "module_page.timed.delete_confirm" "name" .Name}}">{{t "module_page.timed.delete"}}</button>
+        </div>
+      </form>
+    </details>
+    {{else}}
+    <p class="muted">{{t "module_page.timed.empty"}}</p>
+    {{end}}
+  </div>
+</section>
+{{end}}
+
+{{/* Fields of one timed event. Receives (list timedView timedEventView). */}}
+{{define "timed_event_fields"}}
+{{$v := index . 0}}{{$e := index . 1}}
+<label class="field">{{t "module_page.timed.name"}}<input name="name" required maxlength="60" value="{{$e.Name}}" placeholder="{{t "module_page.timed.name_placeholder"}}"></label>
+<label class="field">{{t "module_page.timed.kind"}}
+  <select name="kind">
+    <option value="interval" {{if eq $e.Kind "interval"}}selected{{end}}>{{t "module_page.timed.kind_interval"}}</option>
+    <option value="schedule" {{if eq $e.Kind "schedule"}}selected{{end}}>{{t "module_page.timed.kind_schedule"}}</option>
+  </select>
+</label>
+<fieldset class="timed-interval">
+  <legend>{{t "module_page.timed.interval"}} <span class="muted">{{t "module_page.timed.interval_hint"}}</span></legend>
+  <div class="timed-grid">
+    <label class="field">{{t "module_page.timed.days"}}<input type="number" name="days" min="0" max="365" value="{{$e.Days}}"></label>
+    <label class="field">{{t "module_page.timed.hours"}}<input type="number" name="hours" min="0" max="23" value="{{$e.Hours}}"></label>
+    <label class="field">{{t "module_page.timed.minutes"}}<input type="number" name="minutes" min="0" max="59" value="{{$e.Minutes}}"></label>
+    <label class="field">{{t "module_page.timed.seconds"}}<input type="number" name="seconds" min="0" max="59" value="{{$e.Seconds}}"></label>
+  </div>
+</fieldset>
+<fieldset class="timed-schedule">
+  <legend>{{t "module_page.timed.times"}}</legend>
+  <label class="field"><input name="times" value="{{$e.TimesText}}" placeholder="08:00, 20:30" class="mono">
+    <span class="hint">{{t "module_page.timed.times_hint"}}</span></label>
+</fieldset>
+<fieldset>
+  <legend>{{t "module_page.timed.weekdays"}} <span class="muted">{{t "module_page.timed.weekdays_hint"}}</span></legend>
+  <div class="timed-days">
+    {{range $v.Weekdays}}<label class="chip-check"><input type="checkbox" name="weekday" value="{{.}}" {{if index $e.On .}}checked{{end}}> {{t (printf "module_page.timed.day_%d" .)}}</label>{{end}}
+  </div>
+</fieldset>
+<label class="toggle-row"><span>{{t "module_page.timed.enabled"}}</span><input type="checkbox" class="toggle" name="enabled" value="true" {{if $e.Enabled}}checked{{end}}></label>
+{{end}}
+
+{{define "webhooks_fragment"}}{{template "webhooks" .Data}}{{end}}
+
+{{/* Webhooks: API key, new webhook with example request, list. Receives a webhooksView. */}}
+{{define "webhooks"}}
+{{with .Notice}}<div class="alert alert-success">{{t .}}</div>{{end}}
+
+<section class="box">
+  <header class="box-head">
+    <h2>{{t "module_page.webhooks.key.title"}}</h2>
+    <span class="box-meta">{{if .Key.Set}}{{t "module_page.webhooks.key.created" "date" .Key.Created}}{{else}}{{t "module_page.webhooks.key.none"}}{{end}}</span>
+  </header>
+  <div class="box-body form">
+    <p class="muted">{{t "module_page.webhooks.key.intro"}}</p>
+    {{if .NewKey}}
+    <div class="alert alert-success">{{t "module_page.webhooks.key.once"}}</div>
+    <div class="copy-field copy-field-secret"><code>{{.NewKey}}</code><button type="button" class="btn btn-sm" data-copy="{{.NewKey}}" data-copy-done="{{t "module_page.webhooks.copied"}}">{{t "module_page.webhooks.copy"}}</button></div>
+    {{else if .Key.Set}}
+    <div class="copy-field"><code>bh_••••••••••••••••••••••••••••{{.Key.Hint}}</code></div>
+    {{end}}
+    <div>
+      <button type="button" class="btn btn-sm{{if not .Key.Set}} btn-primary{{end}}" hx-post="/bot/{{.BotID}}/webhook-key" hx-target="#webhooks-body" hx-swap="innerHTML"
+        {{if .Key.Set}}hx-confirm="{{t "module_page.webhooks.key.regenerate_confirm"}}"{{end}}>{{if .Key.Set}}{{t "module_page.webhooks.key.regenerate"}}{{else}}{{t "module_page.webhooks.key.create"}}{{end}}</button>
+    </div>
+  </div>
+</section>
+
+<section class="box">
+  <header class="box-head"><h2>{{t "module_page.webhooks.new"}}</h2></header>
+  <div class="box-body">
+    <p class="muted">{{t "module_page.webhooks.intro"}} <a href="/bots/modules/custom-events">{{t "module_page.webhooks.intro_link"}}</a></p>
+    <div class="split">
+      <form class="form" hx-post="/bot/{{.BotID}}/webhooks" hx-target="#webhooks-body" hx-swap="innerHTML" data-webhook-form>
+        <label class="field">{{t "module_page.webhooks.name"}}
+          <input name="name" required maxlength="60" placeholder="{{t "module_page.webhooks.name_placeholder"}}">
+          <span class="hint">{{t "module_page.webhooks.name_hint"}}</span>
+        </label>
+        <label class="field">{{t "module_page.webhooks.event_id"}}
+          <input name="event_id" required pattern="[a-z0-9]{16,40}" minlength="16" maxlength="40" value="{{.NewEventID}}" class="mono" spellcheck="false">
+          <span class="hint">{{t "module_page.webhooks.event_id_hint"}}</span>
+        </label>
+        <label class="toggle-row">
+          <span><strong>{{t "module_page.webhooks.require_key"}}</strong><span class="hint">{{t "module_page.webhooks.require_key_hint"}}</span></span>
+          <input type="checkbox" class="toggle" name="require_key" value="true" checked>
+        </label>
+        <div><button type="submit" class="btn btn-primary btn-sm">+ {{t "module_page.webhooks.create"}}</button></div>
+      </form>
+      <div>
+        <span class="code-block-title">{{t "module_page.webhooks.example"}}</span>
+        <pre class="code-block" data-webhook-example data-base="{{.BaseURL}}/api/hooks/{{.BotID}}/">{{template "webhook_example" (list (printf "%s/api/hooks/%d/%s" .BaseURL .BotID .NewEventID) true)}}</pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="box">
+  <header class="box-head"><h2>{{t "module_page.webhooks.list" "count" (len .Items)}}</h2></header>
+  <div class="box-body">
+    {{range .Items}}
+    <details class="hook-item">
+      <summary>
+        <span class="hook-title"><strong>{{.Name}}</strong><code class="muted mono">{{.FullURL}}</code></span>
+        {{if .RequireKey}}<span class="badge-soft">🔑 {{t "module_page.webhooks.badge_key"}}</span>{{else}}<span class="badge-soft badge-soft-error">{{t "module_page.webhooks.badge_open"}}</span>{{end}}
+        {{if not .Enabled}}<span class="badge-soft badge-soft-stopped">{{t "module_page.webhooks.off"}}</span>{{end}}
+        <span class="muted">{{t "module_page.webhooks.calls" "count" .Calls}}{{with .LastCalled}} · {{t "module_page.webhooks.last" "date" .}}{{end}}</span>
+      </summary>
+      <div class="split">
+        <form class="form" hx-put="/bot/{{$.BotID}}/webhooks/{{.ID}}" hx-target="#webhooks-body" hx-swap="innerHTML">
+          <div class="copy-field"><code>{{.FullURL}}</code><button type="button" class="btn btn-sm" data-copy="{{.FullURL}}" data-copy-done="{{t "module_page.webhooks.copied"}}">{{t "module_page.webhooks.copy"}}</button></div>
+          <label class="field">{{t "module_page.webhooks.name"}}<input name="name" required maxlength="60" value="{{.Name}}"></label>
+          <label class="toggle-row">
+            <span><strong>{{t "module_page.webhooks.require_key"}}</strong><span class="hint">{{t "module_page.webhooks.require_key_hint"}}</span></span>
+            <input type="checkbox" class="toggle" name="require_key" value="true" {{if .RequireKey}}checked{{end}}>
+          </label>
+          <label class="toggle-row">
+            <span><strong>{{t "module_page.webhooks.enabled"}}</strong><span class="hint">{{t "module_page.webhooks.enabled_hint"}}</span></span>
+            <input type="checkbox" class="toggle" name="enabled" value="true" {{if .Enabled}}checked{{end}}>
+          </label>
+          <div class="modal-actions">
+            <button type="submit" class="btn btn-primary btn-sm">{{t "module_page.webhooks.save"}}</button>
+            <button type="button" class="btn btn-sm btn-danger-soft" hx-delete="/bot/{{$.BotID}}/webhooks/{{.ID}}" hx-target="#webhooks-body" hx-swap="innerHTML"
+              hx-confirm="{{t "module_page.webhooks.delete_confirm" "name" .Name}}">{{t "module_page.webhooks.delete"}}</button>
+          </div>
+        </form>
+        <div class="form">
+          <div>
+            <span class="code-block-title">{{t "module_page.webhooks.example"}}</span>
+            <pre class="code-block">{{template "webhook_example" (list .FullURL .RequireKey)}}</pre>
+          </div>
+          <form class="inline-form" hx-post="/bot/{{$.BotID}}/webhooks/{{.ID}}/test" hx-target="#webhooks-body" hx-swap="innerHTML">
+            <input name="message" maxlength="200" placeholder="{{t "module_page.webhooks.test_placeholder"}}" aria-label="{{t "module_page.webhooks.test_placeholder"}}">
+            <button type="submit" class="btn btn-sm">▶ {{t "module_page.webhooks.test"}}</button>
+          </form>
+          <span class="hint">{{t "module_page.webhooks.vars_hint"}}</span>
+        </div>
+      </div>
+    </details>
+    {{else}}
+    <div class="empty-state">
+      <span class="empty-state-icon">🔌</span>
+      <strong>{{t "module_page.webhooks.empty"}}</strong>
+      <span class="muted">{{t "module_page.webhooks.empty_hint"}}</span>
+    </div>
+    {{end}}
+  </div>
+</section>
+{{end}}
+
+{{/* Example request. Receives (list url requireKey). */}}
+{{define "webhook_example"}}{{$url := index . 0}}{{$key := index . 1}}curl -X POST "{{$url}}" \
+  -H "Content-Type: application/json" \
+{{if $key}}  -H "Authorization: YOUR_API_KEY" \
+{{end}}  -d '{"variables":{"message":"Hello from a webhook"}}'{{end}}

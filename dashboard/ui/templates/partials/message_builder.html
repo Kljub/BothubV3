@@ -1,0 +1,165 @@
+{{/* Message Builder module: saved messages. Data: msgBuilderView. */}}
+{{define "message_builder"}}
+<div data-msgb data-templates-url="/api/v1/bots/{{.BotID}}/message-templates" data-bot-name="{{.BotName}}" data-bot-avatar="{{.BotAvatar}}" data-data-vars-url="/api/v1/bots/{{.BotID}}/data/variables">
+  <script type="application/json" id="msgb-texts">{{.Texts}}</script>
+  <script type="application/json" id="msgb-variables">{{.Variables}}</script>
+  <script src="/static/js/icons.js" defer></script>
+  <script src="/static/js/var-picker.js" defer></script>
+  <script src="/static/js/builder-message.js" defer></script>
+  <script src="/static/js/message-page.js" defer></script>
+
+  <section class="box">
+    <header class="box-head">
+      <h2>{{t "msgb.how.title"}}</h2>
+    </header>
+    <div class="box-body">
+      <ol class="list">
+        <li><strong>{{t "msgb.how.build"}}</strong> <span class="muted">{{t "msgb.how.build_hint"}}</span></li>
+        <li><strong>{{t "msgb.how.save"}}</strong> <span class="muted">{{t "msgb.how.save_hint"}}</span></li>
+        <li><strong>{{t "msgb.how.use"}}</strong> <span class="muted">{{t "msgb.how.use_hint"}}</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="box">
+    <header class="box-head">
+      <span id="msgb-head">{{template "message_builder_head" .}}</span>
+      <button type="button" class="btn btn-primary btn-sm" data-msgb-new>+ {{t "msgb.new"}}</button>
+    </header>
+    <div class="box-body">
+      <div id="msgb-error" class="hint" role="status"></div>
+      {{template "message_builder_list" .}}
+    </div>
+  </section>
+
+  <dialog id="msgb-name-dialog" class="modal" aria-labelledby="msgb-name-title">
+    <header class="modal-header">
+      <h2 id="msgb-name-title">{{t "msgb.name_title"}}</h2>
+      <button type="button" class="icon-btn" data-close-dialog aria-label="{{t "admin.close"}}">×</button>
+    </header>
+    <div id="msgb-name-error"></div>
+    <form class="form" hx-post="/bot/{{.BotID}}/message-templates" hx-target="#msgb-list" hx-swap="outerHTML">
+      <input type="hidden" name="message">
+      <label class="field">{{t "msgb.name"}}
+        <input name="name" class="input-wide" maxlength="60" required>
+        <span class="hint">{{t "msgb.name_hint"}}</span>
+      </label>
+      <div class="inline-form">
+        <button type="submit" class="btn btn-primary">{{t "action.save"}}</button>
+        <button type="button" class="btn" data-close-dialog>{{t "action.cancel"}}</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="msgb-dialog" class="modal modal-wide" aria-label="{{t "msgb.title"}}">
+    <div id="msgb-dialog-body"><p class="muted">{{t "cmdhub.loading"}}</p></div>
+  </dialog>
+</div>
+{{end}}
+
+{{define "message_builder_head"}}<h2>{{t "msgb.saved"}} <span class="box-count">{{len .Items}}</span></h2> <span class="box-meta">{{t "msgb.limit" "count" (len .Items) "max" .Max}}</span>{{end}}
+
+{{define "message_builder_list_fragment"}}{{template "message_builder_list" .Data}}
+<span id="msgb-head" hx-swap-oob="true">{{template "message_builder_head" .Data}}</span>
+{{end}}
+
+{{define "message_builder_list"}}
+<div id="msgb-list" hx-get="/bot/{{.BotID}}/message-templates" hx-trigger="bothub:templates-changed from:body" hx-swap="outerHTML">
+  {{if not .Items}}
+  <div class="empty-state">
+    <span class="empty-state-icon">{{template "icon_mail"}}</span>
+    <strong>{{t "msgb.empty.title"}}</strong>
+    <span class="muted">{{t "msgb.empty.hint"}}</span>
+  </div>
+  {{else}}
+  {{range .Items}}
+  <div class="command-row">
+    <span class="command-text">
+      <span class="command-line">
+        <strong>{{.Name}}</strong>
+        {{if .V2}}<span class="badge-soft">{{t "msgb.kind_v2"}}</span>{{else if .Embeds}}<span class="badge-soft">{{t "msgb.embeds" "count" .Embeds}}</span>{{end}}
+      </span>
+      <span class="command-desc">{{if .Summary}}{{.Summary}}{{else}}{{t "msgb.no_text"}}{{end}} · {{.CreatedAt.Format "2006-01-02"}}</span>
+    </span>
+    <span class="command-actions">
+      <button type="button" class="btn btn-sm btn-primary" data-msgb-edit="{{.ID}}">{{t "msgb.edit"}}</button>
+      <button type="button" class="btn btn-sm" data-open-dialog="msgb-dialog"
+        hx-get="/bot/{{$.BotID}}/message-templates/{{.ID}}/send" hx-target="#msgb-dialog-body">{{t "msgb.send"}}</button>
+      <button type="button" class="btn btn-sm" data-open-dialog="msgb-dialog"
+        hx-get="/bot/{{$.BotID}}/message-templates/{{.ID}}/rename" hx-target="#msgb-dialog-body">{{t "msgb.rename"}}</button>
+      <button type="button" class="btn btn-sm" hx-post="/bot/{{$.BotID}}/message-templates/{{.ID}}/copy" hx-target="#msgb-list" hx-swap="outerHTML">{{template "icon_copy"}} {{t "msgb.copy"}}</button>
+      <button type="button" class="icon-btn icon-btn-plain" title="{{t "msgb.delete"}}" aria-label="{{t "msgb.delete"}}"
+        hx-delete="/bot/{{$.BotID}}/message-templates/{{.ID}}" hx-target="#msgb-list" hx-swap="outerHTML"
+        hx-confirm="{{t "msgb.delete_confirm" "name" .Name}}">{{template "icon_trash"}}</button>
+    </span>
+  </div>
+  {{end}}
+  {{end}}
+</div>
+{{end}}
+
+{{define "message_builder_rename_fragment"}}{{$v := .Data}}
+<header class="modal-header">
+  <h2>{{t "msgb.rename_title"}}</h2>
+  <button type="button" class="icon-btn" data-close-dialog aria-label="{{t "admin.close"}}">×</button>
+</header>
+<div id="msgb-dialog-error"></div>
+<form class="form" hx-put="/bot/{{$v.BotID}}/message-templates/{{$v.Template.ID}}/name" hx-target="#msgb-list" hx-swap="outerHTML">
+  <label class="field">{{t "msgb.name"}}
+    <input name="name" class="input-wide" maxlength="60" value="{{$v.Template.Name}}" required autofocus>
+  </label>
+  <div class="inline-form">
+    <button type="submit" class="btn btn-primary">{{t "action.save"}}</button>
+    <button type="button" class="btn" data-close-dialog>{{t "action.cancel"}}</button>
+  </div>
+</form>
+{{end}}
+
+{{/* Send dialog: a channel of one of the bot's servers, or a Discord webhook. */}}
+{{define "message_builder_send_fragment"}}{{$v := .Data}}
+<header class="modal-header">
+  <h2>{{t "msgb.send_title" "name" $v.Template.Name}}</h2>
+  <button type="button" class="icon-btn" data-close-dialog aria-label="{{t "admin.close"}}">×</button>
+</header>
+<div id="msgb-dialog-error"></div>
+<form class="form" hx-post="/bot/{{$v.BotID}}/message-templates/{{$v.Template.ID}}/send" hx-target="#msgb-send-result" hx-swap="innerHTML">
+  <div class="chips" role="radiogroup" aria-label="{{t "msgb.target"}}">
+    <label class="chip"><input type="radio" name="target" value="channel" checked> {{t "msgb.target_channel"}}</label>
+    <label class="chip"><input type="radio" name="target" value="webhook"> {{t "msgb.target_webhook"}}</label>
+  </div>
+  <label class="field">{{t "msgb.server"}}
+    <select name="guild" class="input-wide" hx-get="/bot/{{$v.BotID}}/message-templates/channels" hx-target="#msgb-channels" hx-trigger="change">
+      <option value="">{{t "msgb.pick_server"}}</option>
+      {{range $v.Guilds}}<option value="{{.ID}}">{{.Name}}</option>{{end}}
+    </select>
+    {{if not $v.Guilds}}<span class="hint">{{t "msgb.no_servers"}}</span>{{end}}
+  </label>
+  <label class="field">{{t "msgb.channel"}}
+    <select name="channel_id" id="msgb-channels" class="input-wide"><option value="">{{t "msgb.pick_channel"}}</option></select>
+  </label>
+  <label class="field">{{t "msgb.webhook_url"}}
+    <input name="webhook_url" class="input-wide mono" placeholder="https://discord.com/api/webhooks/…" autocomplete="off">
+    <span class="hint">{{t "msgb.webhook_hint"}}</span>
+  </label>
+  <div class="inline-form">
+    <button type="submit" class="btn btn-primary">{{t "msgb.send"}}</button>
+    <button type="button" class="btn" data-close-dialog>{{t "action.cancel"}}</button>
+  </div>
+  <div id="msgb-send-result"></div>
+</form>
+{{end}}
+
+{{define "message_builder_channels_fragment"}}
+<option value="">{{t "msgb.pick_channel"}}</option>
+{{range .Data.Channels}}<option value="{{.ID}}">#{{.Name}}</option>{{end}}
+{{end}}
+
+{{/* Job state; polls every second until the bot is done. Data: msgJobView. */}}
+{{define "message_builder_job_fragment"}}{{$v := .Data}}
+{{if $v.Done}}
+  {{if eq $v.Job.Status "done"}}<div class="alert alert-success">{{t "msgb.sent"}}</div>
+  {{else}}<div class="alert alert-error">{{t "msgb.send_failed"}}{{with $v.Job.ErrorKey}} {{t .}}{{end}}</div>{{end}}
+{{else}}
+<p class="muted" hx-get="/bot/{{$v.BotID}}/message-jobs/{{$v.Job.ID}}" hx-trigger="load delay:1s" hx-swap="outerHTML">{{t "msgb.sending"}}</p>
+{{end}}
+{{end}}

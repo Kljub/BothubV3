@@ -1,0 +1,32 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "utility.error_handler",
+  "version": 1,
+  "category": "utility",
+  "group": "utility",
+  "icon": "⚠",
+  "labelKey": "builder.node.utility_error_handler.label",
+  "descriptionKey": "builder.node.utility_error_handler.description",
+  "locked": true,
+  "inputs": [],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "default": "error",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  }
+}

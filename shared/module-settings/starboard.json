@@ -1,0 +1,73 @@
+{
+  "module": "starboard",
+  "fields": [
+    {
+      "key": "emoji",
+      "type": "emojis",
+      "max": 1,
+      "hint": true
+    },
+    {
+      "key": "required",
+      "type": "number",
+      "min": 1,
+      "max": 1000,
+      "default": 5
+    },
+    {
+      "key": "channel",
+      "type": "channel",
+      "channelTypes": [
+        "text",
+        "announcement"
+      ],
+      "hint": true
+    },
+    {
+      "key": "color",
+      "type": "color",
+      "default": "#facc15"
+    },
+    {
+      "key": "react",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "deleteBelow",
+      "type": "bool",
+      "default": false
+    },
+    {
+      "key": "selfStar",
+      "type": "bool",
+      "default": false
+    },
+    {
+      "key": "channelMode",
+      "type": "select",
+      "options": [
+        "all",
+        "except",
+        "only"
+      ],
+      "default": "all"
+    },
+    {
+      "key": "channels",
+      "type": "channels",
+      "channelTypes": [
+        "text",
+        "announcement",
+        "forum"
+      ],
+      "max": 50,
+      "showIf": {
+        "channelMode": [
+          "except",
+          "only"
+        ]
+      }
+    }
+  ]
+}

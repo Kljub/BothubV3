@@ -1,0 +1,33 @@
+/* bh-topbar: Top bar: title, tour, language, notifications. */
+
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  height: 52px; padding: 0 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--sidebar);
+}
+.topbar-title { font-size: 15px; font-weight: 700; }
+.topbar-actions { display: flex; align-items: center; gap: 12px; }
+.topbar-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 8px;
+  font: inherit; font-size: 12px; font-weight: 600;
+  color: var(--text-2);
+  background: none; border: 0; border-radius: var(--radius-sm);
+  cursor: pointer;
+  list-style: none;
+}
+.topbar-btn::-webkit-details-marker { display: none; }
+.topbar-btn:hover { color: var(--text); background: var(--surface); }
+.lang-switch { position: relative; }
+.lang-menu {
+  position: absolute; right: 0; top: calc(100% + 4px); z-index: 10;
+  display: flex; flex-direction: column; min-width: 140px; padding: 4px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+}
+.lang-menu button {
+  text-align: left; padding: 6px 10px;
+  font: inherit; color: var(--text);
+  background: none; border: 0; border-radius: var(--radius-sm); cursor: pointer;
+}
+.lang-menu button:hover, .lang-menu button[aria-current="true"] { background: var(--surface-2); }

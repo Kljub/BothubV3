@@ -1,0 +1,24 @@
+/* bh-button: Buttons and icon buttons. */
+
+.htmx-request.icon-btn, .htmx-request .icon-btn { opacity: 0.5; pointer-events: none; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 9px 18px;
+  font: inherit; font-weight: 700;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.btn:hover { background: var(--surface-2); }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.btn-primary:hover { background: var(--accent); filter: brightness(1.08); }
+.btn-danger { background: var(--red); border-color: var(--red); color: #0f0f0f; }
+.htmx-request.btn, .htmx-request .btn { opacity: 0.6; pointer-events: none; }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+.btn-outline-danger { color: var(--red); border-color: var(--red); }
+.btn-outline-success { color: var(--green); border-color: var(--green); }
+.btn-danger-soft { color: var(--red); border-color: color-mix(in srgb, var(--red) 55%, transparent); background: color-mix(in srgb, var(--red) 15%, transparent); }
+.modal-header .icon-btn { background: none; border: 0; color: var(--muted); }
+.btn-block { display: flex; width: 100%; }

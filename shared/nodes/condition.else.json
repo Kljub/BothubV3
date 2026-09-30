@@ -1,0 +1,31 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "condition.else",
+  "version": 1,
+  "category": "condition",
+  "group": "logic",
+  "icon": "?",
+  "palette": false,
+  "compact": true,
+  "labelKey": "builder.node.condition_else.label",
+  "descriptionKey": "builder.node.condition_else.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}

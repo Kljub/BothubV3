@@ -1,0 +1,64 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.add_emoji",
+  "version": 1,
+  "category": "action",
+  "group": "emoji",
+  "order": 620,
+  "color": "blue",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_add_emoji.label",
+  "descriptionKey": "builder.node.action_add_emoji.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "name": {
+        "type": "string",
+        "maxLength": 100,
+        "x-labelKey": "builder.cfg.name"
+      },
+      "image_url": {
+        "type": "string",
+        "maxLength": 2000,
+        "x-labelKey": "builder.cfg.image_url_image_url",
+        "x-mono": true
+      },
+      "reason": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.reason",
+        "x-hintKey": "builder.cfg.reason_hint"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      },
+      "guild": {
+        "type": "string",
+        "maxLength": 40,
+        "x-advanced": true,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.guild",
+        "x-hintKey": "builder.cfg.guild_hint"
+      }
+    }
+  }
+}

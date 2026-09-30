@@ -1,0 +1,98 @@
+{
+  "module": "auto-responder",
+  "fields": [
+    {
+      "key": "responders",
+      "type": "list",
+      "max": 100,
+      "titleField": "keywords",
+      "item": [
+        {
+          "key": "match",
+          "type": "select",
+          "options": [
+            "contains",
+            "equals",
+            "starts_with",
+            "ends_with",
+            "word"
+          ],
+          "default": "contains"
+        },
+        {
+          "key": "keywords",
+          "type": "words",
+          "max": 100,
+          "maxLength": 100
+        },
+        {
+          "key": "message",
+          "type": "message",
+          "default": {
+            "mode": "text",
+            "content": "Hi {user.mention}!"
+          }
+        },
+        {
+          "key": "reply",
+          "type": "bool",
+          "default": true
+        },
+        {
+          "key": "cooldown",
+          "type": "number",
+          "min": 1,
+          "max": 3600,
+          "default": 5
+        },
+        {
+          "key": "channelMode",
+          "type": "select",
+          "options": [
+            "all",
+            "except",
+            "only"
+          ],
+          "default": "all"
+        },
+        {
+          "key": "channels",
+          "type": "channels",
+          "channelTypes": [
+            "text",
+            "announcement",
+            "forum"
+          ],
+          "max": 50,
+          "showIf": {
+            "channelMode": [
+              "except",
+              "only"
+            ]
+          }
+        },
+        {
+          "key": "roleMode",
+          "type": "select",
+          "options": [
+            "all",
+            "except",
+            "only"
+          ],
+          "default": "all"
+        },
+        {
+          "key": "roles",
+          "type": "roles",
+          "max": 50,
+          "showIf": {
+            "roleMode": [
+              "except",
+              "only"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+/* bh-mod-card: Module groups and module/plugin cards. Each group sets --group. */
+
+.module-group-utility { --group: #2dd4bf; }
+.module-group-security { --group: #f87171; }
+.module-group-messages { --group: #facc15; }
+.module-group-fun { --group: #a855f7; }
+.module-group-ticket { --group: #ec4899; }
+.module-group-social { --group: #3b82f6; }
+.module-card-plugin { --group: #a855f7; }
+
+.module-group { margin-bottom: 36px; }
+.module-group > summary { list-style: none; }
+.module-group > summary::-webkit-details-marker { display: none; }
+.module-group-head { display: flex; align-items: center; gap: 14px; padding: 8px 8px 16px; cursor: pointer; }
+.module-group-icon { font-size: 22px; }
+.module-group-text { display: flex; flex-direction: column; flex: 1; }
+.module-group-text strong { font-size: 18px; }
+.module-group-text .muted { display: inline-flex; align-items: center; gap: 10px; font-size: 12px; }
+.module-group:not([open]) .icon-chevron { transform: rotate(-90deg); }
+
+/* At least 280px wide, at most 5 per row (min width never below a fifth of the row). */
+.module-grid { --gap: 12px; display: grid; grid-template-columns: repeat(auto-fill, minmax(max(280px, calc((100% - 4 * var(--gap)) / 5)), 1fr)); gap: var(--gap); }
+.module-card { position: relative; display: flex; flex-direction: column; overflow: hidden; border-radius: 10px; transition: opacity 0.15s; }
+.module-card-top { position: relative; display: grid; place-items: center; height: 80px; background: var(--surface); }
+.module-card-icon { font-size: 30px; line-height: 1; }
+.module-card-toggle { position: absolute; top: 10px; right: 10px; margin: 0; }
+.card-badges { position: absolute; top: 10px; left: 10px; display: flex; gap: 4px; }
+.module-card-body { display: flex; flex-direction: column; gap: 6px; padding: 14px 14px 16px; flex: 1; }
+.module-card-body h3 { font-size: 14px; }
+.module-card-body p { font-size: 12px; flex: 1; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+/* Edit: full-width hit area; grey button only on hover (reference design). */
+.module-card-edit { display: flex; justify-content: center; margin-top: 12px; padding: 10px 12px; font-size: 13px; font-weight: 700; color: var(--group, var(--accent)); background: transparent; border-radius: 8px; transition: background-color 0.2s ease, color 0.2s ease; }
+.module-card-edit:hover, .module-card-edit:focus-visible { color: var(--text); background: var(--surface-2); }
+
+/* On/off follows the switch itself (:has), so the highlight changes on click,
+   before the server answers. Enabled: colored border, tinted top, colored toggle. */
+.module-card:has(.module-card-toggle input:checked) { border-color: var(--group); }
+.module-card:has(.module-card-toggle input:checked) .module-card-top { background: color-mix(in srgb, var(--surface) 82%, var(--group) 12%); }
+.module-card input.toggle:checked { background: var(--group); }
+
+/* Disabled: dimmed, grey. */
+.module-card:not(:has(.module-card-toggle input:checked)) { opacity: 0.45; }
+.module-card:not(:has(.module-card-toggle input:checked)):hover, .module-card:not(:has(.module-card-toggle input:checked)):focus-within { opacity: 0.8; }
+
+
+/* Module content page: breadcrumb in the group color, header with toggle. */
+/* Module pages: the path sits close under the top bar. */
+.main:has(> .module-page) { padding-top: 16px; }
+.module-breadcrumb { padding-bottom: 12px; margin-bottom: 20px; border-bottom: 2px solid var(--group, var(--border)); color: var(--text-2); font-size: 13px; }
+.module-breadcrumb a { color: var(--group, var(--accent)); font-weight: 600; }
+.module-breadcrumb strong { color: var(--text); }
+.module-head { display: flex; align-items: center; gap: 18px; padding: 20px; }
+.module-head-icon { font-size: 34px; line-height: 1; }
+.module-head-text { flex: 1; min-width: 0; }
+.module-head-text h2 { font-size: 15px; }
+.module-head input.toggle:checked { background: var(--group, var(--accent)); }
+.module-page .box-body:has(> .command-row) { padding: 8px 4px; }
+
+/* Smooth on/off: htmx keeps the id and settles the class change, so these animate. */
+.module-card { transition: opacity 0.25s ease, border-color 0.25s ease, filter 0.25s ease; }
+.module-card-top { transition: background-color 0.25s ease; }
+@media (prefers-reduced-motion: reduce) { .module-card, .module-card-top { transition: none; } }

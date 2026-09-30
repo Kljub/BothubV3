@@ -1,0 +1,65 @@
+{{/* Modules tab: collapsible groups of module cards. Plugins tab: the same
+     cards without groups. "Edit →" opens the module or plugin content page. */}}
+
+{{define "module_group"}}
+<details class="module-group module-group-{{.Key}}" open>
+  <summary class="module-group-head">
+    <span class="module-group-icon" aria-hidden="true">{{.Icon}}</span>
+    <span class="module-group-text">
+      <strong>{{t (printf "module.category.%s" .Key)}}</strong>
+      <span class="muted">{{t (printf "module.category.%s.description" .Key)}}
+        {{template "group_count" .}}</span>
+    </span>
+    {{template "icon_chevron"}}
+  </summary>
+  <div class="module-grid">
+    {{range .Modules}}{{template "module_card" .}}{{end}}
+  </div>
+</details>
+{{end}}
+
+{{define "group_count"}}<span class="pill-count" id="group-count-{{.Key}}">{{t "modules.active" "active" .Active "total" .Total}}</span>{{end}}
+
+{{define "module_card"}}
+<article class="card module-card {{if .Enabled}}module-card-on{{else}}module-card-off{{end}}" id="module-{{.Key}}">
+  <div class="module-card-top">
+    {{if .Beta}}<span class="card-badges"><span class="beta">{{t "modules.beta"}}</span></span>{{end}}
+    <span class="module-card-icon" aria-hidden="true">{{.Icon}}</span>
+    <form class="module-card-toggle" hx-put="/bot/{{.BotID}}/modules/{{.Key}}" hx-trigger="change" hx-target="#module-{{.Key}}" hx-swap="outerHTML swap:250ms">
+      <input type="checkbox" class="toggle toggle-sm" name="enabled" value="true" {{if .Enabled}}checked{{end}}
+        aria-label="{{t "modules.toggle" "name" (t (printf "module.%s.name" .Key))}}">
+    </form>
+  </div>
+  <div class="module-card-body">
+    <h3>{{t (printf "module.%s.name" .Key)}}</h3>
+    <p class="muted">{{t (printf "module.%s.description" .Key)}}</p>
+    <a class="module-card-edit" href="/bots/modules/{{.Key}}">{{t "modules.edit"}}</a>
+  </div>
+</article>
+{{end}}
+
+{{/* Toggle response: the card plus the group's counter, swapped out of band. */}}
+{{define "module_toggle_fragment"}}
+{{template "module_card" .Data.Module}}
+<span class="pill-count" id="group-count-{{.Data.Category.Key}}" hx-swap-oob="true">{{t "modules.active" "active" .Data.Category.Active "total" .Data.Category.Total}}</span>
+{{end}}
+
+{{define "plugin_card"}}
+<article class="card module-card module-card-plugin {{if .Enabled}}module-card-on{{else}}module-card-off{{end}}" id="plugin-{{.ID}}">
+  <div class="module-card-top">
+    <span class="card-badges"><span class="badge-plugin">{{t "plugins.badge"}}</span>{{if .Beta}}<span class="beta">{{t "modules.beta"}}</span>{{end}}</span>
+    <span class="module-card-icon" aria-hidden="true">{{.Icon}}</span>
+    <form class="module-card-toggle" hx-put="/bot/{{.BotID}}/plugins/{{.ID}}" hx-trigger="change" hx-target="#plugin-{{.ID}}" hx-swap="outerHTML swap:250ms">
+      <input type="checkbox" class="toggle toggle-sm" name="enabled" value="true" {{if .Enabled}}checked{{end}}
+        aria-label="{{t "modules.toggle" "name" .Name}}">
+    </form>
+  </div>
+  <div class="module-card-body">
+    <h3>{{.Name}}</h3>
+    <p class="muted">{{.Description}}</p>
+    <a class="module-card-edit" href="/bots/plugins/{{.ID}}">{{t "modules.edit"}}</a>
+  </div>
+</article>
+{{end}}
+
+{{define "plugin_card_fragment"}}{{template "plugin_card" .Data}}{{end}}

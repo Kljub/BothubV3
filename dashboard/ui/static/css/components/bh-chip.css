@@ -1,0 +1,9 @@
+/* bh-chip: Chips and segmented controls. */
+
+.segmented { display: inline-flex; padding: 2px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; }
+.segment { padding: 5px 12px; font: inherit; font-size: 12px; color: var(--muted); background: none; border: 0; border-radius: 6px; cursor: pointer; }
+.segment[aria-pressed="true"] { background: var(--surface-2); color: var(--text); font-weight: 600; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.form .chip { display: inline-flex; flex-direction: row; font-weight: 400; align-items: center; padding: 6px 14px; border: 1px solid var(--border-strong); border-radius: 999px; font-size: 12px; color: var(--text-2); cursor: pointer; }
+.chip input { position: absolute; opacity: 0; pointer-events: none; }
+.chip:has(input:checked) { border-color: var(--text-2); color: var(--text); background: var(--surface-2); }

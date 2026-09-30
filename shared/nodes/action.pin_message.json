@@ -1,0 +1,54 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.pin_message",
+  "version": 1,
+  "category": "action",
+  "group": "message_actions",
+  "order": 80,
+  "color": "blue",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_pin_message.label",
+  "descriptionKey": "builder.node.action_pin_message.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "message": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.message",
+        "x-hintKey": "builder.cfg.ref_hint",
+        "x-ref": "message"
+      },
+      "unpin": {
+        "type": "boolean",
+        "default": false,
+        "x-labelKey": "builder.cfg.unpin"
+      },
+      "undo_after": {
+        "type": "string",
+        "maxLength": 20,
+        "pattern": "^[0-9]+[smhd]$",
+        "x-widget": "undo",
+        "x-labelKey": "builder.undo.title",
+        "x-undoTitleKey": "builder.undo.pin_message",
+        "x-undoHintKey": "builder.undo.pin_message_hint"
+      }
+    }
+  }
+}

@@ -1,0 +1,206 @@
+{{/* Account and Security tabs of the user settings. Cards with rows; rows
+     with a form open in place. Only the user's own account. */}}
+
+{{define "account_panel"}}
+<div class="settings-card">
+  <div class="settings-row" data-setting>
+    <span class="settings-row-text"><strong>{{t "settings.account.username"}}</strong><span class="hint">{{t "settings.account.username_hint"}}</span></span>
+    <span class="settings-value mono">{{.Username}}</span>
+  </div>
+  <details class="settings-row settings-expand" data-setting>
+    <summary>
+      <span class="settings-row-text"><strong>{{t "security.email.title"}}</strong><span class="hint">{{with .Email}}{{.}}{{else}}{{t "security.email.none"}}{{end}}</span></span>
+      <span class="settings-action">{{if .Email}}{{t "settings.change"}}{{else}}{{t "settings.add"}}{{end}} ›</span>
+    </summary>
+    <form class="form settings-expand-body" hx-post="/account/email" hx-swap="none" data-reset-on="bothub:reset-forms">
+      <label class="field">{{t "security.email.new"}}
+        <input type="email" name="email" autocomplete="email" required maxlength="254" class="input-medium">
+        <span class="hint">{{t "security.email.hint"}}</span>
+      </label>
+      <label class="field">{{t "security.current_password"}}
+        <input type="password" name="current_password" autocomplete="current-password" required class="input-medium">
+      </label>
+      <div><button type="submit" class="btn btn-primary btn-sm">{{t "security.email.save"}}</button></div>
+    </form>
+  </details>
+</div>
+{{end}}
+
+{{define "security_panel"}}
+<h3 class="settings-group">{{t "settings.security.signin"}}</h3>
+<div class="settings-card">
+  <details class="settings-row settings-expand" data-setting>
+    <summary>
+      <span class="settings-row-text"><strong>{{t "security.passkeys.title"}}</strong><span class="hint">{{t "settings.security.passkeys_hint"}}</span></span>
+      <span class="settings-action">{{t "settings.manage"}} ›</span>
+    </summary>
+    <div class="form settings-expand-body">
+      <div id="passkey-error"></div>
+      <div id="passkeys" hx-get="/account/passkeys" hx-trigger="intersect once" hx-swap="outerHTML"><p class="muted">…</p></div>
+      <form class="inline-form" data-passkey-register>
+        <input name="name" required maxlength="50" placeholder="{{t "security.passkeys.name_placeholder"}}" class="input-medium" aria-label="{{t "security.passkeys.name"}}">
+        <button type="submit" class="btn btn-primary btn-sm">{{t "security.passkeys.add"}}</button>
+      </form>
+      <p class="hint" data-passkey-unsupported hidden>{{t "security.passkeys.unsupported"}}</p>
+    </div>
+  </details>
+  <details class="settings-row settings-expand" data-setting>
+    <summary>
+      <span class="settings-row-text"><strong>{{t "security.password.title"}}</strong><span class="hint">{{t "settings.security.password_hint"}}</span></span>
+      <span class="settings-action">{{t "settings.change"}} ›</span>
+    </summary>
+    <form class="form settings-expand-body" hx-post="/account/password" hx-swap="none" data-reset-on="bothub:reset-forms">
+      <label class="field">{{t "security.current_password"}}
+        <input type="password" name="current_password" autocomplete="current-password" required class="input-medium">
+      </label>
+      <label class="field">{{t "security.password.new"}}
+        <input type="password" name="new_password" autocomplete="new-password" required minlength="12" class="input-medium">
+        <span class="hint">{{t "security.password.hint"}}</span>
+      </label>
+      <label class="field">{{t "field.password_confirm"}}
+        <input type="password" name="new_password_confirm" autocomplete="new-password" required minlength="12" class="input-medium">
+      </label>
+      <div><button type="submit" class="btn btn-primary btn-sm">{{t "security.password.save"}}</button></div>
+    </form>
+  </details>
+</div>
+
+<h3 class="settings-group">{{t "security.twofa.title"}}</h3>
+<div class="settings-card">
+  <details class="settings-row settings-expand" data-setting>
+    <summary>
+      <span class="settings-row-text"><strong>{{t "settings.security.authenticator"}}</strong><span class="hint">{{t "settings.security.authenticator_hint"}}</span></span>
+      <span class="settings-action">{{if .TwoFactorEnabled}}<span class="badge-soft badge-soft-running"><span class="badge-dot"></span>{{t "security.twofa.on"}}</span>{{else}}<span class="badge-soft">{{t "security.twofa.off"}}</span>{{end}} ›</span>
+    </summary>
+    <div class="settings-expand-body">{{template "twofa" .}}</div>
+  </details>
+</div>
+
+<h3 class="settings-group">{{t "settings.security.sessions"}}</h3>
+<div class="settings-card">
+  <details class="settings-row settings-expand" data-setting>
+    <summary>
+      <span class="settings-row-text"><strong>{{t "settings.security.active_sessions"}}</strong><span class="hint">{{t "settings.security.active_sessions_hint"}}</span></span>
+      <span class="settings-action">{{t "settings.show"}} ›</span>
+    </summary>
+    <div class="settings-expand-body">
+      <div id="sessions" hx-get="/account/sessions" hx-trigger="toggle[target.open] from:closest details" hx-swap="outerHTML"><p class="muted">…</p></div>
+    </div>
+  </details>
+  <details class="settings-row settings-expand" data-setting>
+    <summary>
+      <span class="settings-row-text"><strong>{{t "settings.security.history"}}</strong><span class="hint">{{t "settings.security.history_hint"}}</span></span>
+      <span class="settings-action">{{t "settings.show"}} ›</span>
+    </summary>
+    <div class="settings-expand-body">
+      <div id="security-activity" hx-get="/account/activity" hx-trigger="toggle[target.open] from:closest details" hx-swap="outerHTML"><p class="muted">…</p></div>
+    </div>
+  </details>
+</div>
+{{end}}
+
+{{define "passkeys_fragment"}}
+<div id="passkeys">
+  {{if .Data}}
+  <ul class="list">
+    {{range .Data}}
+    <li>
+      <span><strong>{{.Name}}</strong><br><span class="muted">{{t "security.passkeys.created" "date" (.CreatedAt.Local.Format "02.01.2006")}}{{with .LastUsedAt}} · {{t "security.passkeys.last_used" "date" (.Local.Format "02.01.2006 15:04")}}{{end}}</span></span>
+      <button type="button" class="btn btn-danger-soft btn-sm" hx-delete="/account/passkeys/{{.ID}}" hx-target="#passkeys" hx-swap="outerHTML" hx-confirm="{{t "security.passkeys.delete_confirm" "name" .Name}}">{{t "security.passkeys.delete"}}</button>
+    </li>
+    {{end}}
+  </ul>
+  {{else}}
+  <p class="muted">{{t "security.passkeys.none"}}</p>
+  {{end}}
+</div>
+{{end}}
+
+{{/* Active sessions. Receives a sessionsView. */}}
+{{define "sessions_fragment"}}
+{{with .Data}}
+<div id="sessions" class="form">
+  {{with .Notice}}<div class="alert alert-success">{{t .}}</div>{{end}}
+  <ul class="list">
+    {{range .Items}}
+    <li>
+      <span><strong>{{.Device}}</strong>{{if .Current}} <span class="badge-soft badge-soft-running">{{t "settings.security.this_device"}}</span>{{end}}<br>
+        <span class="muted">{{.IP}} · {{t "settings.security.last_active" "date" .LastSeen}} · {{t "settings.security.signed_in" "date" .Created}}</span></span>
+      {{if not .Current}}<button type="button" class="btn btn-danger-soft btn-sm" hx-delete="/account/sessions/{{.ID}}" hx-target="#sessions" hx-swap="outerHTML">{{t "settings.security.sign_out"}}</button>{{end}}
+    </li>
+    {{end}}
+  </ul>
+  {{if gt (len .Items) 1}}
+  <div><button type="button" class="btn btn-sm btn-outline-danger" hx-post="/account/sessions/revoke-others" hx-target="#sessions" hx-swap="outerHTML"
+    hx-confirm="{{t "settings.security.sign_out_others_confirm"}}">{{t "settings.security.sign_out_others"}}</button></div>
+  {{end}}
+</div>
+{{end}}
+{{end}}
+
+{{/* Security history. Receives []activityRow. */}}
+{{define "activity_fragment"}}
+<div id="security-activity">
+  {{if .Data}}
+  <ul class="list">
+    {{range .Data}}
+    <li>
+      <span><strong>{{if .Failed}}⚠ {{end}}{{t (printf "settings.security.event.%s" .Type)}}</strong><br><span class="muted">{{.Device}} · {{.IP}}</span></span>
+      <span class="muted">{{.When}}</span>
+    </li>
+    {{end}}
+  </ul>
+  {{else}}
+  <p class="muted">{{t "settings.security.history_empty"}}</p>
+  {{end}}
+</div>
+{{end}}
+
+{{/* 2FA content inside its settings row. Receives Me (initial render) or a
+     twoFactorView (htmx answers): both have a TwoFactorEnabled field. */}}
+{{define "twofa"}}
+<div id="twofa" class="form">
+  <div id="twofa-error"></div>
+  {{if .TwoFactorEnabled}}
+    <p class="hint hint-top">{{t "security.twofa.disable_hint"}}</p>
+    <form class="form" hx-post="/account/2fa/disable" hx-target="#twofa" hx-swap="outerHTML">
+      <label class="field">{{t "security.current_password"}}
+        <input type="password" name="current_password" autocomplete="current-password" required class="input-medium">
+      </label>
+      <label class="field">{{t "login.totp.code"}}
+        <input name="code" inputmode="numeric" autocomplete="one-time-code" required maxlength="20" class="input-small">
+      </label>
+      <div><button type="submit" class="btn btn-danger-soft btn-sm">{{t "security.twofa.disable"}}</button></div>
+    </form>
+  {{else}}
+    <p class="hint hint-top">{{t "security.twofa.intro"}}</p>
+    <div><button type="button" class="btn btn-primary btn-sm" hx-post="/account/2fa/setup" hx-target="#twofa" hx-swap="outerHTML">{{t "security.twofa.setup"}}</button></div>
+  {{end}}
+</div>
+{{end}}
+
+{{/* htmx answers for the 2FA row: setup (QR), recovery codes, or status. */}}
+{{define "twofa_fragment"}}
+{{with .Data}}
+{{if .Setup}}
+<div id="twofa" class="form">
+  <div id="twofa-error"></div>
+  <p class="hint hint-top">{{t "security.twofa.scan"}}</p>
+  <img src="{{.QRDataURL}}" alt="{{t "security.twofa.qr_alt"}}" width="180" height="180">
+  <p class="hint">{{t "security.twofa.manual"}} <span class="mono">{{.Setup.Secret}}</span></p>
+  <form class="inline-form" hx-post="/account/2fa/enable" hx-target="#twofa" hx-swap="outerHTML">
+    <input name="code" inputmode="numeric" autocomplete="one-time-code" required maxlength="6" placeholder="123456" class="input-small" aria-label="{{t "login.totp.code"}}">
+    <button type="submit" class="btn btn-primary btn-sm">{{t "security.twofa.enable"}}</button>
+  </form>
+</div>
+{{else if .RecoveryCodes}}
+<div id="twofa" class="form">
+  <div class="alert alert-success">{{t "security.twofa.enabled"}}</div>
+  <p class="hint hint-top">{{t "security.twofa.recovery_hint"}}</p>
+  <ul class="list mono">{{range .RecoveryCodes}}<li>{{.}}</li>{{end}}</ul>
+</div>
+{{else}}
+{{template "twofa" (twofaState .Enabled)}}
+{{end}}
+{{end}}
+{{end}}

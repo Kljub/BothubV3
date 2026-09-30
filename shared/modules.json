@@ -1,0 +1,294 @@
+{
+  "$comment": "Module catalog. Group and module texts are i18n keys: module.category.<key>(.description), module.<key>.name / .description. The group color is set in bh-mod-card.css (.module-group-<key>).",
+  "categories": [
+    {
+      "key": "utility",
+      "icon": "🔧"
+    },
+    {
+      "key": "security",
+      "icon": "🛡️"
+    },
+    {
+      "key": "messages",
+      "icon": "💬"
+    },
+    {
+      "key": "fun",
+      "icon": "🎉"
+    },
+    {
+      "key": "ticket",
+      "icon": "🎫"
+    },
+    {
+      "key": "social",
+      "icon": "📡"
+    }
+  ],
+  "modules": [
+    {
+      "key": "command-builder",
+      "category": "utility",
+      "icon": "⚙️"
+    },
+    {
+      "key": "custom-events",
+      "category": "utility",
+      "icon": "🎯"
+    },
+    {
+      "key": "timed-events",
+      "category": "utility",
+      "icon": "⏱️"
+    },
+    {
+      "key": "data-storage",
+      "category": "utility",
+      "icon": "🗄️"
+    },
+    {
+      "key": "webhooks",
+      "category": "utility",
+      "icon": "🔌"
+    },
+    {
+      "key": "message-builder",
+      "category": "utility",
+      "icon": "✉️"
+    },
+    {
+      "key": "card-designer",
+      "category": "utility",
+      "icon": "🎨"
+    },
+    {
+      "key": "node-editor",
+      "category": "utility",
+      "icon": "🧩",
+      "beta": true
+    },
+    {
+      "key": "transcripts",
+      "category": "utility",
+      "icon": "📄"
+    },
+    {
+      "key": "automod",
+      "category": "security",
+      "icon": "🤖"
+    },
+    {
+      "key": "moderation",
+      "category": "security",
+      "icon": "⚔️"
+    },
+    {
+      "key": "polls-filter",
+      "category": "security",
+      "icon": "📊"
+    },
+    {
+      "key": "server-management",
+      "category": "security",
+      "icon": "⚙️"
+    },
+    {
+      "key": "verification",
+      "category": "security",
+      "icon": "🛡️"
+    },
+    {
+      "key": "sticky-roles",
+      "category": "security",
+      "icon": "📎"
+    },
+    {
+      "key": "honeypot",
+      "category": "security",
+      "icon": "🍯"
+    },
+    {
+      "key": "dm-commands",
+      "category": "security",
+      "icon": "📩"
+    },
+    {
+      "key": "reaction-roles",
+      "category": "messages",
+      "icon": "📌"
+    },
+    {
+      "key": "polls",
+      "category": "messages",
+      "icon": "📊"
+    },
+    {
+      "key": "timed-messages",
+      "category": "messages",
+      "icon": "⏰"
+    },
+    {
+      "key": "auto-responder",
+      "category": "messages",
+      "icon": "🤖"
+    },
+    {
+      "key": "autoreact",
+      "category": "messages",
+      "icon": "⚡"
+    },
+    {
+      "key": "welcommer",
+      "category": "messages",
+      "icon": "👋"
+    },
+    {
+      "key": "leavemer",
+      "category": "messages",
+      "icon": "🚪"
+    },
+    {
+      "key": "sticky-messages",
+      "category": "messages",
+      "icon": "📌"
+    },
+    {
+      "key": "media-channels",
+      "category": "messages",
+      "icon": "🖼️"
+    },
+    {
+      "key": "global-chat",
+      "category": "messages",
+      "icon": "🌐"
+    },
+    {
+      "key": "message-logger",
+      "category": "messages",
+      "icon": "📋"
+    },
+    {
+      "key": "starboard",
+      "category": "fun",
+      "icon": "⭐"
+    },
+    {
+      "key": "temp-voice",
+      "category": "fun",
+      "icon": "🎙️"
+    },
+    {
+      "key": "leveling",
+      "category": "fun",
+      "icon": "📈",
+      "beta": true
+    },
+    {
+      "key": "achievements",
+      "category": "fun",
+      "icon": "🏆"
+    },
+    {
+      "key": "invite-tracker",
+      "category": "fun",
+      "icon": "🔗",
+      "beta": true
+    },
+    {
+      "key": "counting",
+      "category": "fun",
+      "icon": "🔢"
+    },
+    {
+      "key": "birthday",
+      "category": "fun",
+      "icon": "🎂",
+      "beta": true
+    },
+    {
+      "key": "suggestions",
+      "category": "fun",
+      "icon": "💡",
+      "beta": true
+    },
+    {
+      "key": "qotd",
+      "category": "social",
+      "icon": "❓"
+    },
+    {
+      "key": "giveaway",
+      "category": "fun",
+      "icon": "🎁"
+    },
+    {
+      "key": "economy",
+      "category": "fun",
+      "icon": "💰"
+    },
+    {
+      "key": "ticket",
+      "category": "ticket",
+      "icon": "🎫",
+      "beta": true
+    },
+    {
+      "key": "modmail",
+      "category": "ticket",
+      "icon": "📮"
+    },
+    {
+      "key": "forum-tagger",
+      "category": "ticket",
+      "icon": "🏷️"
+    },
+    {
+      "key": "github-notifs",
+      "category": "social",
+      "icon": "🐙",
+      "beta": true
+    },
+    {
+      "key": "twitch-notifs",
+      "category": "social",
+      "icon": "🟣"
+    },
+    {
+      "key": "youtube-notifs",
+      "category": "social",
+      "icon": "▶️"
+    },
+    {
+      "key": "reddit-notifs",
+      "category": "social",
+      "icon": "🟠"
+    },
+    {
+      "key": "kick-notifs",
+      "category": "social",
+      "icon": "🟢"
+    },
+    {
+      "key": "twitter-linkfix",
+      "category": "social",
+      "icon": "🐦"
+    },
+    {
+      "key": "free-games",
+      "category": "social",
+      "icon": "🎮",
+      "beta": true
+    },
+    {
+      "key": "music",
+      "category": "social",
+      "icon": "🎵"
+    },
+    {
+      "key": "statistic-channels",
+      "category": "social",
+      "icon": "📊"
+    }
+  ]
+}

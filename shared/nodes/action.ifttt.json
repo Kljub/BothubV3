@@ -1,0 +1,55 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.ifttt",
+  "version": 1,
+  "category": "action",
+  "group": "api",
+  "order": 130,
+  "color": "orange",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_ifttt.label",
+  "descriptionKey": "builder.node.action_ifttt.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "event": {
+        "type": "string",
+        "maxLength": 100,
+        "x-labelKey": "builder.cfg.event",
+        "x-mono": true,
+        "x-hintKey": "builder.cfg.event_hint"
+      },
+      "value1": {
+        "type": "string",
+        "maxLength": 500,
+        "x-labelKey": "builder.cfg.value1"
+      },
+      "value2": {
+        "type": "string",
+        "maxLength": 500,
+        "x-labelKey": "builder.cfg.value2"
+      },
+      "value3": {
+        "type": "string",
+        "maxLength": 500,
+        "x-labelKey": "builder.cfg.value3"
+      }
+    }
+  }
+}

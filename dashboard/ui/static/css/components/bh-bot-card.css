@@ -1,0 +1,45 @@
+/* bh-bot-card: Bot cards on the dashboard. */
+
+/* 5 per row on wide screens, at least 240px each. */
+.bot-grid { --gap: 16px; display: grid; grid-template-columns: repeat(auto-fill, minmax(max(240px, calc((100% - 4 * var(--gap)) / 5)), 1fr)); gap: var(--gap); }
+.bot-card { position: relative; display: flex; flex-direction: column; border-width: 2px; }
+.bot-card .card-title::after { content: ""; position: absolute; inset: 0 0 56px 0; }
+.bot-card:hover { background: color-mix(in srgb, var(--surface) 85%, var(--text) 3%); }
+.bot-card-running { border-color: var(--green); }
+.bot-card-stopped { border-color: var(--red); }
+.bot-card-error { border-color: var(--yellow); }
+.bot-card-body { display: flex; flex-direction: column; gap: 14px; padding: 16px 16px 18px; }
+.bot-card-header { display: flex; align-items: center; gap: 10px; }
+.bot-card-title { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.3; }
+.avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex: none; }
+.bot-card .avatar { border: 2px solid var(--border-strong); }
+.bot-card-running .avatar { border-color: var(--green); }
+.avatar-fallback {
+  display: grid; place-items: center;
+  background: var(--surface-2); color: var(--text-2);
+  font-size: 16px; font-weight: 700;
+}
+.status-text { font-size: 12px; }
+.status-text-running { color: var(--green); }
+.status-text-stopped { color: var(--red); }
+.status-text-error { color: var(--yellow); }
+.status-text-starting, .status-text-stopping { color: var(--muted); }
+.bot-card-footer {
+  display: flex; align-items: center; gap: 6px;
+  margin-top: auto;
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg) 50%, var(--surface));
+  border-radius: 0 0 calc(var(--radius) - 2px) calc(var(--radius) - 2px);
+}
+.spacer { flex: 1; }
+.add-card {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  min-height: 156px;
+  font: inherit; font-size: 12px;
+  color: var(--muted);
+  border: 2px dashed var(--border-strong);
+  cursor: pointer;
+}
+.add-card:hover { color: var(--text-2); border-color: var(--muted); }
+.add-card-plus { font-size: 22px; font-weight: 300; line-height: 1; }

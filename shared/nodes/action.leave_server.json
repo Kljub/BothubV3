@@ -1,0 +1,32 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.leave_server",
+  "version": 1,
+  "category": "action",
+  "group": "server",
+  "order": 740,
+  "color": "red",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_leave_server.label",
+  "descriptionKey": "builder.node.action_leave_server.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}

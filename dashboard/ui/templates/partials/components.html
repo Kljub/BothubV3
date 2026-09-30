@@ -1,0 +1,173 @@
+{{/* Components shared by several pages. Every page set includes this file. */}}
+
+{{define "bot_card"}}
+<article class="card bot-card bot-card-{{.Status}}" id="bot-{{.ID}}"
+  {{if .Transitioning}}hx-get="/bot/{{.ID}}/card" hx-trigger="load delay:1500ms" hx-swap="outerHTML"{{end}}>
+  <div class="bot-card-body">
+    <header class="bot-card-header">
+      {{template "avatar" .}}
+      <div class="bot-card-title">
+        <a href="/select-bot/{{.ID}}" class="card-title">{{.Name}}</a>
+        {{with .ApplicationID}}<span class="mono muted">{{.}}</span>{{end}}
+      </div>
+      {{template "status_badge" .Status}}
+    </header>
+    {{with .StatusErrorKey}}<p class="status-text status-text-error">{{t .}}</p>
+    {{else}}<p class="status-text status-text-{{.Status}}">{{t (printf "bot.status_text.%s" .Status)}}</p>{{end}}
+  </div>
+  <footer class="bot-card-footer">
+    <a class="icon-btn" href="/select-bot/{{.ID}}?to=settings" title="{{t "bots.manage"}}" aria-label="{{t "bots.manage"}}">{{template "icon_gear"}}</a>
+    <a class="icon-btn" href="/select-bot/{{.ID}}?to=logs" title="{{t "bots.logs"}}" aria-label="{{t "bots.logs"}}">{{template "icon_log"}}</a>
+    <span class="spacer"></span>
+    {{if or (eq .Status "stopped") (eq .Status "error")}}
+    <button class="icon-btn icon-btn-start" hx-post="/bot/{{.ID}}/start" hx-target="#bot-{{.ID}}" hx-swap="outerHTML"
+      title="{{t "bots.start"}}" aria-label="{{t "bots.start"}}">{{template "icon_play"}}</button>
+    {{else if eq .Status "running"}}
+    <button class="icon-btn icon-btn-stop" hx-post="/bot/{{.ID}}/stop" hx-target="#bot-{{.ID}}" hx-swap="outerHTML"
+      title="{{t "bots.stop"}}" aria-label="{{t "bots.stop"}}">{{template "icon_stop"}}</button>
+    {{end}}
+  </footer>
+</article>
+{{end}}
+
+{{define "bot_grid"}}
+<div id="bot-grid" hx-get="/overview/bots?page={{.Page}}" hx-trigger="every 10s" hx-swap="outerHTML">
+<section class="bot-grid" aria-label="{{t "bots.title"}}">
+  {{range .Bots}}{{template "bot_card" .}}{{end}}
+  <button type="button" class="card add-card" data-open-dialog="add-bot-dialog">
+    <span class="add-card-plus" aria-hidden="true">+</span>
+    <span>{{t "bots.add.title"}}</span>
+  </button>
+</section>
+{{template "pagination" (pager .Page .Pages "/overview/bots" "#bot-grid")}}
+</div>
+{{end}}
+
+{{define "add_bot_dialog"}}
+<dialog id="add-bot-dialog" class="modal" aria-labelledby="add-bot-title">
+  <header class="modal-header">
+    <h2 id="add-bot-title">{{t "bots.add.title"}}</h2>
+    <button type="button" class="icon-btn" data-close-dialog aria-label="{{t "admin.close"}}">×</button>
+  </header>
+  <p class="muted">{{t "bots.add.hint"}}</p>
+  <div id="add-bot-error"></div>
+  <form class="form" hx-post="/bots" hx-target="#add-bot-error">
+    <label>{{t "field.bot_token"}}
+      <input type="password" name="token" required autocomplete="off" placeholder="{{t "bots.add.token_placeholder"}}">
+    </label>
+    <div class="modal-actions">
+      <button type="submit" class="btn btn-primary">{{t "bots.add.submit"}}</button>
+      <button type="button" class="btn" data-close-dialog>{{t "action.cancel"}}</button>
+    </div>
+  </form>
+</dialog>
+{{end}}
+
+{{define "avatar"}}{{with .AvatarURL}}<img class="avatar" src="{{.}}" alt="" width="40" height="40">{{else}}<span class="avatar avatar-fallback" aria-hidden="true">{{initial $.Name}}</span>{{end}}{{end}}
+
+{{define "admin_icon"}}{{if eq . "overview"}}{{template "icon_gear"}}{{else if eq . "resources"}}{{template "icon_activity"}}{{else if eq . "plugins"}}{{template "icon_plugin"}}{{else if eq . "users_roles"}}{{template "icon_users"}}{{else if eq . "email"}}{{template "icon_mail"}}{{else if eq . "server_settings"}}{{template "icon_server"}}{{else if eq . "logs"}}{{template "icon_log"}}{{else if eq . "sdk_policies"}}{{template "icon_plugin"}}{{else}}{{template "icon_gear"}}{{end}}{{end}}
+
+{{define "bot_icon"}}{{if eq . "overview"}}{{template "icon_chip"}}{{else if eq . "docs"}}{{template "icon_book"}}{{else if eq . "invite"}}{{template "icon_user_plus"}}{{else if eq . "status"}}{{template "icon_activity"}}{{else if eq . "server"}}{{template "icon_server"}}{{else if eq . "logs"}}{{template "icon_log"}}{{else if eq . "modules"}}{{template "icon_grid"}}{{else}}{{template "icon_plugin"}}{{end}}{{end}}
+
+{{/* Icons: 16px, stroke uses currentColor. */}}
+{{define "icon_shield"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>{{end}}
+{{define "icon_mail"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg>{{end}}
+{{define "icon_users"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>{{end}}
+{{define "icon_book"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg>{{end}}
+{{define "icon_user_plus"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>{{end}}
+{{define "icon_activity"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>{{end}}
+{{define "icon_server"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="8" rx="2"/><rect x="3" y="13" width="18" height="8" rx="2"/><path d="M7 7h.01M7 17h.01"/></svg>{{end}}
+{{define "icon_grid"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>{{end}}
+{{define "icon_chevron"}}<svg class="icon icon-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>{{end}}
+{{define "icon_logout"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>{{end}}
+{{define "icon_compass"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M16.2 7.8l-2.1 6.3-6.3 2.1 2.1-6.3z"/></svg>{{end}}
+{{define "icon_globe"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg>{{end}}
+{{define "icon_bell"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg>{{end}}
+{{define "icon_plugin"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M12 7v4M10 9h4"/></svg>{{end}}
+{{define "icon_chip"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>{{end}}
+{{define "icon_terminal"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l6-6-6-6M12 19h8"/></svg>{{end}}
+{{define "icon_folder"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>{{end}}
+{{define "icon_trash"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>{{end}}
+{{define "icon_copy"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>{{end}}
+{{define "icon_history"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>{{end}}
+{{define "icon_hammer"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 12l-8.5 8.5a2.1 2.1 0 0 1-3-3L12 9"/><path d="M17.6 15L22 10.6 13.4 2 9 6.4z"/></svg>{{end}}
+{{define "icon_layers"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2L2 7l10 5 10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>{{end}}
+{{define "icon_save"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>{{end}}
+{{define "icon_list"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>{{end}}
+{{define "icon_gear"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>{{end}}
+{{define "icon_log"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8M8 9h2"/></svg>{{end}}
+{{define "icon_play"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg>{{end}}
+{{define "icon_stop"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>{{end}}
+
+{{/* Fragments for htmx responses; they receive a Page with the component data in .Data. */}}
+{{/* Date range picker (bh-datepicker). Receives a rangeForm: From/To in
+     datetime-local format, Hint = i18n key of the retention note. Every day
+     can be picked; days of other months are only dimmed. Whole days: posts "from" = start day 00:00 and "to" = end
+     day 23:59 (the server caps it at now). One click selects a single day. */}}
+{{define "range_picker"}}
+<div class="datepicker" data-range-picker
+  data-from="{{.From}}" data-to="{{.To}}"
+  data-label-prev="{{t "datepicker.prev"}}" data-label-next="{{t "datepicker.next"}}" data-label-toggle="{{t "datepicker.toggle"}}">
+  <div class="datepicker-calendar" aria-live="polite"></div>
+  <div class="inline-form">
+    <span class="field">{{t "overview.range.from"}} <span class="datepicker-value mono" data-range-label="from">–</span></span>
+    <span class="field">{{t "overview.range.to"}} <span class="datepicker-value mono" data-range-label="to">–</span></span>
+  </div>
+  <input type="hidden" name="from" value="{{.From}}">
+  <input type="hidden" name="to" value="{{.To}}">
+</div>
+<div class="inline-form">
+  <button type="submit" class="btn btn-primary btn-sm">{{t "overview.range.apply"}}</button>
+  <span class="hint">{{t .Hint}}</span>
+</div>
+{{end}}
+
+{{/* Page numbers. Receives a pagerView; renders nothing for a single page. */}}
+{{define "pagination"}}
+{{if gt .Pages 1}}
+<nav class="pagination" aria-label="{{t "pagination.label"}}">
+  <button type="button" class="page-btn" hx-get="{{.URL}}?page={{.Prev}}" hx-target="{{.Target}}" hx-swap="outerHTML" {{if eq .Page 1}}disabled{{end}} aria-label="{{t "pagination.prev"}}">‹</button>
+  {{range .Items}}{{if eq . 0}}<span class="page-gap">…</span>{{else}}<button type="button" class="page-btn" hx-get="{{$.URL}}?page={{.}}" hx-target="{{$.Target}}" hx-swap="outerHTML" {{if eq . $.Page}}aria-current="page"{{end}}>{{.}}</button>{{end}}{{end}}
+  <button type="button" class="page-btn" hx-get="{{.URL}}?page={{.Next}}" hx-target="{{.Target}}" hx-swap="outerHTML" {{if eq .Page .Pages}}disabled{{end}} aria-label="{{t "pagination.next"}}">›</button>
+</nav>
+{{end}}
+{{end}}
+
+{{define "bot_grid_fragment"}}{{template "bot_grid" .Data}}{{end}}
+{{define "bot_card_fragment"}}{{template "bot_card" .Data}}{{end}}
+
+{{/* Command row (bh-command): usage chip, title, description, gear, toggle.
+     Receives a commandView. */}}
+{{define "command_row"}}
+<div class="command-row" id="cmd-{{.Name}}">
+  <div class="command-text">
+    <div class="command-line"><code class="command-usage">{{.Usage}}</code><span class="command-title">{{t (printf "command.%s.title" .Name)}}</span></div>
+    <p class="command-desc">{{t (printf "command.%s.description" .Name)}}</p>
+  </div>
+  <div class="command-actions">
+    <a class="icon-btn" href="/bots/commands/{{.Name}}" hx-boost="false" title="{{t "command.settings"}}" aria-label="{{t "command.settings"}}">{{template "icon_gear"}}</a>
+    <form hx-put="/bot/{{.BotID}}/modules/{{.Module}}/commands/{{.Name}}" hx-trigger="change" hx-target="#cmd-{{.Name}}" hx-swap="outerHTML swap:250ms">
+      <input type="checkbox" class="toggle" name="enabled" value="true" {{if .Enabled}}checked{{end}} aria-label="{{t "command.toggle" "name" .Name}}">
+    </form>
+  </div>
+</div>
+{{end}}
+
+{{define "command_row_fragment"}}{{template "command_row" .Data}}{{end}}
+
+{{/* Tachometer (bh-gauge). Receives a gaugeView. Arc length 100 = full scale. */}}
+{{define "gauge"}}
+<span class="gauge gauge-{{.Level}}" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{.Pct}}" aria-label="{{.Label}}">
+  <svg viewBox="0 0 100 58" aria-hidden="true">
+    <path class="gauge-track" d="M10 50 A40 40 0 0 1 90 50" pathLength="100"/>
+    <path class="gauge-zone gauge-zone-ok" d="M10 50 A40 40 0 0 1 90 50" pathLength="100" stroke-dasharray="60 100"/>
+    <path class="gauge-zone gauge-zone-warn" d="M10 50 A40 40 0 0 1 90 50" pathLength="100" stroke-dasharray="30 100" stroke-dashoffset="-60"/>
+    <path class="gauge-zone gauge-zone-high" d="M10 50 A40 40 0 0 1 90 50" pathLength="100" stroke-dasharray="10 100" stroke-dashoffset="-90"/>
+    <g class="gauge-ticks"><line x1="4" y1="50" x2="0" y2="50"/><line x1="17.5" y1="17.5" x2="14.6" y2="14.6"/><line x1="50" y1="4" x2="50" y2="0"/><line x1="82.5" y1="17.5" x2="85.4" y2="14.6"/><line x1="96" y1="50" x2="100" y2="50"/></g>
+    <path class="gauge-fill" d="M10 50 A40 40 0 0 1 90 50" pathLength="100" stroke-dasharray="100" stroke-dashoffset="{{sub 100.0 .Pct}}"/>
+    <line class="gauge-needle" x1="50" y1="50" x2="50" y2="18" transform="rotate({{.Angle}} 50 50)"/>
+    <circle class="gauge-hub" cx="50" cy="50" r="4"/>
+  </svg>
+  <span class="gauge-value">{{.Label}}</span>
+</span>
+{{end}}

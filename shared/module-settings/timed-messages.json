@@ -1,0 +1,17 @@
+{
+  "module": "timed-messages",
+  "fields": [
+    {
+      "key": "messages", "type": "list", "max": 25, "titleField": "name",
+      "item": [
+        { "key": "name", "type": "text", "max": 60, "default": "Reminder" },
+        { "key": "channel", "type": "channel", "channelTypes": ["text", "announcement"] },
+        { "key": "days", "type": "number", "min": 0, "max": 30, "default": 0 },
+        { "key": "hours", "type": "number", "min": 0, "max": 23, "default": 1 },
+        { "key": "minutes", "type": "number", "min": 0, "max": 59, "default": 0 },
+        { "key": "message", "type": "message", "default": { "mode": "embed", "title": "Reminder", "description": "Don't forget to read the rules!", "color": "#a78bfa" } },
+        { "key": "skipStacked", "type": "bool", "default": true }
+      ]
+    }
+  ]
+}

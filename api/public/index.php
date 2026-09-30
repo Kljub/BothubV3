@@ -2,17 +2,143 @@
 
 declare(strict_types=1);
 
-// Phase 0 skeleton: health endpoint only. Slim 4, auth and the
-// access middleware follow in phase 2 (see plan.md).
+// Health endpoint and the internal endpoints (/internal/*, see
+// InternalRouter). Slim 4, auth and the access middleware for /api/v1
+// follow in phase 2 (see plan.md).
+
+require __DIR__ . '/../src/autoload.php';
+
+use BotHub\BotCore\Jobs;
+use BotHub\BotCore\SecretBox;
+use BotHub\Database\Connection;
+use BotHub\Internal\BotStore;
+use BotHub\Internal\CommandStore;
+use BotHub\Internal\InternalRouter;
+use BotHub\Internal\ProcessStatus;
+use BotHub\Internal\TemplateStore;
+use BotHub\Internal\DataStore;
+use BotHub\Internal\SdkPolicyStore;
+use BotHub\Internal\TimedStore;
+use BotHub\Internal\WebhookStore;
+use BotHub\Internal\ApiError;
+use BotHub\Redis\RedisConnect;
 
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+$method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 header('Content-Type: application/json; charset=utf-8');
 
+$send = static function (int $status, ?array $body): void {
+    http_response_code($status);
+    if ($body !== null) {
+        echo json_encode($body, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    }
+};
+
 if ($path === '/api/health') {
-    echo json_encode(['status' => 'ok'], JSON_THROW_ON_ERROR);
+    $send(200, ['status' => 'ok']);
     return;
 }
 
-http_response_code(404);
-echo json_encode(['error' => ['key' => 'error.not_found']], JSON_THROW_ON_ERROR);
+// Public webhook receiver (Webhooks module): no session, optional API key.
+if (preg_match('#^/api/hooks/(\d+)/([a-z0-9]{1,64})$#', $path, $m)) {
+    if ($method !== 'POST') {
+        $send(405, ['error' => ['key' => 'error.method_not_allowed', 'params' => (object) []]]);
+        return;
+    }
+    $error = static fn (int $status, string $key) => $send($status, ['error' => ['key' => $key, 'params' => (object) []]]);
+    if ((int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > WebhookStore::MAX_BODY) {
+        $error(413, 'error.webhook.too_large');
+        return;
+    }
+    $raw = (string) file_get_contents('php://input', false, null, 0, WebhookStore::MAX_BODY + 1);
+    if (strlen($raw) > WebhookStore::MAX_BODY) {
+        $error(413, 'error.webhook.too_large');
+        return;
+    }
+    // 60 calls per minute and webhook (Redis counter; without Redis no limit).
+    try {
+        $redis = RedisConnect::open(RedisConnect::url(), 0.5, true);
+        $rl = "bothub:rl:hook:{$m[1]}:{$m[2]}:" . intdiv(time(), 60);
+        $calls = $redis->incr($rl);
+        if ($calls === 1) {
+            $redis->expire($rl, 120);
+        }
+        if ($calls > 60) {
+            $error(429, 'error.webhook.rate_limited');
+            return;
+        }
+    } catch (\RedisException) {
+    }
+    try {
+        (new WebhookStore(Connection::open(Connection::defaultPath())))->receive((int) $m[1], $m[2], $_SERVER['HTTP_AUTHORIZATION'] ?? null, $raw);
+        $send(202, ['ok' => true]);
+    } catch (ApiError $e) {
+        $error($e->status, $e->key);
+    } catch (\Throwable $e) {
+        error_log('hooks: ' . $e::class . ': ' . $e->getMessage());
+        $error(500, 'error.internal');
+    }
+    return;
+}
+
+if (str_starts_with($path, '/internal/')) {
+    if (!InternalRouter::authorized($_SERVER['HTTP_X_BOTHUB_INTERNAL'] ?? null)) {
+        $send(401, ['error' => ['key' => 'error.auth.required', 'params' => (object) []]]);
+        return;
+    }
+    $raw = (string) file_get_contents('php://input');
+    $body = $raw === '' ? [] : json_decode($raw, true);
+    if (!is_array($body)) {
+        $send(400, ['error' => ['key' => 'error.bad_json', 'params' => (object) []]]);
+        return;
+    }
+    if ($path === '/internal/processes/botcore/restart' && $method === 'POST') {
+        // The NodeCore exits after the job; its supervisor starts it again.
+        try {
+            $jobs = new Jobs(RedisConnect::open(RedisConnect::url(), 1.0, true));
+            $send(202, ['jobId' => $jobs->dispatch('core.restart', ['requestedAt' => time()])]);
+        } catch (\RedisException) {
+            $send(503, ['error' => ['key' => 'error.redis.unavailable', 'params' => (object) []]]);
+        }
+        return;
+    }
+    if ($path === '/internal/processes' && $method === 'GET') {
+        // Resource overview: BotCore heartbeat (Redis) and the database.
+        $items = [];
+        try {
+            $items[] = ProcessStatus::read(RedisConnect::open(RedisConnect::url(), 1.0, true));
+        } catch (\RedisException) {
+            $items[] = ['key' => 'botcore', 'kind' => 'service', 'status' => 'stopped', 'restarts24h' => 0];
+        }
+        try {
+            $items[] = ProcessStatus::database(Connection::open(Connection::defaultPath()), Connection::defaultPath());
+        } catch (\Throwable $e) {
+            error_log('processes: ' . $e->getMessage());
+            $items[] = ['key' => 'database', 'kind' => 'database', 'status' => 'crashed'];
+        }
+        $send(200, ['items' => $items]);
+        return;
+    }
+    try {
+        $pdo = Connection::open(Connection::defaultPath());
+        $router = new InternalRouter(
+            new BotStore($pdo, SecretBox::loadOrCreate()),
+            static fn () => new Jobs(RedisConnect::open(RedisConnect::url(), 1.0, true)),
+            new CommandStore($pdo),
+            new TimedStore($pdo),
+            new WebhookStore($pdo),
+            new TemplateStore($pdo),
+            new DataStore($pdo),
+            new SdkPolicyStore($pdo),
+        );
+        [$status, $out] = $router->handle($method, $path, $body, $raw === '' ? null : json_decode($raw, false), $_GET);
+    } catch (\Throwable $e) {
+        error_log('internal: ' . $e::class . ': ' . $e->getMessage());
+        [$status, $out] = [500, ['error' => ['key' => 'error.internal', 'params' => (object) []]]];
+    }
+    $send($status, $out);
+    return;
+}
+
+$send(404, ['error' => ['key' => 'error.not_found']]);

@@ -1,0 +1,63 @@
+{
+  "module": "qotd",
+  "fields": [
+    {
+      "key": "channel",
+      "type": "channel",
+      "channelTypes": [
+        "text",
+        "announcement",
+        "forum"
+      ]
+    },
+    {
+      "key": "time",
+      "type": "text",
+      "max": 5,
+      "default": "12:00",
+      "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+    },
+    {
+      "key": "mentionRoles",
+      "type": "roles",
+      "max": 5
+    },
+    {
+      "key": "message",
+      "type": "message",
+      "default": {
+        "mode": "embed",
+        "title": "❓ Question of the day #{number}",
+        "description": "{question}",
+        "color": "#60a5fa"
+      }
+    },
+    {
+      "key": "thread",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "threadName",
+      "type": "text",
+      "max": 90,
+      "showIf": {
+        "thread": [
+          "true"
+        ]
+      },
+      "default": "QOTD #{number}"
+    },
+    {
+      "key": "questions",
+      "type": "words",
+      "max": 500,
+      "maxLength": 300
+    },
+    {
+      "key": "skipAsked",
+      "type": "bool",
+      "default": true
+    }
+  ]
+}

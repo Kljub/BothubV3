@@ -1,0 +1,81 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.mod_history",
+  "version": 1,
+  "category": "action",
+  "group": "server",
+  "order": 750,
+  "color": "orange",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_mod_history.label",
+  "descriptionKey": "builder.node.action_mod_history.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": "",
+      "labelKey": "builder.result.mod_history.0"
+    },
+    {
+      "suffix": ".count",
+      "labelKey": "builder.result.mod_history.1"
+    },
+    {
+      "suffix": ".warns",
+      "labelKey": "builder.result.mod_history.2"
+    },
+    {
+      "suffix": ".timeouts",
+      "labelKey": "builder.result.mod_history.3"
+    },
+    {
+      "suffix": ".kicks",
+      "labelKey": "builder.result.mod_history.4"
+    },
+    {
+      "suffix": ".bans",
+      "labelKey": "builder.result.mod_history.5"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "user": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.user",
+        "x-hintKey": "builder.cfg.ref_hint",
+        "x-ref": "member",
+        "default": "{user.id}"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      },
+      "guild": {
+        "type": "string",
+        "maxLength": 40,
+        "x-advanced": true,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.guild",
+        "x-hintKey": "builder.cfg.guild_hint"
+      }
+    }
+  }
+}

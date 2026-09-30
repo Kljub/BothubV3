@@ -1,0 +1,44 @@
+{
+  "module": "sticky-roles",
+  "fields": [
+    {
+      "key": "mode",
+      "type": "select",
+      "options": [
+        "ignored",
+        "allowed"
+      ],
+      "default": "ignored"
+    },
+    {
+      "key": "roles",
+      "type": "roles",
+      "max": 100,
+      "hint": true
+    },
+    {
+      "key": "ignoreModeration",
+      "type": "bool",
+      "default": false,
+      "hint": true
+    },
+    {
+      "key": "dm",
+      "type": "bool",
+      "default": false
+    },
+    {
+      "key": "dmMessage",
+      "type": "message",
+      "showIf": {
+        "dm": [
+          "true"
+        ]
+      },
+      "default": {
+        "mode": "text",
+        "content": "Welcome back to {server}! You got your roles back: {roles}"
+      }
+    }
+  ]
+}

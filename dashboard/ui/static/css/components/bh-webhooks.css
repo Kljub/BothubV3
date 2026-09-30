@@ -1,0 +1,9 @@
+/* Webhooks module page (module_item.html, "webhooks"). */
+
+.hook-item { border-top: 1px solid var(--border); padding: 12px 0; }
+.hook-item:first-child { border-top: 0; }
+.hook-item > summary { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; cursor: pointer; list-style: none; }
+.hook-item > summary::-webkit-details-marker { display: none; }
+.hook-item[open] > summary { margin-bottom: 14px; }
+.hook-title { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.hook-title code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

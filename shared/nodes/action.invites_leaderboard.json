@@ -1,0 +1,47 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.invites_leaderboard",
+  "version": 1,
+  "category": "action",
+  "group": "invite_tracker",
+  "order": 1030,
+  "color": "blue",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_invites_leaderboard.label",
+  "descriptionKey": "builder.node.action_invites_leaderboard.description",
+  "module": "invite-tracker",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "limit": {
+        "type": "number",
+        "minimum": 1,
+        "x-labelKey": "builder.cfg.limit_entries",
+        "maximum": 50,
+        "default": 10
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  }
+}

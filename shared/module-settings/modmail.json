@@ -1,0 +1,11 @@
+{
+  "module": "modmail",
+  "fields": [
+    { "key": "channel", "type": "channel", "channelTypes": ["text"] },
+    { "key": "supportRoles", "type": "roles", "max": 10 },
+    { "key": "pingSupport", "type": "bool", "default": true },
+    { "key": "greeting", "type": "message", "default": { "mode": "embed", "title": "📬 Message received", "description": "Thanks for your message. The team of {server} will answer you here.", "color": "#60a5fa" } },
+    { "key": "closeMessage", "type": "text", "max": 1000, "default": "Your conversation with the team of {server} was closed. Write again any time." },
+    { "key": "anonymousStaff", "type": "bool", "default": false }
+  ]
+}

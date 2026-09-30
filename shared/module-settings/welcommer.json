@@ -1,0 +1,79 @@
+{
+  "module": "welcommer",
+  "fields": [
+    {
+      "key": "channelEnabled",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "channel",
+      "type": "channel",
+      "channelTypes": [
+        "text",
+        "announcement"
+      ],
+      "showIf": {
+        "channelEnabled": [
+          "true"
+        ]
+      },
+      "hint": true
+    },
+    {
+      "key": "message",
+      "type": "message",
+      "showIf": {
+        "channelEnabled": [
+          "true"
+        ]
+      },
+      "default": {
+        "mode": "embed",
+        "title": "Welcome {user.name}!",
+        "description": "{user.mention} joined **{server}**. We are now {members} members.",
+        "color": "#a78bfa"
+      }
+    },
+    {
+      "key": "reactions",
+      "type": "emojis",
+      "max": 5,
+      "showIf": {
+        "channelEnabled": [
+          "true"
+        ]
+      },
+      "hint": true
+    },
+    {
+      "key": "dm",
+      "type": "bool",
+      "default": false
+    },
+    {
+      "key": "dmMessage",
+      "type": "message",
+      "showIf": {
+        "dm": [
+          "true"
+        ]
+      },
+      "default": {
+        "mode": "text",
+        "content": "Welcome to {server}, {user.name}!"
+      }
+    },
+    {
+      "key": "roles",
+      "type": "roles",
+      "max": 10,
+      "hint": true
+    },
+    {
+      "key": "ignoreBots",
+      "type": "bool",
+      "default": true
+    }
+  ]
+}

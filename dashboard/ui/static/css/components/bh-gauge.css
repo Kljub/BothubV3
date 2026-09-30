@@ -1,0 +1,19 @@
+/* bh-gauge: Tachometer (half circle) with needle for a load of 0–100.
+   Level colors: ok < 60, warn < 90, high >= 90. Use the "gauge" template. */
+
+.gauge { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; }
+.gauge svg { width: 72px; height: 42px; overflow: visible; }
+.gauge-track { fill: none; stroke: var(--border-strong); stroke-width: 8; stroke-linecap: round; }
+/* Faint zones on the full arc, so the scale stays readable at low load. */
+.gauge-zone { fill: none; stroke-width: 8; opacity: 0.22; }
+.gauge-zone-ok { stroke: var(--green); }
+.gauge-zone-warn { stroke: var(--yellow); }
+.gauge-zone-high { stroke: var(--red); }
+.gauge-ticks line { stroke: var(--muted); stroke-width: 1.5; stroke-linecap: round; }
+.gauge-fill { fill: none; stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset 0.4s; }
+.gauge-ok .gauge-fill { stroke: var(--green); }
+.gauge-warn .gauge-fill { stroke: var(--yellow); }
+.gauge-high .gauge-fill { stroke: var(--red); }
+.gauge-needle { stroke: var(--text); stroke-width: 2; stroke-linecap: round; transition: transform 0.4s; }
+.gauge-hub { fill: var(--text); }
+.gauge-value { font-size: 11px; font-variant-numeric: tabular-nums; color: var(--text-2); }

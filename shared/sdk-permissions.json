@@ -1,0 +1,53 @@
+{
+  "$comment": "SDK v1 capability catalog (user spec 2026-09-30, sdk/API.md). 'core' calls need no permission (plugin info, lifecycle, logger, config, utils, locale, resources, rate limits). Every other call needs its permission switched on in the SDK policies (admin > SDK Policies, table sdk_policies; default: risk low = on, otherwise off) and declared in the plugin manifest. Plugins never get a database handle, the bot token, environment variables or direct network access; every call goes through the SDK manager in the bot. 'implemented' lists the calls the manager answers today; the others answer sdk.call.not_available. Texts: dashboard lang keys sdk.perm.<key> and sdk.perm.<key>_hint.",
+  "sdkVersion": 1,
+  "core": {
+    "calls": [
+      "plugin.getInfo", "plugin.getId", "plugin.getVersion", "plugin.getConfig", "plugin.isEnabled", "plugin.getPath", "plugin.getManifest",
+      "logger.debug", "logger.info", "logger.warn", "logger.error", "logger.success",
+      "config.get", "config.set", "config.has", "config.delete", "config.getAll",
+      "utils.uuid", "utils.random", "utils.hash", "utils.formatDate", "utils.formatDuration", "utils.formatNumber", "utils.validate",
+      "locale.get", "locale.translate", "locale.has", "locale.getAvailable",
+      "rateLimit.check", "rateLimit.consume", "rateLimit.reset",
+      "resources.readFile", "resources.exists", "resources.getPath"
+    ],
+    "implemented": ["logger.debug", "logger.info", "logger.warn", "logger.error", "logger.success"]
+  },
+  "permissions": [
+    { "key": "storage", "risk": "low", "calls": ["storage.get", "storage.set", "storage.has", "storage.delete", "storage.increment", "storage.decrement", "storage.clear", "storage.transaction"], "implemented": ["storage.get", "storage.set", "storage.has", "storage.delete", "storage.increment", "storage.decrement", "storage.clear"] },
+    { "key": "storage.collections", "risk": "low", "calls": ["collection.create", "collection.find", "collection.findOne", "collection.count", "collection.insert", "collection.update", "collection.upsert", "collection.delete"], "implemented": [] },
+    { "key": "cache", "risk": "low", "calls": ["cache.get", "cache.set", "cache.has", "cache.delete", "cache.clear", "cache.increment", "cache.decrement"], "implemented": [] },
+    { "key": "scheduler", "risk": "low", "calls": ["scheduler.timeout", "scheduler.interval", "scheduler.cron", "scheduler.every", "scheduler.cancel", "scheduler.list"], "implemented": [] },
+    { "key": "events.plugin", "risk": "low", "calls": ["events.on", "events.once", "events.off", "events.emit", "events.list"], "implemented": [] },
+    { "key": "discord.guilds.read", "risk": "low", "calls": ["guild.get", "guild.list", "guild.getChannels", "guild.getRoles", "guild.getEmojis"], "implemented": ["guild.get", "guild.list"] },
+    { "key": "discord.channels.read", "risk": "low", "calls": ["channel.get", "channel.list"], "implemented": [] },
+    { "key": "discord.roles.read", "risk": "low", "calls": ["role.get", "role.list"], "implemented": [] },
+    { "key": "permissions.check", "risk": "low", "calls": ["permissions.check", "permissions.checkUser", "permissions.checkMember", "permissions.checkRole", "permissions.checkChannel", "permissions.require"], "implemented": [] },
+    { "key": "discord.members.read", "risk": "medium", "calls": ["guild.getMembers", "member.get", "member.list"], "implemented": [] },
+    { "key": "discord.messages.read", "risk": "medium", "calls": ["message.get"], "implemented": [] },
+    { "key": "discord.messages.send", "risk": "medium", "calls": ["message.send"], "implemented": ["message.send"] },
+    { "key": "discord.messages.manage", "risk": "medium", "calls": ["message.edit", "message.delete", "message.pin", "message.unpin", "message.react"], "implemented": [] },
+    { "key": "discord.interactions", "risk": "medium", "calls": ["interaction.reply", "interaction.editReply", "interaction.deferReply", "interaction.followUp", "interaction.showModal", "interaction.respond"], "implemented": [] },
+    { "key": "discord.events", "risk": "medium", "calls": ["events.discord"], "events": ["messageCreate", "messageUpdate", "messageDelete", "interactionCreate", "guildCreate", "guildDelete", "guildMemberAdd", "guildMemberRemove", "guildMemberUpdate", "channelCreate", "channelDelete", "channelUpdate", "roleCreate", "roleDelete", "roleUpdate", "voiceStateUpdate", "reactionAdd", "reactionRemove"], "implemented": [] },
+    { "key": "bothub.events", "risk": "low", "calls": ["events.bothub"], "events": ["bot.ready", "bot.start", "bot.stop", "bot.restart", "bot.shutdown", "plugin.load", "plugin.enable", "plugin.disable", "plugin.unload"], "implemented": [] },
+    { "key": "commands.manage", "risk": "medium", "calls": ["commands.register", "commands.unregister", "commands.get", "commands.list", "commands.isEnabled", "commands.getPermissions", "commands.setPermissions"], "implemented": [] },
+    { "key": "plugins.interop", "risk": "medium", "calls": ["plugins.get", "plugins.list", "plugins.isInstalled", "plugins.isEnabled", "plugins.getAPI", "plugins.emit"], "implemented": [] },
+    { "key": "dashboard.ui", "risk": "medium", "calls": ["dashboard.registerPage", "dashboard.registerSettings", "dashboard.registerComponent", "dashboard.registerMenuItem", "dashboard.getRoute"], "implemented": [] },
+    { "key": "discord.members.manage", "risk": "high", "calls": ["member.addRole", "member.removeRole", "member.timeout", "member.kick", "member.ban", "member.unban", "member.setNickname"], "implemented": [] },
+    { "key": "discord.channels.manage", "risk": "high", "calls": ["channel.create", "channel.edit", "channel.delete", "channel.setPermissions"], "implemented": [] },
+    { "key": "discord.roles.manage", "risk": "high", "calls": ["role.create", "role.edit", "role.delete", "role.addToMember", "role.removeFromMember"], "implemented": [] },
+    { "key": "http.outbound", "risk": "high", "calls": ["http.get", "http.post", "http.put", "http.patch", "http.delete"], "implemented": [] },
+    { "key": "secrets.read", "risk": "high", "calls": ["secrets.get", "secrets.has"], "implemented": [] }
+  ],
+  "limits": {
+    "memoryMb": 64,
+    "callsPerSecond": 50,
+    "messageBytes": 65536,
+    "callTimeoutMs": 5000,
+    "blockTimeoutMs": 10000,
+    "storageKeys": 1000,
+    "storageValueBytes": 16384,
+    "storageTotalBytes": 1048576,
+    "restartsPer10Min": 3
+  }
+}

@@ -1,0 +1,28 @@
+{{/* Server tab: count, search, server cards with a leave button on hover. */}}
+
+{{define "server_list_fragment"}}{{template "server_list" .Data}}{{end}}
+
+{{define "server_list"}}
+<div id="server-list">
+  <header class="list-head">
+    <p class="list-count"><strong>{{len .Guilds}}</strong> <span class="muted">{{t "server.count"}}</span></p>
+    <input type="search" class="sidebar-search list-search" placeholder="{{t "server.search"}}" aria-label="{{t "server.search"}}" data-card-filter="server-grid">
+  </header>
+  {{if .Guilds}}
+  <section class="server-grid" id="server-grid">
+    {{range .Guilds}}
+    <article class="card server-card" data-filter-text="{{.Name}} {{.ID}}">
+      {{with .IconURL}}<img class="avatar" src="{{.}}" alt="" width="44" height="44">{{else}}<span class="avatar avatar-fallback" aria-hidden="true">{{initial .Name}}</span>{{end}}
+      <span class="server-card-text">
+        <strong>{{.Name}}</strong>
+        <span class="mono muted">{{.ID}}</span>
+      </span>
+      <button type="button" class="icon-btn server-leave" title="{{t "server.leave"}}" aria-label="{{t "server.leave_named" "name" .Name}}"
+        hx-delete="/bot/{{$.Bot.ID}}/guilds/{{.ID}}" hx-target="#server-list" hx-swap="outerHTML"
+        hx-confirm="{{t "server.leave_confirm" "name" .Name}}">{{template "icon_logout"}}</button>
+    </article>
+    {{end}}
+  </section>
+  {{else}}<p class="muted">{{t "guilds.empty"}}</p>{{end}}
+</div>
+{{end}}

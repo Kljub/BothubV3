@@ -1,0 +1,65 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.reset_cooldown",
+  "version": 1,
+  "category": "action",
+  "group": "other",
+  "order": 780,
+  "color": "orange",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_reset_cooldown.label",
+  "descriptionKey": "builder.node.action_reset_cooldown.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "command": {
+        "type": "string",
+        "maxLength": 32,
+        "x-labelKey": "builder.cfg.command",
+        "x-mono": true,
+        "x-placeholder": "daily",
+        "x-hintKey": "builder.cfg.command_hint"
+      },
+      "cooldown_scope": {
+        "type": "string",
+        "enum": [
+          "user",
+          "server",
+          "global"
+        ],
+        "default": "user",
+        "x-labelKey": "builder.cfg.cooldown_scope",
+        "x-enumKey": "builder.enum.cooldown_scope"
+      },
+      "user": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.user",
+        "x-hintKey": "builder.cfg.ref_hint",
+        "x-ref": "member",
+        "x-showIf": {
+          "cooldown_scope": [
+            "user"
+          ]
+        },
+        "default": "{user.id}"
+      }
+    }
+  }
+}

@@ -1,0 +1,8852 @@
+{
+ "$comment": "Custom command copies of every module command from the v2 dashboard (modules tab). Each one is seeded as a disabled custom command, grouped by module, so it can be rebuilt in the command builder. A copy can share its name with the built-in command; only one of them can be enabled.",
+ "commands": [
+  {
+   "module": "moderation",
+   "group": "Moderation",
+   "name": "purge",
+   "title": "Purge",
+   "description": "Deletes multiple messages at once",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "purge",
+       "description": "Deletes multiple messages at once",
+       "hide_replies": true,
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "moderation:moderator"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [],
+        "banned_channels": [],
+        "hide_without_permission": false
+       }
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Moderation module."
+     },
+     {
+      "id": "option_amount",
+      "type": "option.number",
+      "typeVersion": 1,
+      "config": {
+       "name": "amount",
+       "description": "How many messages (1-100)",
+       "required": true,
+       "variable": "amount"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.purge_messages",
+      "typeVersion": 1,
+      "config": {
+       "channel": "{channel.id}",
+       "amount": "{option_amount}",
+       "variable": "purged"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Deleted {purged} messages."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_amount",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "moderation",
+   "group": "Moderation",
+   "name": "kick",
+   "title": "Kick",
+   "description": "Kicks a user from the server",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "kick",
+       "description": "Kicks a user from the server",
+       "hide_replies": true,
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "moderation:moderator"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [],
+        "banned_channels": [],
+        "hide_without_permission": false
+       }
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Moderation module."
+     },
+     {
+      "id": "option_user",
+      "type": "option.user",
+      "typeVersion": 1,
+      "config": {
+       "name": "user",
+       "description": "The member",
+       "required": true,
+       "variable": "user"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "option_reason",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "reason",
+       "description": "Why",
+       "required": false,
+       "variable": "reason"
+      },
+      "position": {
+       "x": 410,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.kick",
+      "typeVersion": 1,
+      "config": {
+       "user": "{option_user}",
+       "reason": "{option_reason}"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "<@{option_user}> was kicked."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_user",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "option_reason",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "moderation",
+   "group": "Moderation",
+   "name": "ban",
+   "title": "Ban",
+   "description": "Bans a user permanently",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "ban",
+       "description": "Bans a user permanently",
+       "hide_replies": true,
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "moderation:moderator"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [],
+        "banned_channels": [],
+        "hide_without_permission": false
+       }
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Moderation module."
+     },
+     {
+      "id": "option_user",
+      "type": "option.user",
+      "typeVersion": 1,
+      "config": {
+       "name": "user",
+       "description": "The member",
+       "required": true,
+       "variable": "user"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "option_reason",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "reason",
+       "description": "Why",
+       "required": false,
+       "variable": "reason"
+      },
+      "position": {
+       "x": 410,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.ban",
+      "typeVersion": 1,
+      "config": {
+       "user": "{option_user}",
+       "reason": "{option_reason}",
+       "delete_messages": "none"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "<@{option_user}> was banned."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_user",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "option_reason",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "moderation",
+   "group": "Moderation",
+   "name": "tempban",
+   "title": "Temp-Ban",
+   "description": "Bans a user temporarily",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "tempban",
+       "description": "Bans a user temporarily",
+       "hide_replies": true,
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "moderation:moderator"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [],
+        "banned_channels": [],
+        "hide_without_permission": false
+       }
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Moderation module."
+     },
+     {
+      "id": "option_user",
+      "type": "option.user",
+      "typeVersion": 1,
+      "config": {
+       "name": "user",
+       "description": "The member",
+       "required": true,
+       "variable": "user"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "option_duration",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "duration",
+       "description": "How long, e.g. 1d or 12h",
+       "required": true,
+       "variable": "duration"
+      },
+      "position": {
+       "x": 410,
+       "y": 110
+      }
+     },
+     {
+      "id": "option_reason",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "reason",
+       "description": "Why",
+       "required": false,
+       "variable": "reason"
+      },
+      "position": {
+       "x": 700,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.ban",
+      "typeVersion": 1,
+      "config": {
+       "user": "{option_user}",
+       "reason": "{option_reason}",
+       "undo_after": "{option_duration}",
+       "variable": "ban"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "<@{option_user}> was banned for {option_duration}."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_user",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "option_duration",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "option_reason",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "moderation",
+   "group": "Moderation",
+   "name": "unban",
+   "title": "Unban",
+   "description": "Unbans a user",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "unban",
+       "description": "Unbans a user",
+       "hide_replies": true,
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "moderation:moderator"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [],
+        "banned_channels": [],
+        "hide_without_permission": false
+       }
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Moderation module."
+     },
+     {
+      "id": "option_user",
+      "type": "option.user",
+      "typeVersion": 1,
+      "config": {
+       "name": "user",
+       "description": "The member",
+       "required": true,
+       "variable": "user"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.unban",
+      "typeVersion": 1,
+      "config": {
+       "user": "{option_user}"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "<@{option_user}> was unbanned."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_user",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "moderation",
+   "group": "Moderation",
+   "name": "banlist",
+   "title": "Ban list",
+   "description": "Shows all banned users",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "banlist",
+       "description": "Shows all banned users",
+       "hide_replies": true,
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "moderation:moderator"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [],
+        "banned_channels": [],
+        "hide_without_permission": false
+       }
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Moderation module."
+     },
+     {
+      "id": "step1",
+      "type": "action.list_bans",
+      "typeVersion": 1,
+      "config": {
+       "variable": "bans"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Banned users ({bans.count}):\n{bans}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "moderation",
+   "group": "Moderation",
+   "name": "mute",
+   "title": "Mute",
+   "description": "Mutes a user",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "mute",
+       "description": "Mutes a user",
+       "hide_replies": true,
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "moderation:moderator"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [],
+        "banned_channels": [],
+        "hide_without_permission": false
+       }
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Moderation module."
+     },
+     {
+      "id": "option_user",
+      "type": "option.user",
+      "typeVersion": 1,
+      "config": {
+       "name": "user",
+       "description": "The member",
+       "required": true,
+       "variable": "user"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "option_duration",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "duration",
+       "description": "How long, e.g. 10m",
+       "required": false,
+       "variable": "duration"
+      },
+      "position": {
+       "x": 410,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "condition.comparison",
+      "typeVersion": 1,
+      "config": {
+       "source": "option",
+       "subject": "option_duration",
+       "multi": "first"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step1_empty",
+      "type": "condition.state",
+      "typeVersion": 1,
+      "config": {
+       "operator": "eq",
+       "value": ""
+      },
+      "position": {
+       "x": 440,
+       "y": 370
+      }
+     },
+     {
+      "id": "step1_else",
+      "type": "condition.else",
+      "typeVersion": 1,
+      "config": {},
+      "position": {
+       "x": 700,
+       "y": 370
+      }
+     },
+     {
+      "id": "step1_a",
+      "type": "action.timeout",
+      "typeVersion": 1,
+      "config": {
+       "user": "{option_user}",
+       "duration": "28d"
+      },
+      "position": {
+       "x": 440,
+       "y": 500
+      }
+     },
+     {
+      "id": "step1_b",
+      "type": "action.timeout",
+      "typeVersion": 1,
+      "config": {
+       "user": "{option_user}",
+       "duration": "{option_duration}"
+      },
+      "position": {
+       "x": 760,
+       "y": 500
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "<@{option_user}> was muted."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 1120,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_user",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "option_duration",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "branches"
+      },
+      "to": {
+       "node": "step1_empty",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "branches"
+      },
+      "to": {
+       "node": "step1_else",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1_empty",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1_a",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1_else",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1_b",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1_a",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1_b",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "moderation",
+   "group": "Moderation",
+   "name": "unmute",
+   "title": "Unmute",
+   "description": "Unmutes a user",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "unmute",
+       "description": "Unmutes a user",
+       "hide_replies": true,
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "moderation:moderator"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [],
+        "banned_channels": [],
+        "hide_without_permission": false
+       }
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Moderation module."
+     },
+     {
+      "id": "option_user",
+      "type": "option.user",
+      "typeVersion": 1,
+      "config": {
+       "name": "user",
+       "description": "The member",
+       "required": true,
+       "variable": "user"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.timeout",
+      "typeVersion": 1,
+      "config": {
+       "user": "{option_user}",
+       "duration": ""
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "<@{option_user}> was unmuted."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_user",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "moderation",
+   "group": "Moderation",
+   "name": "warn",
+   "title": "Warn",
+   "description": "Warns a user",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "warn",
+       "description": "Warns a user",
+       "hide_replies": true,
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "moderation:moderator"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [],
+        "banned_channels": [],
+        "hide_without_permission": false
+       }
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Moderation module."
+     },
+     {
+      "id": "option_user",
+      "type": "option.user",
+      "typeVersion": 1,
+      "config": {
+       "name": "user",
+       "description": "The member",
+       "required": true,
+       "variable": "user"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "option_reason",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "reason",
+       "description": "Why",
+       "required": false,
+       "variable": "reason"
+      },
+      "position": {
+       "x": 410,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.warn",
+      "typeVersion": 1,
+      "config": {
+       "user": "{option_user}",
+       "reason": "{option_reason}",
+       "variable": "warning"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "<@{option_user}> was warned. Warnings: {warning.count}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_user",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "option_reason",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "moderation",
+   "group": "Moderation",
+   "name": "warnings",
+   "title": "Warnings",
+   "description": "Shows a user's warnings",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "warnings",
+       "description": "Shows a user's warnings",
+       "hide_replies": true,
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "moderation:moderator"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [],
+        "banned_channels": [],
+        "hide_without_permission": false
+       }
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Moderation module."
+     },
+     {
+      "id": "option_user",
+      "type": "option.user",
+      "typeVersion": 1,
+      "config": {
+       "name": "user",
+       "description": "The member",
+       "required": true,
+       "variable": "user"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.list_warnings",
+      "typeVersion": 1,
+      "config": {
+       "user": "{option_user}",
+       "variable": "warns"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Warnings of <@{option_user}> ({warns.count}):\n{warns}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_user",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "moderation",
+   "group": "Moderation",
+   "name": "clearwarnings",
+   "title": "Clear warnings",
+   "description": "Clears all of a user's warnings",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "clearwarnings",
+       "description": "Clears all of a user's warnings",
+       "hide_replies": true,
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "moderation:moderator"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [],
+        "banned_channels": [],
+        "hide_without_permission": false
+       }
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Moderation module."
+     },
+     {
+      "id": "option_user",
+      "type": "option.user",
+      "typeVersion": 1,
+      "config": {
+       "name": "user",
+       "description": "The member",
+       "required": true,
+       "variable": "user"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.clear_warnings",
+      "typeVersion": 1,
+      "config": {
+       "user": "{option_user}"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Cleared all warnings of <@{option_user}>."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_user",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "moderation",
+   "group": "Moderation",
+   "name": "slowmode",
+   "title": "Slowmode",
+   "description": "Enables slowmode in the channel",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "slowmode",
+       "description": "Enables slowmode in the channel",
+       "hide_replies": true,
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "moderation:moderator"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [],
+        "banned_channels": [],
+        "hide_without_permission": false
+       }
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Moderation module."
+     },
+     {
+      "id": "option_duration",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "duration",
+       "description": "Delay between messages, e.g. 10s (0 = off)",
+       "required": true,
+       "variable": "duration"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.edit_channel",
+      "typeVersion": 1,
+      "config": {
+       "channel": "{channel.id}",
+       "slowmode": "{option_duration}"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Slowmode set to {option_duration}."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_duration",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "moderation",
+   "group": "Moderation",
+   "name": "lock",
+   "title": "Lock",
+   "description": "Locks the channel",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "lock",
+       "description": "Locks the channel",
+       "hide_replies": true,
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "moderation:moderator"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [],
+        "banned_channels": [],
+        "hide_without_permission": false
+       }
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Moderation module."
+     },
+     {
+      "id": "option_reason",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "reason",
+       "description": "Why",
+       "required": false,
+       "variable": "reason"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.lock_channel",
+      "typeVersion": 1,
+      "config": {
+       "channel": "{channel.id}",
+       "lock": true,
+       "reason": "{option_reason}"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "🔒 This channel is locked."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_reason",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "moderation",
+   "group": "Moderation",
+   "name": "unlock",
+   "title": "Unlock",
+   "description": "Unlocks the channel",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "unlock",
+       "description": "Unlocks the channel",
+       "hide_replies": true,
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "moderation:moderator"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [],
+        "banned_channels": [],
+        "hide_without_permission": false
+       }
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Moderation module."
+     },
+     {
+      "id": "step1",
+      "type": "action.lock_channel",
+      "typeVersion": 1,
+      "config": {
+       "channel": "{channel.id}",
+       "lock": false
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "🔓 This channel is unlocked."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "moderation",
+   "group": "Moderation",
+   "name": "announce",
+   "title": "Announce",
+   "description": "Sends an announcement",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "announce",
+       "description": "Sends an announcement",
+       "hide_replies": true,
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "moderation:moderator"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [],
+        "banned_channels": [],
+        "hide_without_permission": false
+       }
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Moderation module."
+     },
+     {
+      "id": "option_message",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "message",
+       "description": "The announcement",
+       "required": true,
+       "variable": "message"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "{option_message}"
+       },
+       "target": "command_channel"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Announcement sent."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 1000,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_message",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "moderation",
+   "group": "Moderation",
+   "name": "automods",
+   "title": "Automod-Regeln",
+   "description": "Shows active automod rules",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "automods",
+       "description": "Shows active automod rules",
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "moderation:moderator"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [],
+        "banned_channels": [],
+        "hide_without_permission": false
+       }
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Moderation module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     }
+    ],
+    "edges": []
+   }
+  },
+  {
+   "module": "moderation",
+   "group": "Moderation",
+   "name": "role",
+   "title": "Role",
+   "description": "Adds or removes a role",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "role",
+       "description": "Adds or removes a role",
+       "hide_replies": true,
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "moderation:admin"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [],
+        "banned_channels": [],
+        "hide_without_permission": false
+       }
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Moderation module."
+     },
+     {
+      "id": "option_action",
+      "type": "option.choice",
+      "typeVersion": 1,
+      "config": {
+       "name": "action",
+       "description": "Add or remove",
+       "required": true,
+       "variable": "action",
+       "choices": "add\nremove"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "option_user",
+      "type": "option.user",
+      "typeVersion": 1,
+      "config": {
+       "name": "user",
+       "description": "The member",
+       "required": true,
+       "variable": "user"
+      },
+      "position": {
+       "x": 410,
+       "y": 110
+      }
+     },
+     {
+      "id": "option_role",
+      "type": "option.role",
+      "typeVersion": 1,
+      "config": {
+       "name": "role",
+       "description": "The role",
+       "required": true,
+       "variable": "role"
+      },
+      "position": {
+       "x": 700,
+       "y": 110
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
+     },
+     {
+      "id": "step1",
+      "type": "condition.comparison",
+      "typeVersion": 1,
+      "config": {
+       "source": "option",
+       "subject": "option_action",
+       "multi": "first"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step1_add",
+      "type": "condition.state",
+      "typeVersion": 1,
+      "config": {
+       "operator": "eq",
+       "value": "add"
+      },
+      "position": {
+       "x": 440,
+       "y": 360
+      }
+     },
+     {
+      "id": "step1_else",
+      "type": "condition.else",
+      "typeVersion": 1,
+      "config": {},
+      "position": {
+       "x": 700,
+       "y": 360
+      }
+     },
+     {
+      "id": "step1_a",
+      "type": "action.add_roles",
+      "typeVersion": 1,
+      "config": {
+       "user": "{option_user}",
+       "roles": "{option_role}"
+      },
+      "position": {
+       "x": 440,
+       "y": 470
+      }
+     },
+     {
+      "id": "step1_b",
+      "type": "action.remove_roles",
+      "typeVersion": 1,
+      "config": {
+       "user": "{option_user}",
+       "roles": "{option_role}"
+      },
+      "position": {
+       "x": 700,
+       "y": 470
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Role <@&{option_role}>: {option_action} for <@{option_user}>."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 1000,
+       "y": 240
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_action",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "option_user",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "option_role",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "branches"
+      },
+      "to": {
+       "node": "step1_add",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "branches"
+      },
+      "to": {
+       "node": "step1_else",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1_add",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1_a",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1_else",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1_b",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1_a",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1_b",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "moderation",
+   "group": "Moderation",
+   "name": "channel",
+   "title": "Manage channels",
+   "description": "Manages channels with subcommands",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "channel",
+       "description": "Manages channels with subcommands",
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "moderation:moderator"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [],
+        "banned_channels": [],
+        "hide_without_permission": false
+       }
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Moderation module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     },
+     {
+      "id": "option_action",
+      "type": "option.choice",
+      "typeVersion": 1,
+      "config": {
+       "name": "action",
+       "description": "What to do",
+       "required": true,
+       "variable": "action",
+       "choices": "create\ndelete\nrename"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_action",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "moderation",
+   "group": "Moderation",
+   "name": "nick",
+   "title": "Nickname",
+   "description": "Changes a user's nickname",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "nick",
+       "description": "Changes a user's nickname",
+       "hide_replies": true,
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "moderation:moderator"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [],
+        "banned_channels": [],
+        "hide_without_permission": false
+       }
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Moderation module."
+     },
+     {
+      "id": "option_user",
+      "type": "option.user",
+      "typeVersion": 1,
+      "config": {
+       "name": "user",
+       "description": "The member",
+       "required": true,
+       "variable": "user"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "option_nickname",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "nickname",
+       "description": "The new nickname (empty = reset)",
+       "required": false,
+       "variable": "nickname"
+      },
+      "position": {
+       "x": 410,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.change_nickname",
+      "typeVersion": 1,
+      "config": {
+       "user": "{option_user}",
+       "nickname": "{option_nickname}"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Nickname of <@{option_user}> changed."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_user",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "option_nickname",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "moderation",
+   "group": "Moderation",
+   "name": "avatar",
+   "title": "Avatar",
+   "description": "Shows a user's avatar",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "avatar",
+       "description": "Shows a user's avatar",
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "everyone"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [],
+        "banned_channels": [],
+        "hide_without_permission": false
+       }
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Moderation module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     },
+     {
+      "id": "option_user",
+      "type": "option.user",
+      "typeVersion": 1,
+      "config": {
+       "name": "user",
+       "description": "The member (you when empty)",
+       "required": false,
+       "variable": "user"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_user",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "moderation",
+   "group": "Moderation",
+   "name": "serverinfo",
+   "title": "Serverinfo",
+   "description": "Information about the server",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "serverinfo",
+       "description": "Information about the server",
+       "hide_replies": false,
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "everyone"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [],
+        "banned_channels": [],
+        "hide_without_permission": false
+       }
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Moderation module."
+     },
+     {
+      "id": "step1",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "**{server}**\nID: {server.id}\nMembers: {server.members}\nOwner: <@{server.owner_id}>"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "moderation",
+   "group": "Moderation",
+   "name": "userinfo",
+   "title": "Userinfo",
+   "description": "Information about a user",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "userinfo",
+       "description": "Information about a user",
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "everyone"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [],
+        "banned_channels": [],
+        "hide_without_permission": false
+       }
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Moderation module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     },
+     {
+      "id": "option_user",
+      "type": "option.user",
+      "typeVersion": 1,
+      "config": {
+       "name": "user",
+       "description": "The member (you when empty)",
+       "required": false,
+       "variable": "user"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_user",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "moderation",
+   "group": "Moderation",
+   "name": "voicekick",
+   "title": "Voice Kick",
+   "description": "Kicks a user from the voice channel",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "voicekick",
+       "description": "Kicks a user from the voice channel",
+       "hide_replies": true,
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "moderation:moderator"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [],
+        "banned_channels": [],
+        "hide_without_permission": false
+       }
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Moderation module."
+     },
+     {
+      "id": "option_user",
+      "type": "option.user",
+      "typeVersion": 1,
+      "config": {
+       "name": "user",
+       "description": "The member",
+       "required": true,
+       "variable": "user"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "option_reason",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "reason",
+       "description": "Why",
+       "required": false,
+       "variable": "reason"
+      },
+      "position": {
+       "x": 410,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.voice_kick",
+      "typeVersion": 1,
+      "config": {
+       "user": "{option_user}",
+       "reason": "{option_reason}"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "<@{option_user}> was removed from the voice channel."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_user",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "option_reason",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "moderation",
+   "group": "Moderation",
+   "name": "voicemute",
+   "title": "Voice Mute",
+   "description": "Mutes a user in the voice channel",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "voicemute",
+       "description": "Mutes a user in the voice channel",
+       "hide_replies": true,
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "moderation:moderator"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [],
+        "banned_channels": [],
+        "hide_without_permission": false
+       }
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Moderation module."
+     },
+     {
+      "id": "option_user",
+      "type": "option.user",
+      "typeVersion": 1,
+      "config": {
+       "name": "user",
+       "description": "The member",
+       "required": true,
+       "variable": "user"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "option_duration",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "duration",
+       "description": "How long, e.g. 10m",
+       "required": false,
+       "variable": "duration"
+      },
+      "position": {
+       "x": 410,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.mute_member",
+      "typeVersion": 1,
+      "config": {
+       "user": "{option_user}",
+       "mute": true,
+       "undo_after": "{option_duration}"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "<@{option_user}> was muted in voice."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_user",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "option_duration",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "moderation",
+   "group": "Moderation",
+   "name": "voiceunmute",
+   "title": "Voice Unmute",
+   "description": "Unmutes a user in voice",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "voiceunmute",
+       "description": "Unmutes a user in voice",
+       "hide_replies": true,
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "moderation:moderator"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [],
+        "banned_channels": [],
+        "hide_without_permission": false
+       }
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Moderation module."
+     },
+     {
+      "id": "option_user",
+      "type": "option.user",
+      "typeVersion": 1,
+      "config": {
+       "name": "user",
+       "description": "The member",
+       "required": true,
+       "variable": "user"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.mute_member",
+      "typeVersion": 1,
+      "config": {
+       "user": "{option_user}",
+       "mute": false
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "<@{option_user}> was unmuted in voice."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_user",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "moderation",
+   "group": "Moderation",
+   "name": "temprole",
+   "title": "Temp-Role",
+   "description": "Gives a member a role for a while",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "temprole",
+       "description": "Gives a member a role for a while",
+       "hide_replies": true,
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "moderation:admin"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [],
+        "banned_channels": [],
+        "hide_without_permission": false
+       }
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Moderation module."
+     },
+     {
+      "id": "option_user",
+      "type": "option.user",
+      "typeVersion": 1,
+      "config": {
+       "name": "user",
+       "description": "The member",
+       "required": true,
+       "variable": "user"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "option_role",
+      "type": "option.role",
+      "typeVersion": 1,
+      "config": {
+       "name": "role",
+       "description": "The role",
+       "required": true,
+       "variable": "role"
+      },
+      "position": {
+       "x": 410,
+       "y": 110
+      }
+     },
+     {
+      "id": "option_duration",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "duration",
+       "description": "How long, e.g. 1d or 12h",
+       "required": true,
+       "variable": "duration"
+      },
+      "position": {
+       "x": 700,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.add_roles",
+      "typeVersion": 1,
+      "config": {
+       "user": "{option_user}",
+       "roles": "{option_role}",
+       "undo_after": "{option_duration}"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "<@{option_user}> has <@&{option_role}> for {option_duration}."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_user",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "option_role",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "option_duration",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "moderation",
+   "group": "Moderation",
+   "name": "deafen",
+   "title": "Deafen",
+   "description": "Deafens and mutes a member in voice",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "deafen",
+       "description": "Deafens and mutes a member in voice",
+       "hide_replies": true,
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "moderation:moderator"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [],
+        "banned_channels": [],
+        "hide_without_permission": false
+       }
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Moderation module."
+     },
+     {
+      "id": "option_user",
+      "type": "option.user",
+      "typeVersion": 1,
+      "config": {
+       "name": "user",
+       "description": "The member",
+       "required": true,
+       "variable": "user"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "option_reason",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "reason",
+       "description": "Why",
+       "required": false,
+       "variable": "reason"
+      },
+      "position": {
+       "x": 410,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.deafen_member",
+      "typeVersion": 1,
+      "config": {
+       "user": "{option_user}",
+       "deafen": true,
+       "reason": "{option_reason}"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "<@{option_user}> was deafened."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_user",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "option_reason",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "moderation",
+   "group": "Moderation",
+   "name": "undeafen",
+   "title": "Undeafen",
+   "description": "Undeafens and unmutes a member in voice",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "undeafen",
+       "description": "Undeafens and unmutes a member in voice",
+       "hide_replies": true,
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "moderation:moderator"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [],
+        "banned_channels": [],
+        "hide_without_permission": false
+       }
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Moderation module."
+     },
+     {
+      "id": "option_user",
+      "type": "option.user",
+      "typeVersion": 1,
+      "config": {
+       "name": "user",
+       "description": "The member",
+       "required": true,
+       "variable": "user"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.deafen_member",
+      "typeVersion": 1,
+      "config": {
+       "user": "{option_user}",
+       "deafen": false
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "<@{option_user}> was undeafened."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_user",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "moderation",
+   "group": "Moderation",
+   "name": "case",
+   "title": "Case",
+   "description": "Shows a moderation case",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "case",
+       "description": "Shows a moderation case",
+       "hide_replies": true,
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "moderation:moderator"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [],
+        "banned_channels": [],
+        "hide_without_permission": false
+       }
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Moderation module."
+     },
+     {
+      "id": "option_case",
+      "type": "option.number",
+      "typeVersion": 1,
+      "config": {
+       "name": "case",
+       "description": "Case number",
+       "required": true,
+       "variable": "case"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.mod_case_get",
+      "typeVersion": 1,
+      "config": {
+       "case": "{option_case}",
+       "variable": "found"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "**Case #{option_case}** · {found.action}\nMember: <@{found.user}>\nModerator: <@{found.moderator}>\nDuration: {found.duration}\nReason: {found.reason}\nDate: {found.date}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_case",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "moderation",
+   "group": "Moderation",
+   "name": "removecase",
+   "title": "Remove case",
+   "description": "Removes a case from the history",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "removecase",
+       "description": "Removes a case from the history",
+       "hide_replies": true,
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "moderation:moderator"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [],
+        "banned_channels": [],
+        "hide_without_permission": false
+       }
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Moderation module."
+     },
+     {
+      "id": "option_case",
+      "type": "option.number",
+      "typeVersion": 1,
+      "config": {
+       "name": "case",
+       "description": "Case number",
+       "required": true,
+       "variable": "case"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.mod_case_remove",
+      "typeVersion": 1,
+      "config": {
+       "case": "{option_case}"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Case #{option_case} was removed."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_case",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "moderation",
+   "group": "Moderation",
+   "name": "history",
+   "title": "History",
+   "description": "Shows the moderation history of a member",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "history",
+       "description": "Shows the moderation history of a member",
+       "hide_replies": true,
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "moderation:moderator"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [],
+        "banned_channels": [],
+        "hide_without_permission": false
+       }
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Moderation module."
+     },
+     {
+      "id": "option_user",
+      "type": "option.user",
+      "typeVersion": 1,
+      "config": {
+       "name": "user",
+       "description": "The member",
+       "required": true,
+       "variable": "user"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.mod_history",
+      "typeVersion": 1,
+      "config": {
+       "user": "{option_user}",
+       "variable": "history"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "**History of <@{option_user}>** ({history.count} cases)\n{history}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_user",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "moderation",
+   "group": "Moderation",
+   "name": "clearhistory",
+   "title": "Clear history",
+   "description": "Clears the moderation history of a member",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "clearhistory",
+       "description": "Clears the moderation history of a member",
+       "hide_replies": true,
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "moderation:admin"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [],
+        "banned_channels": [],
+        "hide_without_permission": false
+       }
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Moderation module."
+     },
+     {
+      "id": "option_user",
+      "type": "option.user",
+      "typeVersion": 1,
+      "config": {
+       "name": "user",
+       "description": "The member",
+       "required": true,
+       "variable": "user"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.mod_history_clear",
+      "typeVersion": 1,
+      "config": {
+       "user": "{option_user}",
+       "variable": "cleared"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Removed {cleared} cases of <@{option_user}>."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_user",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "moderation",
+   "group": "Moderation",
+   "name": "note",
+   "title": "Note",
+   "description": "Adds a moderator note to a member",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "note",
+       "description": "Adds a moderator note to a member",
+       "hide_replies": true,
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "moderation:moderator"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [],
+        "banned_channels": [],
+        "hide_without_permission": false
+       }
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Moderation module."
+     },
+     {
+      "id": "option_user",
+      "type": "option.user",
+      "typeVersion": 1,
+      "config": {
+       "name": "user",
+       "description": "The member",
+       "required": true,
+       "variable": "user"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "option_text",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "text",
+       "description": "The note",
+       "required": true,
+       "variable": "text"
+      },
+      "position": {
+       "x": 410,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.mod_note_add",
+      "typeVersion": 1,
+      "config": {
+       "user": "{option_user}",
+       "note": "{option_text}",
+       "variable": "note"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Note #{note} added to <@{option_user}>."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_user",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "option_text",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "moderation",
+   "group": "Moderation",
+   "name": "notes",
+   "title": "Notes",
+   "description": "Shows the moderator notes of a member",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "notes",
+       "description": "Shows the moderator notes of a member",
+       "hide_replies": true,
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "moderation:moderator"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [],
+        "banned_channels": [],
+        "hide_without_permission": false
+       }
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Moderation module."
+     },
+     {
+      "id": "option_user",
+      "type": "option.user",
+      "typeVersion": 1,
+      "config": {
+       "name": "user",
+       "description": "The member",
+       "required": true,
+       "variable": "user"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.mod_notes",
+      "typeVersion": 1,
+      "config": {
+       "user": "{option_user}",
+       "variable": "notes"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "**Notes about <@{option_user}>** ({notes.count})\n{notes}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_user",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "moderation",
+   "group": "Moderation",
+   "name": "removenote",
+   "title": "Remove note",
+   "description": "Removes a moderator note",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "removenote",
+       "description": "Removes a moderator note",
+       "hide_replies": true,
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "moderation:moderator"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [],
+        "banned_channels": [],
+        "hide_without_permission": false
+       }
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Moderation module."
+     },
+     {
+      "id": "option_note",
+      "type": "option.number",
+      "typeVersion": 1,
+      "config": {
+       "name": "note",
+       "description": "Note number",
+       "required": true,
+       "variable": "note"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.mod_note_remove",
+      "typeVersion": 1,
+      "config": {
+       "note": "{option_note}"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Note #{option_note} was removed."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_note",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "servermanagement",
+   "group": "Servermanagement",
+   "name": "ping",
+   "title": "Ping",
+   "description": "Shows the bot's latency",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "ping",
+       "description": "Shows the bot's latency"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Servermanagement module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     }
+    ],
+    "edges": []
+   }
+  },
+  {
+   "module": "servermanagement",
+   "group": "Servermanagement",
+   "name": "memory",
+   "title": "Memory",
+   "description": "Shows the bot's current memory usage",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "memory",
+       "description": "Shows the bot's current memory usage"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Servermanagement module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     }
+    ],
+    "edges": []
+   }
+  },
+  {
+   "module": "servermanagement",
+   "group": "Servermanagement",
+   "name": "uptime",
+   "title": "Uptime",
+   "description": "Shows the bot's uptime",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "uptime",
+       "description": "Shows the bot's uptime"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Servermanagement module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     }
+    ],
+    "edges": []
+   }
+  },
+  {
+   "module": "servermanagement",
+   "group": "Servermanagement",
+   "name": "serverstats",
+   "title": "Server Stats",
+   "description": "Shows statistics about the server",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "serverstats",
+       "description": "Shows statistics about the server"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Servermanagement module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     }
+    ],
+    "edges": []
+   }
+  },
+  {
+   "module": "servermanagement",
+   "group": "Servermanagement",
+   "name": "say",
+   "title": "Say",
+   "description": "Makes the bot send a message",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "say",
+       "description": "Makes the bot send a message"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Servermanagement module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     },
+     {
+      "id": "option_message",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "message",
+       "description": "What the bot says",
+       "required": true,
+       "variable": "message"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_message",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "polls",
+   "group": "Polls",
+   "name": "poll-create",
+   "title": "Create poll",
+   "description": "Create a poll with up to 10 answers",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "poll-create",
+       "description": "Create a poll with up to 10 answers"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Polls module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     },
+     {
+      "id": "option_question",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "question",
+       "description": "The question",
+       "required": true,
+       "variable": "question"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "option_answers",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "answers",
+       "description": "Answers, separated by |",
+       "required": true,
+       "variable": "answers"
+      },
+      "position": {
+       "x": 410,
+       "y": 110
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_question",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "option_answers",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "polls",
+   "group": "Polls",
+   "name": "poll-find",
+   "title": "Find poll",
+   "description": "Show the results of a poll",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "poll-find",
+       "description": "Show the results of a poll"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Polls module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     },
+     {
+      "id": "option_poll",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "poll",
+       "description": "Poll ID",
+       "required": true,
+       "variable": "poll"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_poll",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "polls",
+   "group": "Polls",
+   "name": "poll-list",
+   "title": "Poll list",
+   "description": "List all polls in the server",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "poll-list",
+       "description": "List all polls in the server"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Polls module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     }
+    ],
+    "edges": []
+   }
+  },
+  {
+   "module": "polls",
+   "group": "Polls",
+   "name": "poll-delete",
+   "title": "Delete poll",
+   "description": "Delete a poll",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "poll-delete",
+       "description": "Delete a poll"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Polls module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     },
+     {
+      "id": "option_poll",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "poll",
+       "description": "Poll ID",
+       "required": true,
+       "variable": "poll"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_poll",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "leveling",
+   "group": "Leveling",
+   "name": "rank",
+   "title": "Rank",
+   "description": "Get your or another user's experience progress",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "rank",
+       "description": "Get your or another user's experience progress"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Leveling module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     },
+     {
+      "id": "option_user",
+      "type": "option.user",
+      "typeVersion": 1,
+      "config": {
+       "name": "user",
+       "description": "The member (you when empty)",
+       "required": false,
+       "variable": "user"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_user",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "leveling",
+   "group": "Leveling",
+   "name": "level leaderboard",
+   "title": "Level leaderboard",
+   "description": "Check the leveling leaderboard of this server",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "level leaderboard",
+       "description": "Check the leveling leaderboard of this server"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Leveling module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     }
+    ],
+    "edges": []
+   }
+  },
+  {
+   "module": "leveling",
+   "group": "Leveling",
+   "name": "level edit-xp",
+   "title": "Edit XP",
+   "description": "Edit someone's experience or level (Admin)",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "level edit-xp",
+       "description": "Edit someone's experience or level (Admin)"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Leveling module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     },
+     {
+      "id": "option_user",
+      "type": "option.user",
+      "typeVersion": 1,
+      "config": {
+       "name": "user",
+       "description": "The member",
+       "required": true,
+       "variable": "user"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "option_xp",
+      "type": "option.number",
+      "typeVersion": 1,
+      "config": {
+       "name": "xp",
+       "description": "New XP",
+       "required": true,
+       "variable": "xp"
+      },
+      "position": {
+       "x": 410,
+       "y": 110
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_user",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "option_xp",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "leveling",
+   "group": "Leveling",
+   "name": "level reset-leaderboard",
+   "title": "Reset leaderboard",
+   "description": "Reset this server's leveling leaderboard (Admin)",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "level reset-leaderboard",
+       "description": "Reset this server's leveling leaderboard (Admin)"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Leveling module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     }
+    ],
+    "edges": []
+   }
+  },
+  {
+   "module": "invite-tracker",
+   "group": "Invite Tracker",
+   "name": "invites",
+   "title": "Invites",
+   "description": "Shows invite stats (active / left / fake) for you or another user.",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "invites",
+       "description": "Shows invite stats (active / left / fake) for you or another user."
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Invite Tracker module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     },
+     {
+      "id": "option_user",
+      "type": "option.user",
+      "typeVersion": 1,
+      "config": {
+       "name": "user",
+       "description": "The member (you when empty)",
+       "required": false,
+       "variable": "user"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_user",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "invite-tracker",
+   "group": "Invite Tracker",
+   "name": "invite-reset",
+   "title": "Invite reset",
+   "description": "Resets invite stats (requires: Manage Server).",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "invite-reset",
+       "description": "Resets invite stats (requires: Manage Server)."
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Invite Tracker module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     },
+     {
+      "id": "option_user",
+      "type": "option.user",
+      "typeVersion": 1,
+      "config": {
+       "name": "user",
+       "description": "The member (you when empty)",
+       "required": false,
+       "variable": "user"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_user",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "invite-tracker",
+   "group": "Invite Tracker",
+   "name": "invite-leaderboard",
+   "title": "Invite leaderboard",
+   "description": "Shows the server's invite leaderboard with active / left / fake breakdown.",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "invite-leaderboard",
+       "description": "Shows the server's invite leaderboard with active / left / fake breakdown."
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Invite Tracker module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     },
+     {
+      "id": "option_limit",
+      "type": "option.number",
+      "typeVersion": 1,
+      "config": {
+       "name": "limit",
+       "description": "How many places",
+       "required": false,
+       "variable": "limit"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_limit",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "birthday",
+   "group": "Birthday",
+   "name": "birthday add",
+   "title": "Add birthday",
+   "description": "Register or update your birthday",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "birthday add",
+       "description": "Register or update your birthday"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Birthday module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     },
+     {
+      "id": "option_date",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "date",
+       "description": "Your birthday, e.g. 24.12.",
+       "required": true,
+       "variable": "date"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_date",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "birthday",
+   "group": "Birthday",
+   "name": "birthday delete",
+   "title": "Delete birthday",
+   "description": "Remove your own birthday",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "birthday delete",
+       "description": "Remove your own birthday"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Birthday module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     }
+    ],
+    "edges": []
+   }
+  },
+  {
+   "module": "birthday",
+   "group": "Birthday",
+   "name": "birthday list",
+   "title": "Birthday list",
+   "description": "Show all registered birthdays on the server",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "birthday list",
+       "description": "Show all registered birthdays on the server"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Birthday module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     }
+    ],
+    "edges": []
+   }
+  },
+  {
+   "module": "suggestions",
+   "group": "Suggestions",
+   "name": "suggest",
+   "title": "Suggest",
+   "description": "Submit a new suggestion",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "suggest",
+       "description": "Submit a new suggestion"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Suggestions module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     },
+     {
+      "id": "option_suggestion",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "suggestion",
+       "description": "Your suggestion",
+       "required": true,
+       "variable": "suggestion"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_suggestion",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "suggestions",
+   "group": "Suggestions",
+   "name": "suggest-list",
+   "title": "Suggestion list",
+   "description": "List suggestions in the server",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "suggest-list",
+       "description": "List suggestions in the server"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Suggestions module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     }
+    ],
+    "edges": []
+   }
+  },
+  {
+   "module": "suggestions",
+   "group": "Suggestions",
+   "name": "suggest-approve",
+   "title": "Approve suggestion",
+   "description": "Approve a suggestion (moderator)",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "suggest-approve",
+       "description": "Approve a suggestion (moderator)"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Suggestions module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     },
+     {
+      "id": "option_id",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "id",
+       "description": "Suggestion ID",
+       "required": true,
+       "variable": "id"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "option_reason",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "reason",
+       "description": "Why",
+       "required": false,
+       "variable": "reason"
+      },
+      "position": {
+       "x": 410,
+       "y": 110
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_id",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "option_reason",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "suggestions",
+   "group": "Suggestions",
+   "name": "suggest-reject",
+   "title": "Reject suggestion",
+   "description": "Reject a suggestion (moderator)",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "suggest-reject",
+       "description": "Reject a suggestion (moderator)"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Suggestions module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     },
+     {
+      "id": "option_id",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "id",
+       "description": "Suggestion ID",
+       "required": true,
+       "variable": "id"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "option_reason",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "reason",
+       "description": "Why",
+       "required": false,
+       "variable": "reason"
+      },
+      "position": {
+       "x": 410,
+       "y": 110
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_id",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "option_reason",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "giveaways",
+   "group": "Giveaways",
+   "name": "giveaway-create",
+   "title": "Create giveaway",
+   "description": "Starts a new giveaway",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "giveaway-create",
+       "description": "Starts a new giveaway"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Giveaways module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     },
+     {
+      "id": "option_prize",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "prize",
+       "description": "What can be won",
+       "required": true,
+       "variable": "prize"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "option_duration",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "duration",
+       "description": "How long, e.g. 1d",
+       "required": true,
+       "variable": "duration"
+      },
+      "position": {
+       "x": 410,
+       "y": 110
+      }
+     },
+     {
+      "id": "option_winners",
+      "type": "option.number",
+      "typeVersion": 1,
+      "config": {
+       "name": "winners",
+       "description": "Number of winners",
+       "required": true,
+       "variable": "winners"
+      },
+      "position": {
+       "x": 700,
+       "y": 110
+      }
+     },
+     {
+      "id": "option_channel",
+      "type": "option.channel",
+      "typeVersion": 1,
+      "config": {
+       "name": "channel",
+       "description": "Where to post it",
+       "required": false,
+       "variable": "channel"
+      },
+      "position": {
+       "x": 990,
+       "y": 110
+      }
+     },
+     {
+      "id": "option_role",
+      "type": "option.role",
+      "typeVersion": 1,
+      "config": {
+       "name": "role",
+       "description": "Only members with this role can join",
+       "required": false,
+       "variable": "role"
+      },
+      "position": {
+       "x": 1280,
+       "y": 110
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_prize",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "option_duration",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "option_winners",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "option_channel",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "option_role",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "giveaways",
+   "group": "Giveaways",
+   "name": "giveaway-end",
+   "title": "End giveaway",
+   "description": "Ends a running giveaway early",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "giveaway-end",
+       "description": "Ends a running giveaway early"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Giveaways module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     },
+     {
+      "id": "option_giveaway",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "giveaway",
+       "description": "Giveaway ID",
+       "required": true,
+       "variable": "giveaway"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_giveaway",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "giveaways",
+   "group": "Giveaways",
+   "name": "giveaway-reroll",
+   "title": "Reroll giveaway",
+   "description": "Draws new winners for a finished giveaway",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "giveaway-reroll",
+       "description": "Draws new winners for a finished giveaway"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Giveaways module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     },
+     {
+      "id": "option_giveaway",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "giveaway",
+       "description": "Giveaway ID",
+       "required": true,
+       "variable": "giveaway"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_giveaway",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "giveaways",
+   "group": "Giveaways",
+   "name": "giveaway-list",
+   "title": "List giveaways",
+   "description": "Shows all active giveaways in the server",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "giveaway-list",
+       "description": "Shows all active giveaways in the server"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Giveaways module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     }
+    ],
+    "edges": []
+   }
+  },
+  {
+   "module": "giveaways",
+   "group": "Giveaways",
+   "name": "giveaway-delete",
+   "title": "Delete giveaway",
+   "description": "Deletes a giveaway without drawing a winner",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "giveaway-delete",
+       "description": "Deletes a giveaway without drawing a winner"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Giveaways module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     },
+     {
+      "id": "option_giveaway",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "giveaway",
+       "description": "Giveaway ID",
+       "required": true,
+       "variable": "giveaway"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_giveaway",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "economy",
+   "group": "Economy",
+   "name": "balance",
+   "title": "Balance",
+   "description": "Show your own or another user's balance",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "balance",
+       "description": "Show your own or another user's balance"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Economy module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     },
+     {
+      "id": "option_user",
+      "type": "option.user",
+      "typeVersion": 1,
+      "config": {
+       "name": "user",
+       "description": "The member (you when empty)",
+       "required": false,
+       "variable": "user"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_user",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "economy",
+   "group": "Economy",
+   "name": "pay",
+   "title": "Pay",
+   "description": "Transfer balance to another user",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "pay",
+       "description": "Transfer balance to another user"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Economy module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     },
+     {
+      "id": "option_user",
+      "type": "option.user",
+      "typeVersion": 1,
+      "config": {
+       "name": "user",
+       "description": "The member",
+       "required": true,
+       "variable": "user"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "option_amount",
+      "type": "option.number",
+      "typeVersion": 1,
+      "config": {
+       "name": "amount",
+       "description": "How much",
+       "required": true,
+       "variable": "amount"
+      },
+      "position": {
+       "x": 410,
+       "y": 110
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_user",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "option_amount",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "economy",
+   "group": "Economy",
+   "name": "leaderboard",
+   "title": "Leaderboard",
+   "description": "Leaderboard of the richest users",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "leaderboard",
+       "description": "Leaderboard of the richest users"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Economy module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     }
+    ],
+    "edges": []
+   }
+  },
+  {
+   "module": "economy",
+   "group": "Economy",
+   "name": "economy-add",
+   "title": "Economy Add",
+   "description": "[Admin] Credit balance",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "economy-add",
+       "description": "[Admin] Credit balance"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Economy module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     },
+     {
+      "id": "option_user",
+      "type": "option.user",
+      "typeVersion": 1,
+      "config": {
+       "name": "user",
+       "description": "The member",
+       "required": true,
+       "variable": "user"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "option_amount",
+      "type": "option.number",
+      "typeVersion": 1,
+      "config": {
+       "name": "amount",
+       "description": "How much",
+       "required": true,
+       "variable": "amount"
+      },
+      "position": {
+       "x": 410,
+       "y": 110
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_user",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "option_amount",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "economy",
+   "group": "Economy",
+   "name": "economy-remove",
+   "title": "Economy Remove",
+   "description": "[Admin] Deduct balance",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "economy-remove",
+       "description": "[Admin] Deduct balance"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Economy module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     },
+     {
+      "id": "option_user",
+      "type": "option.user",
+      "typeVersion": 1,
+      "config": {
+       "name": "user",
+       "description": "The member",
+       "required": true,
+       "variable": "user"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "option_amount",
+      "type": "option.number",
+      "typeVersion": 1,
+      "config": {
+       "name": "amount",
+       "description": "How much",
+       "required": true,
+       "variable": "amount"
+      },
+      "position": {
+       "x": 410,
+       "y": 110
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_user",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "option_amount",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "ticket-system",
+   "group": "Ticket System",
+   "name": "ticket setup",
+   "title": "Ticket setup",
+   "description": "Send a ticket panel to a channel",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "ticket setup",
+       "description": "Send a ticket panel to a channel"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Ticket System module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     },
+     {
+      "id": "option_channel",
+      "type": "option.channel",
+      "typeVersion": 1,
+      "config": {
+       "name": "channel",
+       "description": "Where the panel goes",
+       "required": true,
+       "variable": "channel"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_channel",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "ticket-system",
+   "group": "Ticket System",
+   "name": "ticket create",
+   "title": "Create ticket",
+   "description": "Create a ticket manually",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "ticket create",
+       "description": "Create a ticket manually"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Ticket System module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     }
+    ],
+    "edges": []
+   }
+  },
+  {
+   "module": "ticket-system",
+   "group": "Ticket System",
+   "name": "ticket close",
+   "title": "Close ticket",
+   "description": "Close the current ticket",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "ticket close",
+       "description": "Close the current ticket"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Ticket System module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     },
+     {
+      "id": "option_reason",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "reason",
+       "description": "Why",
+       "required": false,
+       "variable": "reason"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_reason",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "ticket-system",
+   "group": "Ticket System",
+   "name": "ticket reopen",
+   "title": "Reopen ticket",
+   "description": "Reopen a closed ticket",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "ticket reopen",
+       "description": "Reopen a closed ticket"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Ticket System module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     }
+    ],
+    "edges": []
+   }
+  },
+  {
+   "module": "ticket-system",
+   "group": "Ticket System",
+   "name": "ticket delete",
+   "title": "Delete ticket",
+   "description": "Delete the current ticket channel",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "ticket delete",
+       "description": "Delete the current ticket channel"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Ticket System module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     }
+    ],
+    "edges": []
+   }
+  },
+  {
+   "module": "ticket-system",
+   "group": "Ticket System",
+   "name": "ticket add",
+   "title": "Add to ticket",
+   "description": "Add a user to the ticket",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "ticket add",
+       "description": "Add a user to the ticket"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Ticket System module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     },
+     {
+      "id": "option_user",
+      "type": "option.user",
+      "typeVersion": 1,
+      "config": {
+       "name": "user",
+       "description": "The member",
+       "required": true,
+       "variable": "user"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_user",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "ticket-system",
+   "group": "Ticket System",
+   "name": "ticket remove",
+   "title": "Remove from ticket",
+   "description": "Remove a user from the ticket",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "ticket remove",
+       "description": "Remove a user from the ticket"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Ticket System module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     },
+     {
+      "id": "option_user",
+      "type": "option.user",
+      "typeVersion": 1,
+      "config": {
+       "name": "user",
+       "description": "The member",
+       "required": true,
+       "variable": "user"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_user",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "ticket-system",
+   "group": "Ticket System",
+   "name": "ticket automation",
+   "title": "Ticket automation",
+   "description": "Show automation settings info",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "ticket automation",
+       "description": "Show automation settings info"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Ticket System module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     }
+    ],
+    "edges": []
+   }
+  },
+  {
+   "module": "ticket-system",
+   "group": "Ticket System",
+   "name": "ticket update-counts",
+   "title": "Update ticket counts",
+   "description": "Sync ticket counts for this server",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "ticket update-counts",
+       "description": "Sync ticket counts for this server"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Ticket System module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     }
+    ],
+    "edges": []
+   }
+  },
+  {
+   "module": "modmail",
+   "group": "Modmail",
+   "name": "modmail close",
+   "title": "Close modmail",
+   "description": "Close the current modmail thread",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "modmail close",
+       "description": "Close the current modmail thread"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Modmail module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     },
+     {
+      "id": "option_reason",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "reason",
+       "description": "Why",
+       "required": false,
+       "variable": "reason"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_reason",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "modmail",
+   "group": "Modmail",
+   "name": "modmail reply",
+   "title": "Modmail reply",
+   "description": "Send a reply to the user from the thread",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "modmail reply",
+       "description": "Send a reply to the user from the thread"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Modmail module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     },
+     {
+      "id": "option_message",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "message",
+       "description": "Your reply",
+       "required": true,
+       "variable": "message"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_message",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "modmail",
+   "group": "Modmail",
+   "name": "modmail block",
+   "title": "Block user",
+   "description": "Block a user from creating new modmails",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "modmail block",
+       "description": "Block a user from creating new modmails"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Modmail module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     },
+     {
+      "id": "option_user",
+      "type": "option.user",
+      "typeVersion": 1,
+      "config": {
+       "name": "user",
+       "description": "The member",
+       "required": true,
+       "variable": "user"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_user",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "modmail",
+   "group": "Modmail",
+   "name": "modmail unblock",
+   "title": "Unblock user",
+   "description": "Unblock a previously blocked user",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "modmail unblock",
+       "description": "Unblock a previously blocked user"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Modmail module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     },
+     {
+      "id": "option_user",
+      "type": "option.user",
+      "typeVersion": 1,
+      "config": {
+       "name": "user",
+       "description": "The member",
+       "required": true,
+       "variable": "user"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_user",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "free-games",
+   "group": "Free Games",
+   "name": "free-games",
+   "title": "Free games",
+   "description": "Shows the current free games from Epic Games and Steam (if enabled).",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "free-games",
+       "description": "Shows the current free games from Epic Games and Steam (if enabled)."
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Free Games module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     }
+    ],
+    "edges": []
+   }
+  },
+  {
+   "module": "music",
+   "group": "Music",
+   "name": "play",
+   "title": "Play",
+   "description": "Load a song or URL into the queue",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "play",
+       "description": "Load a song or URL into the queue"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Music module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     },
+     {
+      "id": "option_query",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "query",
+       "description": "Song name or URL",
+       "required": true,
+       "variable": "query"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_query",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "music",
+   "group": "Music",
+   "name": "skip",
+   "title": "Skip",
+   "description": "Skip the current song",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "skip",
+       "description": "Skip the current song"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Music module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     }
+    ],
+    "edges": []
+   }
+  },
+  {
+   "module": "music",
+   "group": "Music",
+   "name": "stop",
+   "title": "Stop",
+   "description": "Stop music & clear the queue",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "stop",
+       "description": "Stop music & clear the queue"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Music module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     }
+    ],
+    "edges": []
+   }
+  },
+  {
+   "module": "music",
+   "group": "Music",
+   "name": "queue",
+   "title": "Queue",
+   "description": "Show the current queue",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "queue",
+       "description": "Show the current queue"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Music module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     }
+    ],
+    "edges": []
+   }
+  },
+  {
+   "module": "music",
+   "group": "Music",
+   "name": "nowplaying",
+   "title": "Now playing",
+   "description": "Show the current song",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "nowplaying",
+       "description": "Show the current song"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Music module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     }
+    ],
+    "edges": []
+   }
+  },
+  {
+   "module": "music",
+   "group": "Music",
+   "name": "pause",
+   "title": "Pause",
+   "description": "Pause playback",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "pause",
+       "description": "Pause playback"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Music module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     }
+    ],
+    "edges": []
+   }
+  },
+  {
+   "module": "music",
+   "group": "Music",
+   "name": "resume",
+   "title": "Resume",
+   "description": "Resume playback",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "resume",
+       "description": "Resume playback"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Music module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     }
+    ],
+    "edges": []
+   }
+  },
+  {
+   "module": "music",
+   "group": "Music",
+   "name": "volume",
+   "title": "Volume",
+   "description": "Adjust volume (0–100)",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "volume",
+       "description": "Adjust volume (0–100)"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Music module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     },
+     {
+      "id": "option_level",
+      "type": "option.number",
+      "typeVersion": 1,
+      "config": {
+       "name": "level",
+       "description": "Volume from 0 to 100",
+       "required": true,
+       "variable": "level"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_level",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "music",
+   "group": "Music",
+   "name": "shuffle",
+   "title": "Shuffle",
+   "description": "Shuffle the queue",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "shuffle",
+       "description": "Shuffle the queue"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Music module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     }
+    ],
+    "edges": []
+   }
+  },
+  {
+   "module": "music",
+   "group": "Music",
+   "name": "loop",
+   "title": "Loop",
+   "description": "Loop song / queue",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "loop",
+       "description": "Loop song / queue"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Music module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     },
+     {
+      "id": "option_mode",
+      "type": "option.choice",
+      "typeVersion": 1,
+      "config": {
+       "name": "mode",
+       "description": "What to loop",
+       "required": true,
+       "variable": "mode",
+       "choices": "off\nsong\nqueue"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_mode",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "music",
+   "group": "Music",
+   "name": "lyrics",
+   "title": "Lyrics",
+   "description": "Show lyrics",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "lyrics",
+       "description": "Show lyrics"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      },
+      "note": "Copied from the Music module. Add the blocks for what it does."
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 740,
+       "y": 240
+      }
+     }
+    ],
+    "edges": []
+   }
+  }
+ ]
+}

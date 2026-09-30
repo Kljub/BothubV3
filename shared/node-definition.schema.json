@@ -4,10 +4,19 @@
   "title": "BotHub builder node definition",
   "description": "One file per node type in shared/nodes/. Read by the dashboard (editor), the API (validation) and the bot (interpreter). Modules and plugins ship their own definitions in the same format.",
   "type": "object",
-  "required": ["type", "version", "category", "labelKey", "inputs", "outputs"],
+  "required": [
+    "type",
+    "version",
+    "category",
+    "labelKey",
+    "inputs",
+    "outputs"
+  ],
   "additionalProperties": false,
   "properties": {
-    "$schema": { "type": "string" },
+    "$schema": {
+      "type": "string"
+    },
     "type": {
       "type": "string",
       "pattern": "^[a-z][a-z0-9_]*(\\.[a-z0-9_]+)+$"
@@ -19,13 +28,26 @@
     },
     "category": {
       "type": "string",
-      "enum": ["trigger", "option", "action", "condition", "data", "flow", "utility"]
+      "enum": [
+        "trigger",
+        "option",
+        "action",
+        "condition",
+        "utility",
+        "component"
+      ]
     },
     "labelKey": {
       "description": "i18n key for the node title.",
       "type": "string"
     },
-    "descriptionKey": { "type": "string" },
+    "descriptionKey": {
+      "type": "string"
+    },
+    "infoKey": {
+      "description": "i18n key of an info box shown at the top of the block settings.",
+      "type": "string"
+    },
     "module": {
       "description": "Owning module. The node is only available when the module is enabled in the guild.",
       "type": "string"
@@ -33,19 +55,110 @@
     "requires": {
       "description": "Plugin permissions needed to use this node (plugin nodes only).",
       "type": "array",
-      "items": { "type": "string" }
+      "items": {
+        "type": "string"
+      }
     },
     "inputs": {
       "type": "array",
-      "items": { "$ref": "#/$defs/port" }
+      "items": {
+        "$ref": "#/$defs/port"
+      }
     },
     "outputs": {
       "type": "array",
-      "items": { "$ref": "#/$defs/port" }
+      "items": {
+        "$ref": "#/$defs/port"
+      }
     },
     "config": {
-      "description": "JSON Schema for the node's `config` object. Every property needs `x-labelKey` for the editor.",
+      "description": "JSON Schema for the node config. Editor extensions per property: x-labelKey (required), x-hintKey, x-enumKey (i18n prefix for enum values), x-multiline, x-mono, x-placeholder, x-showIf ({field: [values]}), x-kinds (state nodes: condition kinds that use the field), x-widget (custom editor: permissions, form), x-advanced (shown under Advanced), x-ref (member, channel, category, role, roles, message: value is a block variable or channel/message ID), x-group (rendered by a widget), x-undoTitleKey/x-undoHintKey (undo widget), x-permissionGroups (permissions widget: palette groups).",
       "type": "object"
+    },
+    "group": {
+      "description": "Palette section inside the category tab, i18n key builder.group.<group>.",
+      "type": "string"
+    },
+    "order": {
+      "description": "Sort position in the palette; groups follow their first node.",
+      "type": "integer"
+    },
+    "color": {
+      "description": "Node color; default is the category color.",
+      "type": "string",
+      "enum": [
+        "blue",
+        "green",
+        "purple",
+        "orange",
+        "red",
+        "teal",
+        "yellow",
+        "grey"
+      ]
+    },
+    "icon": {
+      "description": "Short icon for the node (letter or emoji).",
+      "type": "string",
+      "maxLength": 4
+    },
+    "locked": {
+      "description": "Fixed node (trigger, error handler): cannot be removed or added from the palette.",
+      "type": "boolean",
+      "default": false
+    },
+    "palette": {
+      "description": "false: not offered in the palette (e.g. condition states).",
+      "type": "boolean",
+      "default": true
+    },
+    "compact": {
+      "description": "Small node box (condition states).",
+      "type": "boolean",
+      "default": false
+    },
+    "conditionKind": {
+      "description": "Condition nodes: how their states are written (compare, chance, match, option = select menu branches).",
+      "type": "string",
+      "enum": [
+        "compare",
+        "chance",
+        "match",
+        "option"
+      ]
+    },
+    "wide": {
+      "description": "Wide node box (message blocks with buttons and menus).",
+      "type": "boolean",
+      "default": false
+    },
+    "produces": {
+      "description": "What the block creates that later blocks can point at (message: its variable holds the sent message).",
+      "type": "string",
+      "enum": [
+        "message"
+      ]
+    },
+    "results": {
+      "description": "Values a block leaves for later blocks: {<variable><suffix>}. Shown as copy chips.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "suffix",
+          "labelKey"
+        ],
+        "properties": {
+          "suffix": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "labelKey": {
+            "type": "string"
+          }
+        }
+      }
     }
   },
   "$defs": {
@@ -56,15 +169,23 @@
     },
     "port": {
       "type": "object",
-      "required": ["name", "type", "labelKey"],
+      "required": [
+        "name",
+        "type",
+        "labelKey"
+      ],
       "additionalProperties": false,
       "properties": {
         "name": {
           "type": "string",
           "pattern": "^[a-z][a-z0-9_]{0,63}$"
         },
-        "type": { "$ref": "#/$defs/portType" },
-        "labelKey": { "type": "string" },
+        "type": {
+          "$ref": "#/$defs/portType"
+        },
+        "labelKey": {
+          "type": "string"
+        },
         "required": {
           "description": "Inputs only: a data input that must be connected or have a config fallback.",
           "type": "boolean",

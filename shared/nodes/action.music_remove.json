@@ -1,0 +1,56 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.music_remove",
+  "version": 1,
+  "category": "action",
+  "group": "music",
+  "order": 300,
+  "color": "teal",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_music_remove.label",
+  "descriptionKey": "builder.node.action_music_remove.description",
+  "module": "music",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "from_position": {
+        "type": "number",
+        "minimum": 1,
+        "x-labelKey": "builder.cfg.from_position",
+        "maximum": 1000,
+        "default": 1
+      },
+      "remove_count": {
+        "type": "number",
+        "minimum": 1,
+        "x-labelKey": "builder.cfg.remove_count",
+        "maximum": 100,
+        "default": 1
+      },
+      "guild": {
+        "type": "string",
+        "maxLength": 40,
+        "x-advanced": true,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.guild",
+        "x-hintKey": "builder.cfg.guild_hint"
+      }
+    }
+  }
+}

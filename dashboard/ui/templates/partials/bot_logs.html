@@ -1,0 +1,81 @@
+{{/* Bot logs tab: console with errors (ERR-), warnings (WAR-), changes and updates. */}}
+
+{{define "bot_logs_fragment"}}{{template "bot_logs" .Data}}{{end}}
+
+{{define "bot_logs"}}
+<section class="box logs" id="bot-logs"
+  hx-get="/bot/{{.BotID}}/logs{{with .Level}}?level={{.}}{{end}}" hx-trigger="every 10s" hx-swap="outerHTML">
+  <header class="box-head">
+    <h2>{{t "logs.title"}}</h2>
+    <div class="inline-form">
+      <div class="segmented" role="group" aria-label="{{t "logs.filter"}}">
+        <button type="button" class="segment" hx-get="/bot/{{.BotID}}/logs" hx-target="#bot-logs" hx-swap="outerHTML"
+          aria-pressed="{{if not .Level}}true{{else}}false{{end}}">{{t "logs.level.all"}}</button>
+        {{range .Levels}}
+        <button type="button" class="segment" hx-get="/bot/{{$.BotID}}/logs?level={{.}}" hx-target="#bot-logs" hx-swap="outerHTML"
+          aria-pressed="{{if eq . $.Level}}true{{else}}false{{end}}">{{t (printf "logs.level.%s" .)}}</button>
+        {{end}}
+      </div>
+      <button type="button" class="btn btn-sm" hx-get="/bot/{{.BotID}}/logs{{with .Level}}?level={{.}}{{end}}" hx-target="#bot-logs" hx-swap="outerHTML">{{t "logs.refresh"}}</button>
+      {{template "log_export" (list (printf "/bot/%d/logs/export" .BotID) .Level)}}
+      <button type="button" class="btn btn-sm" hx-delete="/bot/{{.BotID}}/logs" hx-target="#bot-logs" hx-swap="outerHTML" hx-confirm="{{t "logs.clear_confirm"}}">{{t "logs.clear"}}</button>
+    </div>
+  </header>
+  <div class="box-body">
+    <div class="console" data-scroll-bottom>
+      {{range .Rows}}
+      <div class="console-line console-{{.Level}}">
+        <span class="console-time">{{.Time}}</span>
+        <span class="console-icon" aria-hidden="true">{{.Icon}}</span>
+        <span class="console-text">{{with .Source}}<span class="console-source">[{{t (printf "resources.process.%s" .)}}]</span> {{end}}{{with .Code}}<span class="console-code">[{{.}}]</span> {{end}}{{.Text}}{{with .Change}} <span class="console-change">({{.}})</span>{{end}}{{with .Actor}} <span class="console-change">— {{.}}</span>{{end}}</span>
+      </div>
+      {{else}}
+      <p class="muted console-empty">{{t "logs.empty"}}</p>
+      {{end}}
+    </div>
+  </div>
+</section>
+{{end}}
+
+{{/* Export menu: receives [export URL, level]. Plain links: the browser downloads. */}}
+{{define "log_export"}}
+{{$url := index . 0}}{{$level := index . 1}}
+<details class="lang-switch">
+  <summary class="btn btn-sm">{{t "logs.export"}}</summary>
+  <div class="lang-menu">
+    <a href="{{$url}}?format=txt{{with $level}}&level={{.}}{{end}}" download hx-boost="false">{{t "logs.export.txt"}}</a>
+    <a href="{{$url}}?format=json{{with $level}}&level={{.}}{{end}}" download hx-boost="false">{{t "logs.export.json"}}</a>
+  </div>
+</details>
+{{end}}
+
+{{/* Server logs (admin): same console, no clear (audit trail). */}}
+{{define "server_logs_fragment"}}{{template "server_logs" .Data}}{{end}}
+
+{{define "server_logs"}}
+<div id="server-logs" hx-get="/admin/logs/table{{with .Level}}?level={{.}}{{end}}" hx-trigger="every 10s" hx-swap="outerHTML">
+  <div class="inline-form">
+    <div class="segmented" role="group" aria-label="{{t "logs.filter"}}">
+      <button type="button" class="segment" hx-get="/admin/logs/table" hx-target="#server-logs" hx-swap="outerHTML"
+        aria-pressed="{{if not .Level}}true{{else}}false{{end}}">{{t "logs.level.all"}}</button>
+      {{range .Levels}}
+      <button type="button" class="segment" hx-get="/admin/logs/table?level={{.}}" hx-target="#server-logs" hx-swap="outerHTML"
+        aria-pressed="{{if eq . $.Level}}true{{else}}false{{end}}">{{t (printf "logs.level.%s" .)}}</button>
+      {{end}}
+    </div>
+    <button type="button" class="btn btn-sm" hx-get="/admin/logs/table{{with .Level}}?level={{.}}{{end}}" hx-target="#server-logs" hx-swap="outerHTML">{{t "logs.refresh"}}</button>
+    {{template "log_export" (list "/admin/logs/export" .Level)}}
+  </div>
+  <div class="console section-gap-sm" data-scroll-bottom>
+    {{range .Rows}}
+    <div class="console-line console-{{.Level}}">
+      <span class="console-time">{{.Time}}</span>
+      <span class="console-icon" aria-hidden="true">{{.Icon}}</span>
+      <span class="console-text">{{with .Source}}<span class="console-source">[{{t (printf "resources.process.%s" .)}}]</span> {{end}}{{with .Code}}<span class="console-code">[{{.}}]</span> {{end}}{{.Text}}{{with .Change}} <span class="console-change">({{.}})</span>{{end}}{{with .Actor}} <span class="console-change">— {{.}}</span>{{end}}</span>
+    </div>
+    {{else}}
+    <p class="muted console-empty">{{t "logs.empty"}}</p>
+    {{end}}
+  </div>
+</div>
+{{end}}

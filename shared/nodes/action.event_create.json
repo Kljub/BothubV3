@@ -1,0 +1,168 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.event_create",
+  "version": 1,
+  "category": "action",
+  "group": "events",
+  "order": 560,
+  "color": "blue",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_event_create.label",
+  "descriptionKey": "builder.node.action_event_create.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": ".id",
+      "labelKey": "builder.result.event_create.0"
+    },
+    {
+      "suffix": ".url",
+      "labelKey": "builder.result.event_create.1"
+    },
+    {
+      "suffix": ".name",
+      "labelKey": "builder.result.event_create.2"
+    },
+    {
+      "suffix": ".start",
+      "labelKey": "builder.result.event_create.3"
+    },
+    {
+      "suffix": ".invite_url",
+      "labelKey": "builder.result.event_create.4"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "name": {
+        "type": "string",
+        "maxLength": 100,
+        "x-labelKey": "builder.cfg.name"
+      },
+      "description": {
+        "type": "string",
+        "maxLength": 1000,
+        "x-labelKey": "builder.cfg.description",
+        "x-multiline": true
+      },
+      "start": {
+        "type": "string",
+        "maxLength": 40,
+        "x-labelKey": "builder.cfg.start",
+        "x-mono": true,
+        "x-placeholder": "2026-12-24 18:00",
+        "x-hintKey": "builder.cfg.start_hint"
+      },
+      "end": {
+        "type": "string",
+        "maxLength": 40,
+        "x-labelKey": "builder.cfg.end",
+        "x-mono": true,
+        "x-placeholder": "2026-12-24 18:00",
+        "x-hintKey": "builder.cfg.end_hint"
+      },
+      "timezone": {
+        "type": "string",
+        "maxLength": 64,
+        "x-labelKey": "builder.cfg.timezone",
+        "x-placeholder": "Europe/Berlin",
+        "x-hintKey": "builder.cfg.timezone_hint"
+      },
+      "repeat": {
+        "type": "string",
+        "enum": [
+          "none",
+          "weekdays",
+          "weekly",
+          "biweekly",
+          "monthly",
+          "yearly"
+        ],
+        "default": "none",
+        "x-labelKey": "builder.cfg.repeat",
+        "x-enumKey": "builder.enum.repeat"
+      },
+      "invite_link": {
+        "type": "boolean",
+        "default": false,
+        "x-labelKey": "builder.cfg.invite_link"
+      },
+      "location_type": {
+        "type": "string",
+        "enum": [
+          "voice",
+          "stage",
+          "external"
+        ],
+        "default": "voice",
+        "x-labelKey": "builder.cfg.location_type",
+        "x-enumKey": "builder.enum.location_type"
+      },
+      "channel": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.channel",
+        "x-hintKey": "builder.cfg.ref_hint",
+        "x-ref": "channel",
+        "x-showIf": {
+          "location_type": [
+            "voice",
+            "stage"
+          ]
+        }
+      },
+      "location": {
+        "type": "string",
+        "maxLength": 100,
+        "x-labelKey": "builder.cfg.location",
+        "x-showIf": {
+          "location_type": [
+            "external"
+          ]
+        }
+      },
+      "image_url": {
+        "type": "string",
+        "maxLength": 2000,
+        "x-labelKey": "builder.cfg.image_url",
+        "x-mono": true
+      },
+      "reason": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.reason",
+        "x-hintKey": "builder.cfg.reason_hint"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      },
+      "guild": {
+        "type": "string",
+        "maxLength": 40,
+        "x-advanced": true,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.guild",
+        "x-hintKey": "builder.cfg.guild_hint"
+      }
+    }
+  }
+}

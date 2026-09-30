@@ -2,7 +2,7 @@
 
 Stand: 2026-09-28 · **Plan vom User freigegeben (2026-09-28)** · Entscheidungen: `context/decisions.md` · Übergabe: `HANDOVER_NEUBAU.md`
 
-Status: `⬜ Offen` · `🔄 In Bearbeitung` · `✅ Fertig` (erst nach „approved“ vom User)
+Status: `🔄 In Bearbeitung` · `🔄 In Bearbeitung` · `✅ Fertig` (erst nach „approved“ vom User)
 
 ---
 
@@ -48,7 +48,7 @@ Im AMP-Image laufen alle vier unter `supervisord`. In der Entwicklung ist jeder 
 
 ### Auth und Zugriff (Frage B)
 
-- Genau ein User. Beim ersten Start zeigt das Dashboard den Setup-Wizard, alternativ ENV `BOTHUB_ADMIN_USER` / `BOTHUB_ADMIN_PASSWORD`.
+- Der erste User (Admin) entsteht beim ersten Start über den Setup-Wizard, alternativ ENV `BOTHUB_ADMIN_USER` / `BOTHUB_ADMIN_PASSWORD`. Weitere User legt ein Admin unter „Users & Roles“ an; keine Selbstregistrierung.
 - Session liegt in der API (Cookie `HttpOnly`, `SameSite=Strict`, Session-Daten in Redis).
 - Das Dashboard reicht das Cookie nur weiter und prüft keine Rechte selbst.
 - **Eine zentrale Middleware** in der API prüft Login und den Zugriff auf Bot, Guild und Plugin. Kein Check pro Endpoint.
@@ -75,6 +75,7 @@ Vorschlag: **Go `html/template` + htmx**, ohne SPA.
 - Jeder Command ist ein **Graph** (JSON: Nodes + Verbindungen), gespeichert in der DB.
 - Der Bot hat einen **Graph-Interpreter** und führt jeden Command darüber aus. Es gibt keine hardcoded Command-Logik mehr.
 - Die eingebauten Commands aus v2 (ca. 75: Moderation, Economy, Music, Giveaways …) werden als **Standard-Graphen** mitgeliefert. Der User kann sie ändern und auf Standard zurücksetzen.
+- Jeder Command (eigene, eingebaute, Modul-Commands) bekommt nativ denselben **Permissions-Block** wie der Slash-Trigger: erlaubte Rollen (@everyone vorbelegt), gesperrte Rollen, benötigte Berechtigungen, gesperrte Kanäle, Schalter „vor Mitgliedern ohne Berechtigung verbergen“. API und BotCore setzen ihn für jeden Command durch.
 - Die Module (Economy, Leveling, Tickets …) stellen ihre Funktionen als **Builder-Nodes** bereit, z.B. `economy.add_balance` oder `leveling.get_rank`.
 - Plugins können eigene Nodes registrieren.
 - Node-Definitionen sind JSON-Schemas (wie in v2 `web/functions/builder/nodes/*.json`). Dashboard, API und Bot lesen dieselben Dateien, damit Editor und Interpreter nicht auseinanderlaufen.
@@ -111,25 +112,25 @@ Vorschlag: **Go `html/template` + htmx**, ohne SPA.
 
 | Modul | Status |
 |---|---|
-| Server, Routing, Templates, statische Dateien per `embed` | ⬜ Offen |
-| Layout, Navigation, Theming | ⬜ Offen |
-| i18n-Loader, `lang/en.json`, `lang/de.json` | ⬜ Offen |
-| Reverse-Proxy `/api/*` zur API | ⬜ Offen |
-| Setup-Wizard und Login-Seite | ⬜ Offen |
-| Bot-Verwaltung (Liste, Anlegen, Token, Start/Stop) | ⬜ Offen |
-| Guild-Übersicht und Modul-Schalter pro Guild | ⬜ Offen |
+| Server, Routing, Templates, statische Dateien per `embed` | 🔄 In Bearbeitung |
+| Layout, Navigation, Theming | 🔄 In Bearbeitung |
+| i18n-Loader, `lang/en.json`, `lang/de.json` | 🔄 In Bearbeitung |
+| Reverse-Proxy `/api/*` zur API | 🔄 In Bearbeitung |
+| Setup-Wizard und Login-Seite | 🔄 In Bearbeitung |
+| Bot-Verwaltung (Liste, Anlegen, Token, Start/Stop) | 🔄 In Bearbeitung |
+| Guild-Übersicht und Modul-Schalter pro Guild | 🔄 In Bearbeitung |
 | Command Builder (Editor-Insel) | ⬜ Offen |
 | Modul-Seiten (je Modul eine Seite, siehe Phase 4) | ⬜ Offen |
 | Plugin-Verwaltung pro Bot (Installieren, Permissions) | ⬜ Offen |
 
-Bis die API steht, arbeitet das Dashboard gegen einen Mock, der aus `openapi.yaml` erzeugt wird.
+Bis die API steht, arbeitet das Dashboard gegen die In-Memory-Mock-API `dashboard/cmd/mockapi` (Compose-Profil `mock`).
 
 ### Phase 2 – API (PHP)
 
 | Modul | Status |
 |---|---|
 | FrankenPHP + Slim 4, Config aus ENV | ⬜ Offen |
-| SQLite-Verbindung (WAL), Migrationen, Schema-Version | ⬜ Offen |
+| SQLite-Verbindung (WAL), Migrationen, Schema-Version (`api/migrations`, `shared/db-schema.json`, Test `api/tests/migrations_test.php`) | 🔄 In Bearbeitung |
 | Redis: Cache, Session, Streams | ⬜ Offen |
 | Auth, Setup-Wizard, zentrale Access-Middleware | ⬜ Offen |
 | Endpoints Bots, Guilds, Modul-Status | ⬜ Offen |
@@ -141,42 +142,68 @@ Bis die API steht, arbeitet das Dashboard gegen einen Mock, der aus `openapi.yam
 
 | Modul | Status |
 |---|---|
-| Bot-Manager: alle Bots in einem Prozess, Start/Stop pro Bot | ⬜ Offen |
-| Stream-Consumer (Events, Jobs, Results) | ⬜ Offen |
-| Graph-Interpreter für Commands | ⬜ Offen |
-| Slash-Command-Registrierung aus den Graphen | ⬜ Offen |
+| Bot-Manager: alle Bots in einem Prozess, Start/Stop pro Bot | 🔄 In Bearbeitung |
+| Stream-Consumer (Events, Jobs, Results), Vertrag `shared/streams.json` | 🔄 In Bearbeitung |
+| Graph-Interpreter für Commands und Custom Events (Kern-Blöcke; weitere Blöcke mit ihren Modulen) | 🔄 In Bearbeitung |
+| Slash-Command-Registrierung aus den Graphen (inkl. Unterbefehle, Kontextmenüs, Permissions-Block) | 🔄 In Bearbeitung |
 | Embed/Payload-Validierung gegen discord.js-Typen (keine Felder verwerfen) | ⬜ Offen |
-| Plugin-Runtime (`worker_threads`, RPC, Permission-Checks) | ⬜ Offen |
+| Plugin-Runtime (SDK-Manager `bot/src/sdk`: Child-Prozess pro Plugin und Bot mit `--permission`, RPC, Permission-Checks, Speicher `plugin_storage`; SDK `sdk/`) | 🔄 Runtime und SDK fertig; offen: Installation über API/Market, Dashboard-Seiten, SDK-Policies im Admin |
 
 ### Phase 4 – Module aus v2
 
-Jedes Modul liefert: DB-Tabellen, API-Endpoints, Dashboard-Seite, Builder-Nodes, Standard-Graphen für seine Commands.
+Jedes Modul liefert: DB-Tabellen, API-Endpoints, Modulinhalt-Seite (nur globale Klassen, siehe `dashboard/ui/DESIGN.md`), Builder-Nodes, Standard-Graphen für seine Commands.
+Module gelten pro Bot für alle seine Server. Katalog und Reihenfolge: `shared/modules.json`.
 
-| Modul | Status | Modul | Status |
-|---|---|---|---|
-| achievements | ⬜ | modmail | ⬜ |
-| analytics | ⬜ | music | ⬜ |
-| automod | ⬜ | polls | ⬜ |
-| autoreact | ⬜ | reaction-roles | ⬜ |
-| auto-responder | ⬜ | reddit-notifs | ⬜ |
-| birthday | ⬜ | starboard | ⬜ |
-| counting | ⬜ | statistic-channels | ⬜ |
-| custom-events | ⬜ | sticky-messages | ⬜ |
-| economy | ⬜ | sticky-roles | ⬜ |
-| forum-tagger | ⬜ | suggestions | ⬜ |
-| free-games | ⬜ | temp-voice | ⬜ |
-| github-notifs | ⬜ | ticket | ⬜ |
-| giveaway | ⬜ | timed-events | ⬜ |
-| invite-tracker | ⬜ | timed-messages | ⬜ |
-| kick-notifs | ⬜ | twitch-notifs | ⬜ |
-| leavemer | ⬜ | twitter-linkfix | ⬜ |
-| leveling | ⬜ | verification | ⬜ |
-| message-builder | ⬜ | warnings | ⬜ |
-| message-logger | ⬜ | welcommer | ⬜ |
-| moderation (Commands) | ⬜ | youtube-notifs | ⬜ |
-| server-management (Commands) | ⬜ | | |
+| Gruppe | Modul | Status |
+|---|---|---|
+| utility | command-builder | ⬜ |
+| utility | custom-events | ⬜ |
+| utility | timed-events | ⬜ |
+| utility | data-storage | 🔄 Dashboard-Seite, Mock-API, Bot ({var.key}, Variablen-Blöcke) fertig; offen: Endpoints in der PHP-API, Variablen im Builder-Panel |
+| utility | webhooks | ⬜ |
+| utility | message-builder | ⬜ |
+| utility | card-designer | ⬜ |
+| utility | node-editor (Beta) | ⬜ |
+| utility | transcripts | ⬜ |
+| security | automod | ⬜ |
+| security | moderation | 🔄 Einstellungsseite (Zugriff mit Moderator-/Admin-Rollen, Protokoll-Kanal, Direktnachricht, Bann-Löschung, automatische Strafen), Fälle und Notizen (Migration 0008), befristeter Bann/Rolle über `scheduled_jobs`, 35 Standard-Graphen; fehlen noch: automods, channel, avatar, userinfo |
+| security | server-management | ⬜ |
+| security | verification | ⬜ |
+| security | sticky-roles | ⬜ |
+| security | honeypot | ⬜ |
+| messages | reaction-roles | ⬜ |
+| messages | polls | ⬜ |
+| messages | timed-messages | ⬜ |
+| messages | auto-responder | ⬜ |
+| messages | autoreact | ⬜ |
+| messages | welcommer | ⬜ |
+| messages | leavemer | ⬜ |
+| messages | sticky-messages | ⬜ |
+| messages | message-logger | ⬜ |
+| fun | starboard | ⬜ |
+| fun | temp-voice | ⬜ |
+| fun | leveling (Beta) | ⬜ |
+| fun | achievements | ⬜ |
+| fun | invite-tracker (Beta) | ⬜ |
+| fun | counting | ⬜ |
+| fun | birthday (Beta) | ⬜ |
+| fun | suggestions (Beta) | ⬜ |
+| fun | giveaway | ⬜ |
+| fun | economy | ⬜ |
+| ticket | ticket (Beta) | ⬜ |
+| ticket | modmail | ⬜ |
+| ticket | forum-tagger | ⬜ |
+| social | github-notifs (Beta) | ⬜ |
+| social | twitch-notifs | ⬜ |
+| social | youtube-notifs | ⬜ |
+| social | reddit-notifs | ⬜ |
+| social | kick-notifs | ⬜ |
+| social | twitter-linkfix | ⬜ |
+| social | free-games (Beta) | ⬜ |
+| social | music | ⬜ |
+| social | statistic-channels | ⬜ |
 
-Reihenfolge der Module legt der User fest.
+Reihenfolge der Umsetzung legt der User fest.
 
 ### Phase 5 – AMP-Template
 

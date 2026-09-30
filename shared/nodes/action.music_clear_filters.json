@@ -1,0 +1,42 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.music_clear_filters",
+  "version": 1,
+  "category": "action",
+  "group": "music",
+  "order": 330,
+  "color": "teal",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_music_clear_filters.label",
+  "descriptionKey": "builder.node.action_music_clear_filters.description",
+  "module": "music",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "guild": {
+        "type": "string",
+        "maxLength": 40,
+        "x-advanced": true,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.guild",
+        "x-hintKey": "builder.cfg.guild_hint"
+      }
+    }
+  }
+}

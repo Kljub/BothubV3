@@ -1,0 +1,16 @@
+/* bh-terminal: Log console. */
+
+.logs .box-head { flex-wrap: wrap; }
+.console { height: 480px; overflow-y: auto; padding: 10px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; font-family: ui-monospace, "SFMono-Regular", Consolas, monospace; font-size: 12px; line-height: 1.6; }
+.console-line { display: flex; gap: 10px; white-space: pre-wrap; word-break: break-word; }
+.console-time { color: var(--muted); flex: none; }
+.console-icon { flex: none; width: 1.4em; text-align: center; }
+.console-text { color: var(--text); }
+.console-code { font-weight: 700; }
+.console-error .console-code { color: var(--red); }
+.console-warning .console-code { color: var(--yellow); }
+.console-change { color: var(--muted); }
+.console-empty { font-family: inherit; }
+.console-source { color: var(--blue); }
+.lang-menu a { display: block; padding: 6px 10px; color: var(--text); border-radius: var(--radius-sm); }
+.lang-menu a:hover { background: var(--surface-2); }

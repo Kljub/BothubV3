@@ -1,0 +1,121 @@
+{{/* Settings of a ready-made module, generated from shared/module-settings.
+     Receives a settingsView (internal/web/modsettings.go). */}}
+
+{{define "module_settings_fragment"}}{{template "module_settings" .Data}}{{end}}
+
+{{define "module_settings"}}
+{{$v := .}}
+{{if .Top}}
+<section class="box">
+  <header class="box-head"><h2>{{t "modset.title"}}</h2><span class="hint hint-top">{{t "modset.setup_hint"}}</span></header>
+  <form class="box-body form modset-form" hx-put="{{$v.URL "" -1}}" hx-target="#modset-body" hx-swap="innerHTML">
+    {{range .Top}}{{template "modset_field" .}}{{end}}
+    <div><button type="submit" class="btn btn-primary btn-sm">{{t "modset.save"}}</button></div>
+  </form>
+</section>
+{{end}}
+{{range .Lists}}
+{{$l := .}}
+<section class="box">
+  <header class="box-head"><h2>{{t $l.Field.Label}} <span class="badge-soft">{{len $l.Items}}{{with $l.Field.Max}}/{{.}}{{end}}</span></h2></header>
+  <div class="box-body">
+    {{if $l.Field.Hint}}<p class="hint hint-top">{{t (printf "%s_hint" $l.Field.Label)}}</p>{{end}}
+    {{range $l.Items}}
+    <details class="modset-item">
+      <summary><strong>{{.Title}}</strong></summary>
+      <form class="form modset-form" hx-put="{{$v.URL $l.Field.Key .Index}}" hx-target="#modset-body" hx-swap="innerHTML">
+        {{range .Fields}}{{template "modset_field" .}}{{end}}
+        <div class="modal-actions">
+          <button type="submit" class="btn btn-primary btn-sm">{{t "modset.save"}}</button>
+          <button type="button" class="btn btn-sm btn-danger-soft" hx-delete="{{$v.URL $l.Field.Key .Index}}" hx-target="#modset-body" hx-swap="innerHTML"
+            hx-confirm="{{t "modset.delete_confirm" "name" .Title}}">{{t "modset.delete"}}</button>
+        </div>
+      </form>
+    </details>
+    {{else}}
+    <p class="muted">{{t "modset.empty"}}</p>
+    {{end}}
+    {{if not $l.Full}}
+    <details class="modset-item modset-new">
+      <summary><strong>+ {{t "modset.add"}}</strong></summary>
+      <form class="form modset-form" hx-post="{{$v.URL $l.Field.Key -1}}" hx-target="#modset-body" hx-swap="innerHTML">
+        {{range $l.New}}{{template "modset_field" .}}{{end}}
+        <div><button type="submit" class="btn btn-primary btn-sm">+ {{t "modset.add"}}</button></div>
+      </form>
+    </details>
+    {{end}}
+  </div>
+</section>
+{{end}}
+{{end}}
+
+{{/* One field. Receives a fieldView. */}}
+{{define "modset_field"}}
+{{$f := .}}
+<div class="modset-field" {{with .ShowIfJSON}}data-show-if="{{.}}"{{end}}>
+{{if .Hint}}{{if ne .Type "list"}}<p class="hint modset-hint">{{t (printf "%s_hint" .Label)}}</p>{{end}}{{end}}
+{{if eq .Type "bool"}}
+  <label class="toggle-row"><span>{{t .Label}}</span><input type="checkbox" class="toggle" name="{{.Name}}" value="true" {{if eq (printf "%v" .Value) "true"}}checked{{end}}></label>
+{{else if eq .Type "number"}}
+  <label class="field">{{t .Label}}<input type="number" name="{{.Name}}" value="{{.Value}}" {{with .Min}}min="{{.}}"{{end}} {{with .Max}}max="{{.}}"{{end}}></label>
+{{else if eq .Type "select"}}
+  <label class="field">{{t .Label}}
+    <select name="{{.Name}}">{{range .Options}}<option value="{{.}}" {{if eq . $f.Text}}selected{{end}}>{{t (printf "%s.%s" $f.Label .)}}</option>{{end}}</select>
+  </label>
+{{else if eq .Type "color"}}
+  <label class="field">{{t .Label}}<input type="color" name="{{.Name}}" value="{{if .Text}}{{.Text}}{{else}}#a78bfa{{end}}"></label>
+{{else if eq .Type "text"}}
+  <label class="field">{{t .Label}}
+    {{if .Multiline}}<textarea name="{{.Name}}" rows="3" {{with .Max}}maxlength="{{.}}"{{end}}>{{.Text}}</textarea>{{else}}<input name="{{.Name}}" value="{{.Text}}" {{with .Max}}maxlength="{{.}}"{{end}} {{with .Pattern}}pattern="{{.}}"{{end}}>{{end}}
+    <span class="hint">{{t "modset.placeholders_hint"}}</span>
+  </label>
+{{else if eq .Type "words"}}
+  <label class="field">{{t .Label}}<textarea name="{{.Name}}" rows="3">{{.Text}}</textarea><span class="hint">{{t "modset.words_hint"}}</span></label>
+{{else if eq .Type "emojis"}}
+  <label class="field">{{t .Label}}<input name="{{.Name}}" value="{{.Text}}" placeholder="👍 🎉 <:name:123…>"><span class="hint">{{t "modset.emojis_hint"}}</span></label>
+{{else if or (eq .Type "channel") (eq .Type "channels")}}
+  <label class="field">{{t .Label}}
+    <select name="{{.Name}}" {{if eq .Type "channels"}}multiple size="6"{{end}}>
+      {{if eq .Type "channel"}}<option value="">{{t "modset.none"}}</option>{{end}}
+      {{range .View.Guilds}}{{$g := .}}<optgroup label="{{.Name}}">
+        {{range .Channels}}{{if $f.ChannelOK .Type}}<option value="{{$g.ID}}:{{.ID}}" {{if index $f.Selected (printf "%s:%s" $g.ID .ID)}}selected{{end}}>{{if eq .Type "voice"}}🔊{{else if eq .Type "category"}}📁{{else}}#{{end}} {{.Name}}</option>{{end}}{{end}}
+      </optgroup>{{end}}
+    </select>
+    {{if eq .Type "channels"}}<span class="hint">{{t "modset.multi_hint"}}</span>{{end}}
+    {{if not .View.Guilds}}<span class="hint">{{t "modset.no_servers"}}</span>{{end}}
+  </label>
+{{else if or (eq .Type "role") (eq .Type "roles")}}
+  <label class="field">{{t .Label}}
+    <select name="{{.Name}}" {{if eq .Type "roles"}}multiple size="6"{{end}}>
+      {{if eq .Type "role"}}<option value="">{{t "modset.none"}}</option>{{end}}
+      {{range .View.Guilds}}{{$g := .}}<optgroup label="{{.Name}}">
+        {{range .Roles}}{{if not .Managed}}<option value="{{$g.ID}}:{{.ID}}" {{if index $f.Selected (printf "%s:%s" $g.ID .ID)}}selected{{end}}>@{{.Name}}</option>{{end}}{{end}}
+      </optgroup>{{end}}
+    </select>
+    {{if eq .Type "roles"}}<span class="hint">{{t "modset.multi_hint"}}</span>{{end}}
+    {{if not .View.Guilds}}<span class="hint">{{t "modset.no_servers"}}</span>{{end}}
+  </label>
+{{else if eq .Type "message"}}
+  <fieldset class="modset-message">
+    <legend>{{t .Label}}</legend>
+    <label class="field">{{t "modset.message.mode"}}
+      <select name="{{.Name}}.mode">
+        <option value="text" {{if eq (index .Message "mode") "text"}}selected{{end}}>{{t "modset.message.mode_text"}}</option>
+        <option value="embed" {{if eq (index .Message "mode") "embed"}}selected{{end}}>{{t "modset.message.mode_embed"}}</option>
+      </select>
+    </label>
+    <label class="field">{{t "modset.message.content"}}<textarea name="{{.Name}}.content" rows="3" maxlength="2000">{{index .Message "content"}}</textarea></label>
+    <div class="modset-embed">
+      <label class="field">{{t "modset.message.title"}}<input name="{{.Name}}.title" value="{{index .Message "title"}}" maxlength="256"></label>
+      <label class="field">{{t "modset.message.description"}}<textarea name="{{.Name}}.description" rows="4" maxlength="4000">{{index .Message "description"}}</textarea></label>
+      <div class="modset-grid">
+        <label class="field">{{t "modset.message.color"}}<input type="color" name="{{.Name}}.color" value="{{with index .Message "color"}}{{.}}{{else}}#a78bfa{{end}}"></label>
+        <label class="field">{{t "modset.message.image"}}<input name="{{.Name}}.image" value="{{index .Message "image"}}" placeholder="https://…"></label>
+      </div>
+      <label class="field">{{t "modset.message.footer"}}<input name="{{.Name}}.footer" value="{{index .Message "footer"}}" maxlength="2048"></label>
+    </div>
+    <span class="hint">{{t "modset.placeholders_hint"}}</span>
+  </fieldset>
+{{end}}
+</div>
+{{end}}

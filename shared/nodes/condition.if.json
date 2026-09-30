@@ -1,0 +1,65 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "condition.if",
+  "version": 1,
+  "category": "condition",
+  "group": "general",
+  "order": 10,
+  "icon": "⇒",
+  "conditionKind": "compare",
+  "labelKey": "builder.node.condition_if.label",
+  "descriptionKey": "builder.node.condition_if.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "branches",
+      "type": "flow",
+      "labelKey": "builder.port.branches"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "subject"
+    ],
+    "properties": {
+      "source": {
+        "type": "string",
+        "enum": [
+          "variable",
+          "option",
+          "other"
+        ],
+        "default": "other",
+        "x-group": "checks",
+        "x-labelKey": "builder.cfg.check_source"
+      },
+      "subject": {
+        "type": "string",
+        "maxLength": 200,
+        "x-widget": "checks",
+        "x-labelKey": "builder.check.value"
+      },
+      "multi": {
+        "type": "string",
+        "enum": [
+          "first",
+          "all"
+        ],
+        "default": "first",
+        "x-advanced": true,
+        "x-labelKey": "builder.cfg.multi",
+        "x-hintKey": "builder.cfg.multi_hint",
+        "x-enumKey": "builder.enum.multi"
+      }
+    }
+  }
+}

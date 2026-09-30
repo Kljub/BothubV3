@@ -1,0 +1,54 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.music_autoleave",
+  "version": 1,
+  "category": "action",
+  "group": "music",
+  "order": 280,
+  "color": "teal",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_music_autoleave.label",
+  "descriptionKey": "builder.node.action_music_autoleave.description",
+  "module": "music",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "autoleave": {
+        "type": "boolean",
+        "default": true,
+        "x-labelKey": "builder.cfg.autoleave"
+      },
+      "autoleave_delay": {
+        "type": "number",
+        "minimum": 0,
+        "x-labelKey": "builder.cfg.autoleave_delay",
+        "maximum": 3600,
+        "default": 60
+      },
+      "guild": {
+        "type": "string",
+        "maxLength": 40,
+        "x-advanced": true,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.guild",
+        "x-hintKey": "builder.cfg.guild_hint"
+      }
+    }
+  }
+}

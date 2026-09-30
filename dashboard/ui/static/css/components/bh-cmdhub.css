@@ -1,0 +1,74 @@
+/* bh-cmdhub: custom commands page. Toolbar, commands in groups, expandable rows. */
+
+.cmdhub { display: flex; flex-direction: column; gap: 18px; }
+
+.cmdhub-start-icon { display: grid; place-items: center; width: 38px; height: 38px; color: var(--accent-text); background: var(--accent); border-radius: 10px; }
+.cmdhub-start-icon .icon { width: 20px; height: 20px; }
+.cmdhub-plus { position: relative; z-index: 1; display: grid; place-items: center; width: 24px; height: 24px; margin-top: 4px; font-size: 16px; font-weight: 700; color: var(--accent-text); background: var(--accent); border-radius: 50%; }
+.cmdhub-plus::before { content: ""; position: absolute; bottom: 100%; left: 50%; width: 1px; height: 14px; background: var(--border-strong); }
+.cmdhub-more { position: relative; z-index: 1; font-size: 11px; color: var(--muted); }
+
+.cmdhub-head { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.cmdhub-title { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.cmdhub-title h2 { margin: 0; font-size: 18px; }
+.cmdhub-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.cmdhub-toolbar .sidebar-search { width: 220px; }
+.cmdhub-toolbar select { width: auto; }
+.cmdhub-toolbar .btn { display: inline-flex; align-items: center; gap: 6px; }
+.cmdhub-toolbar .btn .icon { width: 14px; height: 14px; }
+
+.cmdhub-list { display: flex; flex-direction: column; gap: 18px; }
+.cmdhub-group { display: flex; flex-direction: column; gap: 8px; }
+.cmdhub-group-head { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.cmdhub-group-head .icon { width: 16px; height: 16px; color: var(--muted); }
+.cmdhub-group-head .muted { font-size: 12px; }
+.cmdhub-group-empty { margin: 0 0 0 24px; font-size: 12px; }
+
+.cmdhub-row { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); transition: border-color 0.15s; }
+.cmdhub-row:hover { border-color: var(--border-strong); }
+.cmdhub-main { display: flex; align-items: center; gap: 12px; padding: 10px 12px; }
+.cmdhub-icon { position: relative; display: grid; place-items: center; flex: none; width: 36px; height: 36px; color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); border-radius: 8px; }
+.cmdhub-icon .icon { width: 18px; height: 18px; }
+.cmdhub-dot { position: absolute; right: -3px; bottom: -3px; width: 10px; height: 10px; background: var(--green); border: 2px solid var(--surface); border-radius: 50%; }
+.cmdhub-row.is-off .cmdhub-dot { background: var(--muted); }
+.cmdhub-row.is-off .cmdhub-name { color: var(--muted); }
+.cmdhub-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.cmdhub-text .muted { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cmdhub-name { font-size: 14px; font-weight: 600; color: var(--text); text-decoration: none; }
+.cmdhub-name:hover { color: var(--accent); }
+.cmdhub-actions { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.cmdhub-actions .btn { display: inline-flex; align-items: center; gap: 6px; }
+.cmdhub-actions .btn .icon { width: 13px; height: 13px; }
+.cmdhub-actions select { width: 150px; padding-top: 5px; padding-bottom: 5px; font-size: 12px; }
+.cmdhub-toggle { display: flex; }
+.cmdhub-expand .icon-chevron { transition: transform 0.15s; }
+.cmdhub-expand[aria-expanded="true"] .icon-chevron { transform: rotate(180deg); }
+
+.cmdhub-details { display: flex; flex-direction: column; gap: 12px; padding: 0 12px 12px; }
+.cmdhub-preview { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 18px; background-color: var(--bg);
+  background-image: radial-gradient(circle, var(--border) 1px, transparent 1.2px); background-size: 20px 20px; border-radius: 8px; }
+.cmdhub-preview-card { display: flex; align-items: center; gap: 12px; width: min(420px, 100%); padding: 10px 12px; background: var(--sidebar);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border)); border-radius: 10px; }
+.cmdhub-preview-card .cmdhub-start-icon { width: 32px; height: 32px; }
+.cmdhub-history { display: flex; flex-direction: column; gap: 8px; padding: 12px; background: var(--bg); border-radius: 8px; }
+.cmdhub-history-head { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 4px; }
+.cmdhub-history-head > div { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.cmdhub-history-head .muted { font-size: 12px; }
+.cmdhub-history-icon, .cmdhub-version-icon { display: grid; place-items: center; flex: none; width: 30px; height: 30px; color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); border-radius: 8px; }
+.cmdhub-history-icon .icon, .cmdhub-version-icon .icon { width: 15px; height: 15px; }
+.cmdhub-version { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+.cmdhub-version .cmdhub-text strong { font-size: 13px; }
+.cmdhub-version .cmdhub-version-icon { color: var(--muted); background: var(--surface-2); }
+
+.cmdhub-groupform { display: flex; flex-direction: column; gap: 10px; padding: 12px; margin-bottom: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.cmdhub-groupform > .btn { align-self: flex-start; }
+.cmdhub-groupfields { display: grid; grid-template-columns: 1.2fr 2fr 0.8fr; gap: 10px; }
+.cmdhub-grouplist { display: flex; flex-direction: column; gap: 8px; }
+.cmdhub-grouplist .cmdhub-groupform { margin-bottom: 0; }
+.cmdhub-groupform .modal-actions { margin-top: 0; }
+
+@media (max-width: 900px) {
+  .cmdhub-main { flex-wrap: wrap; }
+  .cmdhub-actions { width: 100%; justify-content: flex-start; }
+  .cmdhub-groupfields { grid-template-columns: 1fr; }
+}

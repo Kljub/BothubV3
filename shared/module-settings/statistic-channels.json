@@ -1,0 +1,48 @@
+{
+  "module": "statistic-channels",
+  "fields": [
+    {
+      "key": "counters",
+      "type": "list",
+      "max": 20,
+      "titleField": "name",
+      "item": [
+        {
+          "key": "channel",
+          "type": "channel",
+          "channelTypes": [
+            "voice",
+            "text",
+            "announcement",
+            "category"
+          ]
+        },
+        {
+          "key": "stat",
+          "type": "select",
+          "options": [
+            "members",
+            "humans",
+            "bots",
+            "online",
+            "channels",
+            "roles",
+            "boosts",
+            "boost_level"
+          ],
+          "default": "members"
+        },
+        {
+          "key": "name",
+          "type": "text",
+          "max": 90,
+          "default": "👥 Members: {count}"
+        }
+      ],
+      "unique": [
+        "channel"
+      ],
+      "hint": true
+    }
+  ]
+}

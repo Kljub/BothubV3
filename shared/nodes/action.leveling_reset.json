@@ -1,0 +1,33 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.leveling_reset",
+  "version": 1,
+  "category": "action",
+  "group": "leveling",
+  "order": 1040,
+  "color": "purple",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_leveling_reset.label",
+  "descriptionKey": "builder.node.action_leveling_reset.description",
+  "module": "leveling",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}

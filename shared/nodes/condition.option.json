@@ -1,0 +1,32 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "condition.option",
+  "version": 1,
+  "category": "condition",
+  "group": "logic",
+  "palette": false,
+  "color": "green",
+  "icon": "☰",
+  "conditionKind": "option",
+  "labelKey": "builder.node.condition_option.label",
+  "descriptionKey": "builder.node.condition_option.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "branches",
+      "type": "flow",
+      "labelKey": "builder.port.branches"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}

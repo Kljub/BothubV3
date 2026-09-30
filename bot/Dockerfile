@@ -9,9 +9,12 @@ RUN npm run build
 
 FROM node:24-alpine
 WORKDIR /app
-ENV NODE_ENV=production
+ENV NODE_ENV=production \
+    SHARED_DIR=/shared
 COPY bot/package.json bot/package-lock.json ./
 RUN npm ci --omit=dev
 COPY --from=build /app/dist ./dist
+# Node definitions, graph limits, event catalog, schema version.
+COPY shared/ /shared/
 USER node
-CMD ["node", "dist/index.js"]
+CMD ["node", "--disable-warning=ExperimentalWarning", "dist/index.js"]

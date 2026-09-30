@@ -1,0 +1,120 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.purge_messages",
+  "version": 1,
+  "category": "action",
+  "group": "server",
+  "order": 690,
+  "color": "orange",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_purge_messages.label",
+  "descriptionKey": "builder.node.action_purge_messages.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": "",
+      "labelKey": "builder.result.purge_messages.0"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "channel": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.channel",
+        "x-hintKey": "builder.cfg.ref_hint",
+        "x-ref": "channel",
+        "default": "{channel.id}"
+      },
+      "amount": {
+        "type": "number",
+        "minimum": 1,
+        "x-labelKey": "builder.cfg.amount",
+        "maximum": 1000,
+        "default": 10
+      },
+      "keep_pinned": {
+        "type": "boolean",
+        "default": true,
+        "x-labelKey": "builder.cfg.keep_pinned"
+      },
+      "from_user": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.from_user",
+        "x-hintKey": "builder.cfg.ref_optional_hint",
+        "x-ref": "member"
+      },
+      "bots_only": {
+        "type": "boolean",
+        "default": false,
+        "x-labelKey": "builder.cfg.bots_only"
+      },
+      "contains": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.contains"
+      },
+      "pattern": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.pattern",
+        "x-mono": true,
+        "x-placeholder": "https?://"
+      },
+      "before_id": {
+        "type": "string",
+        "maxLength": 40,
+        "x-labelKey": "builder.cfg.before_id",
+        "x-mono": true
+      },
+      "after_id": {
+        "type": "string",
+        "maxLength": 40,
+        "x-labelKey": "builder.cfg.after_id",
+        "x-mono": true
+      },
+      "skip_old": {
+        "type": "boolean",
+        "default": true,
+        "x-labelKey": "builder.cfg.skip_old"
+      },
+      "reason": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.reason",
+        "x-hintKey": "builder.cfg.reason_hint"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      },
+      "guild": {
+        "type": "string",
+        "maxLength": 40,
+        "x-advanced": true,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.guild",
+        "x-hintKey": "builder.cfg.guild_hint"
+      }
+    }
+  }
+}

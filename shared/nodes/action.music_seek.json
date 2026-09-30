@@ -1,0 +1,59 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.music_seek",
+  "version": 1,
+  "category": "action",
+  "group": "music",
+  "order": 250,
+  "color": "teal",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_music_seek.label",
+  "descriptionKey": "builder.node.action_music_seek.description",
+  "module": "music",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "seek_mode": {
+        "type": "string",
+        "enum": [
+          "absolute",
+          "relative"
+        ],
+        "default": "absolute",
+        "x-labelKey": "builder.cfg.seek_mode",
+        "x-enumKey": "builder.enum.seek_mode"
+      },
+      "seek_seconds": {
+        "type": "number",
+        "minimum": -86400,
+        "x-labelKey": "builder.cfg.seek_seconds",
+        "maximum": 86400,
+        "default": 30
+      },
+      "guild": {
+        "type": "string",
+        "maxLength": 40,
+        "x-advanced": true,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.guild",
+        "x-hintKey": "builder.cfg.guild_hint"
+      }
+    }
+  }
+}

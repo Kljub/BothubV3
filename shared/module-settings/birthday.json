@@ -1,0 +1,54 @@
+{
+  "module": "birthday",
+  "fields": [
+    {
+      "key": "time",
+      "type": "text",
+      "max": 5,
+      "default": "09:00",
+      "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+    },
+    {
+      "key": "channel",
+      "type": "channel",
+      "channelTypes": [
+        "text",
+        "announcement"
+      ]
+    },
+    {
+      "key": "message",
+      "type": "message",
+      "default": {
+        "mode": "embed",
+        "title": "🎂 Happy birthday!",
+        "description": "Happy {age}. birthday, {user.mention}! 🎉",
+        "color": "#f472b6"
+      }
+    },
+    {
+      "key": "messageNoYear",
+      "type": "message",
+      "default": {
+        "mode": "embed",
+        "title": "🎂 Happy birthday!",
+        "description": "Happy birthday, {user.mention}! 🎉",
+        "color": "#f472b6"
+      }
+    },
+    {
+      "key": "reactions",
+      "type": "emojis",
+      "max": 5
+    },
+    {
+      "key": "thread",
+      "type": "bool",
+      "default": false
+    },
+    {
+      "key": "role",
+      "type": "role"
+    }
+  ]
+}

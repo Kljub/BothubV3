@@ -1,0 +1,67 @@
+/* bh-datepicker: Calendar for a date range (reference design by the user).
+   Head: selected dates written out + collapse button. Month row: title and
+   ▲/▼. Grid: 6 weeks, Monday first, days of other months dimmed. Two clicks
+   pick the range in any order; both ends are round, the days between blue.
+   Markup is rendered by app.js from [data-range-picker]. */
+
+.datepicker { display: flex; flex-direction: column; gap: 14px; }
+.datepicker-calendar {
+  width: 334px; max-width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.datepicker-selected {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 12px 14px;
+  font-size: 15px;
+  border-bottom: 1px solid var(--border-strong);
+}
+.datepicker-toggle {
+  display: grid; place-items: center;
+  width: 28px; height: 28px; padding: 0;
+  color: var(--text-2); background: transparent;
+  border: 1px solid var(--border-strong); border-radius: 6px; cursor: pointer;
+}
+.datepicker-toggle .icon { width: 14px; height: 14px; transition: transform 0.15s; }
+.datepicker-calendar[data-collapsed] .datepicker-toggle .icon { transform: rotate(180deg); }
+.datepicker-calendar[data-collapsed] .datepicker-body { display: none; }
+
+.datepicker-body { padding: 12px 10px 10px; }
+.datepicker-head { display: flex; align-items: center; justify-content: space-between; padding: 0 6px 12px; }
+.datepicker-title { font-weight: 700; font-size: 14px; }
+.datepicker-nav { display: flex; gap: 4px; }
+.datepicker-nav button {
+  width: 28px; height: 28px; padding: 0;
+  font-size: 11px; color: var(--text-2);
+  background: none; border: 0; border-radius: 6px; cursor: pointer;
+}
+.datepicker-nav button:hover:not(:disabled) { color: var(--text); background: var(--surface); }
+.datepicker-nav button:disabled { opacity: 0.3; cursor: default; }
+
+.datepicker-grid { display: grid; grid-template-columns: repeat(7, 1fr); row-gap: 4px; }
+.datepicker-weekday { padding: 6px 0 10px; font-size: 13px; font-weight: 700; text-align: center; }
+
+.datepicker-cell { position: relative; display: grid; place-items: center; height: 40px; }
+/* Days between start and end: blue text (reference design). */
+.datepicker-cell-in-range .datepicker-day { color: #38bdf8; font-weight: 600; }
+
+.datepicker-day {
+  position: relative; z-index: 1;
+  width: 36px; height: 36px; padding: 0;
+  font: inherit; font-size: 14px; font-variant-numeric: tabular-nums;
+  color: var(--text); background: none;
+  border: 0; border-radius: 50%; cursor: pointer;
+}
+.datepicker-day:hover:not(:disabled) { background: var(--surface); }
+.datepicker-day-outside { color: var(--muted); }
+.datepicker-day:disabled { color: var(--muted); opacity: 0.3; cursor: default; }
+.datepicker-day-today { box-shadow: inset 0 0 0 1px var(--text-2); }
+.datepicker-day-selected, .datepicker-day-selected:hover:not(:disabled) { background: var(--accent); color: var(--accent-text); font-weight: 700; }
+
+.datepicker-value { min-width: 84px; }
+
+/* Inside a settings popup the calendar floats right of the popup. */
+.datepicker-float { position: absolute; top: 0; left: calc(100% + 12px); z-index: 2; box-shadow: 0 10px 30px rgb(0 0 0 / 0.45); }

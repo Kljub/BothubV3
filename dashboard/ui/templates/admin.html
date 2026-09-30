@@ -1,0 +1,362 @@
+{{define "title"}}{{t (printf "admin.nav.%s" .Data.Section)}}{{end}}
+
+{{define "content"}}{{template "admin_panel" .Data}}{{end}}
+
+{{/* Right pane of the admin settings popup. */}}
+{{define "admin_panel_fragment"}}{{template "admin_panel" .Data}}{{end}}
+
+{{define "admin_panel"}}
+<h2>{{t (printf "admin.nav.%s" .Section)}}</h2>
+{{if eq .Section "overview"}}
+  {{template "memory_panel" .Memory}}
+{{else if eq .Section "users_roles"}}
+  {{template "users_roles" .UsersRoles}}
+{{else if eq .Section "logs"}}
+  {{template "server_logs" .Logs}}
+{{else if eq .Section "resources"}}
+  {{template "resources" .Processes}}
+{{else if eq .Section "server_settings"}}
+  {{template "server_settings" .Server}}
+{{else if eq .Section "email"}}
+  {{template "email_settings" .}}
+{{else}}
+  <p class="muted admin-placeholder">{{t "admin.placeholder"}}</p>
+{{end}}
+{{end}}
+
+{{define "memory_panel_fragment"}}{{template "memory_panel" .Data}}{{end}}
+
+{{define "memory_panel"}}
+{{/* A fixed custom range does not poll: it would not change anyway. */}}
+<section id="memory-panel" class="chart-panel admin-memory"
+  {{if ne .Range "custom"}}hx-get="/overview/memory?range={{.Range}}" hx-trigger="every 15s" hx-swap="outerHTML"{{end}}>
+  <header class="chart-header">
+    <div>
+      <h3>{{t "overview.chart.title"}}</h3>
+      <p class="muted chart-subtitle">{{t "overview.chart.subtitle"}} · {{t "overview.memory_peak" "peak" (bytes .Stats.PeakBytes)}}{{with .Stats.LimitBytes}} · {{t "overview.memory_limit" "limit" (bytes .)}}{{end}}</p>
+    </div>
+    <div class="segmented" role="group" aria-label="{{t "overview.range.label"}}">
+      {{range .Ranges}}
+      <button type="button" class="segment" hx-get="/overview/memory?range={{.}}" hx-target="#memory-panel" hx-swap="outerHTML"
+        aria-pressed="{{if eq . $.Range}}true{{else}}false{{end}}">{{t (printf "overview.range.%s" .)}}</button>
+      {{end}}
+      <button type="button" class="segment" hx-get="/overview/memory?range=custom" hx-target="#memory-panel" hx-swap="outerHTML"
+        aria-pressed="{{if eq .Range "custom"}}true{{else}}false{{end}}">{{t "overview.range.custom"}}</button>
+    </div>
+  </header>
+  {{if eq .Range "custom"}}
+  <form class="custom-range" hx-get="/overview/memory" hx-target="#memory-panel" hx-swap="outerHTML">
+    <input type="hidden" name="range" value="custom">
+    {{template "range_picker" (rangeForm .From .To "overview.range.retention")}}
+  </form>
+  {{end}}
+  <div id="memory-error"></div>
+
+  {{with .Chart}}
+  {{if .Empty}}
+  <p class="muted">{{t "overview.chart.empty"}}</p>
+  {{else}}
+  <div class="chart" data-chart-points="{{.Points}}">
+    <svg viewBox="0 0 {{.W}} {{.H}}" role="img" aria-label="{{t "overview.chart.title"}}">
+      <g class="chart-grid">
+        {{range .YTicks}}<line x1="{{$.Chart.Left}}" x2="{{$.Chart.Right}}" y1="{{.Pos}}" y2="{{.Pos}}"/>{{end}}
+      </g>
+      <g class="chart-axis" aria-hidden="true">
+        {{range .YTicks}}<text x="{{sub $.Chart.Left 8}}" y="{{.Pos}}" text-anchor="end" dominant-baseline="middle">{{.Label}}</text>{{end}}
+        {{range $i, $tick := .XTicks}}<text x="{{$tick.Pos}}" y="{{add $.Chart.Bot 18}}" text-anchor="{{if eq $i 0}}start{{else if eq $i 4}}end{{else}}middle{{end}}">{{$tick.Label}}</text>{{end}}
+      </g>
+      <path class="chart-area" d="{{.Area}}"/>
+      <line class="chart-avg" x1="{{.Left}}" x2="{{.Right}}" y1="{{.AvgY}}" y2="{{.AvgY}}"/>
+      <text class="chart-avg-label" x="{{sub .Right 4}}" y="{{sub .AvgY 6}}" text-anchor="end">{{t "overview.chart.average"}} {{$.AverageLabel}}</text>
+      <path class="chart-line" d="{{.Line}}"/>
+      <line class="chart-crosshair" x1="0" x2="0" y1="{{.Top}}" y2="{{.Bot}}" visibility="hidden"/>
+      <circle class="chart-dot" r="5" cx="0" cy="0" visibility="hidden"/>
+      <rect class="chart-hit" x="{{.Left}}" y="{{.Top}}" width="{{sub .Right .Left}}" height="{{sub .Bot .Top}}"/>
+    </svg>
+    <div class="chart-tooltip" role="status" hidden></div>
+  </div>
+  <ul class="service-list">
+    {{range $.Stats.Services}}<li><span class="muted">{{t (printf "service.%s" .Name)}}</span> <span class="num">{{bytes .CurrentBytes}}</span></li>{{end}}
+  </ul>
+  <details class="chart-table">
+    <summary>{{t "overview.chart.show_table"}}</summary>
+    <table>
+      <thead><tr><th>{{t "overview.chart.col_time"}}</th><th class="num">{{t "overview.chart.col_memory"}}</th></tr></thead>
+      <tbody>
+        {{range .Rows}}<tr><td>{{.Time}}</td><td class="num">{{.Value}}</td></tr>{{end}}
+      </tbody>
+    </table>
+  </details>
+  {{end}}
+  {{end}}
+</section>
+{{end}}
+
+{{/* Instance settings. Only global component classes (see ui/DESIGN.md). */}}
+{{define "server_settings"}}
+<div id="admin-flash"></div>
+{{if .RestartRequired}}<div class="alert alert-error">{{t "server_settings.restart_pending"}}</div>{{end}}
+<form class="form" hx-post="/admin/server-settings" hx-swap="none" data-savebar>
+  <section class="section">
+    <header class="section-head"><h3>{{t "server_settings.web.title"}}</h3></header>
+    <div class="form">
+      <label class="field">{{t "server_settings.domain"}}
+        <input name="domain" value="{{.Domain}}" placeholder="bothub.example.com" maxlength="253" class="input-wide">
+        <span class="hint">{{t "server_settings.domain_hint"}}</span>
+      </label>
+      <label class="toggle-row">
+        <span><strong>{{t "server_settings.behind_proxy"}}</strong><span class="hint">{{t "server_settings.behind_proxy_hint"}}</span></span>
+        <input type="checkbox" class="toggle" name="behind_proxy" value="true" {{if .BehindProxy}}checked{{end}}>
+      </label>
+    </div>
+  </section>
+
+  <section class="section">
+    <header class="section-head">
+      <h3>{{t "server_settings.ports.title"}}</h3>
+      <span class="section-meta">{{t "server_settings.ports.meta"}}</span>
+    </header>
+    <div class="form">
+      <label class="field">{{t "server_settings.public_port"}}
+        <input type="number" name="public_port" value="{{.PublicPort}}" min="1" max="65535" required class="input-small">
+        <span class="hint">{{t "server_settings.public_port_hint"}}</span>
+      </label>
+      <label class="field">{{t "server_settings.api_port"}}
+        <input type="number" name="api_port" value="{{.APIPort}}" min="1" max="65535" required class="input-small">
+        <span class="hint">{{t "server_settings.internal_port_hint"}}</span>
+      </label>
+      <label class="field">{{t "server_settings.redis_port"}}
+        <input type="number" name="redis_port" value="{{.RedisPort}}" min="1" max="65535" required class="input-small">
+        <span class="hint">{{t "server_settings.internal_port_hint"}}</span>
+      </label>
+    </div>
+  </section>
+
+  <section class="section">
+    <header class="section-head"><h3>{{t "server_settings.limits.title"}}</h3></header>
+    <div class="form">
+      <label class="field">{{t "server_settings.session_hours"}}
+        <input type="number" name="session_hours" value="{{.SessionHours}}" min="1" max="720" required class="input-small">
+        <span class="hint">{{t "server_settings.session_hours_hint"}}</span>
+      </label>
+      <label class="field">{{t "server_settings.max_upload"}}
+        <input type="number" name="max_upload_mb" value="{{.MaxUploadMB}}" min="1" max="100" required class="input-small">
+        <span class="hint">{{t "server_settings.max_upload_hint"}}</span>
+      </label>
+    </div>
+  </section>
+
+  <div data-save-own><button type="submit" class="btn btn-primary">{{t "action.save"}}</button></div>
+</form>
+{{end}}
+
+{{/* SMTP settings. The password is write-only and never rendered. */}}
+{{define "email_settings"}}
+{{$m := .SMTP}}
+<div id="admin-flash"></div>
+<form class="form" hx-post="/admin/email" hx-swap="none" data-reset-on="bothub:reset-forms" data-savebar>
+  <label class="toggle-row">
+    <span><strong>{{t "email_settings.enabled"}}</strong><span class="hint">{{t "email_settings.enabled_hint"}}</span></span>
+    <input type="checkbox" class="toggle" name="enabled" value="true" {{if $m.Enabled}}checked{{end}}>
+  </label>
+
+  <section class="section">
+    <header class="section-head"><h3>{{t "email_settings.server.title"}}</h3></header>
+    <div class="form">
+      <label class="field">{{t "email_settings.host"}}
+        <input name="host" value="{{$m.Host}}" placeholder="smtp.example.com" maxlength="253" class="input-wide">
+      </label>
+      <div class="inline-form">
+        <label class="field">{{t "email_settings.port"}}
+          <input type="number" name="port" value="{{$m.Port}}" min="1" max="65535" required class="input-small">
+        </label>
+        <label class="field">{{t "email_settings.security"}}
+          <select name="security">
+            {{range .SecurityModes}}<option value="{{.}}" {{if eq . $m.Security}}selected{{end}}>{{t (printf "email_settings.security.%s" .)}}</option>{{end}}
+          </select>
+        </label>
+      </div>
+      <span class="hint">{{t "email_settings.port_hint"}}</span>
+      <label class="field">{{t "email_settings.username"}}
+        <input name="username" value="{{$m.Username}}" autocomplete="off" maxlength="254" class="input-medium">
+      </label>
+      <label class="field">{{t "email_settings.password"}}
+        <input type="password" name="password" autocomplete="new-password" class="input-medium"
+          placeholder="{{if $m.PasswordSet}}{{t "email_settings.password_set"}}{{end}}">
+        <span class="hint">{{t "email_settings.password_hint"}}</span>
+      </label>
+    </div>
+  </section>
+
+  <section class="section">
+    <header class="section-head"><h3>{{t "email_settings.sender.title"}}</h3></header>
+    <div class="form">
+      <label class="field">{{t "email_settings.from_address"}}
+        <input type="email" name="from_address" value="{{$m.FromAddress}}" placeholder="bothub@example.com" maxlength="254" class="input-medium">
+      </label>
+      <label class="field">{{t "email_settings.from_name"}}
+        <input name="from_name" value="{{$m.FromName}}" placeholder="BotHub" maxlength="100" class="input-medium">
+      </label>
+    </div>
+  </section>
+
+  <div data-save-own><button type="submit" class="btn btn-primary">{{t "action.save"}}</button></div>
+</form>
+
+<section class="section">
+  <header class="section-head"><h3>{{t "email_settings.test.title"}}</h3></header>
+  <div>
+    <form class="inline-form" hx-post="/admin/email/test" hx-swap="none">
+      <input type="email" name="to" required maxlength="254" placeholder="you@example.com" class="input-medium" aria-label="{{t "email_settings.test.to"}}">
+      <button type="submit" class="btn">{{t "email_settings.test.send"}}</button>
+    </form>
+    <p class="hint">{{t "email_settings.test.hint"}}</p>
+  </div>
+</section>
+{{end}}
+
+{{/* Resource overview: every process with load and stability. Refreshes every 5 s. */}}
+{{define "resources_fragment"}}{{template "resources" .Data}}{{end}}
+
+{{define "resources"}}
+<div id="resources" hx-get="/admin/resources/table" hx-trigger="every 5s" hx-swap="outerHTML">
+  <p class="hint hint-top">{{t "resources.intro"}}</p>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>{{t "resources.col.process"}}</th>
+        <th>{{t "resources.col.health"}}</th>
+        <th>{{t "resources.col.load"}}</th>
+        <th class="num">{{t "resources.col.memory"}}</th>
+        <th class="num">{{t "resources.col.storage"}}</th>
+        <th class="num">{{t "resources.col.uptime"}}</th>
+        <th class="num">{{t "resources.col.restarts"}}</th>
+        <th class="num">{{t "resources.col.action"}}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range .}}
+      <tr>
+        <td><strong>{{t (printf "resources.process.%s" .Key)}}</strong><br><span class="muted">{{t (printf "resources.process.%s.hint" .Key)}}{{if .PID}} · PID {{.PID}}{{end}}{{if eq .Key "plugin_manager"}} · {{t "resources.plugins" "count" .Plugins}}{{end}}{{if and (eq .Key "botcore") (eq .Status "running")}} · {{t "resources.bots_online" "count" .Bots}}{{end}}</span></td>
+        <td><span class="badge-soft badge-soft-{{if eq .Health "stable"}}running{{else if eq .Health "unstable"}}error{{else}}stopped{{end}}"><span class="badge-dot" aria-hidden="true"></span>{{t (printf "resources.health.%s" .Health)}}</span></td>
+        <td>
+          {{if eq .Kind "external"}}<span class="num">{{t "resources.latency" "ms" .Latency}}</span>{{else if eq .Kind "database"}}{{if eq .Status "running"}}<span class="num">{{t "resources.response_time" "ms" .Latency}}</span>{{else}}–{{end}}{{else}}{{template "gauge" .Gauge}}{{end}}
+        </td>
+        <td class="num">{{if or (eq .Kind "external") (eq .Kind "database") (ne .Status "running")}}–{{else}}{{.Memory}}{{end}}</td>
+        <td class="num">{{with .Storage}}{{.}}{{else}}–{{end}}</td>
+        <td class="num">{{if eq .Status "running"}}{{.Uptime}}{{else}}–{{end}}</td>
+        <td class="num">{{.Restarts}}</td>
+        <td class="num">{{if .Restartable}}<button type="button" class="btn btn-sm" hx-post="/admin/resources/{{.Key}}/restart" hx-target="#flash" hx-disabled-elt="this"
+          hx-confirm="{{t (printf "resources.restart_confirm.%s" .Key)}}">↺ {{t "resources.restart"}}</button>{{else}}<span class="muted" title="{{t "resources.restart_impossible"}}">–</span>{{end}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+</div>
+{{end}}
+
+{{/* Users & Roles: roles on top (search, create, edit permissions), users
+     below (search by name, add, change role, delete). Receives {View, Flash}. */}}
+{{define "users_roles_fragment"}}{{template "users_roles" .Data}}{{end}}
+
+{{define "users_roles"}}
+{{$v := .View}}
+<div id="users-roles">
+  <div id="admin-flash">{{with .Flash}}<div class="alert alert-success">{{t .}}</div>{{end}}</div>
+
+  <section class="section">
+    <header class="section-head">
+      <h3>{{t "roles.title"}}</h3>
+      <input type="search" class="input-medium" placeholder="{{t "roles.search"}}" aria-label="{{t "roles.search"}}" data-card-filter="role-list">
+    </header>
+    <ul class="list" id="role-list">
+      {{range $v.Roles}}
+      {{$role := .}}
+      <li data-filter-text="{{.Name}}">
+        <details class="role-details">
+          <summary class="inline-form">
+            <strong>{{.Name}}</strong>
+            {{if .Builtin}}<span class="badge-soft">{{t "roles.builtin"}}</span>{{end}}
+            <span class="muted">{{t "roles.summary" "permissions" (len .Permissions) "users" .UserCount}}</span>
+          </summary>
+          <form class="form" hx-post="/admin/roles/{{.ID}}" hx-target="#users-roles" hx-swap="outerHTML">
+            <input type="hidden" name="name" value="{{.Name}}">
+            <div class="chips">
+              {{range $v.Permissions}}
+              <label class="chip"><input type="checkbox" name="permissions" value="{{.}}" {{if index $role.Has .}}checked{{end}} {{if eq $role.Key "admin"}}disabled{{end}}>{{t (printf "permission.%s" .)}}</label>
+              {{end}}
+            </div>
+            {{if eq .Key "admin"}}<p class="hint">{{t "roles.admin_locked"}}</p>
+            {{else if eq .Key "banned"}}<p class="hint">{{t "roles.banned_hint"}}</p>{{end}}
+            <div class="inline-form">
+              {{if ne .Key "admin"}}<button type="submit" class="btn btn-primary btn-sm">{{t "action.save"}}</button>{{end}}
+              {{if not .Builtin}}<button type="button" class="btn btn-danger-soft btn-sm" hx-delete="/admin/roles/{{.ID}}" hx-target="#users-roles" hx-swap="outerHTML" hx-confirm="{{t "roles.delete_confirm" "name" .Name}}">{{t "roles.delete"}}</button>{{end}}
+            </div>
+          </form>
+        </details>
+      </li>
+      {{end}}
+    </ul>
+    <details class="role-details">
+      <summary class="btn btn-sm">+ {{t "roles.create"}}</summary>
+      <form class="form" hx-post="/admin/roles" hx-target="#users-roles" hx-swap="outerHTML">
+        <label class="field">{{t "roles.name"}}
+          <input name="name" required maxlength="32" class="input-medium">
+        </label>
+        <div class="chips">
+          {{range $v.Permissions}}<label class="chip"><input type="checkbox" name="permissions" value="{{.}}">{{t (printf "permission.%s" .)}}</label>{{end}}
+        </div>
+        <div><button type="submit" class="btn btn-primary btn-sm">{{t "roles.create"}}</button></div>
+      </form>
+    </details>
+  </section>
+
+  <section class="section">
+    <header class="section-head">
+      <h3>{{t "users.title"}}</h3>
+      <input type="search" class="input-medium" placeholder="{{t "users.search"}}" aria-label="{{t "users.search"}}" data-card-filter="user-list">
+    </header>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>{{t "users.col.name"}}</th>
+          <th>{{t "users.col.role"}}</th>
+          <th>{{t "users.col.twofa"}}</th>
+          <th>{{t "users.col.last_login"}}</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="user-list">
+        {{range $v.Users}}
+        {{$user := .}}
+        <tr data-filter-text="{{.Username}} {{with .Email}}{{.}}{{end}}">
+          <td><strong>{{.Username}}</strong>{{if .Self}} <span class="muted">({{t "users.you"}})</span>{{end}}<br><span class="muted">{{with .Email}}{{.}}{{else}}–{{end}}</span></td>
+          <td>
+            <form hx-post="/admin/users/{{.ID}}/role" hx-trigger="change" hx-target="#users-roles" hx-swap="outerHTML">
+              <select name="role_id" aria-label="{{t "users.col.role"}}" {{if .Self}}disabled{{end}}>
+                {{range $v.Roles}}<option value="{{.ID}}" {{if eq .ID $user.RoleID}}selected{{end}}>{{.Name}}</option>{{end}}
+              </select>
+            </form>
+          </td>
+          <td>{{if .TwoFactorEnabled}}<span class="badge-soft badge-soft-running">{{t "security.twofa.on"}}</span>{{else}}<span class="badge-soft">{{t "security.twofa.off"}}</span>{{end}}</td>
+          <td class="muted">{{with .LastLoginAt}}{{.Local.Format "02.01.2006 15:04"}}{{else}}–{{end}}</td>
+          <td class="num">{{if not .Self}}<button type="button" class="icon-btn icon-btn-plain" hx-delete="/admin/users/{{.ID}}" hx-target="#users-roles" hx-swap="outerHTML" hx-confirm="{{t "users.delete_confirm" "name" .Username}}" title="{{t "users.delete"}}" aria-label="{{t "users.delete"}}">×</button>{{end}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    <details class="role-details section-gap-sm">
+      <summary class="btn btn-sm">+ {{t "users.create"}}</summary>
+      <form class="form" hx-post="/admin/users" hx-target="#users-roles" hx-swap="outerHTML">
+        <label class="field">{{t "field.username"}}<input name="username" required minlength="3" maxlength="32" autocomplete="off" class="input-medium"></label>
+        <label class="field">{{t "security.email.new"}}<input type="email" name="email" maxlength="254" autocomplete="off" class="input-medium"></label>
+        <label class="field">{{t "field.password"}}<input type="password" name="password" required minlength="12" autocomplete="new-password" class="input-medium"><span class="hint">{{t "security.password.hint"}}</span></label>
+        <label class="field">{{t "users.col.role"}}
+          <select name="role_id" class="input-medium">{{range $v.Roles}}<option value="{{.ID}}" {{if eq .Key "user"}}selected{{end}}>{{.Name}}</option>{{end}}</select>
+        </label>
+        <div><button type="submit" class="btn btn-primary btn-sm">{{t "users.create"}}</button></div>
+      </form>
+    </details>
+  </section>
+</div>
+{{end}}

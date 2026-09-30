@@ -1,0 +1,17 @@
+{{define "title"}}{{t "login.title"}}{{end}}
+
+{{define "content"}}
+<h2>{{t "login.title"}}</h2>
+{{with .Data.Error}}{{template "flash_error" .}}{{end}}
+<form method="post" action="/login" class="form">
+  <label>{{t "field.username"}}
+    <input name="username" autocomplete="username" required autofocus value="{{.Data.Username}}">
+  </label>
+  <label>{{t "field.password"}}
+    <input type="password" name="password" autocomplete="current-password" required>
+  </label>
+  <button type="submit" class="btn btn-primary">{{t "login.submit"}}</button>
+</form>
+<div id="passkey-error" class="section-gap-sm"></div>
+<button type="button" class="btn btn-block section-gap-sm" data-passkey-login hidden>{{t "login.passkey"}}</button>
+{{end}}

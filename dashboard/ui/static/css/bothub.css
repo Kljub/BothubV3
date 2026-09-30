@@ -1,0 +1,40 @@
+/*
+ * BotHub main stylesheet. Imports every component in cascade order.
+ * The dashboard appends ?v=<hash> to each import when serving this file.
+ * Global components for module/plugin content: see dashboard/ui/DESIGN.md.
+ */
+
+@import url('./components/bh-base.css');
+@import url('./components/bh-layout.css');
+@import url('./components/bh-form.css');
+@import url('./components/bh-button.css');
+@import url('./components/bh-toggle.css');
+@import url('./components/bh-chip.css');
+@import url('./components/bh-card.css');
+@import url('./components/bh-section.css');
+@import url('./components/bh-datepicker.css');
+@import url('./components/bh-pagination.css');
+@import url('./components/bh-command.css');
+@import url('./components/bh-gauge.css');
+@import url('./components/bh-badge.css');
+@import url('./components/bh-alert.css');
+@import url('./components/bh-table.css');
+@import url('./components/bh-utilities.css');
+@import url('./components/bh-sidebar.css');
+@import url('./components/bh-topbar.css');
+@import url('./components/bh-page.css');
+@import url('./components/bh-modal.css');
+@import url('./components/bh-tiles.css');
+@import url('./components/bh-bot-card.css');
+@import url('./components/bh-chart.css');
+@import url('./components/bh-terminal.css');
+@import url('./components/bh-mod-card.css');
+@import url('./components/bh-server.css');
+@import url('./components/bh-status.css');
+@import url('./components/bh-media.css');
+@import url('./components/bh-builder.css');
+@import url('./components/bh-cmdhub.css');
+@import url('./components/bh-savebar.css');
+@import url('./components/bh-timed.css');
+@import url('./components/bh-webhooks.css');
+@import url('./components/bh-modset.css');

@@ -1,0 +1,64 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.change_bot_status",
+  "version": 1,
+  "category": "action",
+  "group": "other",
+  "order": 750,
+  "color": "orange",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_change_bot_status.label",
+  "descriptionKey": "builder.node.action_change_bot_status.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "status": {
+        "type": "string",
+        "enum": [
+          "online",
+          "idle",
+          "dnd",
+          "invisible"
+        ],
+        "default": "online",
+        "x-labelKey": "builder.cfg.status",
+        "x-enumKey": "builder.enum.status"
+      },
+      "activity_type": {
+        "type": "string",
+        "enum": [
+          "playing",
+          "streaming",
+          "listening",
+          "watching",
+          "competing",
+          "custom"
+        ],
+        "default": "playing",
+        "x-labelKey": "builder.cfg.activity_type",
+        "x-enumKey": "builder.enum.activity_type"
+      },
+      "activity": {
+        "type": "string",
+        "maxLength": 128,
+        "x-labelKey": "builder.cfg.activity"
+      }
+    }
+  }
+}

@@ -1,0 +1,97 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "condition.state",
+  "version": 1,
+  "category": "condition",
+  "group": "logic",
+  "icon": "?",
+  "palette": false,
+  "compact": true,
+  "labelKey": "builder.node.condition_state.label",
+  "descriptionKey": "builder.node.condition_state.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "operator": {
+        "type": "string",
+        "enum": [
+          "eq",
+          "ne",
+          "gt",
+          "gte",
+          "lt",
+          "lte",
+          "before",
+          "after",
+          "contains",
+          "not_contains",
+          "starts_with",
+          "not_starts_with",
+          "ends_with",
+          "not_ends_with",
+          "in",
+          "not_in"
+        ],
+        "default": "eq",
+        "x-labelKey": "builder.cfg.operator",
+        "x-kinds": [
+          "compare"
+        ],
+        "x-enumKey": "builder.op",
+        "description": "Word operators; the editor maps old symbols (== != > < >= <= contains) to them."
+      },
+      "value": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.state_value",
+        "x-kinds": [
+          "compare",
+          "match",
+          "option"
+        ],
+        "x-hintKey": "builder.check.compare_hint"
+      },
+      "percent": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 100,
+        "default": 10,
+        "x-labelKey": "builder.cfg.percent",
+        "x-kinds": [
+          "chance"
+        ]
+      },
+      "option_description": {
+        "type": "string",
+        "maxLength": 100,
+        "x-labelKey": "builder.cfg.option_description",
+        "x-kinds": [
+          "option"
+        ]
+      },
+      "option_emoji": {
+        "type": "string",
+        "maxLength": 64,
+        "x-labelKey": "builder.cfg.option_emoji",
+        "x-kinds": [
+          "option"
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,13 @@
+/* bh-pagination: Page numbers below a list or grid. */
+
+.pagination { display: flex; align-items: center; justify-content: center; gap: 4px; margin-top: 20px; }
+.page-btn {
+  min-width: 32px; height: 32px; padding: 0 8px;
+  font: inherit; font-variant-numeric: tabular-nums;
+  color: var(--text-2); background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer;
+}
+.page-btn:hover:not(:disabled) { color: var(--text); border-color: var(--border-strong); }
+.page-btn[aria-current="page"] { color: var(--text); background: var(--surface-2); border-color: var(--blue); font-weight: 700; }
+.page-btn:disabled { opacity: 0.4; cursor: default; }
+.page-gap { padding: 0 4px; color: var(--muted); }

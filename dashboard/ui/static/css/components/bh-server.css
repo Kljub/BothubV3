@@ -1,0 +1,11 @@
+/* bh-server: Server cards. */
+
+.server-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+.server-card { position: relative; display: flex; align-items: center; gap: 14px; padding: 12px 14px; }
+.server-card-text { flex: 1; min-width: 0; }
+.server-leave { position: relative; z-index: 1; margin-left: auto; background: transparent; border-color: transparent; color: var(--muted); opacity: 0; transition: opacity 0.12s, color 0.12s, border-color 0.12s, background 0.12s; }
+.server-card:hover .server-leave, .server-card:focus-within .server-leave { opacity: 1; }
+.server-leave:hover, .server-leave:focus-visible { color: var(--red); border-color: color-mix(in srgb, var(--red) 60%, transparent); background: color-mix(in srgb, var(--red) 12%, transparent); }
+.server-card:hover { border-color: var(--border-strong); }
+.server-card[hidden] { display: none; }
+.server-card-text { display: flex; flex-direction: column; line-height: 1.4; }

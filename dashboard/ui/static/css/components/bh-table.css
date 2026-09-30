@@ -1,0 +1,30 @@
+/* bh-table: Lists and tables. */
+
+.list { list-style: none; margin: 0; padding: 0; }
+.list li { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.list li:last-child { border-bottom: 0; }
+.list a:hover { text-decoration: underline; }
+.chart-table { margin-top: 12px; }
+.chart-table summary { cursor: pointer; color: var(--muted); font-size: 12px; }
+.chart-table table { width: 100%; margin-top: 8px; border-collapse: collapse; }
+.chart-table th, .chart-table td { padding: 5px 8px; border-bottom: 1px solid var(--border); text-align: left; }
+.chart-table th { color: var(--muted); font-weight: 500; }
+.chart-table .num { text-align: right; }
+.list-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.list-count { font-size: 16px; }
+.list-count strong { font-size: 20px; margin-right: 4px; }
+.list-search { width: min(220px, 50%); padding: 8px 10px; }
+
+/* Data table. Right-align number columns with .num on th and td. */
+.table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.table th { padding: 8px 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); text-align: left; border-bottom: 1px solid var(--border-strong); }
+.table td { padding: 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.table tr:last-child td { border-bottom: 0; }
+.table .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Horizontal meter (e.g. CPU load): bar + value. */
+.meter { display: inline-flex; align-items: center; gap: 8px; min-width: 150px; }
+.meter svg { width: 90px; height: 6px; }
+.meter-track { fill: var(--surface-2); }
+.meter-fill { fill: var(--blue); }
+.meter-fill-high { fill: var(--red); }

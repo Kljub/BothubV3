@@ -1,0 +1,326 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.send_message",
+  "version": 1,
+  "category": "action",
+  "group": "advanced_messages",
+  "order": 30,
+  "color": "blue",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_send_message.label",
+  "descriptionKey": "builder.node.action_send_message.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    },
+    {
+      "name": "components",
+      "type": "flow",
+      "labelKey": "builder.port.components"
+    }
+  ],
+  "results": [
+    {
+      "suffix": ".id",
+      "labelKey": "builder.result.send_message.0"
+    },
+    {
+      "suffix": ".url",
+      "labelKey": "builder.result.send_message.1"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "message": {
+        "type": "object",
+        "additionalProperties": false,
+        "x-widget": "message",
+        "x-labelKey": "builder.msg.what",
+        "default": {
+          "mode": "normal",
+          "content": ""
+        },
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "normal",
+              "v2"
+            ]
+          },
+          "content": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "embeds": {
+            "type": "array",
+            "maxItems": 10,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "color": {
+                  "type": "string",
+                  "pattern": "^#[0-9a-fA-F]{6}$"
+                },
+                "title": {
+                  "type": "string",
+                  "maxLength": 256
+                },
+                "url": {
+                  "type": "string",
+                  "maxLength": 2000
+                },
+                "description": {
+                  "type": "string",
+                  "maxLength": 4096
+                },
+                "author": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "maxLength": 256
+                    },
+                    "url": {
+                      "type": "string",
+                      "maxLength": 2000
+                    },
+                    "icon_url": {
+                      "type": "string",
+                      "maxLength": 2000
+                    }
+                  }
+                },
+                "fields": {
+                  "type": "array",
+                  "maxItems": 25,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "name",
+                      "value"
+                    ],
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "maxLength": 256
+                      },
+                      "value": {
+                        "type": "string",
+                        "maxLength": 1024
+                      },
+                      "inline": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                },
+                "image_url": {
+                  "type": "string",
+                  "maxLength": 2000
+                },
+                "thumbnail_url": {
+                  "type": "string",
+                  "maxLength": 2000
+                },
+                "footer": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "text": {
+                      "type": "string",
+                      "maxLength": 2048
+                    },
+                    "icon_url": {
+                      "type": "string",
+                      "maxLength": 2000
+                    }
+                  }
+                },
+                "timestamp": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "accent": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$",
+            "description": "Components V2: container accent color."
+          },
+          "components": {
+            "type": "array",
+            "maxItems": 40,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "type"
+              ],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "text",
+                    "separator",
+                    "media"
+                  ]
+                },
+                "content": {
+                  "type": "string",
+                  "maxLength": 4000
+                },
+                "divider": {
+                  "type": "boolean"
+                },
+                "spacing": {
+                  "type": "string",
+                  "enum": [
+                    "small",
+                    "large"
+                  ]
+                },
+                "urls": {
+                  "type": "array",
+                  "maxItems": 10,
+                  "items": {
+                    "type": "string",
+                    "maxLength": 2000
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "target": {
+        "type": "string",
+        "enum": [
+          "reply",
+          "reply_message",
+          "command_channel",
+          "channel",
+          "dm",
+          "edit"
+        ],
+        "default": "reply",
+        "x-widget": "destination",
+        "x-labelKey": "builder.msg.where"
+      },
+      "reply_to": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.reply_to",
+        "x-hintKey": "builder.cfg.ref_hint",
+        "x-ref": "message",
+        "x-group": "destination",
+        "x-showIf": {
+          "target": [
+            "reply_message"
+          ]
+        }
+      },
+      "channel": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.channel",
+        "x-hintKey": "builder.cfg.ref_hint",
+        "x-ref": "channel",
+        "x-group": "destination",
+        "x-showIf": {
+          "target": [
+            "channel"
+          ]
+        }
+      },
+      "user": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.user",
+        "x-hintKey": "builder.cfg.ref_hint",
+        "x-ref": "member",
+        "x-group": "destination",
+        "x-showIf": {
+          "target": [
+            "dm"
+          ]
+        },
+        "default": "{user.id}"
+      },
+      "edit_message": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.edit_message",
+        "x-hintKey": "builder.cfg.ref_hint",
+        "x-ref": "message",
+        "x-group": "destination",
+        "x-showIf": {
+          "target": [
+            "edit"
+          ]
+        }
+      },
+      "delete_after": {
+        "type": "string",
+        "maxLength": 20,
+        "pattern": "^[0-9]+[smhd]$",
+        "x-widget": "undo",
+        "x-labelKey": "builder.msg.undo"
+      },
+      "ephemeral": {
+        "type": "boolean",
+        "default": false,
+        "x-labelKey": "builder.cfg.ephemeral",
+        "x-advanced": true,
+        "x-showIf": {
+          "target": [
+            "reply",
+            "reply_message"
+          ]
+        }
+      },
+      "silent": {
+        "type": "boolean",
+        "default": false,
+        "x-labelKey": "builder.cfg.silent",
+        "x-advanced": true
+      },
+      "mentions": {
+        "type": "string",
+        "enum": [
+          "all",
+          "users",
+          "none"
+        ],
+        "default": "all",
+        "x-labelKey": "builder.cfg.mentions",
+        "x-enumKey": "builder.enum.mentions",
+        "x-advanced": true
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint",
+        "x-advanced": true
+      }
+    }
+  },
+  "produces": "message",
+  "wide": true
+}

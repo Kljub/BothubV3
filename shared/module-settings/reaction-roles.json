@@ -1,0 +1,63 @@
+{
+  "module": "reaction-roles",
+  "fields": [
+    {
+      "key": "entries",
+      "type": "list",
+      "max": 100,
+      "titleField": "emoji",
+      "item": [
+        {
+          "key": "channel",
+          "type": "channel",
+          "channelTypes": [
+            "text",
+            "announcement",
+            "forum"
+          ]
+        },
+        {
+          "key": "messageId",
+          "type": "text",
+          "max": 21,
+          "pattern": "^(\\d{15,21})?$"
+        },
+        {
+          "key": "emoji",
+          "type": "emojis",
+          "max": 1
+        },
+        {
+          "key": "addRoles",
+          "type": "roles",
+          "max": 10
+        },
+        {
+          "key": "removeRoles",
+          "type": "roles",
+          "max": 10
+        },
+        {
+          "key": "unique",
+          "type": "bool",
+          "default": false
+        },
+        {
+          "key": "toggle",
+          "type": "bool",
+          "default": false
+        },
+        {
+          "key": "blacklist",
+          "type": "roles",
+          "max": 25
+        }
+      ],
+      "unique": [
+        "messageId",
+        "emoji"
+      ],
+      "hint": true
+    }
+  ]
+}

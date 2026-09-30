@@ -1,0 +1,96 @@
+{
+  "module": "suggestions",
+  "fields": [
+    {
+      "key": "channel",
+      "type": "channel",
+      "channelTypes": [
+        "text",
+        "announcement",
+        "forum"
+      ],
+      "hint": true
+    },
+    {
+      "key": "convertMessages",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "upvote",
+      "type": "emojis",
+      "max": 1
+    },
+    {
+      "key": "neutral",
+      "type": "bool",
+      "default": false
+    },
+    {
+      "key": "downvote",
+      "type": "emojis",
+      "max": 1
+    },
+    {
+      "key": "color",
+      "type": "color",
+      "default": "#60a5fa"
+    },
+    {
+      "key": "thread",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "anonymous",
+      "type": "bool",
+      "default": false
+    },
+    {
+      "key": "dmAuthor",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "managerRoles",
+      "type": "roles",
+      "max": 25,
+      "hint": true
+    },
+    {
+      "key": "autoApprove",
+      "type": "number",
+      "min": 0,
+      "max": 10000,
+      "default": 0
+    },
+    {
+      "key": "autoDeny",
+      "type": "number",
+      "min": 0,
+      "max": 10000,
+      "default": 0
+    },
+    {
+      "key": "roleMode",
+      "type": "select",
+      "options": [
+        "all",
+        "except",
+        "only"
+      ],
+      "default": "all"
+    },
+    {
+      "key": "roles",
+      "type": "roles",
+      "max": 50,
+      "showIf": {
+        "roleMode": [
+          "except",
+          "only"
+        ]
+      }
+    }
+  ]
+}

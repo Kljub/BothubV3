@@ -1,0 +1,82 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.poll_create",
+  "version": 1,
+  "category": "action",
+  "group": "polls",
+  "order": 1090,
+  "color": "teal",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_poll_create.label",
+  "descriptionKey": "builder.node.action_poll_create.description",
+  "module": "polls",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": ".id",
+      "labelKey": "builder.result.poll_create.0"
+    },
+    {
+      "suffix": ".url",
+      "labelKey": "builder.result.poll_create.1"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "channel": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.channel",
+        "x-hintKey": "builder.cfg.ref_hint",
+        "x-ref": "channel"
+      },
+      "question": {
+        "type": "string",
+        "maxLength": 300,
+        "x-labelKey": "builder.cfg.question"
+      },
+      "answers": {
+        "type": "string",
+        "maxLength": 1000,
+        "x-labelKey": "builder.cfg.answers",
+        "x-multiline": true,
+        "x-hintKey": "builder.cfg.answers_hint"
+      },
+      "duration": {
+        "type": "string",
+        "maxLength": 20,
+        "x-labelKey": "builder.cfg.duration",
+        "x-placeholder": "10m",
+        "x-hintKey": "builder.cfg.duration_hint"
+      },
+      "multiple": {
+        "type": "boolean",
+        "default": false,
+        "x-labelKey": "builder.cfg.multiple"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  },
+  "produces": "message"
+}

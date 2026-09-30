@@ -1,0 +1,57 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.music_player",
+  "version": 1,
+  "category": "action",
+  "group": "music",
+  "order": 160,
+  "color": "teal",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_music_player.label",
+  "descriptionKey": "builder.node.action_music_player.description",
+  "module": "music",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "channel": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.channel",
+        "x-hintKey": "builder.cfg.ref_hint",
+        "x-ref": "channel",
+        "default": "{channel.id}"
+      },
+      "text_channel": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.text_channel",
+        "x-hintKey": "builder.cfg.ref_optional_hint",
+        "x-ref": "channel"
+      },
+      "guild": {
+        "type": "string",
+        "maxLength": 40,
+        "x-advanced": true,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.guild",
+        "x-hintKey": "builder.cfg.guild_hint"
+      }
+    }
+  }
+}

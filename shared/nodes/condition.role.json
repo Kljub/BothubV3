@@ -1,0 +1,60 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "condition.role",
+  "version": 1,
+  "category": "condition",
+  "group": "general",
+  "order": 40,
+  "icon": "⇒",
+  "conditionKind": "match",
+  "labelKey": "builder.node.condition_role.label",
+  "descriptionKey": "builder.node.condition_role.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "branches",
+      "type": "flow",
+      "labelKey": "builder.port.branches"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "user": {
+        "type": "string",
+        "x-labelKey": "builder.cfg.user",
+        "x-hintKey": "builder.cfg.ref_hint"
+      },
+      "require": {
+        "type": "string",
+        "enum": [
+          "any",
+          "all"
+        ],
+        "default": "any",
+        "x-labelKey": "builder.cfg.require",
+        "x-enumKey": "builder.enum.require"
+      },
+      "multi": {
+        "type": "string",
+        "enum": [
+          "first",
+          "all"
+        ],
+        "default": "first",
+        "x-advanced": true,
+        "x-labelKey": "builder.cfg.multi",
+        "x-hintKey": "builder.cfg.multi_hint",
+        "x-enumKey": "builder.enum.multi"
+      }
+    }
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.create_transcript",
+  "version": 1,
+  "category": "action",
+  "group": "message_actions",
+  "order": 50,
+  "color": "blue",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_create_transcript.label",
+  "descriptionKey": "builder.node.action_create_transcript.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": "",
+      "labelKey": "builder.result.create_transcript.0"
+    },
+    {
+      "suffix": ".download_url",
+      "labelKey": "builder.result.create_transcript.1"
+    },
+    {
+      "suffix": ".count",
+      "labelKey": "builder.result.create_transcript.2"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "channel": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.channel",
+        "x-hintKey": "builder.cfg.ref_hint",
+        "x-ref": "channel",
+        "default": "{channel.id}"
+      },
+      "limit": {
+        "type": "number",
+        "minimum": 1,
+        "x-labelKey": "builder.cfg.limit",
+        "maximum": 5000,
+        "default": 500
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  }
+}

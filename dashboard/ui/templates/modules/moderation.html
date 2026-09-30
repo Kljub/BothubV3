@@ -1,0 +1,139 @@
+{{/* Moderation module settings. Receives a moderationView. Saved through the save bar. */}}
+{{define "moderation_settings"}}
+{{$c := .Config}}
+<form class="form" id="moderation-settings" hx-put="/bot/{{.BotID}}/modules/moderation/config" hx-target="#flash" data-savebar>
+  {{/* Servers whose roles and channels loaded; only these are replaced on save. */}}
+  {{range .Guilds}}{{if not .Failed}}<input type="hidden" name="loaded_guild" value="{{.ID}}">{{end}}{{end}}
+  <section class="box">
+    <header class="box-head">
+      <h2>{{t "moderation.access.title"}}</h2>
+      <span class="box-meta">{{t "moderation.access.meta"}}</span>
+    </header>
+    <div class="box-body form">
+      <label class="toggle-row">
+        <span><strong>{{t "moderation.access.default"}}</strong><span class="hint">{{t "moderation.access.default_hint"}}</span></span>
+        <input type="checkbox" class="toggle" name="default_permissions" value="true" {{if $c.DefaultPermissions}}checked{{end}}>
+      </label>
+      {{template "moderation_roles" (list . "moderator_roles" "moderation.access.moderator_roles" "moderation.access.moderator_roles_hint" .Moderator)}}
+      {{template "moderation_roles" (list . "admin_roles" "moderation.access.admin_roles" "moderation.access.admin_roles_hint" .Admin)}}
+    </div>
+  </section>
+
+  <section class="box">
+    <header class="box-head">
+      <h2>{{t "moderation.log.title"}}</h2>
+      <span class="box-meta">{{t "moderation.log.meta"}}</span>
+    </header>
+    <div class="box-body form">
+      <label class="toggle-row">
+        <span><strong>{{t "moderation.log.enable"}}</strong><span class="hint">{{t "moderation.log.enable_hint"}}</span></span>
+        <input type="checkbox" class="toggle" name="log_enabled" value="true" {{if $c.LogEnabled}}checked{{end}}>
+      </label>
+      {{range .Guilds}}
+      <label class="field">{{t "moderation.log.channel" "server" .Name}}
+        <select name="log_channel_{{.ID}}" class="input-medium">
+          <option value="">{{t "moderation.log.channel_none"}}</option>
+          {{$sel := .LogChannel}}
+          {{range .Channels}}{{if or (eq .Type "text") (eq .Type "announcement")}}<option value="{{.ID}}" {{if eq .ID $sel}}selected{{end}}>#{{.Name}}</option>{{end}}{{end}}
+        </select>
+        {{if .Failed}}<span class="hint">{{t "moderation.server_unreachable"}}</span>{{end}}
+      </label>
+      {{else}}
+      <p class="muted">{{t "moderation.no_servers"}}</p>
+      {{end}}
+      <label class="field">{{t "moderation.log.color"}}
+        <input type="color" name="log_color" value="{{$c.LogColor}}" class="input-small">
+      </label>
+    </div>
+  </section>
+
+  <section class="box">
+    <header class="box-head">
+      <h2>{{t "moderation.dm.title"}}</h2>
+      <span class="box-meta">{{t "moderation.dm.meta"}}</span>
+    </header>
+    <div class="box-body form">
+      <label class="toggle-row">
+        <span><strong>{{t "moderation.dm.enable"}}</strong><span class="hint">{{t "moderation.dm.enable_hint"}}</span></span>
+        <input type="checkbox" class="toggle" name="dm_enabled" value="true" {{if $c.DMEnabled}}checked{{end}}>
+      </label>
+      <div class="field">
+        <span class="field-label">{{t "moderation.dm.mode"}}</span>
+        <div class="chips">
+          {{range list "embed" "text"}}<label class="chip"><input type="radio" name="dm_mode" value="{{.}}" {{if eq . $c.DMMode}}checked{{end}}> {{t (printf "moderation.dm.mode_%s" .)}}</label>{{end}}
+        </div>
+      </div>
+      <label class="field">{{t "moderation.dm.message"}}
+        <textarea name="dm_message" rows="6" maxlength="2000" required data-counter="moderation-dm-count">{{$c.DMMessage}}</textarea>
+        <span class="hint">{{t "moderation.dm.variables"}} <span class="mono">{action} {moderator} {time} {case} {reason} {server}</span> · <span id="moderation-dm-count">{{len $c.DMMessage}}/2000</span></span>
+      </label>
+      <label class="field">{{t "moderation.dm.color"}}
+        <input type="color" name="punishment_color" value="{{$c.PunishmentColor}}" class="input-small">
+        <span class="hint">{{t "moderation.dm.color_hint"}}</span>
+      </label>
+    </div>
+  </section>
+
+  <section class="box">
+    <header class="box-head">
+      <h2>{{t "moderation.ban.title"}}</h2>
+    </header>
+    <div class="box-body form">
+      <label class="field">{{t "moderation.ban.delete_messages"}}
+        <select name="ban_delete_messages" class="input-medium">
+          {{range .DeleteOptions}}<option value="{{.}}" {{if eq . $c.BanDeleteMessages}}selected{{end}}>{{t (printf "builder.enum.delete_messages.%s" .)}}</option>{{end}}
+        </select>
+        <span class="hint">{{t "moderation.ban.delete_messages_hint"}}</span>
+      </label>
+    </div>
+  </section>
+
+  <section class="box">
+    <header class="box-head">
+      <h2>{{t "moderation.auto.title"}}</h2>
+      <span class="box-meta">{{t "moderation.auto.meta"}}</span>
+    </header>
+    <div class="box-body form">
+      <p class="hint hint-top">{{t "moderation.auto.hint"}}</p>
+      <div class="rows" data-rows>
+        {{range $c.AutoPunishments}}{{template "moderation_rule" .}}{{end}}
+      </div>
+      <template data-row-template>{{template "moderation_rule" .NewRule}}</template>
+      <div><button type="button" class="btn btn-sm" data-add-row>+ {{t "moderation.auto.add"}}</button></div>
+    </div>
+  </section>
+</form>
+{{end}}
+
+{{/* Role chips of every server. Receives (list view fieldName labelKey hintKey selected). */}}
+{{define "moderation_roles"}}
+{{$v := index . 0}}{{$name := index . 1}}{{$sel := index . 4}}
+<div class="field">
+  <span class="field-label">{{t (index . 2)}}</span>
+  <span class="hint hint-top">{{t (index . 3)}}</span>
+  {{range $v.Guilds}}
+  {{$g := .}}
+  <span class="muted">{{.Name}}</span>
+  <div class="chips">
+    {{range .Roles}}{{if not .Managed}}<label class="chip"><input type="checkbox" name="{{$name}}" value="{{$g.ID}}:{{.ID}}" {{if index $sel .ID}}checked{{end}}> @{{.Name}}</label>{{end}}{{else}}<span class="hint">{{if $g.Failed}}{{t "moderation.server_unreachable"}}{{else}}{{t "moderation.access.no_roles"}}{{end}}</span>{{end}}
+  </div>
+  {{else}}
+  <p class="muted">{{t "moderation.no_servers"}}</p>
+  {{end}}
+</div>
+{{end}}
+
+{{/* One automatic punishment. Receives an api.AutoPunishment. */}}
+{{define "moderation_rule"}}
+<div class="row-entry">
+  <select name="rule_trigger" aria-label="{{t "moderation.auto.trigger"}}">
+    {{range list "warnings" "timeouts"}}<option value="{{.}}" {{if eq . $.Trigger}}selected{{end}}>{{t (printf "moderation.auto.trigger_%s" .)}}</option>{{end}}
+  </select>
+  <input type="number" name="rule_count" min="1" max="100" required value="{{.Count}}" class="input-small" aria-label="{{t "moderation.auto.count"}}">
+  <select name="rule_action" aria-label="{{t "moderation.auto.action"}}">
+    {{range list "timeout" "kick" "ban"}}<option value="{{.}}" {{if eq . $.Action}}selected{{end}}>{{t (printf "moderation.auto.action_%s" .)}}</option>{{end}}
+  </select>
+  <input name="rule_duration" maxlength="6" pattern="[1-9][0-9]{0,4}[smhd]" value="{{.Duration}}" placeholder="{{t "moderation.auto.duration_placeholder"}}" class="input-small mono" aria-label="{{t "moderation.auto.duration"}}">
+  <button type="button" class="icon-btn" data-remove-row aria-label="{{t "action.remove"}}">×</button>
+</div>
+{{end}}

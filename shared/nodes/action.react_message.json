@@ -1,0 +1,87 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.react_message",
+  "version": 1,
+  "category": "action",
+  "group": "message_actions",
+  "order": 70,
+  "color": "blue",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_react_message.label",
+  "descriptionKey": "builder.node.action_react_message.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "message": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.message",
+        "x-hintKey": "builder.cfg.ref_hint",
+        "x-ref": "message"
+      },
+      "reaction_mode": {
+        "type": "string",
+        "enum": [
+          "add",
+          "remove_bot",
+          "remove_user",
+          "remove_all"
+        ],
+        "default": "add",
+        "x-labelKey": "builder.cfg.reaction_mode",
+        "x-enumKey": "builder.enum.reaction_mode"
+      },
+      "emojis": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.emojis",
+        "x-hintKey": "builder.cfg.emojis_hint",
+        "x-showIf": {
+          "reaction_mode": [
+            "add",
+            "remove_bot",
+            "remove_user"
+          ]
+        }
+      },
+      "user": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.user",
+        "x-hintKey": "builder.cfg.ref_hint",
+        "x-ref": "member",
+        "x-showIf": {
+          "reaction_mode": [
+            "remove_user"
+          ]
+        },
+        "default": "{user.id}"
+      },
+      "undo_after": {
+        "type": "string",
+        "maxLength": 20,
+        "pattern": "^[0-9]+[smhd]$",
+        "x-widget": "undo",
+        "x-labelKey": "builder.undo.title",
+        "x-undoTitleKey": "builder.undo.react_message",
+        "x-undoHintKey": "builder.undo.react_message_hint"
+      }
+    }
+  }
+}

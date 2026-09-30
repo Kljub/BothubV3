@@ -1,0 +1,9 @@
+/* bh-section: Flat section with a heading and a divider. Use inside popups
+   and other containers instead of box (no card inside a card). */
+
+.section { padding: 18px 0; border-bottom: 1px solid var(--border-strong); }
+.section:first-child { padding-top: 4px; }
+.section:last-child { border-bottom: 0; }
+.section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.section-head h3 { font-size: 14px; font-weight: 600; }
+.section-meta { font-size: 11px; color: var(--muted); }

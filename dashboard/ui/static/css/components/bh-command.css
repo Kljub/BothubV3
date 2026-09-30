@@ -1,0 +1,22 @@
+/* bh-command: One command row: usage chip, title, description, gear and
+   toggle. Enabled toggles use the group color (--group) when set. */
+
+.command-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+.command-row:last-child { border-bottom: 0; }
+.command-text { min-width: 0; }
+.command-line { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.command-usage { padding: 3px 7px; font-family: ui-monospace, "SFMono-Regular", Consolas, monospace; font-size: 12px; color: var(--text); background: var(--surface-2); border-radius: 4px; }
+.command-title { font-size: 14px; color: var(--muted); }
+.command-desc { margin-top: 4px; font-size: 12px; color: var(--muted); }
+.command-actions { display: flex; align-items: center; gap: 10px; flex: none; }
+.command-actions form { margin: 0; }
+.command-row input.toggle:checked { background: var(--group, var(--accent)); }
+
+/* Expandable row: <details class="command-details"> with a command-row as
+   <summary> and a command-panel that holds the details. */
+.command-details { border-bottom: 1px solid var(--border); }
+.command-details:last-child { border-bottom: 0; }
+.command-details > summary { list-style: none; cursor: pointer; border-bottom: 0; }
+.command-details > summary::-webkit-details-marker { display: none; }
+.command-details[open] > summary .icon-chevron { transform: rotate(180deg); }
+.command-panel { display: flex; flex-direction: column; gap: 12px; padding: 0 16px 16px; }

@@ -1,0 +1,50 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "condition.status",
+  "version": 1,
+  "category": "condition",
+  "group": "general",
+  "order": 80,
+  "icon": "⇒",
+  "conditionKind": "match",
+  "labelKey": "builder.node.condition_status.label",
+  "descriptionKey": "builder.node.condition_status.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "branches",
+      "type": "flow",
+      "labelKey": "builder.port.branches"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "user": {
+        "type": "string",
+        "x-labelKey": "builder.cfg.user",
+        "x-hintKey": "builder.cfg.ref_hint"
+      },
+      "multi": {
+        "type": "string",
+        "enum": [
+          "first",
+          "all"
+        ],
+        "default": "first",
+        "x-advanced": true,
+        "x-labelKey": "builder.cfg.multi",
+        "x-hintKey": "builder.cfg.multi_hint",
+        "x-enumKey": "builder.enum.multi"
+      }
+    }
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "trigger.timed",
+  "version": 1,
+  "category": "trigger",
+  "group": "trigger",
+  "icon": "⏱",
+  "labelKey": "builder.node.trigger_timed.label",
+  "descriptionKey": "builder.node.trigger_timed.description",
+  "locked": true,
+  "inputs": [],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "cron": {
+        "type": "string",
+        "x-labelKey": "builder.cfg.cron",
+        "x-hintKey": "builder.cfg.cron_hint"
+      }
+    }
+  }
+}

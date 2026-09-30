@@ -1,0 +1,91 @@
+{{/* Bot settings tab: header, avatar & banner, token, danger zone. */}}
+
+{{define "bot_settings"}}
+{{template "bot_header" .Bot}}
+{{template "bot_media" .Media}}
+
+<section class="box">
+  <header class="box-head"><h2>{{t "settings.token.title"}}</h2></header>
+  <div class="box-body">
+    <form class="inline-form" hx-post="/bot/{{.Bot.ID}}/token" hx-target="#flash" data-reset-on="bothub:reset-forms">
+      <input type="password" name="token" autocomplete="off" placeholder="{{t "settings.token.placeholder"}}" class="input-wide">
+      <button type="submit" class="btn">{{t "settings.token.save"}}</button>
+    </form>
+    <p class="hint">{{t "settings.token.hint"}}</p>
+  </div>
+</section>
+
+<section class="box box-danger">
+  <header class="box-head"><h2>{{t "settings.danger.title"}}</h2></header>
+  <div class="box-body">
+    <p class="hint hint-top">{{t "bot.delete.hint"}}</p>
+    <button class="btn btn-danger-soft" hx-delete="/bot/{{.Bot.ID}}" hx-confirm="{{t "bot.delete.confirm" "name" .Bot.Name}}">{{t "settings.danger.delete"}}</button>
+  </div>
+</section>
+{{end}}
+
+{{define "bot_header_fragment"}}{{template "bot_header" .Data}}{{end}}
+
+{{define "bot_header"}}
+<section class="box settings-head" id="bot-header"
+  {{if .Transitioning}}hx-get="/bot/{{.ID}}/header" hx-trigger="load delay:1500ms" hx-swap="outerHTML"{{end}}>
+  <div class="settings-head-main">
+    {{template "avatar" .}}
+    <div class="settings-head-name">
+      <form class="inline-form" hx-post="/bot/{{.ID}}/name" hx-target="#flash" data-savebar>
+        <input name="name" required maxlength="64" value="{{.Name}}" class="input-name" aria-label="{{t "field.bot_name"}}">
+        <button type="submit" class="btn btn-sm" data-save-own>{{t "action.save"}}</button>
+      </form>
+      <span class="badge-soft badge-soft-{{.Status}}"><span class="badge-dot" aria-hidden="true"></span>{{t (printf "bot.status.%s" .Status)}}</span>
+    </div>
+  </div>
+  <div class="settings-head-actions">
+    {{if eq .Status "running"}}
+    <button class="btn btn-outline-danger" hx-post="/bot/{{.ID}}/power/stop" hx-target="#bot-header" hx-swap="outerHTML">■ {{t "bots.stop"}}</button>
+    <button class="btn" hx-post="/bot/{{.ID}}/power/restart" hx-target="#bot-header" hx-swap="outerHTML">↺ {{t "bots.restart"}}</button>
+    {{else if or (eq .Status "stopped") (eq .Status "error")}}
+    <button class="btn btn-outline-success" hx-post="/bot/{{.ID}}/power/start" hx-target="#bot-header" hx-swap="outerHTML">▶ {{t "bots.start"}}</button>
+    {{else}}
+    <span class="muted">{{t (printf "bot.status_text.%s" .Status)}}</span>
+    {{end}}
+  </div>
+</section>
+{{end}}
+
+{{define "bot_media_fragment"}}{{template "bot_media" .Data}}{{end}}
+
+{{define "bot_media"}}
+{{$bot := .Bot}}{{$p := .Profile}}
+<section class="box" id="bot-media">
+  <header class="box-head">
+    <h2>{{t "settings.media.title"}}</h2>
+    <span class="box-meta">
+      {{t "settings.media.limit" "avatar" $p.Limits.Avatar.Remaining "banner" $p.Limits.Banner.Remaining "minutes" (minutes $p.WindowSeconds)}}
+      {{range list $p.Limits.Avatar $p.Limits.Banner}}{{with .ResetAt}}
+      <span class="cooldown" data-reset-at="{{.Format "2006-01-02T15:04:05Z07:00"}}" data-window="{{$p.WindowSeconds}}" hx-get="/bot/{{$bot.ID}}/media" hx-trigger="bothub:cooldown-done" hx-target="#bot-media" hx-swap="outerHTML">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><circle class="cooldown-track" cx="10" cy="10" r="8"/><circle class="cooldown-ring" cx="10" cy="10" r="8" pathLength="100" stroke-dasharray="100" stroke-dashoffset="0"/></svg>
+        <span class="cooldown-text"></span>
+      </span>
+      {{end}}{{end}}
+    </span>
+  </header>
+  <div class="box-body">
+    <div id="media-error"></div>
+    <div class="media">
+      <form class="media-banner" hx-put="/bot/{{$bot.ID}}/profile/banner" hx-encoding="multipart/form-data" hx-trigger="change" hx-target="#bot-media" hx-swap="outerHTML">
+        <label title="{{t "settings.media.upload_banner"}}">
+          {{with $p.BannerURL}}<img src="{{cdnSize . 1024}}" srcset="{{cdnSize . 1024}} 1024w, {{cdnSize . 2048}} 2048w" sizes="(max-width: 700px) 100vw, 900px" alt="" decoding="async">{{else}}<span class="media-empty">{{t "settings.media.upload_banner"}}</span>{{end}}
+          <input type="file" name="file" accept="image/png,image/jpeg,image/gif,image/webp" {{if eq $p.Limits.Banner.Remaining 0}}disabled{{end}} hidden>
+        </label>
+      </form>
+      <form class="media-avatar" hx-put="/bot/{{$bot.ID}}/profile/avatar" hx-encoding="multipart/form-data" hx-trigger="change" hx-target="#bot-media" hx-swap="outerHTML">
+        <label title="{{t "settings.media.upload_avatar"}}">
+          {{with $p.AvatarURL}}<img src="{{.}}" alt="">{{else}}<span class="avatar-fallback">{{initial $bot.Name}}</span>{{end}}
+          <input type="file" name="file" accept="image/png,image/jpeg,image/gif,image/webp" {{if eq $p.Limits.Avatar.Remaining 0}}disabled{{end}} hidden>
+        </label>
+      </form>
+      <button type="button" class="btn btn-sm media-sync" hx-post="/bot/{{$bot.ID}}/profile/sync" hx-target="#bot-media" hx-swap="outerHTML">↓ {{t "settings.media.from_discord"}}</button>
+    </div>
+  </div>
+</section>
+{{end}}

@@ -1,0 +1,59 @@
+{
+  "module": "verification",
+  "fields": [
+    {
+      "key": "channel",
+      "type": "channel",
+      "channelTypes": [
+        "text"
+      ]
+    },
+    {
+      "key": "type",
+      "type": "select",
+      "options": [
+        "button",
+        "captcha",
+        "number"
+      ],
+      "default": "button"
+    },
+    {
+      "key": "panel",
+      "type": "message",
+      "default": {
+        "mode": "embed",
+        "title": "✅ Verification",
+        "description": "Press the button below to get access to {server}.",
+        "color": "#4ade80"
+      }
+    },
+    {
+      "key": "buttonLabel",
+      "type": "text",
+      "max": 80,
+      "default": "Verify"
+    },
+    {
+      "key": "role",
+      "type": "role",
+      "hint": true
+    },
+    {
+      "key": "removeRole",
+      "type": "role"
+    },
+    {
+      "key": "successMessage",
+      "type": "text",
+      "max": 1000,
+      "default": "You are verified. Welcome to {server}!"
+    },
+    {
+      "key": "failMessage",
+      "type": "text",
+      "max": 1000,
+      "default": "That was not correct. Please try again."
+    }
+  ]
+}

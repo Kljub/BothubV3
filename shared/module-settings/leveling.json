@@ -1,0 +1,178 @@
+{
+  "module": "leveling",
+  "fields": [
+    {
+      "key": "minXp",
+      "type": "number",
+      "min": 0,
+      "max": 1000,
+      "default": 15
+    },
+    {
+      "key": "maxXp",
+      "type": "number",
+      "min": 0,
+      "max": 1000,
+      "default": 25
+    },
+    {
+      "key": "cooldown",
+      "type": "number",
+      "min": 1,
+      "max": 3600,
+      "default": 60
+    },
+    {
+      "key": "baseXp",
+      "type": "number",
+      "min": 10,
+      "max": 100000,
+      "default": 100
+    },
+    {
+      "key": "stepXp",
+      "type": "number",
+      "min": 0,
+      "max": 100000,
+      "default": 50
+    },
+    {
+      "key": "maxLevel",
+      "type": "number",
+      "min": 0,
+      "max": 10000,
+      "default": 0
+    },
+    {
+      "key": "voiceXp",
+      "type": "bool",
+      "default": false
+    },
+    {
+      "key": "voiceXpPerMinute",
+      "type": "number",
+      "min": 1,
+      "max": 1000,
+      "default": 5,
+      "showIf": {
+        "voiceXp": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "levelUp",
+      "type": "select",
+      "options": [
+        "off",
+        "current",
+        "channel",
+        "dm"
+      ],
+      "default": "current"
+    },
+    {
+      "key": "levelUpChannel",
+      "type": "channel",
+      "channelTypes": [
+        "text",
+        "announcement"
+      ],
+      "showIf": {
+        "levelUp": [
+          "channel"
+        ]
+      }
+    },
+    {
+      "key": "levelUpMessage",
+      "type": "text",
+      "max": 1000,
+      "showIf": {
+        "levelUp": [
+          "current",
+          "channel",
+          "dm"
+        ]
+      },
+      "default": "🎉 {user.mention} reached level **{level}**!"
+    },
+    {
+      "key": "clearOnLeave",
+      "type": "bool",
+      "default": false
+    },
+    {
+      "key": "channelMode",
+      "type": "select",
+      "options": [
+        "all",
+        "except",
+        "only"
+      ],
+      "default": "all"
+    },
+    {
+      "key": "channels",
+      "type": "channels",
+      "channelTypes": [
+        "text",
+        "announcement",
+        "forum",
+        "voice"
+      ],
+      "max": 50,
+      "showIf": {
+        "channelMode": [
+          "except",
+          "only"
+        ]
+      }
+    },
+    {
+      "key": "roleMode",
+      "type": "select",
+      "options": [
+        "all",
+        "except",
+        "only"
+      ],
+      "default": "all"
+    },
+    {
+      "key": "roles",
+      "type": "roles",
+      "max": 50,
+      "showIf": {
+        "roleMode": [
+          "except",
+          "only"
+        ]
+      }
+    },
+    {
+      "key": "stackRewards",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "rewards",
+      "type": "list",
+      "max": 50,
+      "titleField": "level",
+      "item": [
+        {
+          "key": "level",
+          "type": "number",
+          "min": 1,
+          "max": 10000,
+          "default": 5
+        },
+        {
+          "key": "role",
+          "type": "role"
+        }
+      ]
+    }
+  ]
+}

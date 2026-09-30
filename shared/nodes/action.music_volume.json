@@ -1,0 +1,49 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.music_volume",
+  "version": 1,
+  "category": "action",
+  "group": "music",
+  "order": 260,
+  "color": "teal",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_music_volume.label",
+  "descriptionKey": "builder.node.action_music_volume.description",
+  "module": "music",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "volume": {
+        "type": "number",
+        "minimum": 0,
+        "x-labelKey": "builder.cfg.volume",
+        "maximum": 1000,
+        "default": 100
+      },
+      "guild": {
+        "type": "string",
+        "maxLength": 40,
+        "x-advanced": true,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.guild",
+        "x-hintKey": "builder.cfg.guild_hint"
+      }
+    }
+  }
+}

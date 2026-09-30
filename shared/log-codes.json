@@ -1,0 +1,127 @@
+{
+  "$comment": "Stable IDs for bot log entries. ERR-1xxx = errors, WAR-2xxx = warnings. The message text is the i18n key log.code.<id>; params fill its placeholders. Never reuse or renumber an ID.",
+  "errors": {
+    "ERR-1001": {
+      "key": "token_invalid",
+      "params": []
+    },
+    "ERR-1002": {
+      "key": "missing_permission",
+      "params": [
+        "permission",
+        "guild"
+      ]
+    },
+    "ERR-1003": {
+      "key": "command_registration_failed",
+      "params": [
+        "reason"
+      ]
+    },
+    "ERR-1004": {
+      "key": "plugin_crashed",
+      "params": [
+        "plugin"
+      ]
+    },
+    "ERR-1005": {
+      "key": "command_failed",
+      "params": [
+        "command",
+        "reason"
+      ]
+    },
+    "ERR-1006": {
+      "key": "gateway_disconnected",
+      "params": [
+        "code"
+      ]
+    },
+    "ERR-1007": {
+      "key": "graph_error_log",
+      "params": [
+        "command",
+        "text"
+      ]
+    },
+    "ERR-1008": {
+      "key": "event_failed",
+      "params": [
+        "event",
+        "reason"
+      ]
+    },
+    "ERR-1009": {
+      "key": "plugin_error",
+      "params": [
+        "plugin",
+        "reason"
+      ]
+    }
+  },
+  "warnings": {
+    "WAR-2001": {
+      "key": "rate_limited",
+      "params": [
+        "route",
+        "seconds"
+      ]
+    },
+    "WAR-2002": {
+      "key": "missing_intent",
+      "params": [
+        "intent"
+      ]
+    },
+    "WAR-2003": {
+      "key": "slow_command",
+      "params": [
+        "command",
+        "ms"
+      ]
+    },
+    "WAR-2004": {
+      "key": "plugin_memory_high",
+      "params": [
+        "plugin",
+        "mb"
+      ]
+    },
+    "WAR-2005": {
+      "key": "graph_step_limit",
+      "params": [
+        "command",
+        "steps"
+      ]
+    },
+    "WAR-2006": {
+      "key": "module_send_limited",
+      "params": [
+        "module",
+        "channel"
+      ]
+    },
+    "WAR-2007": {
+      "key": "module_role_unassignable",
+      "params": [
+        "module",
+        "role",
+        "reason"
+      ]
+    },
+    "WAR-2008": {
+      "key": "module_setup_problem",
+      "params": [
+        "module",
+        "problem"
+      ]
+    },
+    "WAR-2009": {
+      "key": "plugin_warning",
+      "params": [
+        "plugin",
+        "reason"
+      ]
+    }
+  }
+}

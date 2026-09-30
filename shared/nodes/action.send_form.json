@@ -1,0 +1,190 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.send_form",
+  "version": 1,
+  "category": "action",
+  "group": "advanced_messages",
+  "order": 10,
+  "color": "blue",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_send_form.label",
+  "descriptionKey": "builder.node.action_send_form.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "form_name": {
+        "type": "string",
+        "pattern": "^[a-z0-9-]{1,32}$",
+        "x-labelKey": "builder.cfg.form_name",
+        "x-hintKey": "builder.cfg.form_name_hint",
+        "x-placeholder": "my-form",
+        "x-mono": true
+      },
+      "form": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "title",
+          "fields"
+        ],
+        "x-widget": "form",
+        "x-labelKey": "builder.form.section",
+        "default": {
+          "title": "Form Title",
+          "fields": [
+            {
+              "type": "text",
+              "variable": "answer",
+              "label": "Your answer",
+              "required": false,
+              "style": "short"
+            }
+          ]
+        },
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 45
+          },
+          "fields": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 5,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "type",
+                "variable",
+                "label"
+              ],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "text",
+                    "select",
+                    "user",
+                    "role",
+                    "channel",
+                    "mentionable",
+                    "file"
+                  ]
+                },
+                "variable": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_]{0,31}$"
+                },
+                "label": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 45
+                },
+                "description": {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                "required": {
+                  "type": "boolean"
+                },
+                "style": {
+                  "type": "string",
+                  "enum": [
+                    "short",
+                    "paragraph"
+                  ]
+                },
+                "placeholder": {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                "min_length": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 4000
+                },
+                "max_length": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 4000
+                },
+                "default": {
+                  "type": "string",
+                  "maxLength": 4000
+                },
+                "min_values": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 25
+                },
+                "max_values": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 25
+                },
+                "options": {
+                  "type": "array",
+                  "maxItems": 25,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "label",
+                      "value"
+                    ],
+                    "properties": {
+                      "label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100
+                      },
+                      "value": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100
+                      },
+                      "description": {
+                        "type": "string",
+                        "maxLength": 100
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "timeout": {
+        "type": "number",
+        "minimum": 30,
+        "maximum": 900,
+        "default": 300,
+        "x-advanced": true,
+        "x-labelKey": "builder.cfg.form_timeout",
+        "x-hintKey": "builder.cfg.form_timeout_hint"
+      }
+    },
+    "required": [
+      "form_name"
+    ]
+  },
+  "infoKey": "builder.node.action_send_form.info"
+}

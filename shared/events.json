@@ -1,0 +1,1225 @@
+{
+  "$comment": "Event types for custom events. Texts: builder.event.<key> and builder.eventcat.<category>. vars are the placeholders the event gives its blocks. \"soon\": true marks types the bot does not emit yet; the builder shows them but they cannot be picked.",
+  "categories": [
+    {
+      "key": "member",
+      "icon": "👤",
+      "events": [
+        {
+          "key": "member_join",
+          "vars": [
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}",
+            "{server}",
+            "{server.id}",
+            "{members}"
+          ]
+        },
+        {
+          "key": "member_leave",
+          "vars": [
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}",
+            "{server}",
+            "{server.id}",
+            "{members}"
+          ]
+        },
+        {
+          "key": "member_ban",
+          "vars": [
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}",
+            "{server}",
+            "{server.id}",
+            "{reason}"
+          ]
+        },
+        {
+          "key": "member_unban",
+          "vars": [
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}",
+            "{server}",
+            "{server.id}"
+          ]
+        },
+        {
+          "key": "member_role_add",
+          "vars": [
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}",
+            "{role}",
+            "{role.id}",
+            "{role.name}"
+          ]
+        },
+        {
+          "key": "member_role_remove",
+          "vars": [
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}",
+            "{role}",
+            "{role.id}",
+            "{role.name}"
+          ]
+        },
+        {
+          "key": "member_update",
+          "vars": [
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}"
+          ]
+        },
+        {
+          "key": "member_nickname",
+          "vars": [
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}",
+            "{old_nickname}",
+            "{new_nickname}"
+          ]
+        },
+        {
+          "key": "member_status",
+          "vars": [
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}",
+            "{old_status}",
+            "{new_status}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "member_screening",
+          "vars": [
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "guild_update",
+          "vars": [
+            "{server}",
+            "{server.id}",
+            "{change}",
+            "{old}",
+            "{new}"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "message",
+      "icon": "💬",
+      "events": [
+        {
+          "key": "message_create",
+          "vars": [
+            "{message.id}",
+            "{message.content}",
+            "{message.url}",
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}",
+            "{channel}",
+            "{channel.id}",
+            "{channel.name}"
+          ]
+        },
+        {
+          "key": "message_update",
+          "vars": [
+            "{message.id}",
+            "{message.content}",
+            "{message.url}",
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}",
+            "{channel}",
+            "{channel.id}",
+            "{channel.name}",
+            "{old_content}"
+          ]
+        },
+        {
+          "key": "message_delete",
+          "vars": [
+            "{message.id}",
+            "{message.content}",
+            "{message.url}",
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}",
+            "{channel}",
+            "{channel.id}",
+            "{channel.name}"
+          ]
+        },
+        {
+          "key": "message_pin",
+          "vars": [
+            "{message.id}",
+            "{message.content}",
+            "{message.url}",
+            "{channel}",
+            "{channel.id}",
+            "{channel.name}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "typing_start",
+          "vars": [
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}",
+            "{channel}",
+            "{channel.id}",
+            "{channel.name}"
+          ],
+          "soon": true
+        }
+      ]
+    },
+    {
+      "key": "reaction",
+      "icon": "😀",
+      "events": [
+        {
+          "key": "reaction_add",
+          "vars": [
+            "{emoji}",
+            "{emoji.id}",
+            "{message.id}",
+            "{message.content}",
+            "{message.url}",
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}",
+            "{channel}",
+            "{channel.id}",
+            "{channel.name}"
+          ]
+        },
+        {
+          "key": "reaction_remove",
+          "vars": [
+            "{emoji}",
+            "{emoji.id}",
+            "{message.id}",
+            "{message.content}",
+            "{message.url}",
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}",
+            "{channel}",
+            "{channel.id}",
+            "{channel.name}"
+          ]
+        },
+        {
+          "key": "reaction_remove_all",
+          "vars": [
+            "{message.id}",
+            "{message.content}",
+            "{message.url}",
+            "{channel}",
+            "{channel.id}",
+            "{channel.name}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "reaction_remove_emoji",
+          "vars": [
+            "{emoji}",
+            "{message.id}",
+            "{message.content}",
+            "{message.url}",
+            "{channel}",
+            "{channel.id}",
+            "{channel.name}"
+          ],
+          "soon": true
+        }
+      ]
+    },
+    {
+      "key": "voice",
+      "icon": "🔊",
+      "events": [
+        {
+          "key": "voice_join",
+          "vars": [
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}",
+            "{channel}",
+            "{channel.id}",
+            "{channel.name}"
+          ]
+        },
+        {
+          "key": "voice_switch",
+          "vars": [
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}",
+            "{channel}",
+            "{channel.id}",
+            "{channel.name}",
+            "{old_channel}",
+            "{old_channel.id}"
+          ]
+        },
+        {
+          "key": "voice_leave",
+          "vars": [
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}",
+            "{channel}",
+            "{channel.id}",
+            "{channel.name}"
+          ]
+        },
+        {
+          "key": "voice_stream_start",
+          "vars": [
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}",
+            "{channel}",
+            "{channel.id}",
+            "{channel.name}"
+          ]
+        },
+        {
+          "key": "voice_stream_stop",
+          "vars": [
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}",
+            "{channel}",
+            "{channel.id}",
+            "{channel.name}"
+          ]
+        },
+        {
+          "key": "voice_mute",
+          "vars": [
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}",
+            "{channel}",
+            "{channel.id}",
+            "{channel.name}",
+            "{by_server}"
+          ]
+        },
+        {
+          "key": "voice_unmute",
+          "vars": [
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}",
+            "{channel}",
+            "{channel.id}",
+            "{channel.name}",
+            "{by_server}"
+          ]
+        },
+        {
+          "key": "voice_deafen",
+          "vars": [
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}",
+            "{channel}",
+            "{channel.id}",
+            "{channel.name}",
+            "{by_server}"
+          ]
+        },
+        {
+          "key": "voice_undeafen",
+          "vars": [
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}",
+            "{channel}",
+            "{channel.id}",
+            "{channel.name}",
+            "{by_server}"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "channel",
+      "icon": "#️⃣",
+      "events": [
+        {
+          "key": "channel_create",
+          "vars": [
+            "{channel}",
+            "{channel.id}",
+            "{channel.name}",
+            "{channel.type}"
+          ]
+        },
+        {
+          "key": "channel_update",
+          "vars": [
+            "{channel}",
+            "{channel.id}",
+            "{channel.name}",
+            "{change}",
+            "{old}",
+            "{new}"
+          ]
+        },
+        {
+          "key": "channel_delete",
+          "vars": [
+            "{channel}",
+            "{channel.id}",
+            "{channel.name}"
+          ]
+        },
+        {
+          "key": "channel_permissions",
+          "vars": [
+            "{channel}",
+            "{channel.id}",
+            "{channel.name}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "channel_topic",
+          "vars": [
+            "{channel}",
+            "{channel.id}",
+            "{channel.name}",
+            "{old_topic}",
+            "{new_topic}"
+          ]
+        },
+        {
+          "key": "channel_pins",
+          "vars": [
+            "{channel}",
+            "{channel.id}",
+            "{channel.name}"
+          ],
+          "soon": true
+        }
+      ]
+    },
+    {
+      "key": "thread",
+      "icon": "🧵",
+      "events": [
+        {
+          "key": "thread_create",
+          "vars": [
+            "{thread}",
+            "{thread.id}",
+            "{thread.name}",
+            "{thread.parent_id}",
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}"
+          ]
+        },
+        {
+          "key": "thread_update",
+          "vars": [
+            "{thread}",
+            "{thread.id}",
+            "{thread.name}",
+            "{change}"
+          ]
+        },
+        {
+          "key": "thread_delete",
+          "vars": [
+            "{thread.id}",
+            "{thread.name}"
+          ]
+        },
+        {
+          "key": "thread_members",
+          "vars": [
+            "{thread}",
+            "{thread.id}",
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}"
+          ],
+          "soon": true
+        }
+      ]
+    },
+    {
+      "key": "role",
+      "icon": "🎭",
+      "events": [
+        {
+          "key": "role_create",
+          "vars": [
+            "{role}",
+            "{role.id}",
+            "{role.name}",
+            "{role.color}"
+          ]
+        },
+        {
+          "key": "role_update",
+          "vars": [
+            "{role}",
+            "{role.id}",
+            "{role.name}",
+            "{change}",
+            "{old}",
+            "{new}"
+          ]
+        },
+        {
+          "key": "role_delete",
+          "vars": [
+            "{role}",
+            "{role.id}",
+            "{role.name}"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "invite",
+      "icon": "✉️",
+      "events": [
+        {
+          "key": "invite_create",
+          "vars": [
+            "{invite.code}",
+            "{invite.url}",
+            "{inviter}",
+            "{inviter.id}",
+            "{channel}",
+            "{channel.id}",
+            "{channel.name}"
+          ]
+        },
+        {
+          "key": "invite_delete",
+          "vars": [
+            "{invite.code}",
+            "{channel}",
+            "{channel.id}",
+            "{channel.name}"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "boost",
+      "icon": "🚀",
+      "events": [
+        {
+          "key": "boost_start",
+          "vars": [
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}",
+            "{boosts}",
+            "{boost_level}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "boost_stop",
+          "vars": [
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}",
+            "{boosts}",
+            "{boost_level}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "boost_level_up",
+          "vars": [
+            "{boost_level}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "boost_level_down",
+          "vars": [
+            "{boost_level}"
+          ],
+          "soon": true
+        }
+      ]
+    },
+    {
+      "key": "scheduled",
+      "icon": "📅",
+      "events": [
+        {
+          "key": "scheduled_create",
+          "vars": [
+            "{scheduled_event.id}",
+            "{scheduled_event.name}",
+            "{scheduled_event.url}",
+            "{scheduled_event.start}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "scheduled_update",
+          "vars": [
+            "{scheduled_event.id}",
+            "{scheduled_event.name}",
+            "{scheduled_event.url}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "scheduled_delete",
+          "vars": [
+            "{scheduled_event.id}",
+            "{scheduled_event.name}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "scheduled_user_add",
+          "vars": [
+            "{scheduled_event.id}",
+            "{scheduled_event.name}",
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "scheduled_user_remove",
+          "vars": [
+            "{scheduled_event.id}",
+            "{scheduled_event.name}",
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "scheduled_start",
+          "vars": [
+            "{scheduled_event.id}",
+            "{scheduled_event.name}",
+            "{scheduled_event.url}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "scheduled_end",
+          "vars": [
+            "{scheduled_event.id}",
+            "{scheduled_event.name}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "scheduled_cancel",
+          "vars": [
+            "{scheduled_event.id}",
+            "{scheduled_event.name}"
+          ],
+          "soon": true
+        }
+      ]
+    },
+    {
+      "key": "poll",
+      "icon": "📊",
+      "events": [
+        {
+          "key": "poll_vote_add",
+          "vars": [
+            "{poll.answer}",
+            "{poll.answer_id}",
+            "{message.id}",
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}",
+            "{channel}",
+            "{channel.id}",
+            "{channel.name}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "poll_vote_remove",
+          "vars": [
+            "{poll.answer}",
+            "{poll.answer_id}",
+            "{message.id}",
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}",
+            "{channel}",
+            "{channel.id}",
+            "{channel.name}"
+          ],
+          "soon": true
+        }
+      ]
+    },
+    {
+      "key": "automod",
+      "icon": "🛡️",
+      "events": [
+        {
+          "key": "automod_action",
+          "vars": [
+            "{rule.name}",
+            "{rule.id}",
+            "{content}",
+            "{matched}",
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}",
+            "{channel}",
+            "{channel.id}",
+            "{channel.name}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "automod_rule_create",
+          "vars": [
+            "{rule.name}",
+            "{rule.id}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "automod_rule_update",
+          "vars": [
+            "{rule.name}",
+            "{rule.id}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "automod_rule_delete",
+          "vars": [
+            "{rule.name}",
+            "{rule.id}"
+          ],
+          "soon": true
+        }
+      ]
+    },
+    {
+      "key": "bot",
+      "icon": "🤖",
+      "events": [
+        {
+          "key": "bot_guild_join",
+          "vars": [
+            "{server}",
+            "{server.id}",
+            "{server.members}",
+            "{server.owner_id}"
+          ]
+        },
+        {
+          "key": "bot_guild_leave",
+          "vars": [
+            "{server}",
+            "{server.id}"
+          ]
+        },
+        {
+          "key": "bot_ready",
+          "vars": [
+            "{bot.name}",
+            "{bot.servers}"
+          ]
+        },
+        {
+          "key": "bot_variable_change",
+          "vars": [
+            "{variable.name}",
+            "{variable.old}",
+            "{variable.new}",
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "bot_updated",
+          "vars": [
+            "{bot.name}"
+          ],
+          "soon": true
+        }
+      ]
+    },
+    {
+      "key": "audit",
+      "icon": "📜",
+      "events": [
+        {
+          "key": "audit_entry",
+          "vars": [
+            "{audit.action}",
+            "{audit.executor}",
+            "{audit.executor_id}",
+            "{audit.target_id}",
+            "{audit.reason}"
+          ],
+          "soon": true
+        }
+      ]
+    },
+    {
+      "key": "application",
+      "icon": "🧩",
+      "events": [
+        {
+          "key": "app_command_permissions",
+          "vars": [
+            "{command.id}",
+            "{command.name}"
+          ],
+          "soon": true
+        }
+      ]
+    },
+    {
+      "key": "sticker",
+      "icon": "🏷️",
+      "events": [
+        {
+          "key": "sticker_create",
+          "vars": [
+            "{sticker.id}",
+            "{sticker.name}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "sticker_update",
+          "vars": [
+            "{sticker.id}",
+            "{sticker.name}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "sticker_delete",
+          "vars": [
+            "{sticker.id}",
+            "{sticker.name}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "stage_start",
+          "vars": [
+            "{stage.topic}",
+            "{channel}",
+            "{channel.id}",
+            "{channel.name}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "stage_update",
+          "vars": [
+            "{stage.topic}",
+            "{channel}",
+            "{channel.id}",
+            "{channel.name}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "stage_end",
+          "vars": [
+            "{channel}",
+            "{channel.id}",
+            "{channel.name}"
+          ],
+          "soon": true
+        }
+      ]
+    },
+    {
+      "key": "music",
+      "icon": "🎵",
+      "events": [
+        {
+          "key": "music_track_start",
+          "vars": [
+            "{track.title}",
+            "{track.url}",
+            "{track.author}",
+            "{track.duration}",
+            "{queue.size}",
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "music_track_end",
+          "vars": [
+            "{track.title}",
+            "{track.url}",
+            "{track.author}",
+            "{track.duration}",
+            "{queue.size}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "music_track_skip",
+          "vars": [
+            "{track.title}",
+            "{track.url}",
+            "{track.author}",
+            "{track.duration}",
+            "{queue.size}",
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "music_track_error",
+          "vars": [
+            "{track.title}",
+            "{track.url}",
+            "{track.author}",
+            "{track.duration}",
+            "{queue.size}",
+            "{error}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "music_queue_add",
+          "vars": [
+            "{track.title}",
+            "{track.url}",
+            "{track.author}",
+            "{track.duration}",
+            "{queue.size}",
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "music_queue_remove",
+          "vars": [
+            "{track.title}",
+            "{track.url}",
+            "{track.author}",
+            "{track.duration}",
+            "{queue.size}",
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "music_queue_end",
+          "vars": [
+            "{queue.size}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "music_pause",
+          "vars": [
+            "{track.title}",
+            "{track.url}",
+            "{track.author}",
+            "{track.duration}",
+            "{queue.size}",
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "music_resume",
+          "vars": [
+            "{track.title}",
+            "{track.url}",
+            "{track.author}",
+            "{track.duration}",
+            "{queue.size}",
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "music_stop",
+          "vars": [
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "music_volume",
+          "vars": [
+            "{volume}",
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "music_loop",
+          "vars": [
+            "{loop_mode}",
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "music_filters",
+          "vars": [
+            "{filters}",
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "music_player_create",
+          "vars": [
+            "{channel}",
+            "{channel.id}",
+            "{channel.name}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "music_player_destroy",
+          "vars": [
+            "{channel}",
+            "{channel.id}",
+            "{channel.name}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "music_voice_join",
+          "vars": [
+            "{channel}",
+            "{channel.id}",
+            "{channel.name}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "music_voice_leave",
+          "vars": [
+            "{channel}",
+            "{channel.id}",
+            "{channel.name}",
+            "{reason}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "music_listener_join",
+          "vars": [
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}",
+            "{channel}",
+            "{channel.id}",
+            "{channel.name}"
+          ],
+          "soon": true
+        },
+        {
+          "key": "music_listener_leave",
+          "vars": [
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}",
+            "{channel}",
+            "{channel.id}",
+            "{channel.name}"
+          ],
+          "soon": true
+        }
+      ]
+    },
+    {
+      "key": "other",
+      "icon": "🔗",
+      "events": [
+        {
+          "key": "webhook",
+          "vars": [
+            "{webhook.name}",
+            "{webhook.body}",
+            "{webhook.json}"
+          ]
+        },
+        {
+          "key": "timed",
+          "vars": [
+            "{schedule.name}",
+            "{schedule.next}"
+          ]
+        },
+        {
+          "key": "ifttt",
+          "vars": [
+            "{ifttt.value1}",
+            "{ifttt.value2}",
+            "{ifttt.value3}"
+          ],
+          "soon": true
+        }
+      ]
+    }
+  ]
+}

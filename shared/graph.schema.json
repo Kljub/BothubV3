@@ -71,6 +71,21 @@
             "y": { "type": "number" }
           }
         },
+        "label": {
+          "description": "Name on the block in the builder; the definition's label when empty.",
+          "type": "string",
+          "maxLength": 60
+        },
+        "note": {
+          "description": "Helper text shown next to the block on the canvas.",
+          "type": "string",
+          "maxLength": 500
+        },
+        "paths": {
+          "description": "Success and error paths: the flow output `next` becomes `success` and `error`.",
+          "type": "boolean",
+          "default": false
+        },
         "disabled": {
           "description": "Disabled nodes are skipped; their flow output continues directly.",
           "type": "boolean",

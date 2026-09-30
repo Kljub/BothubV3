@@ -1,0 +1,56 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "option.user",
+  "version": 1,
+  "category": "option",
+  "group": "general",
+  "icon": "U",
+  "labelKey": "builder.node.option_user.label",
+  "descriptionKey": "builder.node.option_user.description",
+  "inputs": [],
+  "outputs": [
+    {
+      "name": "option",
+      "type": "any",
+      "labelKey": "builder.port.option"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "name": {
+        "type": "string",
+        "pattern": "^[a-z0-9_-]{1,32}$",
+        "x-labelKey": "builder.cfg.option_name",
+        "x-hintKey": "builder.cfg.option_name_hint"
+      },
+      "description": {
+        "type": "string",
+        "maxLength": 100,
+        "x-labelKey": "builder.cfg.description"
+      },
+      "required": {
+        "type": "boolean",
+        "default": true,
+        "x-labelKey": "builder.cfg.required"
+      },
+      "subcommand": {
+        "type": "string",
+        "pattern": "^[a-z0-9_-]{0,32}$",
+        "x-labelKey": "builder.cfg.subcommand",
+        "x-hintKey": "builder.cfg.subcommand_hint"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "default": "user",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    },
+    "required": [
+      "name"
+    ]
+  }
+}

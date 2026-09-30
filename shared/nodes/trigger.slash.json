@@ -3,31 +3,379 @@
   "type": "trigger.slash",
   "version": 1,
   "category": "trigger",
+  "group": "trigger",
+  "icon": "⚡",
   "labelKey": "builder.node.trigger_slash.label",
   "descriptionKey": "builder.node.trigger_slash.description",
-  "inputs": [],
+  "locked": true,
+  "inputs": [
+    {
+      "name": "options",
+      "type": "any",
+      "labelKey": "builder.port.options",
+      "multiple": true
+    }
+  ],
   "outputs": [
-    { "name": "next", "type": "flow", "labelKey": "builder.port.next" },
-    { "name": "user", "type": "user", "labelKey": "builder.port.user" },
-    { "name": "member", "type": "member", "labelKey": "builder.port.member" },
-    { "name": "channel", "type": "channel", "labelKey": "builder.port.channel" },
-    { "name": "guild", "type": "guild", "labelKey": "builder.port.guild" }
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
   ],
   "config": {
     "type": "object",
-    "required": ["description"],
     "additionalProperties": false,
+    "required": [
+      "command_name"
+    ],
     "properties": {
+      "command_type": {
+        "type": "string",
+        "enum": [
+          "slash",
+          "user",
+          "message"
+        ],
+        "default": "slash",
+        "x-labelKey": "builder.cfg.command_type",
+        "x-enumKey": "builder.enum.command_type"
+      },
+      "display_name": {
+        "type": "string",
+        "maxLength": 64,
+        "x-labelKey": "builder.cfg.display_name",
+        "x-hintKey": "builder.cfg.display_name_hint"
+      },
+      "command_name": {
+        "type": "string",
+        "pattern": "^[a-z0-9_-]{1,32}( [a-z0-9_-]{1,32}){0,2}$",
+        "x-labelKey": "builder.cfg.command_name",
+        "x-hintKey": "builder.cfg.command_name_hint"
+      },
+      "menu_name": {
+        "type": "string",
+        "maxLength": 32,
+        "x-labelKey": "builder.cfg.menu_name",
+        "x-hintKey": "builder.cfg.menu_name_hint",
+        "x-showIf": {
+          "command_type": [
+            "user",
+            "message"
+          ]
+        }
+      },
       "description": {
         "type": "string",
-        "minLength": 1,
         "maxLength": 100,
-        "x-labelKey": "builder.node.trigger_slash.config.description"
+        "x-labelKey": "builder.cfg.description",
+        "x-hintKey": "builder.cfg.description_hint",
+        "x-showIf": {
+          "command_type": [
+            "slash"
+          ]
+        }
       },
-      "ephemeral": {
+      "hide_replies": {
         "type": "boolean",
         "default": false,
-        "x-labelKey": "builder.node.trigger_slash.config.ephemeral"
+        "x-labelKey": "builder.cfg.hide_replies",
+        "x-hintKey": "builder.cfg.hide_replies_hint"
+      },
+      "cooldown_type": {
+        "type": "string",
+        "enum": [
+          "none",
+          "user",
+          "server",
+          "global"
+        ],
+        "default": "none",
+        "x-labelKey": "builder.cfg.cooldown_type",
+        "x-enumKey": "builder.enum.cooldown"
+      },
+      "cooldown_seconds": {
+        "type": "number",
+        "minimum": 1,
+        "maximum": 86400,
+        "default": 10,
+        "x-labelKey": "builder.cfg.cooldown_seconds",
+        "x-showIf": {
+          "cooldown_type": [
+            "user",
+            "server",
+            "global"
+          ]
+        }
+      },
+      "permissions": {
+        "type": "object",
+        "additionalProperties": false,
+        "x-labelKey": "builder.cfg.permissions",
+        "x-widget": "permissions",
+        "x-permissionGroups": [
+          {
+            "group": "general",
+            "permissions": [
+              "view_channel",
+              "manage_channels",
+              "manage_roles",
+              "manage_guild_expressions",
+              "create_guild_expressions",
+              "view_audit_log",
+              "view_guild_insights",
+              "manage_webhooks",
+              "manage_guild"
+            ]
+          },
+          {
+            "group": "membership",
+            "permissions": [
+              "create_instant_invite",
+              "change_nickname",
+              "manage_nicknames",
+              "kick_members",
+              "ban_members",
+              "moderate_members"
+            ]
+          },
+          {
+            "group": "text",
+            "permissions": [
+              "send_messages",
+              "send_messages_in_threads",
+              "create_public_threads",
+              "create_private_threads",
+              "embed_links",
+              "attach_files",
+              "add_reactions",
+              "use_external_emojis",
+              "use_external_stickers",
+              "mention_everyone",
+              "manage_messages",
+              "manage_threads",
+              "read_message_history",
+              "send_tts_messages",
+              "send_voice_messages",
+              "send_polls",
+              "use_application_commands"
+            ]
+          },
+          {
+            "group": "voice",
+            "permissions": [
+              "connect",
+              "speak",
+              "stream",
+              "use_soundboard",
+              "use_external_sounds",
+              "use_vad",
+              "priority_speaker",
+              "mute_members",
+              "deafen_members",
+              "move_members"
+            ]
+          },
+          {
+            "group": "events",
+            "permissions": [
+              "create_events",
+              "manage_events"
+            ]
+          },
+          {
+            "group": "advanced",
+            "permissions": [
+              "administrator"
+            ]
+          }
+        ],
+        "default": {
+          "allowed_roles": [
+            {
+              "id": "everyone"
+            }
+          ],
+          "banned_roles": [],
+          "required_permissions": [],
+          "banned_channels": [],
+          "hide_without_permission": false
+        },
+        "properties": {
+          "allowed_roles": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^(everyone|moderation:moderator|moderation:admin|[0-9]{17,20})$",
+                  "description": "Role ID, or \"everyone\" for the @everyone role of every server."
+                },
+                "guild": {
+                  "type": "string",
+                  "pattern": "^([0-9]{17,20})?$"
+                },
+                "name": {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                "color": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "pattern": "^#[0-9a-fA-F]{6}$"
+                }
+              }
+            },
+            "description": "The member needs one of these roles. \"everyone\" allows every member."
+          },
+          "banned_roles": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^(everyone|moderation:moderator|moderation:admin|[0-9]{17,20})$",
+                  "description": "Role ID, or \"everyone\" for the @everyone role of every server."
+                },
+                "guild": {
+                  "type": "string",
+                  "pattern": "^([0-9]{17,20})?$"
+                },
+                "name": {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                "color": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "pattern": "^#[0-9a-fA-F]{6}$"
+                }
+              }
+            }
+          },
+          "required_permissions": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "enum": [
+                "view_channel",
+                "manage_channels",
+                "manage_roles",
+                "manage_guild_expressions",
+                "create_guild_expressions",
+                "view_audit_log",
+                "view_guild_insights",
+                "manage_webhooks",
+                "manage_guild",
+                "create_instant_invite",
+                "change_nickname",
+                "manage_nicknames",
+                "kick_members",
+                "ban_members",
+                "moderate_members",
+                "send_messages",
+                "send_messages_in_threads",
+                "create_public_threads",
+                "create_private_threads",
+                "embed_links",
+                "attach_files",
+                "add_reactions",
+                "use_external_emojis",
+                "use_external_stickers",
+                "mention_everyone",
+                "manage_messages",
+                "manage_threads",
+                "read_message_history",
+                "send_tts_messages",
+                "send_voice_messages",
+                "send_polls",
+                "use_application_commands",
+                "connect",
+                "speak",
+                "stream",
+                "use_soundboard",
+                "use_external_sounds",
+                "use_vad",
+                "priority_speaker",
+                "mute_members",
+                "deafen_members",
+                "move_members",
+                "create_events",
+                "manage_events",
+                "administrator"
+              ]
+            },
+            "description": "Discord permission flags in snake_case; the member needs all of them."
+          },
+          "banned_channels": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[0-9]{17,20}$"
+                },
+                "guild": {
+                  "type": "string",
+                  "pattern": "^([0-9]{17,20})?$"
+                },
+                "name": {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "category",
+                    "text",
+                    "voice",
+                    "announcement",
+                    "forum",
+                    "stage"
+                  ]
+                }
+              }
+            }
+          },
+          "hide_without_permission": {
+            "type": "boolean",
+            "default": false,
+            "description": "Sets default_member_permissions so Discord hides the command."
+          }
+        }
+      },
+      "contexts": {
+        "type": "string",
+        "enum": [
+          "guild",
+          "guild_dm"
+        ],
+        "default": "guild",
+        "x-labelKey": "builder.cfg.contexts",
+        "x-enumKey": "builder.enum.contexts"
       }
     }
   }

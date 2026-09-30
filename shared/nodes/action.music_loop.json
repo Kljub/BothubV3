@@ -1,0 +1,53 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.music_loop",
+  "version": 1,
+  "category": "action",
+  "group": "music",
+  "order": 270,
+  "color": "teal",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_music_loop.label",
+  "descriptionKey": "builder.node.action_music_loop.description",
+  "module": "music",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "loop_mode": {
+        "type": "string",
+        "enum": [
+          "off",
+          "track",
+          "queue"
+        ],
+        "default": "off",
+        "x-labelKey": "builder.cfg.loop_mode",
+        "x-enumKey": "builder.enum.loop_mode"
+      },
+      "guild": {
+        "type": "string",
+        "maxLength": 40,
+        "x-advanced": true,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.guild",
+        "x-hintKey": "builder.cfg.guild_hint"
+      }
+    }
+  }
+}
