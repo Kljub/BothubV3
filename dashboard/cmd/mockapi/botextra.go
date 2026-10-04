@@ -13,7 +13,9 @@ import (
 
 const (
 	profileWindow = 5 * time.Minute
-	profileLimit  = 2
+	// profileLoadTimeout bounds the first Discord read of avatar and banner.
+	profileLoadTimeout = 4 * time.Second
+	profileLimit       = 2
 )
 
 type rateWindow struct {
@@ -119,9 +121,13 @@ func (s *store) getProfile(w http.ResponseWriter, r *http.Request, b *bot) {
 	}
 	s.mu.Unlock()
 	if load {
-		if err := s.loadProfile(r.Context(), b); err != nil {
+		// Short: the page waits for this answer, and a slow Discord must not
+		// make the dashboard give up ("API not reachable"). Tried again after a minute.
+		ctx, cancel := context.WithTimeout(r.Context(), profileLoadTimeout)
+		if err := s.loadProfile(ctx, b); err != nil {
 			log.Printf("profile of bot %d: %v", b.ID, err)
 		}
+		cancel()
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()

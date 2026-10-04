@@ -55,7 +55,7 @@ Requirements: Docker with Docker Compose.
    | Variable | Meaning |
    |---|---|
    | `DASHBOARD_PORT` | Port of the dashboard (default 8080) |
-   | `BOTHUB_INTERNAL_KEY` | Shared secret of the services, at least 32 characters (`openssl rand -hex 32`) |
+   | `BOTHUB_INTERNAL_KEY` | Shared secret of the services, at least 32 characters (`openssl rand -hex 32`); empty: generated and kept in `./data/internal.key` |
    | `BOTHUB_ADMIN_USER`, `BOTHUB_ADMIN_PASSWORD` | Optional first admin; otherwise the setup wizard asks |
    | `BOTHUB_DEFAULT_LOCALE` | `en` or `de` |
    | `TZ` | Time zone, e.g. `Europe/Berlin` |

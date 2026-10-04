@@ -7,11 +7,25 @@
 #   gateway  127.0.0.1:9001 (sign-in, sessions, per-bot access; talks to the API)
 #   dashboard :8080 (the only public port; talks to the gateway)
 set -uo pipefail
+BOTHUB_INTERNAL_KEY="${BOTHUB_INTERNAL_KEY:-}"
 
 # "start-app hash-password <pw>": print an Argon2id hash for BOTHUB_ADMIN_PASSWORD.
 if [[ "${1:-}" == "hash-password" ]]; then
   shift
   exec bothub-gateway hash-password "$@"
+fi
+
+# Shared secret of gateway and API (/internal/*). Without it the gateway
+# runs in memory only (no database). Empty or too short: use a generated
+# one, kept in /data so it stays the same across restarts.
+if [[ ${#BOTHUB_INTERNAL_KEY} -lt 32 ]]; then
+  [[ -n "${BOTHUB_INTERNAL_KEY:-}" ]] && echo "start-app: BOTHUB_INTERNAL_KEY is shorter than 32 characters, using the generated key" >&2
+  keyfile="${DATA_DIR:-/data}/internal.key"
+  if [[ ! -s "$keyfile" ]]; then
+    (umask 077 && php -r 'echo bin2hex(random_bytes(32));' > "$keyfile")
+  fi
+  BOTHUB_INTERNAL_KEY="$(cat "$keyfile")"
+  export BOTHUB_INTERNAL_KEY
 fi
 
 pids=()

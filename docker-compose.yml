@@ -19,7 +19,8 @@ services:
       DATA_DIR: "/data"
       REDIS_URL: "redis://redis:6379"
       BOTHUB_DEFAULT_LOCALE: "${BOTHUB_DEFAULT_LOCALE:-en}"
-      # Shared secret between gateway and API (/internal/*), at least 32 characters.
+      # Shared secret between gateway and API (/internal/*), at least 32
+      # characters; empty: generated once into ./data/internal.key.
       BOTHUB_INTERNAL_KEY: "${BOTHUB_INTERNAL_KEY:-}"
       # Optional first admin (plain text or Argon2id hash).
       BOTHUB_ADMIN_USER: "${BOTHUB_ADMIN_USER:-}"
