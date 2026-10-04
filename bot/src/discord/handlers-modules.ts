@@ -3,13 +3,14 @@
 // modules (bot/src/modules), so a command built from these blocks and the
 // module itself see the same data.
 
-import type { Guild } from 'discord.js';
+import type { Guild, GuildMember } from 'discord.js';
 import type { Repo } from '../core/repo.js';
 import { GraphError, type Handler, type Run } from '../graph/interpreter.js';
 import type { GraphNode } from '../graph/types.js';
 import { snowflake } from '../graph/util.js';
 import { createSuggestion, decideSuggestion, levelFor } from '../modules/community.js';
 import { ModuleContext } from '../modules/context.js';
+import * as eco from '../modules/economy.js';
 import type { DiscordData } from './handlers.js';
 
 function guildOf(run: Run): Guild {
@@ -20,6 +21,23 @@ function guildOf(run: Run): Guild {
 
 function userOf(run: Run, node: GraphNode, key = 'user'): string {
   return snowflake(run.str(node, key) || (run.vars.get('user.id') ?? ''), key);
+}
+
+function memberOf(run: Run): GuildMember {
+  const member = (run.data as unknown as DiscordData).member;
+  if (!member) throw new GraphError('error.run.no_server');
+  return member;
+}
+
+/** Economy errors become the text of {error} ("❌ {error}" in the presets). */
+async function econ(fn: () => unknown): Promise<void> {
+  try {
+    await fn();
+  } catch (err) {
+    if (err instanceof eco.EconomyError) throw new GraphError('error.run.economy', { message: err.message });
+    if (err instanceof Error && err.message === 'economy.unknown_currency') throw new GraphError('error.run.economy', { message: 'Unknown currency.' });
+    throw err;
+  }
 }
 
 function limitOf(run: Run, node: GraphNode): number {
@@ -55,6 +73,11 @@ export function daysUntil(month: number, day: number, now: Date): number {
 export function moduleHandlers(repo: Repo, botId: number): Map<string, Handler> {
   const ctx = new ModuleContext(botId, repo);
   const db = repo.db;
+  // Economy roles after a change by a block.
+  const syncMember = async (run: Run) => {
+    const member = (run.data as unknown as DiscordData).member;
+    if (member) await eco.syncRoles(ctx, member);
+  };
   const levelCfg = () => ctx.config<{ baseXp: number; stepXp: number; maxLevel: number }>('leveling');
   const inviteStats = (guildId: string, userId: string) =>
     db
@@ -65,6 +88,67 @@ export function moduleHandlers(repo: Repo, botId: number): Map<string, Handler> 
       .get(botId, guildId, userId) as { total: number | null; gone: number | null };
 
   return new Map<string, Handler>([
+    // --- economy extras (modules/economy.ts): readable errors for "❌ {error}" ---
+    ['action.economy_daily', (node, run) => econ(() => {
+      const r = eco.daily(ctx, guildOf(run).id, userOf(run, node));
+      run.setResult(node, '', eco.money(ctx, r.amount));
+      run.setResult(node, '.balance', eco.money(ctx, r.balance));
+      return syncMember(run);
+    })],
+    ['action.economy_bank', (node, run) => econ(() => {
+      const guild = guildOf(run).id;
+      const user = userOf(run, node);
+      const mode = run.str(node, 'mode') || 'show';
+      const r = mode === 'deposit' ? eco.deposit(ctx, guild, user, run.str(node, 'amount'))
+        : mode === 'withdraw' ? eco.withdraw(ctx, guild, user, run.str(node, 'amount'))
+          : { moved: 0, wallet: repo.balance(botId, guild, user), bank: eco.bank(ctx, guild, user) };
+      run.setResult(node, '', eco.money(ctx, r.moved));
+      run.setResult(node, '.wallet', eco.money(ctx, r.wallet));
+      run.setResult(node, '.bank', eco.money(ctx, r.bank));
+      run.setResult(node, '.interest', `${eco.config(ctx).bankInterest} %`);
+      return syncMember(run);
+    })],
+    ['action.economy_shop', (node, run) => {
+      const list = eco.items(ctx);
+      run.setResult(node, '', list.map((i) => `**${i.name}** (\`${i.key}\`) · ${eco.money(ctx, i.price, i.currency)}${i.description ? `\n${i.description}` : ''}`).join('\n\n') || 'The shop is empty.');
+      run.setResult(node, '.count', list.length);
+    }],
+    ['action.economy_buy', async (node, run) => econ(async () => {
+      const guild = guildOf(run);
+      const member = memberOf(run);
+      const r = await eco.buy(ctx, guild, member, run.str(node, 'item'), Number(run.str(node, 'amount')) || 1);
+      run.setResult(node, '', r.item.name);
+      run.setResult(node, '.qty', r.qty);
+      run.setResult(node, '.cost', eco.money(ctx, r.cost, r.item.currency));
+      run.setResult(node, '.balance', eco.money(ctx, r.balance, r.item.currency));
+      run.setResult(node, '.used', r.used);
+    })],
+    ['action.economy_inventory', (node, run) => {
+      const guild = guildOf(run).id;
+      const names = new Map(eco.items(ctx, true).map((i) => [i.key, i.name]));
+      const list = eco.owned(ctx, guild, userOf(run, node));
+      run.setResult(node, '', list.map((r) => `${r.qty} × **${names.get(r.item) ?? r.item}**`).join('\n') || 'Nothing yet.');
+      run.setResult(node, '.count', list.reduce((s, r) => s + r.qty, 0));
+    }],
+    ['action.economy_use', async (node, run) => econ(async () => {
+      run.setResult(node, '', await eco.use(ctx, guildOf(run), memberOf(run), run.str(node, 'item')));
+    })],
+    ['action.economy_lottery', (node, run) => econ(() => {
+      const guild = guildOf(run).id;
+      const user = userOf(run, node);
+      const c = eco.config(ctx);
+      if (run.str(node, 'mode') === 'buy') {
+        const r = eco.buyTickets(ctx, guild, user, Number(run.str(node, 'tickets')) || 1);
+        run.setResult(node, '.balance', eco.money(ctx, r.balance));
+      }
+      const l = eco.lottery(ctx, guild);
+      const total = Object.values(l.tickets).reduce((s, n) => s + n, 0);
+      run.setResult(node, '', `Pot: **${eco.money(ctx, l.pot)}** · ${total} tickets · you hold ${l.tickets[user] ?? 0} · draw daily at ${c.lotteryTime} · ticket ${eco.money(ctx, c.lotteryPrice)}`);
+      run.setResult(node, '.pot', eco.money(ctx, l.pot));
+      run.setResult(node, '.tickets', total);
+      run.setResult(node, '.mine', l.tickets[user] ?? 0);
+    })],
+
     [
       'action.leveling_get_rank',
       (node, run) => {

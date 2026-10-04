@@ -1,14 +1,14 @@
 {
   "$schema": "../node-definition.schema.json",
-  "type": "action.economy_get",
+  "type": "action.economy_buy",
   "version": 1,
   "category": "action",
   "group": "economy",
-  "order": 940,
+  "order": 943,
   "color": "green",
   "icon": "▶︎",
-  "labelKey": "builder.node.action_economy_get.label",
-  "descriptionKey": "builder.node.action_economy_get.description",
+  "labelKey": "builder.node.action_economy_buy.label",
+  "descriptionKey": "builder.node.action_economy_buy.description",
   "module": "economy",
   "inputs": [
     {
@@ -28,34 +28,38 @@
   "results": [
     {
       "suffix": "",
-      "labelKey": "builder.result.economy_get.0"
+      "labelKey": "builder.result.economy_buy.0"
     },
     {
-      "suffix": ".bank",
-      "labelKey": "builder.result.economy_get.bank"
+      "suffix": ".qty",
+      "labelKey": "builder.result.economy_buy.qty"
     },
     {
-      "suffix": ".all",
-      "labelKey": "builder.result.economy_get.all"
+      "suffix": ".cost",
+      "labelKey": "builder.result.economy_buy.cost"
+    },
+    {
+      "suffix": ".balance",
+      "labelKey": "builder.result.economy_buy.balance"
+    },
+    {
+      "suffix": ".used",
+      "labelKey": "builder.result.economy_buy.used"
     }
   ],
   "config": {
     "type": "object",
     "additionalProperties": false,
     "properties": {
-      "user": {
+      "item": {
         "type": "string",
-        "maxLength": 200,
-        "x-labelKey": "builder.cfg.user",
-        "x-hintKey": "builder.cfg.ref_hint",
-        "x-ref": "member",
-        "default": "{user.id}"
+        "maxLength": 100,
+        "x-labelKey": "builder.cfg.economy_item"
       },
-      "currency": {
+      "amount": {
         "type": "string",
-        "maxLength": 32,
-        "x-labelKey": "builder.cfg.economy_currency",
-        "x-hintKey": "builder.cfg.economy_currency_hint"
+        "maxLength": 20,
+        "x-labelKey": "builder.cfg.amount_amount"
       },
       "variable": {
         "type": "string",

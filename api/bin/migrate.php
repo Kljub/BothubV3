@@ -36,6 +36,13 @@ if ($regrouped > 0) {
     fwrite(STDOUT, "migrate: {$regrouped} module command copies moved back into their module group\n");
 }
 
+// Module commands of newer presets reach the existing bots (off until switched on).
+$added = Connection::write($pdo, fn (PDO $p) => CommandPresets::addMissing($p));
+if ($added > 0) {
+    fwrite(STDOUT, "migrate: {$added} new module commands added to the bots
+");
+}
+
 // Module command copies nobody saved yet follow the current presets.
 $refreshed = Connection::write($pdo, fn (PDO $p) => CommandPresets::refresh($p));
 if ($refreshed > 0) {

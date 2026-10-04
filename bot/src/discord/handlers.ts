@@ -27,6 +27,16 @@ import { freeGames, freeGamesText, gameEmbed, platformsOf, type FreeGamesConfig 
 import { deleteGiveaway, endGiveaway, giveawayPayload, listGiveaways, loadGiveaway, saveGiveaway, type Giveaway } from '../modules/giveaway.js';
 
 /** What a run knows about where it runs (run.data). */
+/** An unknown currency key becomes a readable error of the run. */
+function currencyRun<T>(fn: () => T): T {
+  try {
+    return fn();
+  } catch (err) {
+    if (err instanceof Error && err.message === 'economy.unknown_currency') throw new GraphError('error.run.economy', { message: 'Unknown currency.' });
+    throw err;
+  }
+}
+
 export interface DiscordData {
   client: Client;
   botId: number;
@@ -1181,15 +1191,23 @@ export function discordHandlers(repo: Repo, mod?: Moderation): Map<string, Handl
         );
       },
     ],
-    // --- economy (default currency) ---
-    ['action.economy_get', (node, run) => run.setResult(node, '', repo.balance(data(run).botId, guildId(run), snowflake(run.str(node, 'user') || (run.vars.get('user.id') ?? ''), 'user')))],
-    ['action.economy_add', (node, run) => void repo.changeBalance(data(run).botId, guildId(run), snowflake(run.str(node, 'user') || (run.vars.get('user.id') ?? ''), 'user'), run.num(node, 'amount'), 'add')],
-    ['action.economy_remove', (node, run) => void repo.changeBalance(data(run).botId, guildId(run), snowflake(run.str(node, 'user') || (run.vars.get('user.id') ?? ''), 'user'), -run.num(node, 'amount'), 'add')],
-    ['action.economy_set', (node, run) => void repo.changeBalance(data(run).botId, guildId(run), snowflake(run.str(node, 'user') || (run.vars.get('user.id') ?? ''), 'user'), run.num(node, 'amount'), 'set')],
+    // --- economy (currency of the block, else the default) ---
+    ['action.economy_get', (node, run) => {
+      const user = snowflake(run.str(node, 'user') || (run.vars.get('user.id') ?? ''), 'user');
+      const all = currencyRun(() => repo.balances(data(run).botId, guildId(run), user));
+      const cur = run.str(node, 'currency').toLowerCase();
+      const one = (cur && all.find((c) => c.key === cur)) || all[0];
+      run.setResult(node, '', one?.balance ?? 0);
+      run.setResult(node, '.bank', one?.bank ?? 0);
+      run.setResult(node, '.all', all.map((c) => `${c.symbol ? `${c.symbol} ` : ''}**${c.balance.toLocaleString('en-US')}** ${c.name}${c.bank ? ` · bank ${c.bank.toLocaleString('en-US')}` : ''}`).join('\n'));
+    }],
+    ['action.economy_add', (node, run) => void currencyRun(() => repo.changeBalance(data(run).botId, guildId(run), snowflake(run.str(node, 'user') || (run.vars.get('user.id') ?? ''), 'user'), run.num(node, 'amount'), 'add', run.str(node, 'currency') || null))],
+    ['action.economy_remove', (node, run) => void currencyRun(() => repo.changeBalance(data(run).botId, guildId(run), snowflake(run.str(node, 'user') || (run.vars.get('user.id') ?? ''), 'user'), -run.num(node, 'amount'), 'add', run.str(node, 'currency') || null))],
+    ['action.economy_set', (node, run) => void currencyRun(() => repo.changeBalance(data(run).botId, guildId(run), snowflake(run.str(node, 'user') || (run.vars.get('user.id') ?? ''), 'user'), run.num(node, 'amount'), 'set', run.str(node, 'currency') || null))],
     [
       'action.economy_pay',
       (node, run) => {
-        const ok = repo.pay(data(run).botId, guildId(run), snowflake(run.str(node, 'from_user'), 'from_user'), snowflake(run.str(node, 'to_user'), 'to_user'), Math.trunc(run.num(node, 'amount')));
+        const ok = currencyRun(() => repo.pay(data(run).botId, guildId(run), snowflake(run.str(node, 'from_user'), 'from_user'), snowflake(run.str(node, 'to_user'), 'to_user'), Math.trunc(run.num(node, 'amount')), run.str(node, 'currency') || null));
         if (!ok) throw new GraphError('error.run.not_enough_balance');
       },
     ],
@@ -1197,7 +1215,7 @@ export function discordHandlers(repo: Repo, mod?: Moderation): Map<string, Handl
       'action.economy_leaderboard',
       (node, run) => {
         const limit = Math.max(1, Math.min(25, Math.trunc(Number(run.raw(node, 'limit') ?? 10))));
-        const rows = repo.leaderboard(data(run).botId, guildId(run), limit);
+        const rows = currencyRun(() => repo.leaderboard(data(run).botId, guildId(run), limit, run.str(node, 'currency') || null));
         run.setResult(node, '', rows.map((r, i) => `${i + 1}. <@${r.userId}> – ${r.balance}`).join('\n'));
       },
     ],

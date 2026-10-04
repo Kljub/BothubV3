@@ -1,14 +1,14 @@
 {
   "$schema": "../node-definition.schema.json",
-  "type": "action.economy_get",
+  "type": "action.economy_bank",
   "version": 1,
   "category": "action",
   "group": "economy",
-  "order": 940,
+  "order": 941,
   "color": "green",
   "icon": "▶︎",
-  "labelKey": "builder.node.action_economy_get.label",
-  "descriptionKey": "builder.node.action_economy_get.description",
+  "labelKey": "builder.node.action_economy_bank.label",
+  "descriptionKey": "builder.node.action_economy_bank.description",
   "module": "economy",
   "inputs": [
     {
@@ -28,21 +28,40 @@
   "results": [
     {
       "suffix": "",
-      "labelKey": "builder.result.economy_get.0"
+      "labelKey": "builder.result.economy_bank.0"
+    },
+    {
+      "suffix": ".wallet",
+      "labelKey": "builder.result.economy_bank.wallet"
     },
     {
       "suffix": ".bank",
-      "labelKey": "builder.result.economy_get.bank"
+      "labelKey": "builder.result.economy_bank.bank"
     },
     {
-      "suffix": ".all",
-      "labelKey": "builder.result.economy_get.all"
+      "suffix": ".interest",
+      "labelKey": "builder.result.economy_bank.interest"
     }
   ],
   "config": {
     "type": "object",
     "additionalProperties": false,
     "properties": {
+      "mode": {
+        "type": "string",
+        "enum": [
+          "show",
+          "deposit",
+          "withdraw"
+        ],
+        "default": "show",
+        "x-labelKey": "builder.cfg.economy_bank_mode"
+      },
+      "amount": {
+        "type": "string",
+        "maxLength": 20,
+        "x-labelKey": "builder.cfg.economy_amount_all"
+      },
       "user": {
         "type": "string",
         "maxLength": 200,
@@ -50,12 +69,6 @@
         "x-hintKey": "builder.cfg.ref_hint",
         "x-ref": "member",
         "default": "{user.id}"
-      },
-      "currency": {
-        "type": "string",
-        "maxLength": 32,
-        "x-labelKey": "builder.cfg.economy_currency",
-        "x-hintKey": "builder.cfg.economy_currency_hint"
       },
       "variable": {
         "type": "string",

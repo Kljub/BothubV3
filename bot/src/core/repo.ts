@@ -352,7 +352,7 @@ export class Repo {
     return Number(this.db.prepare('UPDATE scheduled_jobs SET cancelled_at = ? WHERE bot_id = ? AND key = ? AND done_at IS NULL AND cancelled_at IS NULL').run(now(), botId, key).changes);
   }
 
-  // ---------- economy (default currency) ----------
+  // ---------- economy (currencies of the module settings; the first is the default) ----------
 
   private defaultCurrency(botId: number): number {
     const row = this.db.prepare('SELECT id FROM economy_currencies WHERE bot_id = ? AND is_default = 1').get(botId) as Row | undefined;
@@ -361,52 +361,90 @@ export class Repo {
     return Number(r.lastInsertRowid);
   }
 
-  balance(botId: number, guildId: string, userId: string): number {
+  /** The currency by key (empty: the default); throws economy.unknown_currency. */
+  currencyId(botId: number, key?: string | null): number {
+    if (!key) return this.defaultCurrency(botId);
+    const row = this.db.prepare('SELECT id FROM economy_currencies WHERE bot_id = ? AND key = ?').get(botId, key.toLowerCase()) as Row | undefined;
+    if (!row) throw new Error('economy.unknown_currency');
+    return Number(row.id);
+  }
+
+  /** Currencies of the settings into the table (by key; the first is the default). Balances of removed ones stay. */
+  syncCurrencies(botId: number, list: { key: string; name: string; emoji: string }[]): void {
+    const clean = list.filter((c) => /^[a-z0-9]{1,32}$/.test(c.key ?? '') && String(c.name ?? '').trim());
+    if (!clean.length) return;
+    write(this.db, () => {
+      this.db.prepare('UPDATE economy_currencies SET is_default = 0 WHERE bot_id = ?').run(botId);
+      const upsert = this.db.prepare(
+        `INSERT INTO economy_currencies (bot_id, key, name, symbol, is_default) VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT (bot_id, key) DO UPDATE SET name = excluded.name, symbol = excluded.symbol, is_default = excluded.is_default`,
+      );
+      clean.forEach((c, i) => upsert.run(botId, c.key, c.name.trim().slice(0, 40), String(c.emoji ?? '').slice(0, 64), i === 0 ? 1 : 0));
+    });
+  }
+
+  balance(botId: number, guildId: string, userId: string, currency?: string | null): number {
     const row = this.db
       .prepare('SELECT balance FROM economy_balances WHERE currency_id = ? AND guild_id = ? AND user_id = ?')
-      .get(this.defaultCurrency(botId), guildId, userId) as Row | undefined;
+      .get(this.currencyId(botId, currency), guildId, userId) as Row | undefined;
     return row ? Number(row.balance) : 0;
   }
 
   /** Changes a balance; mode "add" adds (negative removes), "set" replaces. Never below 0. */
-  changeBalance(botId: number, guildId: string, userId: string, amount: number, mode: 'add' | 'set'): number {
+  changeBalance(botId: number, guildId: string, userId: string, amount: number, mode: 'add' | 'set', currency?: string | null): number {
     return write(this.db, () => {
-      const currency = this.defaultCurrency(botId);
-      const current = this.balance(botId, guildId, userId);
+      const id = this.currencyId(botId, currency);
+      const current = this.balance(botId, guildId, userId, currency);
       const next = Math.max(0, Math.trunc(mode === 'set' ? amount : current + amount));
       this.db
         .prepare(
           `INSERT INTO economy_balances (currency_id, guild_id, user_id, balance, updated_at) VALUES (?, ?, ?, ?, ?)
            ON CONFLICT DO UPDATE SET balance = excluded.balance, updated_at = excluded.updated_at`,
         )
-        .run(currency, guildId, userId, next, now());
+        .run(id, guildId, userId, next, now());
       return next;
     });
   }
 
   /** Moves balance between two members in one transaction. */
-  pay(botId: number, guildId: string, from: string, to: string, amount: number): boolean {
+  pay(botId: number, guildId: string, from: string, to: string, amount: number, currency?: string | null): boolean {
     return write(this.db, () => {
-      const currency = this.defaultCurrency(botId);
-      const have = this.balance(botId, guildId, from);
+      const id = this.currencyId(botId, currency);
+      const have = this.balance(botId, guildId, from, currency);
       if (amount <= 0 || have < amount) return false;
       const set = this.db.prepare(
         `INSERT INTO economy_balances (currency_id, guild_id, user_id, balance, updated_at) VALUES (?, ?, ?, ?, ?)
          ON CONFLICT DO UPDATE SET balance = excluded.balance, updated_at = excluded.updated_at`,
       );
-      set.run(currency, guildId, from, have - amount, now());
-      set.run(currency, guildId, to, this.balance(botId, guildId, to) + amount, now());
+      set.run(id, guildId, from, have - amount, now());
+      set.run(id, guildId, to, this.balance(botId, guildId, to, currency) + amount, now());
       return true;
     });
   }
 
-  leaderboard(botId: number, guildId: string, limit: number): { userId: string; balance: number }[] {
+  leaderboard(botId: number, guildId: string, limit: number, currency?: string | null): { userId: string; balance: number }[] {
     return (
       this.db
         .prepare('SELECT user_id, balance FROM economy_balances WHERE currency_id = ? AND guild_id = ? ORDER BY balance DESC LIMIT ?')
-        .all(this.defaultCurrency(botId), guildId, limit) as Row[]
+        .all(this.currencyId(botId, currency), guildId, limit) as Row[]
     ).map((r) => ({ userId: String(r.user_id), balance: Number(r.balance) }));
   }
+
+  /** Every currency with the member's balance (wallet), default first. */
+  balances(botId: number, guildId: string, userId: string): { key: string; name: string; symbol: string; balance: number; bank: number }[] {
+    this.defaultCurrency(botId);
+    return (
+      this.db
+        .prepare(
+          `SELECT c.key, c.name, c.symbol, COALESCE(b.balance, 0) AS balance, COALESCE(k.amount, 0) AS bank FROM economy_currencies c
+           LEFT JOIN economy_balances b ON b.currency_id = c.id AND b.guild_id = ? AND b.user_id = ?
+           LEFT JOIN economy_bank k ON k.currency_id = c.id AND k.guild_id = ? AND k.user_id = ?
+           WHERE c.bot_id = ? ORDER BY c.is_default DESC, c.id`,
+        )
+        .all(guildId, userId, guildId, userId, botId) as Row[]
+    ).map((r) => ({ key: String(r.key), name: String(r.name), symbol: String(r.symbol), balance: Number(r.balance), bank: Number(r.bank) }));
+  }
+
 }
 
 function botRow(r: Row): BotRow {

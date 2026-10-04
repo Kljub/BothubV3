@@ -187,7 +187,7 @@ $blk = '{"moderators":{"allowed_roles":[{"id":"333333333333333333","guild":"2222
 check('moderator block stored', $s === 200 && $mc['moderators']['banned_channels'][0]['id'] === '111111111111111111' && $mc['admins']['required_permissions'] === ['administrator']);
 check('moderator block: everyone 422', call('PUT', "{$b}/modules/moderation/config", '{"moderators":{"allowed_roles":[{"id":"everyone"}]}}')[0] === 422);
 check('moderator block: unknown permission 422', call('PUT', "{$b}/modules/moderation/config", '{"admins":{"required_permissions":["fly"]}}')[0] === 422);
-[$s, $e] = call('GET', "{$b}/modules/economy/config");
+[$s, $e] = call('GET', "{$b}/modules/giveaway/config");
 check('module without settings 404', $s === 404 && $e['error']['key'] === 'error.module.no_settings');
 
 // presence

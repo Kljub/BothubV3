@@ -14,6 +14,7 @@ import { globalChat, tempVoice } from './social.js';
 import { ensurePanels, modmailMessage, onModuleInteraction } from './support.js';
 import { ensureHoneypots, honeypotMessage } from './honeypot.js';
 import { ModuleTimers } from './timers.js';
+import { messageReward, syncCurrencies } from './economy.js';
 import { linkfixMessage } from './linkfix.js';
 
 export { ModuleContext } from './context.js';
@@ -28,6 +29,7 @@ export function bindModules(client: Client, ctx: ModuleContext, timezone: () => 
   const t = new ModuleTimers(ctx, timezone);
   timers.set(ctx, t);
 
+  syncCurrencies(ctx);
   client.once(Events.ClientReady, (c) => {
     t.start(c);
     const guilds = [...c.guilds.cache.values()];
@@ -40,6 +42,7 @@ export function bindModules(client: Client, ctx: ModuleContext, timezone: () => 
     levelingVoiceInit(ctx, guilds);
   });
   ctx.onChange = () => {
+    syncCurrencies(ctx);
     if (!client.isReady()) return;
     const guilds = [...client.guilds.cache.values()];
     guard('reaction-roles', prepareReactionRoles(ctx, guilds));
@@ -67,6 +70,7 @@ export function bindModules(client: Client, ctx: ModuleContext, timezone: () => 
     guard('honeypot', honeypotMessage(ctx, msg));
     guard('automod-media', automodMedia(ctx, msg));
     guard('twitter-linkfix', linkfixMessage(ctx, msg));
+    guard('economy-messages', messageReward(ctx, msg));
   });
   client.on(Events.MessageUpdate, (old, msg) => {
     // Link previews arrive with an edit: the media filter checks them then.

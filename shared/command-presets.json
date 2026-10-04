@@ -10682,7 +10682,7 @@
       "config": {
        "message": {
         "mode": "normal",
-        "content": "💰 <@{target}> has **{bal}** coins."
+        "content": "💰 <@{target}>\n{bal.all}"
        },
        "target": "reply"
       },
@@ -11410,6 +11410,1292 @@
      {
       "from": {
        "node": "option_amount",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "economy",
+   "group": "Economy",
+   "name": "daily",
+   "title": "Daily",
+   "description": "Claim your daily bonus",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "daily",
+       "description": "Claim your daily bonus"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 760
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.economy_daily",
+      "typeVersion": 1,
+      "config": {
+       "variable": "d"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "embeds": [
+         {
+          "color": "#22c55e",
+          "title": "🎁 Daily bonus",
+          "description": "You got **{d}**!\nWallet: {d.balance}"
+         }
+        ]
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "economy",
+   "group": "Economy",
+   "name": "bank balance",
+   "title": "Bank balance",
+   "description": "Your wallet and bank",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "bank balance",
+       "description": "Your wallet and bank"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 760
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.economy_bank",
+      "typeVersion": 1,
+      "config": {
+       "mode": "show",
+       "variable": "b"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "embeds": [
+         {
+          "color": "#5865f2",
+          "title": "🏦 Bank",
+          "description": "Wallet: **{b.wallet}**\nBank: **{b.bank}** (+{b.interest} per day)"
+         }
+        ]
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "economy",
+   "group": "Economy",
+   "name": "bank deposit",
+   "title": "Bank deposit",
+   "description": "Put money in the bank to earn interest",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "bank deposit",
+       "description": "Put money in the bank to earn interest"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 760
+      }
+     },
+     {
+      "id": "option_amount",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "amount",
+       "description": "Amount or \"all\"",
+       "required": true,
+       "variable": "amount"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.economy_bank",
+      "typeVersion": 1,
+      "config": {
+       "mode": "deposit",
+       "amount": "{option_amount}",
+       "variable": "b"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "embeds": [
+         {
+          "color": "#22c55e",
+          "title": "🏦 Deposited",
+          "description": "Deposited **{b}**.\nWallet: {b.wallet} · Bank: {b.bank}"
+         }
+        ]
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_amount",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "economy",
+   "group": "Economy",
+   "name": "bank withdraw",
+   "title": "Bank withdraw",
+   "description": "Take money out of the bank",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "bank withdraw",
+       "description": "Take money out of the bank"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 760
+      }
+     },
+     {
+      "id": "option_amount",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "amount",
+       "description": "Amount or \"all\"",
+       "required": true,
+       "variable": "amount"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.economy_bank",
+      "typeVersion": 1,
+      "config": {
+       "mode": "withdraw",
+       "amount": "{option_amount}",
+       "variable": "b"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "embeds": [
+         {
+          "color": "#22c55e",
+          "title": "🏦 Withdrawn",
+          "description": "Withdrew **{b}**.\nWallet: {b.wallet} · Bank: {b.bank}"
+         }
+        ]
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_amount",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "economy",
+   "group": "Economy",
+   "name": "shop view",
+   "title": "Shop",
+   "description": "See what's for sale",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "shop view",
+       "description": "See what's for sale"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 760
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.economy_shop",
+      "typeVersion": 1,
+      "config": {
+       "variable": "s"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "embeds": [
+         {
+          "color": "#5865f2",
+          "title": "🛒 Shop",
+          "description": "{s}\n\nBuy with /shop buy."
+         }
+        ]
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "economy",
+   "group": "Economy",
+   "name": "shop buy",
+   "title": "Shop buy",
+   "description": "Buy something from the shop",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "shop buy",
+       "description": "Buy something from the shop"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 760
+      }
+     },
+     {
+      "id": "option_item",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "item",
+       "description": "Item name or key",
+       "required": true,
+       "variable": "item"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "option_amount",
+      "type": "option.number",
+      "typeVersion": 1,
+      "config": {
+       "name": "amount",
+       "description": "How many (default 1)",
+       "required": false,
+       "variable": "amount"
+      },
+      "position": {
+       "x": 440,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.economy_buy",
+      "typeVersion": 1,
+      "config": {
+       "item": "{option_item}",
+       "amount": "{option_amount}",
+       "variable": "b"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "embeds": [
+         {
+          "color": "#22c55e",
+          "title": "🛒 Bought",
+          "description": "**{b.qty} × {b}** for {b.cost}.\nWallet: {b.balance}\n{b.used}"
+         }
+        ]
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_item",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "option_amount",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "economy",
+   "group": "Economy",
+   "name": "inventory",
+   "title": "Inventory",
+   "description": "Look inside your inventory",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "inventory",
+       "description": "Look inside your inventory"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 760
+      }
+     },
+     {
+      "id": "option_user",
+      "type": "option.user",
+      "typeVersion": 1,
+      "config": {
+       "name": "user",
+       "description": "The member (you when empty)",
+       "required": false,
+       "variable": "user"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.economy_inventory",
+      "typeVersion": 1,
+      "config": {
+       "user": "{option_user}",
+       "variable": "i"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "embeds": [
+         {
+          "color": "#5865f2",
+          "title": "🎒 Inventory",
+          "description": "{i}"
+         }
+        ]
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_user",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "economy",
+   "group": "Economy",
+   "name": "item use",
+   "title": "Use item",
+   "description": "Use an item of your inventory",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "item use",
+       "description": "Use an item of your inventory"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 760
+      }
+     },
+     {
+      "id": "option_item",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "item",
+       "description": "Item name or key",
+       "required": true,
+       "variable": "item"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.economy_use",
+      "typeVersion": 1,
+      "config": {
+       "item": "{option_item}",
+       "variable": "u"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "✨ {u}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_item",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "economy",
+   "group": "Economy",
+   "name": "lottery",
+   "title": "Lottery",
+   "description": "View the next lottery or buy tickets",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "lottery",
+       "description": "View the next lottery or buy tickets"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 760
+      }
+     },
+     {
+      "id": "option_action",
+      "type": "option.choice",
+      "typeVersion": 1,
+      "config": {
+       "name": "action",
+       "description": "view or buy",
+       "required": false,
+       "variable": "action",
+       "choices": "view\nbuy"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "option_tickets",
+      "type": "option.number",
+      "typeVersion": 1,
+      "config": {
+       "name": "tickets",
+       "description": "How many tickets (default 1)",
+       "required": false,
+       "variable": "tickets"
+      },
+      "position": {
+       "x": 440,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.economy_lottery",
+      "typeVersion": 1,
+      "config": {
+       "mode": "{option_action}",
+       "tickets": "{option_tickets}",
+       "variable": "l"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "embeds": [
+         {
+          "color": "#f59e0b",
+          "title": "🎟️ Lottery",
+          "description": "{l}"
+         }
+        ]
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_action",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "option_tickets",
        "port": "option"
       },
       "to": {

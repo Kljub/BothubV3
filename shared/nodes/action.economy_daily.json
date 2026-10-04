@@ -1,14 +1,14 @@
 {
   "$schema": "../node-definition.schema.json",
-  "type": "action.economy_get",
+  "type": "action.economy_daily",
   "version": 1,
   "category": "action",
   "group": "economy",
   "order": 940,
   "color": "green",
   "icon": "▶︎",
-  "labelKey": "builder.node.action_economy_get.label",
-  "descriptionKey": "builder.node.action_economy_get.description",
+  "labelKey": "builder.node.action_economy_daily.label",
+  "descriptionKey": "builder.node.action_economy_daily.description",
   "module": "economy",
   "inputs": [
     {
@@ -28,15 +28,11 @@
   "results": [
     {
       "suffix": "",
-      "labelKey": "builder.result.economy_get.0"
+      "labelKey": "builder.result.economy_daily.0"
     },
     {
-      "suffix": ".bank",
-      "labelKey": "builder.result.economy_get.bank"
-    },
-    {
-      "suffix": ".all",
-      "labelKey": "builder.result.economy_get.all"
+      "suffix": ".balance",
+      "labelKey": "builder.result.economy_daily.balance"
     }
   ],
   "config": {
@@ -50,12 +46,6 @@
         "x-hintKey": "builder.cfg.ref_hint",
         "x-ref": "member",
         "default": "{user.id}"
-      },
-      "currency": {
-        "type": "string",
-        "maxLength": 32,
-        "x-labelKey": "builder.cfg.economy_currency",
-        "x-hintKey": "builder.cfg.economy_currency_hint"
       },
       "variable": {
         "type": "string",

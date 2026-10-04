@@ -1,14 +1,14 @@
 {
   "$schema": "../node-definition.schema.json",
-  "type": "action.economy_leaderboard",
+  "type": "action.economy_shop",
   "version": 1,
   "category": "action",
   "group": "economy",
-  "order": 920,
+  "order": 942,
   "color": "green",
   "icon": "▶︎",
-  "labelKey": "builder.node.action_economy_leaderboard.label",
-  "descriptionKey": "builder.node.action_economy_leaderboard.description",
+  "labelKey": "builder.node.action_economy_shop.label",
+  "descriptionKey": "builder.node.action_economy_shop.description",
   "module": "economy",
   "inputs": [
     {
@@ -25,23 +25,20 @@
       "labelKey": "builder.port.next"
     }
   ],
+  "results": [
+    {
+      "suffix": "",
+      "labelKey": "builder.result.economy_shop.0"
+    },
+    {
+      "suffix": ".count",
+      "labelKey": "builder.result.economy_shop.count"
+    }
+  ],
   "config": {
     "type": "object",
     "additionalProperties": false,
     "properties": {
-      "limit": {
-        "type": "number",
-        "minimum": 1,
-        "x-labelKey": "builder.cfg.limit_entries",
-        "maximum": 50,
-        "default": 10
-      },
-      "currency": {
-        "type": "string",
-        "maxLength": 32,
-        "x-labelKey": "builder.cfg.economy_currency",
-        "x-hintKey": "builder.cfg.economy_currency_hint"
-      },
       "variable": {
         "type": "string",
         "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",

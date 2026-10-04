@@ -41,6 +41,12 @@
         "type": "number",
         "minimum": 0,
         "x-labelKey": "builder.cfg.amount_amount"
+      },
+      "currency": {
+        "type": "string",
+        "maxLength": 32,
+        "x-labelKey": "builder.cfg.economy_currency",
+        "x-hintKey": "builder.cfg.economy_currency_hint"
       }
     }
   }

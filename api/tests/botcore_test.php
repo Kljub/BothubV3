@@ -86,6 +86,16 @@ check('refresh updates only the unsaved copy', $changed === 1 && $graphOf('purge
 check('refresh keeps enabled, adds a version and an event', $purge['enabled'] === 0 && $purge['versions'] === 2 && (int) $pdo->query('SELECT COUNT(*) FROM outbox')->fetchColumn() === $outboxBefore + 1);
 check('refresh is idempotent', Connection::write($pdo, fn (PDO $p) => CommandPresets::refresh($p)) === 0);
 
+// --- addMissing: new presets reach existing bots once ---
+$pdo->exec("DELETE FROM command_versions WHERE command_id IN (SELECT id FROM commands WHERE bot_id = {$botId} AND name = 'kick')");
+$pdo->exec("DELETE FROM commands WHERE bot_id = {$botId} AND name = 'kick'");
+$added = Connection::write($pdo, fn (PDO $p) => CommandPresets::addMissing($p));
+$kick = $pdo->query("SELECT enabled, hidden FROM commands WHERE bot_id = {$botId} AND name = 'kick'")->fetch();
+check('addMissing adds a missing preset copy, off and hidden', $added >= 1 && $kick['enabled'] === 0 && $kick['hidden'] === 1);
+$pdo->exec("DELETE FROM command_versions WHERE command_id IN (SELECT id FROM commands WHERE bot_id = {$botId} AND name = 'kick')");
+$pdo->exec("DELETE FROM commands WHERE bot_id = {$botId} AND name = 'kick'");
+check('addMissing does not bring back a deleted known preset', Connection::write($pdo, fn (PDO $p) => CommandPresets::addMissing($p)) === 0);
+
 // --- regroup: copies that lost their module group get it back ---
 check('seeded module groups are system groups', (int) $pdo->query("SELECT MIN(system) FROM command_groups WHERE bot_id = {$botId}")->fetchColumn() === 1);
 $pdo->exec("DELETE FROM command_groups WHERE bot_id = {$botId} AND name = 'Moderation'");

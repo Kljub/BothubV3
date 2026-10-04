@@ -8,6 +8,7 @@ import { log } from '../core/log.js';
 import { baseVars, buildMessage, fill, idIn, idsIn, reactionOf, type MessageConfig, type ModuleContext } from './context.js';
 import { allow, assignable, send, warn } from './guard.js';
 import { pollFeeds } from './feeds.js';
+import { lotteryDraw } from './economy.js';
 import { postFreeGames } from './freegames.js';
 
 // ---------- pure helpers ----------
@@ -95,6 +96,7 @@ export class ModuleTimers {
       const local = localTime(now, this.timezone());
       await this.birthdays(guilds, local);
       await this.qotd(guilds, local);
+      await lotteryDraw(this.ctx, guilds, local);
       if (this.ctx.enabled('free-games')) {
         const check = Math.floor(now / 1_800_000) !== Math.floor((now - 30_000) / 1_800_000);
         for (const g of guilds) await postFreeGames(this.ctx, g, local, check);

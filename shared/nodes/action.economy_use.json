@@ -1,14 +1,14 @@
 {
   "$schema": "../node-definition.schema.json",
-  "type": "action.economy_get",
+  "type": "action.economy_use",
   "version": 1,
   "category": "action",
   "group": "economy",
-  "order": 940,
+  "order": 945,
   "color": "green",
   "icon": "▶︎",
-  "labelKey": "builder.node.action_economy_get.label",
-  "descriptionKey": "builder.node.action_economy_get.description",
+  "labelKey": "builder.node.action_economy_use.label",
+  "descriptionKey": "builder.node.action_economy_use.description",
   "module": "economy",
   "inputs": [
     {
@@ -28,34 +28,17 @@
   "results": [
     {
       "suffix": "",
-      "labelKey": "builder.result.economy_get.0"
-    },
-    {
-      "suffix": ".bank",
-      "labelKey": "builder.result.economy_get.bank"
-    },
-    {
-      "suffix": ".all",
-      "labelKey": "builder.result.economy_get.all"
+      "labelKey": "builder.result.economy_use.0"
     }
   ],
   "config": {
     "type": "object",
     "additionalProperties": false,
     "properties": {
-      "user": {
+      "item": {
         "type": "string",
-        "maxLength": 200,
-        "x-labelKey": "builder.cfg.user",
-        "x-hintKey": "builder.cfg.ref_hint",
-        "x-ref": "member",
-        "default": "{user.id}"
-      },
-      "currency": {
-        "type": "string",
-        "maxLength": 32,
-        "x-labelKey": "builder.cfg.economy_currency",
-        "x-hintKey": "builder.cfg.economy_currency_hint"
+        "maxLength": 100,
+        "x-labelKey": "builder.cfg.economy_item"
       },
       "variable": {
         "type": "string",

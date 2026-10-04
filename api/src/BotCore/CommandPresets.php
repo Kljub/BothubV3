@@ -50,6 +50,68 @@ final class CommandPresets
     }
 
     /**
+     * Gives every bot the module commands that came with newer presets (e.g.
+     * /daily after the economy got it). Setting 'presets.known' holds the
+     * presets already rolled out, so a copy the user deleted is not added
+     * again. Copies start off and hidden, like at bot creation. Call inside
+     * Connection::write().
+     *
+     * @return int number of copies added
+     */
+    public static function addMissing(PDO $pdo, ?string $file = null): int
+    {
+        if (!$pdo->inTransaction()) {
+            throw new \LogicException('CommandPresets::addMissing must run inside Connection::write()');
+        }
+        $file ??= (getenv('SHARED_DIR') ?: __DIR__ . '/../../../shared') . '/command-presets.json';
+        $doc = json_decode((string) file_get_contents($file), false, 512, JSON_THROW_ON_ERROR);
+        $known = $pdo->query("SELECT value FROM settings WHERE key = 'presets.known'")->fetchColumn();
+        $known = $known === false ? [] : (array) json_decode((string) $known, true);
+        $has = $pdo->prepare('SELECT 1 FROM commands WHERE bot_id = ? AND preset_name = ? AND plugin_id IS NULL');
+        $group = $pdo->prepare('SELECT id FROM command_groups WHERE bot_id = ? AND name = ? AND system = 1');
+        $addGroup = $pdo->prepare('INSERT INTO command_groups (bot_id, name, position, system) VALUES (?, ?, ?, 1)');
+        $addCommand = $pdo->prepare(
+            "INSERT INTO commands (bot_id, kind, name, description, builtin, enabled, hidden, group_id, graph, preset_name)
+             VALUES (?, 'command', ?, ?, 0, 0, 1, ?, ?, ?)",
+        );
+        $addVersion = $pdo->prepare('INSERT INTO command_versions (command_id, nodes, graph) VALUES (?, ?, ?)');
+        $added = 0;
+        foreach ($pdo->query('SELECT id FROM bots')->fetchAll(PDO::FETCH_COLUMN) as $botId) {
+            $before = $added;
+            foreach ($doc->commands as $preset) {
+                if (in_array($preset->name, $known, true)) {
+                    continue;
+                }
+                $has->execute([$botId, $preset->name]);
+                if ($has->fetchColumn() !== false) {
+                    continue;
+                }
+                $name = mb_substr($preset->group, 0, 40);
+                $group->execute([$botId, $name]);
+                $groupId = $group->fetchColumn();
+                if ($groupId === false) {
+                    $position = (int) $pdo->query('SELECT COALESCE(MAX(position) + 1, 0) FROM command_groups WHERE bot_id = ' . (int) $botId)->fetchColumn();
+                    $addGroup->execute([$botId, $name, min($position, 999)]);
+                    $groupId = (int) $pdo->lastInsertId();
+                }
+                $graph = json_encode($preset->graph, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                $addCommand->execute([$botId, $preset->name, mb_substr($preset->description ?? '', 0, 100), (int) $groupId, $graph, $preset->name]);
+                $addVersion->execute([(int) $pdo->lastInsertId(), count($preset->graph->nodes ?? []), $graph]);
+                $added++;
+            }
+            if ($added > $before) {
+                Outbox::add($pdo, 'commands.changed', ['botId' => (int) $botId]);
+            }
+        }
+        $names = array_map(fn ($c) => $c->name, $doc->commands);
+        $pdo->prepare(
+            "INSERT INTO settings (key, value) VALUES ('presets.known', ?)
+             ON CONFLICT (key) DO UPDATE SET value = excluded.value, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')",
+        )->execute([json_encode(array_values(array_unique([...$known, ...$names])), JSON_UNESCAPED_UNICODE)]);
+        return $added;
+    }
+
+    /**
      * Brings module copies the user never saved (hidden = 1) up to the current
      * preset graph, e.g. after a preset got its blocks. Saved copies (hidden = 0),
      * plugin copies and the enabled switch are left alone. Each changed copy gets
