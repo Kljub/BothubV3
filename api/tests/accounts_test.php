@@ -48,4 +48,15 @@ check('role in use stays', $call('DELETE', '/internal/accounts/roles/1')[0] === 
 check('delete user', $call('DELETE', '/internal/accounts/users/1')[0] === 204 && $call('GET', '/internal/accounts')[1]['users'] === []);
 check('bad user refused', $call('PUT', '/internal/accounts/users/2', ['username' => 'x'])[0] === 422);
 
+// Co-Work: members of a bot show in the bot list.
+$call('PUT', '/internal/accounts/users/1', ['username' => 'owner', 'passwordHash' => '$argon2id$x', 'roleId' => 1]);
+$call('PUT', '/internal/accounts/users/2', ['username' => 'helper', 'passwordHash' => '$argon2id$x', 'roleId' => 3]);
+$pdo->exec("INSERT INTO bots (id, name, token_enc, token_fingerprint, owner_id) VALUES (5, 'Bot', x'00', x'05', 1)");
+check('member', $call('PUT', '/internal/bots/5/members/2', ['role' => 'custom', 'permissions' => ['bot.control', 'bad perm']])[0] === 204);
+$b = array_values(array_filter($call('GET', '/internal/bots')[1]['items'] ?? $call('GET', '/internal/bots')[1], fn ($x) => $x['id'] === 5))[0] ?? [];
+check('bot list has owner and members', ($b['ownerId'] ?? 0) === 1 && ($b['members'][0]['userId'] ?? 0) === 2 && ($b['members'][0]['permissions'] ?? null) === ['bot.control']);
+check('bad role refused', $call('PUT', '/internal/bots/5/members/2', ['role' => 'king'])[0] === 422);
+check('unknown user refused', $call('PUT', '/internal/bots/5/members/9', ['role' => 'viewer'])[0] === 404);
+check('remove member', $call('DELETE', '/internal/bots/5/members/2')[0] === 204);
+
 exit($failed === 0 ? 0 : 1);

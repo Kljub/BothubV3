@@ -178,6 +178,15 @@ final class InternalRouter
 
     private function route(string $method, string $path, array $body): array
     {
+        if (preg_match('#^/internal/bots/(\d+)/members/(\d+)$#', $path, $m)) {
+            $by = $this->userId;
+            match ($method) {
+                'PUT' => $this->bots->setMember((int) $m[1], (int) $m[2], (string) ($body['role'] ?? ''), is_array($body['permissions'] ?? null) ? $body['permissions'] : [], $by),
+                'DELETE' => $this->bots->removeMember((int) $m[1], (int) $m[2]),
+                default => throw new ApiError(405, 'error.method_not_allowed'),
+            };
+            return [204, null];
+        }
         if ($path === '/internal/bots') {
             return match ($method) {
                 'GET' => [200, ['items' => $this->bots->all()]],

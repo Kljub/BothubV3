@@ -34,7 +34,13 @@ type bot struct {
 	GuildCount    int        `json:"guildCount"`
 	CreatedAt     time.Time  `json:"createdAt"`
 	StartedAt     *time.Time `json:"startedAt"` // set while running (bot goes online)
-	token         string
+	// Co-Work: owner (0 = nobody, e.g. old bots) and members.
+	OwnerID int64       `json:"ownerId"`
+	Members []botMember `json:"members"`
+	// For the signed-in user: "owner" or the member role, and their rights.
+	Access      string   `json:"access,omitempty"`
+	Permissions []string `json:"permissions,omitempty"`
+	token       string
 }
 
 type guild struct {
@@ -238,6 +244,10 @@ func main() {
 	mux.HandleFunc("GET /api/v1/bots", s.auth(s.listBots))
 	mux.HandleFunc("POST /api/v1/bots", s.auth(s.createBot))
 	mux.HandleFunc("GET /api/v1/bots/{id}", s.auth(s.withBot(s.getBot)))
+	// Co-Work: the owner and members of a bot ({user}: ID or user name).
+	mux.HandleFunc("GET /api/v1/bots/{id}/members", s.auth(s.withBot(s.listMembers)))
+	mux.HandleFunc("PUT /api/v1/bots/{id}/members/{user}", s.auth(s.withBot(s.setMember)))
+	mux.HandleFunc("DELETE /api/v1/bots/{id}/members/{user}", s.auth(s.withBot(s.removeMember)))
 	mux.HandleFunc("PATCH /api/v1/bots/{id}", s.auth(s.withBot(s.updateBot)))
 	mux.HandleFunc("DELETE /api/v1/bots/{id}", s.auth(s.withBot(s.deleteBot)))
 	mux.HandleFunc("POST /api/v1/bots/{id}/start", s.auth(s.withBot(s.startBot)))
@@ -560,7 +570,7 @@ func (s *store) updateSettings(w http.ResponseWriter, r *http.Request, sid strin
 type botHandler func(w http.ResponseWriter, r *http.Request, b *bot)
 
 func (s *store) withBot(next botHandler) authed {
-	return func(w http.ResponseWriter, r *http.Request, _ string) {
+	return func(w http.ResponseWriter, r *http.Request, sid string) {
 		id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
 		s.mu.Lock()
 		b := s.bots[id]
@@ -580,11 +590,23 @@ func (s *store) withBot(next botHandler) authed {
 			apiError(w, 404, "error.bot.not_found")
 			return
 		}
+		// Co-Work: only the owner, members and instance admins; members only with the right.
+		s.mu.Lock()
+		found, ok := s.allowed(s.sessUser(sid), b, r)
+		s.mu.Unlock()
+		if !found {
+			apiError(w, 404, "error.bot.not_found")
+			return
+		}
+		if !ok {
+			apiError(w, 403, "error.access.denied")
+			return
+		}
 		next(w, r, b)
 	}
 }
 
-func (s *store) listBots(w http.ResponseWriter, r *http.Request, _ string) {
+func (s *store) listBots(w http.ResponseWriter, r *http.Request, sid string) {
 	if s.php != nil {
 		if err := s.syncBots(r.Context()); err != nil {
 			pe := asPHPError(err)
@@ -594,10 +616,18 @@ func (s *store) listBots(w http.ResponseWriter, r *http.Request, _ string) {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	me := s.sessUser(sid)
 	items := make([]bot, 0, len(s.bots))
 	for id := int64(1); id < s.nextID; id++ {
 		if b, ok := s.bots[id]; ok {
-			items = append(items, *b)
+			// Only the bots the user owns or works on (instance admins: all).
+			role, perms, has := s.botAccess(me, b)
+			if !has {
+				continue
+			}
+			c := *b
+			c.Access, c.Permissions = role, perms
+			items = append(items, c)
 		}
 	}
 	writeJSON(w, 200, map[string]any{"items": items})
@@ -645,6 +675,9 @@ func (s *store) createBot(w http.ResponseWriter, r *http.Request, _ string) {
 	}
 	appID, avatar := id.Application.ID, avatarURL(id.User)
 	b := &bot{ID: s.nextID, Name: name, ApplicationID: &appID, AvatarURL: &avatar, Status: "stopped", TokenSet: true, Autostart: in.Autostart, CreatedAt: time.Now().UTC(), token: token}
+	if u := s.sessUserFromRequest(r); u != nil {
+		b.OwnerID = u.ID
+	}
 	s.bots[b.ID] = b
 	s.nextID++
 	s.seedPresets(b.ID)
@@ -711,6 +744,7 @@ func (s *store) refreshGuildCount(ctx context.Context, b *bot) {
 func (s *store) getBot(w http.ResponseWriter, r *http.Request, b *bot) {
 	s.mu.Lock()
 	out := *b
+	out.Access, out.Permissions, _ = s.botAccess(s.sessUserFromRequest(r), b)
 	s.mu.Unlock()
 	writeJSON(w, 200, out)
 }

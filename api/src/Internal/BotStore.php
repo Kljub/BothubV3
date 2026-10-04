@@ -17,7 +17,8 @@ use PDO;
 final class BotStore
 {
     private const COLUMNS = "b.id, b.name, b.application_id, b.avatar_url, b.status, b.status_error_key,
-        b.token_enc IS NOT NULL AS token_set, b.autostart, b.created_at, b.started_at,
+        b.token_enc IS NOT NULL AS token_set, b.autostart, b.created_at, b.started_at, b.owner_id,
+        (SELECT json_group_array(json_object('userId', m.user_id, 'role', m.role, 'permissions', json(m.permissions))) FROM bot_members m WHERE m.bot_id = b.id) AS members,
         (SELECT COUNT(*) FROM bot_guilds g WHERE g.bot_id = b.id AND g.left_at IS NULL) AS guild_count";
 
     /** $owner: the signed-in user; a new bot belongs to them and uses their secrets. */
@@ -257,6 +258,32 @@ final class BotStore
     }
 
     /** @param array<string, mixed> $r */
+    /** Co-Work: adds or changes a member (role preset or custom with its permissions). */
+    public function setMember(int $botId, int $userId, string $role, array $permissions, int $by): void
+    {
+        if ($this->find($botId) === null) {
+            throw ApiError::notFound('error.bot.not_found');
+        }
+        if (!in_array($role, ['viewer', 'operator', 'builder', 'admin', 'custom'], true)) {
+            throw new ApiError(422, 'error.validation', ['field' => 'role']);
+        }
+        $user = $this->pdo->prepare('SELECT 1 FROM users WHERE id = ?');
+        $user->execute([$userId]);
+        if ($user->fetchColumn() === false) {
+            throw ApiError::notFound('error.user.not_found');
+        }
+        $perms = array_values(array_unique(array_filter(array_map('strval', $permissions), static fn ($p) => preg_match('/^[a-z]+\.[a-z_]+$/', $p) === 1)));
+        $this->pdo->prepare(
+            'INSERT INTO bot_members (bot_id, user_id, role, permissions, added_by) VALUES (?, ?, ?, ?, ?)
+             ON CONFLICT (bot_id, user_id) DO UPDATE SET role = excluded.role, permissions = excluded.permissions',
+        )->execute([$botId, $userId, $role, json_encode($role === 'custom' ? $perms : []), $by]);
+    }
+
+    public function removeMember(int $botId, int $userId): void
+    {
+        $this->pdo->prepare('DELETE FROM bot_members WHERE bot_id = ? AND user_id = ?')->execute([$botId, $userId]);
+    }
+
     private static function json(array $r): array
     {
         return [
@@ -271,6 +298,9 @@ final class BotStore
             'guildCount' => (int) $r['guild_count'],
             'createdAt' => $r['created_at'],
             'startedAt' => $r['status'] === 'running' ? $r['started_at'] : null,
+            // Co-Work: the owner and the other users who work on the bot.
+            'ownerId' => (int) $r['owner_id'],
+            'members' => json_decode((string) ($r['members'] ?? '[]'), true) ?: [],
         ];
     }
 }

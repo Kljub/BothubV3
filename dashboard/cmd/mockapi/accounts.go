@@ -97,6 +97,15 @@ func (s *store) sessUser(sid string) *mockUser {
 	return nil
 }
 
+// sessUserFromRequest is requestUser for callers that hold s.mu.
+func (s *store) sessUserFromRequest(r *http.Request) *mockUser {
+	c, err := r.Cookie("bothub_session")
+	if err != nil {
+		return nil
+	}
+	return s.sessUser(c.Value)
+}
+
 // requestUser is the signed-in user of a request (by its session cookie).
 func (s *store) requestUser(r *http.Request) *mockUser {
 	c, err := r.Cookie("bothub_session")
