@@ -4,7 +4,7 @@ Generated from `shared/sdk-permissions.json` by `sdk/scripts/api-doc.mjs`; do no
 
 Call a function as `ctx.<area>.<name>(...)`. A call needs its permission declared in `bothub-plugin.json` and switched on in the SDK policies (admin). Planned calls exist already and answer `sdk.call.not_available`.
 
-**Status:** 138 of 227 calls available.
+**Status:** 139 of 228 calls available.
 
 Events (`discord.events`, `bothub.events`): messageCreate, messageUpdate, messageDelete, reactionAdd, reactionRemove; guildMemberAdd, guildMemberRemove, guildMemberUpdate; guildCreate, guildDelete, channelCreate, channelDelete, channelUpdate, roleCreate, roleDelete, roleUpdate; voiceStateUpdate; interactionCreate; bot.ready, bot.start, bot.stop, bot.restart, bot.shutdown, plugin.load, plugin.enable, plugin.disable, plugin.unload.
 
@@ -416,6 +416,7 @@ Events (`discord.events`, `bothub.events`): messageCreate, messageUpdate, messag
 | `http.put()` | http.outbound | high | ✅ |
 | `http.patch()` | http.outbound | high | ✅ |
 | `http.delete()` | http.outbound | high | ✅ |
+| `http.check()` | http.check | medium | ✅ |
 | `http.secret()` | secrets.use | medium | ✅ |
 
 ## secrets

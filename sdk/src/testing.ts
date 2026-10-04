@@ -49,6 +49,7 @@ const CALLS: Record<string, string | null> = {
   'voice.join': 'discord.voice.connect', 'voice.leave': 'discord.voice.connect', 'voice.play': 'discord.voice.speak',
   'voice.stop': 'discord.voice.speak', 'voice.state': 'discord.voice.connect',
   'http.secret': 'secrets.use',
+  'http.check': 'http.check',
   'http.get': 'http.outbound', 'http.post': 'http.outbound', 'http.put': 'http.outbound', 'http.patch': 'http.outbound', 'http.delete': 'http.outbound',
   'message.dm': 'discord.messages.send',
   'guild.getChannels': 'discord.guilds.read', 'guild.getRoles': 'discord.guilds.read', 'guild.getEmojis': 'discord.guilds.read',
@@ -211,7 +212,7 @@ export interface EndpointRequest {
   headers: Record<string, string>;
 }
 /** base64: a binary answer (e.g. an image for saveAs 'file'). */
-export interface EndpointReply { status?: number; json?: Json; text?: string; base64?: string; headers?: Record<string, string> }
+export interface EndpointReply { status?: number; json?: Json; text?: string; base64?: string; headers?: Record<string, string>; /** http.check: the latency it reports (default 1). */ latencyMs?: number }
 export interface PlayedSound { guildId: string; channelId: string; file: string; volume: number }
 
 /** A sent message; file: the image of message.sendFile. */
@@ -421,6 +422,21 @@ export function createTestContext(options: TestContextOptions = {}): TestContext
       },
     },
     http: {
+      // Like the bot: only status and latency; the fake server is options.web[<host>] (none = not reachable).
+      check: async (url: string) => {
+        let u: URL;
+        try {
+          u = new URL(url);
+        } catch {
+          throw new SdkCallError('sdk.http.bad_url');
+        }
+        if (!['http:', 'https:'].includes(u.protocol)) throw new SdkCallError('sdk.http.bad_url');
+        const server = options.web?.[u.hostname];
+        if (!server) return { ok: false, status: null, latencyMs: null, error: 'failed' };
+        const reply = await server({ method: 'GET', url: u.toString(), query: Object.fromEntries(u.searchParams), headers: {} } as WebRequest);
+        const status = reply.status ?? 200;
+        return { ok: status < 400, status, latencyMs: reply.latencyMs ?? 1 };
+      },
       // Like the bot: url = name of an address secret (+ path) or an https URL of
       // a host of "hosts"; auth puts a secret into a header or URL parameter.
       // The fake server is options.web[<host of the address>].

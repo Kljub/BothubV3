@@ -2052,6 +2052,18 @@
       ]
     },
     {
+      "key": "http.check",
+      "group": "network",
+      "risk": "medium",
+      "calls": [
+        "http.check"
+      ],
+      "implemented": [
+        "http.check"
+      ],
+      "$comment": "Status and latency of any public http(s) URL (website monitors): never the page content, never home-network addresses, at most 3 redirects, 60 checks per minute per bot."
+    },
+    {
       "key": "secrets.use",
       "group": "network",
       "risk": "medium",

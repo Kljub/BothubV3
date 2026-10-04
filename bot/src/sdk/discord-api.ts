@@ -12,6 +12,7 @@
 
 import { createHash, randomBytes } from 'node:crypto';
 import { lookup } from 'node:dns/promises';
+import { request as httpRequest } from 'node:http';
 import { request as httpsRequest } from 'node:https';
 import { BlockList, isIP } from 'node:net';
 import {
@@ -299,6 +300,96 @@ const rawHttps: RawHttp = (url, init, address) =>
     req.end();
   });
 
+/** Status only (http.check): connects to the checked address, reads the status line and drops the body. */
+const rawStatus: RawHttp = (url, init, address) =>
+  new Promise((ok, fail) => {
+    const request = url.protocol === 'http:' ? httpRequest : httpsRequest;
+    const req = request(
+      {
+        host: url.hostname, servername: url.hostname, port: url.port || (url.protocol === 'http:' ? 80 : 443), path: url.pathname + url.search, method: init.method,
+        headers: { 'user-agent': 'BotHub-StatusCheck', ...init.headers },
+        lookup: checkedLookup(address) as never,
+      },
+      (res) => {
+        const headers: Record<string, string> = {};
+        for (const [k, v] of Object.entries(res.headers)) if (typeof v === 'string') headers[k] = v;
+        ok({ status: res.statusCode ?? 0, headers, body: Buffer.alloc(0) });
+        req.destroy();
+      },
+    );
+    req.on('error', (err) => fail(err));
+    req.end();
+  });
+
+export interface CheckAnswer {
+  /** Answered with a status below 400. */
+  ok: boolean;
+  status: number | null;
+  latencyMs: number | null;
+  /** Why there is no status: timeout, dns, private_address, too_many_redirects, failed. */
+  error?: string;
+}
+
+/**
+ * http.check: is a website up? Any public http(s) URL (the user enters it in
+ * the plugin settings), at most 3 redirects, never the home network. Answers
+ * only status and latency, never the page, so a plugin cannot read sites
+ * through it. Network problems are an answer (ok false), not an error.
+ */
+export async function siteCheck(
+  rawUrl: unknown,
+  options: unknown,
+  resolve: (host: string) => Promise<string[]> = async (h) => (await lookup(h, { all: true })).map((a) => a.address),
+  raw: RawHttp = rawStatus,
+): Promise<CheckAnswer> {
+  const o = (options && typeof options === 'object' && !Array.isArray(options) ? options : {}) as Record<string, unknown>;
+  const timeoutMs = Number.isInteger(o.timeoutMs) ? Math.min(10_000, Math.max(1000, o.timeoutMs as number)) : 8000;
+  const method = o.method === 'HEAD' ? 'HEAD' : 'GET';
+  if (typeof rawUrl !== 'string' || rawUrl.length > 2000) throw new SdkError('sdk.http.bad_url');
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    throw new SdkError('sdk.http.bad_url');
+  }
+  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) throw new SdkError('sdk.http.bad_url');
+  const start = Date.now();
+  const fail = (error: string): CheckAnswer => ({ ok: false, status: null, latencyMs: null, error });
+  for (let hop = 0; hop <= 3; hop++) {
+    const host = url.hostname.toLowerCase().replace(/^\[|\]$/g, '');
+    const addresses = isIP(host) ? [host] : await resolve(host).catch(() => []);
+    if (!addresses.length) return fail('dns');
+    const address = addresses.find((a) => !privateAddress(a));
+    if (!address || addresses.some(privateAddress)) return fail('private_address');
+    let timer: NodeJS.Timeout | undefined;
+    const res = await Promise.race([
+      raw(url, { method, headers: {} }, address),
+      new Promise<'timeout'>((done) => {
+        timer = setTimeout(() => done('timeout'), Math.max(0, start + timeoutMs - Date.now()));
+      }),
+    ])
+      .catch(() => null)
+      .finally(() => clearTimeout(timer));
+    if (res === 'timeout') return fail('timeout');
+    if (!res) return fail('failed');
+    const location = res.headers.location;
+    if (res.status >= 300 && res.status < 400 && location) {
+      try {
+        url = new URL(location, url);
+      } catch {
+        return fail('failed');
+      }
+      if (!['http:', 'https:'].includes(url.protocol)) return fail('failed');
+      continue;
+    }
+    return { ok: res.status > 0 && res.status < 400, status: res.status, latencyMs: Date.now() - start };
+  }
+  return fail('too_many_redirects');
+}
+
+/** http.check calls per bot and plugin per minute. */
+const CHECKS_PER_MINUTE = 60;
+
 const BLOCKED_HEADERS = /^(authorization|cookie|host|content-length|connection|transfer-encoding|proxy-.*|x-forwarded-.*|forwarded)$/;
 
 /** http.get/post/...: https to a host of the manifest, no private addresses, max. 3 redirects. */
@@ -415,7 +506,7 @@ function emojiJson(e: { id: string; name: string | null; animated: boolean | nul
   return { id: e.id, name: e.name, animated: e.animated === true, available: e.available !== false, url: e.imageURL(), mention: `<${e.animated ? 'a' : ''}:${e.name}:${e.id}>` };
 }
 
-export function discordApi(botId: number, pluginId: string, hosts: string[], deps: DiscordApiDeps, interactions: InteractionRegistry, net?: { resolve?: (h: string) => Promise<string[]>; raw?: RawHttp }): Record<string, Handler> {
+export function discordApi(botId: number, pluginId: string, hosts: string[], deps: DiscordApiDeps, interactions: InteractionRegistry, net?: { resolve?: (h: string) => Promise<string[]>; raw?: RawHttp; checkRaw?: RawHttp }): Record<string, Handler> {
   const a = (q: Record<string, unknown>): unknown[] => (Array.isArray(q.args) ? q.args : []);
   const client = (): Client => {
     const c = deps.client();
@@ -506,6 +597,7 @@ export function discordApi(botId: number, pluginId: string, hosts: string[], dep
   };
   // At most HTTP_PARALLEL open requests per plugin and bot: slow servers must not fill the call slots.
   let open = 0;
+  const checks: number[] = [];
   const http = (method: string) => async (q: Record<string, unknown>) => {
     if (open >= HTTP_PARALLEL) throw new SdkError('sdk.http.busy');
     open++;
@@ -837,6 +929,14 @@ export function discordApi(botId: number, pluginId: string, hosts: string[], dep
     'http.put': http('PUT'),
     'http.patch': http('PATCH'),
     'http.delete': http('DELETE'),
+    // --- http.check: status and latency of any public website ---
+    'http.check': async (q) => {
+      const now = Date.now();
+      checks.splice(0, checks.length, ...checks.filter((t) => now - t < 60_000));
+      if (checks.length >= CHECKS_PER_MINUTE) throw new SdkError('sdk.http.busy');
+      checks.push(now);
+      return siteCheck(a(q)[0], a(q)[1], net?.resolve, net?.checkRaw);
+    },
     // --- economy (the bot's Economy module: same balances as /balance) ---
     'economy.get': (q) => deps.economy.balance(econGuild(a(q)[0]), sf(a(q)[1], 'user')),
     'economy.add': (q) => deps.economy.change(econGuild(a(q)[0]), sf(a(q)[1], 'user'), amount(a(q)[2]), 'add'),

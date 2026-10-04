@@ -859,3 +859,29 @@ test('variables.*: a plugin creates its own Data Storage variables, values per s
     manager.stopAll();
   }
 });
+
+test('http.check: status and latency of public websites only, redirects followed, home network refused', async () => {
+  const { siteCheck } = await import('./discord-api.js');
+  const dns: Record<string, string[]> = { 'up.example': ['93.184.216.34'], 'moved.example': ['93.184.216.35'], 'lan.example': ['192.168.1.10'] };
+  const resolve = async (h: string) => dns[h] ?? [];
+  const seen: string[] = [];
+  const raw = async (url: URL): Promise<{ status: number; headers: Record<string, string>; body: Buffer }> => {
+    seen.push(url.toString());
+    if (url.hostname === 'moved.example') return { status: 301, headers: { location: 'https://up.example/home' }, body: Buffer.alloc(0) };
+    if (url.pathname === '/slow') return new Promise<never>(() => undefined);
+    return { status: url.pathname === '/gone' ? 404 : 200, headers: {}, body: Buffer.alloc(0) };
+  };
+  const up = await siteCheck('http://up.example/', {}, resolve, raw);
+  assert.equal(up.ok, true);
+  assert.equal(up.status, 200);
+  assert.equal(typeof up.latencyMs, 'number');
+  assert.deepEqual(await siteCheck('https://up.example/gone', {}, resolve, raw).then((r) => [r.ok, r.status]), [false, 404]);
+  assert.equal((await siteCheck('https://moved.example/', {}, resolve, raw)).status, 200, 'redirect followed');
+  assert.ok(seen.includes('https://up.example/home'));
+  assert.equal((await siteCheck('http://lan.example/', {}, resolve, raw)).error, 'private_address');
+  assert.equal((await siteCheck('http://127.0.0.1/', {}, resolve, raw)).error, 'private_address');
+  assert.equal((await siteCheck('https://nowhere.example/', {}, resolve, raw)).error, 'dns');
+  assert.equal((await siteCheck('https://up.example/slow', { timeoutMs: 1000 }, resolve, raw)).error, 'timeout');
+  await assert.rejects(siteCheck('ftp://up.example/', {}, resolve, raw), /sdk.http.bad_url/);
+  await assert.rejects(siteCheck('https://user:pw@up.example/', {}, resolve, raw), /sdk.http.bad_url/);
+});

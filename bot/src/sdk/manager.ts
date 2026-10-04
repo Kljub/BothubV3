@@ -40,7 +40,7 @@ export interface PluginDeps {
   /** Discord, HTTP and economy calls of a running bot (discord-api.ts); undefined when it is not running. */
   discord?(botId: number): DiscordApiDeps | undefined;
   /** Tests: DNS and raw HTTPS of http.outbound. */
-  outbound?: { resolve?: (host: string) => Promise<string[]>; raw?: RawHttp };
+  outbound?: { resolve?: (host: string) => Promise<string[]>; raw?: RawHttp; checkRaw?: RawHttp };
   log(botId: number, level: 'info' | 'warning' | 'error', plugin: string, text: string): void;
 }
 

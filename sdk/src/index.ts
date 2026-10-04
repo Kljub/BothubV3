@@ -399,6 +399,12 @@ export interface PluginContext {
     put(url: string, json?: Json, options?: { query?: Record<string, string>; headers?: Record<string, string>; body?: string }): Async<HttpAnswer>;
     patch(url: string, json?: Json, options?: { query?: Record<string, string>; headers?: Record<string, string>; body?: string }): Async<HttpAnswer>;
     secret(request: SecretRequest): Async<{ status: number; headers: Record<string, string | SecretFileAnswer>; json: Json; text: string }>;
+    /**
+     * "http.check": does a website answer? Any public http(s) URL, only status
+     * and latency (never the page). Network trouble is an answer with ok false
+     * and error (timeout, dns, private_address, too_many_redirects, failed).
+     */
+    check(url: string, options?: { method?: 'GET' | 'HEAD'; timeoutMs?: number }): Async<{ ok: boolean; status: number | null; latencyMs: number | null; error?: string }>;
   };
   /** "discord.voice": play files of the plugin folder (sounds/<name>.ogg|mp3|wav). */
   readonly voice: {

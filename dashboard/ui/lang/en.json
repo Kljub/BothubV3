@@ -4119,5 +4119,7 @@
   "sdk.perm.data.variables": "Custom variables",
   "sdk.perm.data.variables_hint": "Creates and deletes its own Data Storage variables ({var.<key>}) and reads and writes their values. The Custom Command Builder and the Message Builder can use them.",
   "error.data.plugin_owned": "This variable belongs to the plugin {plugin}: only the plugin changes or deletes it.",
-  "data.plugin_badge": "Plugin"
+  "data.plugin_badge": "Plugin",
+  "sdk.perm.http.check": "Check websites",
+  "sdk.perm.http.check_hint": "Asks any public website whether it answers: only the status code and the response time, never the page itself. Home-network addresses stay blocked."
 }

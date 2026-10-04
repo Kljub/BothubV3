@@ -4119,5 +4119,7 @@
   "sdk.perm.data.variables": "Eigene Variablen",
   "sdk.perm.data.variables_hint": "Legt eigene Data-Storage-Variablen ({var.<key>}) an und löscht sie, liest und schreibt ihre Werte. Custom Command Builder und Message Builder können sie nutzen.",
   "error.data.plugin_owned": "Diese Variable gehört zum Plugin {plugin}: nur das Plugin ändert oder löscht sie.",
-  "data.plugin_badge": "Plugin"
+  "data.plugin_badge": "Plugin",
+  "sdk.perm.http.check": "Webseiten prüfen",
+  "sdk.perm.http.check_hint": "Fragt beliebige öffentliche Webseiten, ob sie antworten: nur Statuscode und Antwortzeit, nie die Seite selbst. Adressen im Heimnetz bleiben gesperrt."
 }
