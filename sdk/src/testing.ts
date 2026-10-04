@@ -384,18 +384,18 @@ export function createTestContext(options: TestContextOptions = {}): TestContext
       },
       list: async () => (options.guilds ?? []).map((g) => ({ ...g })),
       // Like the bot: the backup JSON becomes a plugin file. The fake server's
-      // structure comes from options.discord['guild.snapshot'](guildId, parts).
+      // structure comes from options.discord['guild.snapshot.data'](guildId, parts).
       snapshot: async (guildId: string, opts: { parts?: string[] } = {}) => {
         if (!permissions.has('storage.files')) throw new SdkCallError('sdk.call.denied');
         const parts = opts.parts?.length ? opts.parts : ['settings', 'roles', 'channels', 'emojis'];
-        const data = (options.discord?.['guild.snapshot']?.(guildId, parts) ?? {}) as Record<string, Json>;
+        const data = (options.discord?.['guild.snapshot.data']?.(guildId, parts) ?? {}) as Record<string, Json>;
         const backup = { format: 'bothub-server-backup', version: 1, createdAt: new Date().toISOString(), guild: { id: guildId, name: String((data.settings as Record<string, Json>)?.name ?? guildId) }, parts, ...data };
         const text = JSON.stringify(backup);
         const file = await putFile(new TextEncoder().encode(text), `backup-${guildId}-${backup.createdAt.slice(0, 10)}.json`, false);
         const counts = Object.fromEntries(['roles', 'channels', 'emojis', 'bans'].map((k) => [k, Array.isArray(data[k]) ? (data[k] as Json[]).length : 0]));
         return { file, counts, size: text.length, createdAt: backup.createdAt, guild: backup.guild, parts };
       },
-      // The report comes from options.discord['guild.restore'](guildId, backup, options), else nothing created.
+      // The report comes from options.discord['guild.restore.report'](guildId, backup, options), else nothing created.
       restore: async (guildId: string, name: string, opts: { mode?: string; parts?: string[] } = {}) => {
         const f = fileOf(name);
         if (!f) throw new SdkCallError('sdk.files.unknown');
@@ -407,7 +407,7 @@ export function createTestContext(options: TestContextOptions = {}): TestContext
         }
         if (backup.format !== 'bothub-server-backup') throw new SdkCallError('sdk.backup.bad_file');
         const mode = opts.mode === 'replace' ? 'replace' : 'add';
-        return (options.discord?.['guild.restore']?.(guildId, backup, { ...opts, mode }) as Json) ?? { mode, created: { roles: 0, channels: 0, emojis: 0, bans: 0 }, deleted: { roles: 0, channels: 0 }, failed: [] };
+        return (options.discord?.['guild.restore.report']?.(guildId, backup, { ...opts, mode }) as Json) ?? { mode, created: { roles: 0, channels: 0, emojis: 0, bans: 0 }, deleted: { roles: 0, channels: 0 }, failed: [] };
       },
     },
     secrets: {
