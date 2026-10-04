@@ -6,7 +6,7 @@
 
 # Dependencies and build output
 node_modules/
-vendor/
+/api/vendor/
 dist/
 /dashboard/bin/
 
