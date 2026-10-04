@@ -288,6 +288,7 @@ func (s *store) startUpdate(ctx context.Context, actor string) error {
 		return err
 	}
 	s.mu.Lock()
+	s.updateState.behind = 0 // pulled; the next check tells again
 	s.addServerLog(time.Now(), "change", "", "log.server.update_started", "api", actor, nil, nil)
 	s.mu.Unlock()
 	return nil

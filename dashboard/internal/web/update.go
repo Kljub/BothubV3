@@ -23,6 +23,15 @@ func (v updateView) LastCheck() string {
 	return formatDateTime(v.Info.LastCheck.At, v.Locale)
 }
 
+// UpdateAvailable: the last check (this one, else the gateway's last) found
+// new commits. Only then the box offers "Update now".
+func (v updateView) UpdateAvailable() bool {
+	if v.Check != nil {
+		return v.Check.Error == "" && v.Check.Behind > 0
+	}
+	return v.Info.LastCheck != nil && v.Info.LastCheck.Behind > 0
+}
+
 // Running: the update helper still works (the box polls).
 func (v updateView) Running() bool {
 	return v.Info.Run != nil && (v.Info.Run.Status == "running" || v.Info.Run.Status == "created")

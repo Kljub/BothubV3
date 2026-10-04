@@ -617,7 +617,7 @@ docker compose up -d --build</pre>
   {{end}}
   <div class="update-actions">
     <button type="button" class="btn" hx-post="/admin/update/check" hx-target="#update-box" hx-swap="outerHTML" hx-disabled-elt="this">{{t "update.check"}}</button>
-    {{if not .Running}}
+    {{if and (not .Running) .UpdateAvailable}}
     <button type="button" class="btn btn-primary" hx-post="/admin/update/run" hx-target="#update-box" hx-swap="outerHTML" hx-confirm="{{t "update.confirm"}}" hx-disabled-elt="this">{{t "update.run"}}</button>
     {{end}}
   </div>
