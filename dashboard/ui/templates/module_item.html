@@ -61,7 +61,10 @@
   <section class="box"><div class="box-body"><p class="muted">{{t "command_page.placeholder"}}</p></div></section>
 </div>
 {{else}}
-<a class="back-link muted" href="/bots/plugins">{{t "plugins.back"}}</a>
+<div class="module-page module-group-{{$d.Plugin.Category}}">
+<nav class="module-breadcrumb" aria-label="{{t "bot.nav.plugins"}}">
+  <a href="/bots/plugins">{{t "bot.nav.plugins"}}</a> › <span>{{t (printf "module.category.%s" $d.Plugin.Category)}}</span> › <strong>{{template "plugin_name" $d.Plugin}}</strong>
+</nav>
 <section class="box">
   <header class="box-head item-head">
     <span class="module-card-icon" aria-hidden="true">{{or $d.Plugin.Icon "🧩"}}</span>
@@ -98,6 +101,7 @@
 <div id="modset-error"></div>
 <div id="modset-body">{{template "module_settings" .}}</div>
 {{end}}
+</div>
 {{end}}
 {{end}}
 

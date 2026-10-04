@@ -157,6 +157,19 @@ type pluginView struct {
 	api.InstalledPlugin
 }
 
+// Category of the plugin (bothub.json "category"; utility when none), for
+// the breadcrumb and the store's group texts (module.category.<key>).
+func (p pluginView) Category() string {
+	var m struct {
+		Category string `json:"category"`
+	}
+	_ = json.Unmarshal(p.Manifest, &m)
+	if !slices.Contains(storeCategories, m.Category) {
+		return "utility"
+	}
+	return m.Category
+}
+
 func (s *Server) pluginViews(r *http.Request, botID int64) ([]pluginView, error) {
 	plugins, err := s.api.ListBotPlugins(r.Context(), session(r), botID)
 	if err != nil {
