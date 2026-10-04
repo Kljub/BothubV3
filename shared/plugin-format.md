@@ -179,6 +179,20 @@ await ctx.variables.create({ key: 'plex_last_title', name: 'Plex: last title', t
 await ctx.variables.set('plex_last_title', 'Frieren', { guildId });
 ```
 
+## Sounds (file fields)
+
+A `file` field with `"accept": "audio"` gets an upload button and a player on
+the dashboard: mp3, ogg, wav or webm up to 8 MB (SDK permission
+`storage.files`). The value is the stored file's name; `ctx.voice.play(guildId,
+name)` plays it. Example (a list of sounds):
+
+```json
+{ "key": "sounds", "type": "list", "max": 25, "titleField": "name", "item": [
+  { "key": "name", "type": "text", "max": 32, "required": true },
+  { "key": "file", "type": "file", "accept": "audio", "required": true }
+] }
+```
+
 ## Images (plugin files)
 
 An `image` field in `dashboard/settings.json` gets an upload button with a

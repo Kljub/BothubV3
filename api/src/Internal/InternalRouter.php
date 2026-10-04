@@ -118,12 +118,12 @@ final class InternalRouter
             if ($this->plugins !== null && preg_match('#^/internal/admin/plugins(?:/([a-z0-9_-]{2,64}))?$#', $path, $m)) {
                 return $this->adminPluginRoute($method, $m[1] ?? null, $body, $query);
             }
-            if ($this->plugins !== null && preg_match('#^/internal/bots/(\d+)/plugins/([a-z0-9_-]{2,64})/files(?:/([0-9a-f]{16}\.[a-z]{3,4}))?$#', $path, $m)) {
+            if ($this->plugins !== null && preg_match('#^/internal/bots/(\d+)/plugins/([a-z0-9_-]{2,64})/files(?:/([0-9a-f]{16}\.[a-z0-9]{1,8}))?$#', $path, $m)) {
                 $this->bots->find((int) $m[1]) ?? throw ApiError::notFound();
                 $files = $this->plugins->files((int) $m[1], $m[2]);
                 return match (true) {
                     !isset($m[3]) && $method === 'GET' => [200, ['items' => $files->list((int) $m[1], $m[2])]],
-                    !isset($m[3]) && $method === 'POST' => [201, $files->upload((int) $m[1], $m[2], $body['data'] ?? null)],
+                    !isset($m[3]) && $method === 'POST' => [201, $files->upload((int) $m[1], $m[2], $body['data'] ?? null, ($body['accept'] ?? 'image') === 'audio' ? 'audio' : 'image', $body['filename'] ?? '')],
                     isset($m[3]) && $method === 'GET' => (static function (?array $f): array {
                         $f ?? throw ApiError::notFound();
                         return [200, ['name' => $f['name'], 'mime' => $f['mime'], 'data' => base64_encode($f['data'])]];

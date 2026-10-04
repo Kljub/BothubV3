@@ -4,7 +4,7 @@ FROM dunglas/frankenphp:1-php8.5-alpine
 RUN install-php-extensions pdo_sqlite redis pcntl zip
 # Bodies: plugin zips arrive base64 in JSON (max. 5 MB -> 8M); plugin webhooks
 # (Plex) may send a small file with the form, which PHP parses before index.php.
-RUN printf 'post_max_size=8M\nupload_max_filesize=3M\nmax_file_uploads=2\n' > "$PHP_INI_DIR/conf.d/bothub-limits.ini"
+RUN printf 'post_max_size=16M\nupload_max_filesize=3M\nmax_file_uploads=2\n' > "$PHP_INI_DIR/conf.d/bothub-limits.ini"
 
 WORKDIR /app
 COPY api/ /app/

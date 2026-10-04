@@ -69,3 +69,6 @@
 .choices-item input { flex: none; margin: 0; }
 .choices-drop > summary { font-size: 14px; font-weight: 400; }
 .choices-item:hover { background: var(--surface-2); }
+
+/* "file" field (sounds): player instead of an image preview. */
+.modset-audio-preview { height: 34px; max-width: 280px; }

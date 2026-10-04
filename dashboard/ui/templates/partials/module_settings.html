@@ -131,6 +131,18 @@
     </div>
     <span class="hint" data-image-status data-uploading="{{t "modset.image.uploading"}}" data-too-big="{{t "error.files.too_big"}}">{{t "modset.image.hint"}}</span>
   </div>
+{{else if eq .Type "file"}}
+  {{/* A sound of the plugin files: modsettings.js uploads it, the hidden field keeps its name; the player plays it. */}}
+  <div class="field modset-image modset-file" data-image-field data-max="8388608">
+    <span class="field-label">{{t .Label}}</span>
+    <input type="hidden" name="{{.Name}}" value="{{.Text}}">
+    <div class="modset-image-row">
+      <audio class="modset-audio-preview" controls preload="none" {{if .ImageURL}}src="{{.ImageURL}}"{{else}}hidden{{end}}></audio>
+      {{if .UploadURL}}<label class="btn btn-sm">{{if .Text}}{{t "modset.file.replace"}}{{else}}{{t "modset.file.upload"}}{{end}}<input type="file" accept=".mp3,.ogg,.wav,.webm,audio/mpeg,audio/ogg,audio/wav,audio/webm" data-image-upload="{{.UploadURL}}?accept=audio" hidden></label>{{end}}
+      <button type="button" class="btn btn-sm btn-danger-soft" data-image-clear {{if not .Text}}hidden{{end}}>{{t "modset.image.remove"}}</button>
+    </div>
+    <span class="hint" data-image-status data-uploading="{{t "modset.image.uploading"}}" data-too-big="{{t "error.files.too_big"}}">{{t "modset.file.hint"}}</span>
+  </div>
 {{else if eq .Type "permissions"}}
   {{/* The permissions block (allowed/banned roles, required permissions, banned channels); the hidden field holds its JSON. */}}
   <div class="field modset-perm">

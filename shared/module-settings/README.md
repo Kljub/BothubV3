@@ -17,6 +17,7 @@ list item use `modset.<module>.<list>.<key>`.
 | `text`     | string                                                  | `default`, `max`, `multiline`, `pattern` (regex; empty text always passes) |
 | `number`   | integer                                                 | `default`, `min`, `max`              |
 | `select`   | one of `options`                                        | `options`, `default`                 |
+| `file`     | name of a plugin file or `""` (plugins, uploaded in the dashboard) | `accept`: `audio` (mp3, ogg, wav, webm, max. 8 MB) |
 | `choices`  | `["value", …]` (several picks)                          | `options` (strings), `dynamic` (plugins: options from `ctx.config.setOptions`), `max` |
 | `color`    | `#rrggbb`                                               | `default`                            |
 | `channel`  | `{id, guild}` or `null`                                 | `channelTypes`                       |

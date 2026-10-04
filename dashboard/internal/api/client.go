@@ -1030,9 +1030,10 @@ type PluginFile struct {
 }
 
 // UploadPluginFile stores an image for the plugin's "image" settings fields.
-func (c *Client) UploadPluginFile(ctx context.Context, s Session, botID int64, pluginID string, data []byte) (PluginFile, error) {
+// UploadPluginFile stores an upload; accept "image" or "audio" (filename gives the sound's type).
+func (c *Client) UploadPluginFile(ctx context.Context, s Session, botID int64, pluginID string, data []byte, accept, filename string) (PluginFile, error) {
 	var out PluginFile
-	_, err := c.do(ctx, s, http.MethodPost, fmt.Sprintf("/api/v1/bots/%d/plugins/%s/files", botID, url.PathEscape(pluginID)), map[string]string{"data": base64.StdEncoding.EncodeToString(data)}, &out)
+	_, err := c.do(ctx, s, http.MethodPost, fmt.Sprintf("/api/v1/bots/%d/plugins/%s/files", botID, url.PathEscape(pluginID)), map[string]string{"data": base64.StdEncoding.EncodeToString(data), "accept": accept, "filename": filename}, &out)
 	return out, err
 }
 

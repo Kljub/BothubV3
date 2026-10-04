@@ -105,6 +105,12 @@ final class ModuleSettings
                     return (string) ($default ?? '');
                 }
                 return is_string($v) && preg_match('/^#[0-9a-fA-F]{6}$/', $v) ? strtolower($v) : self::fail($path);
+            case 'file':
+                // A sound of plugin_files ("accept": "audio", uploaded in the dashboard); empty = none.
+                if ($missing || $v === null || $v === '') {
+                    return '';
+                }
+                return is_string($v) && preg_match(PluginFileStore::FILE, $v) && isset(PluginFileStore::AUDIO[pathinfo($v, PATHINFO_EXTENSION)]) ? $v : self::fail($path);
             case 'image':
                 // A file of plugin_files (uploaded in the dashboard); empty = no image.
                 if ($missing || $v === null || $v === '') {

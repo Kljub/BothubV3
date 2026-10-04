@@ -20,7 +20,7 @@ import { blockType, readManifest, type Permission } from './manifest.js';
 import { PluginProcess, type SdkLimits } from './process.js';
 import { PluginStorage, type StorageLimits } from './storage.js';
 import { pluginVariables } from './variables.js';
-import { discordAttachmentUrl, FILE_LIMITS, FILE_NAME, PluginFiles } from './files.js';
+import { ANY_FILE, discordAttachmentUrl, FILE_LIMITS, FILE_NAME, PluginFiles } from './files.js';
 import { lookup } from 'node:dns/promises';
 import { Readable } from 'node:stream';
 import { buildComponents, privateAddress, discordApi, interactionEvent, InteractionRegistry, parsePluginCustomId, pluginCode, type DiscordApiDeps, type RawHttp } from './discord-api.js';
@@ -124,6 +124,7 @@ function fieldDefault(f: SettingsField): unknown {
     case 'text':
     case 'color':
     case 'image':
+    case 'file':
       return '';
     case 'channel':
     case 'role':
@@ -169,6 +170,8 @@ function checkSetting(f: SettingsField, v: unknown, path: string): unknown {
       return v === '' || (typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v)) ? (v as string).toLowerCase() : bad();
     case 'image':
       return v === '' || (typeof v === 'string' && FILE_NAME.test(v)) ? v : bad();
+    case 'file':
+      return v === '' || (typeof v === 'string' && /^[0-9a-f]{16}\.(mp3|ogg|wav|webm)$/.test(v)) ? v : bad();
     case 'channel':
     case 'role':
       return v === null || REF(v) ? (v === null ? null : { id: v.id, guild: v.guild }) : bad();
@@ -199,7 +202,7 @@ function checkSetting(f: SettingsField, v: unknown, path: string): unknown {
 /** File names (plugin files) anywhere in a settings value. */
 function fileNames(v: unknown, out = new Set<string>()): Set<string> {
   if (typeof v === 'string') {
-    if (FILE_NAME.test(v)) out.add(v);
+    if (ANY_FILE.test(v)) out.add(v);
   } else if (v && typeof v === 'object') {
     for (const x of Object.values(v)) fileNames(x, out);
   }

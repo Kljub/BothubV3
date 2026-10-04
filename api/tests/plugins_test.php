@@ -320,6 +320,20 @@ check('files of unknown plugin 404', call('GET', "/internal/bots/{$bot1}/plugins
 $pdo->exec("INSERT INTO plugin_files (bot_id, plugin_id, name, mime, size, data) VALUES ({$bot1}, 'plugin_greeter', 'aaaaaaaaaaaaaaaa.png', 'image/png', 1, x'00')");
 call('PUT', "/internal/bots/{$bot1}/plugins/plugin_greeter/config", ['config' => ['greeting' => 'Hello there']]);
 check('unsaved upload pruned, plugin file kept', array_column(call('GET', $filesPath)[1]['items'], 'name') === ['aaaaaaaaaaaaaaaa.png']);
+// Sounds of "file" fields (accept audio): type by the file name, the name is kept.
+$r = call('POST', $filesPath, ['data' => base64_encode('ID3 airhorn'), 'accept' => 'audio', 'filename' => 'C:\\x\\Air horn.mp3']);
+$sound = $r[1]['name'] ?? '';
+check('upload sound', $r[0] === 201 && preg_match('/^[0-9a-f]{16}\.mp3$/', $sound) === 1 && $r[1]['mime'] === 'audio/mpeg');
+check('sound keeps its name', array_column(call('GET', $filesPath)[1]['items'], 'filename', 'name')[$sound] === 'Air horn.mp3');
+check('sound read back', call('GET', "{$filesPath}/{$sound}")[0] === 200);
+check('no sound type refused', call('POST', $filesPath, ['data' => base64_encode('x'), 'accept' => 'audio', 'filename' => 'run.exe'])[0] === 422);
+check('file setting value', \BotHub\Internal\ModuleSettings::normalize(['fields' => [['key' => 'snd', 'type' => 'file', 'accept' => 'audio']]], ['snd' => $sound])['snd'] === $sound);
+try {
+    \BotHub\Internal\ModuleSettings::normalize(['fields' => [['key' => 'snd', 'type' => 'file', 'accept' => 'audio']]], ['snd' => $fileName]);
+    check('file setting refuses images', false);
+} catch (\BotHub\Internal\ApiError) {
+    check('file setting refuses images', true);
+}
 check('image setting value', \BotHub\Internal\ModuleSettings::normalize(['fields' => [['key' => 'logo', 'type' => 'image']]], ['logo' => $fileName])['logo'] === $fileName);
 try {
     \BotHub\Internal\ModuleSettings::normalize(['fields' => [['key' => 'logo', 'type' => 'image']]], ['logo' => '../x.png']);

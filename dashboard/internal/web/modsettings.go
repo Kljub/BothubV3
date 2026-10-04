@@ -46,6 +46,8 @@ type settingsField struct {
 	Vars []string `json:"vars"`
 	// Dynamic: a "choices" field whose options the plugin sets (ctx.config.setOptions).
 	Dynamic bool `json:"dynamic"`
+	// Accept: what a "file" field takes ("audio").
+	Accept string `json:"accept"`
 }
 
 type settingsSchema struct {
@@ -258,7 +260,7 @@ func (s *Server) buildFields(v *settingsView, labels, prefix string, fields []se
 			fv.Text = strings.Join(parts, sep)
 		case "choices":
 			fv.Choices = choiceItems(f, labels+prefix+f.Key, values[f.Key], v.Options[f.Key])
-		case "image":
+		case "image", "file":
 			fv.Text, _ = values[f.Key].(string)
 			fv.UploadURL = v.Files
 			if fv.Text != "" && v.Files != "" {

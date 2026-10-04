@@ -104,7 +104,7 @@ const HTTP_RESPONSE_BYTES = 1024 * 1024;
 const HTTP_TIMEOUT_MS = 10000;
 // Plugin files (storage.files).
 const FILE_NAME = /^[0-9a-f]{16}\.[a-z0-9]{1,8}$/;
-const FILE_NAMES = /[0-9a-f]{16}\.(?:png|gif|webp|jpg)/g;
+const FILE_NAMES = /[0-9a-f]{16}\.[a-z0-9]{1,8}/g;
 const FILE_MAX_BYTES = 8 * 1024 * 1024;
 // Like the bot (bot/src/sdk/files.ts): programs and image names without image content are refused.
 const EXECUTABLE = new Set(['exe', 'msi', 'bat', 'cmd', 'com', 'scr', 'ps1', 'vbs', 'js', 'jse', 'wsf', 'hta', 'jar', 'sh', 'apk', 'dll', 'lnk', 'reg', 'png', 'gif', 'webp', 'jpg', 'jpeg']);

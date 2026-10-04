@@ -20,6 +20,11 @@ final class PluginFileStore
     public const MAX_FILES = 100;
     public const MAX_TOTAL = 50 * 1024 * 1024;
     public const NAME = '/^[0-9a-f]{16}\.(png|gif|webp|jpg)$/';
+    /** Any stored file (images and others, migration 0030). */
+    public const FILE = '/^[0-9a-f]{16}\.[a-z0-9]{1,8}$/';
+    /** Sounds of "file" fields with accept "audio": extension => type. */
+    public const AUDIO = ['mp3' => 'audio/mpeg', 'ogg' => 'audio/ogg', 'wav' => 'audio/wav', 'webm' => 'audio/webm'];
+    public const MAX_AUDIO = 8 * 1024 * 1024;
 
     public function __construct(private readonly PDO $pdo)
     {
@@ -39,17 +44,17 @@ final class PluginFileStore
 
     public function list(int $botId, string $pluginId): array
     {
-        $stmt = $this->pdo->prepare('SELECT name, mime, size, origin, created_at FROM plugin_files WHERE bot_id = ? AND plugin_id = ? ORDER BY created_at');
+        $stmt = $this->pdo->prepare('SELECT name, mime, size, origin, filename, created_at FROM plugin_files WHERE bot_id = ? AND plugin_id = ? ORDER BY created_at');
         $stmt->execute([$botId, $pluginId]);
         return array_map(static fn (array $r) => [
-            'name' => $r['name'], 'mime' => $r['mime'], 'size' => (int) $r['size'], 'origin' => $r['origin'], 'createdAt' => $r['created_at'],
+            'name' => $r['name'], 'mime' => $r['mime'], 'size' => (int) $r['size'], 'origin' => $r['origin'], 'filename' => $r['filename'], 'createdAt' => $r['created_at'],
         ], $stmt->fetchAll());
     }
 
     /** @return array{name: string, mime: string, data: string}|null */
     public function get(int $botId, string $pluginId, string $name): ?array
     {
-        if (!preg_match(self::NAME, $name)) {
+        if (!preg_match(self::FILE, $name)) {
             return null;
         }
         $stmt = $this->pdo->prepare('SELECT name, mime, data FROM plugin_files WHERE bot_id = ? AND plugin_id = ? AND name = ?');
@@ -58,22 +63,34 @@ final class PluginFileStore
         return $row ? ['name' => $row['name'], 'mime' => $row['mime'], 'data' => (string) $row['data']] : null;
     }
 
-    /** Stores an upload of the dashboard (base64); returns name, mime and size. */
-    public function upload(int $botId, string $pluginId, mixed $base64): array
+    /**
+     * Stores an upload of the dashboard (base64); returns name, mime and size.
+     * accept "image" (image fields) or "audio" ("file" fields: mp3, ogg, wav,
+     * webm by the file name's extension, up to 8 MB, the name is kept).
+     */
+    public function upload(int $botId, string $pluginId, mixed $base64, string $accept = 'image', mixed $filename = ''): array
     {
-        if (is_string($base64) && strlen($base64) > intdiv(self::MAX_BYTES * 4, 3) + 8) {
-            throw new ApiError(413, 'error.files.too_big', ['max' => self::MAX_BYTES]);
+        $max = $accept === 'audio' ? self::MAX_AUDIO : self::MAX_BYTES;
+        if (is_string($base64) && strlen($base64) > intdiv($max * 4, 3) + 8) {
+            throw new ApiError(413, 'error.files.too_big', ['max' => $max]);
         }
         $data = is_string($base64) ? base64_decode($base64, true) : false;
         if ($data === false || $data === '') {
             throw new ApiError(422, 'error.files.bad_type');
         }
-        if (strlen($data) > self::MAX_BYTES) {
-            throw new ApiError(413, 'error.files.too_big', ['max' => self::MAX_BYTES]);
+        if (strlen($data) > $max) {
+            throw new ApiError(413, 'error.files.too_big', ['max' => $max]);
         }
-        $type = self::sniff($data) ?? throw new ApiError(422, 'error.files.bad_type');
+        $original = '';
+        if ($accept === 'audio') {
+            $original = is_string($filename) ? mb_substr(preg_replace('/[^\w.\- ()]/u', '_', basename(str_replace('\\', '/', $filename))), -100) : '';
+            $ext = strtolower(pathinfo($original, PATHINFO_EXTENSION));
+            $type = isset(self::AUDIO[$ext]) ? ['mime' => self::AUDIO[$ext], 'ext' => $ext] : throw new ApiError(422, 'error.files.bad_type');
+        } else {
+            $type = self::sniff($data) ?? throw new ApiError(422, 'error.files.bad_type');
+        }
         $name = substr(hash('sha256', $data), 0, 16) . '.' . $type['ext'];
-        Connection::write($this->pdo, function (PDO $pdo) use ($botId, $pluginId, $name, $type, $data): void {
+        Connection::write($this->pdo, function (PDO $pdo) use ($botId, $pluginId, $name, $type, $data, $original): void {
             $exists = $pdo->prepare('SELECT 1 FROM plugin_files WHERE bot_id = ? AND plugin_id = ? AND name = ?');
             $exists->execute([$botId, $pluginId, $name]);
             if ($exists->fetchColumn()) {
@@ -85,13 +102,14 @@ final class PluginFileStore
             if ((int) $u['n'] >= self::MAX_FILES || (int) $u['total'] + strlen($data) > self::MAX_TOTAL) {
                 throw new ApiError(413, 'error.files.full', ['max' => self::MAX_FILES]);
             }
-            $add = $pdo->prepare("INSERT INTO plugin_files (bot_id, plugin_id, name, mime, size, data, origin) VALUES (?, ?, ?, ?, ?, ?, 'dashboard')");
+            $add = $pdo->prepare("INSERT INTO plugin_files (bot_id, plugin_id, name, mime, size, data, origin, filename) VALUES (?, ?, ?, ?, ?, ?, 'dashboard', ?)");
             $add->bindValue(1, $botId, PDO::PARAM_INT);
             $add->bindValue(2, $pluginId);
             $add->bindValue(3, $name);
             $add->bindValue(4, $type['mime']);
             $add->bindValue(5, strlen($data), PDO::PARAM_INT);
             $add->bindValue(6, $data, PDO::PARAM_LOB);
+            $add->bindValue(7, $original);
             $add->execute();
         });
         return ['name' => $name, 'mime' => $type['mime'], 'size' => strlen($data)];
@@ -123,7 +141,7 @@ final class PluginFileStore
     public static function names(mixed $v): array
     {
         if (is_string($v)) {
-            return preg_match(self::NAME, $v) ? [$v] : [];
+            return preg_match(self::FILE, $v) ? [$v] : [];
         }
         if (!is_array($v)) {
             return [];

@@ -4121,5 +4121,8 @@
   "error.data.plugin_owned": "This variable belongs to the plugin {plugin}: only the plugin changes or deletes it.",
   "data.plugin_badge": "Plugin",
   "sdk.perm.http.check": "Check websites",
-  "sdk.perm.http.check_hint": "Asks any public website whether it answers: only the status code and the response time, never the page itself. Home-network addresses stay blocked."
+  "sdk.perm.http.check_hint": "Asks any public website whether it answers: only the status code and the response time, never the page itself. Home-network addresses stay blocked.",
+  "modset.file.upload": "Upload sound",
+  "modset.file.replace": "Replace sound",
+  "modset.file.hint": "mp3, ogg, wav or webm, max. 8 MB."
 }

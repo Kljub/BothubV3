@@ -21,7 +21,11 @@ func (s *store) viaPHP(local botHandler) botHandler {
 			local(w, r, b)
 			return
 		}
-		body, err := io.ReadAll(io.LimitReader(r.Body, 4<<20))
+		limit := int64(4 << 20)
+		if strings.HasSuffix(r.URL.Path, "/files") {
+			limit = 12 << 20 // base64 of a sound of the plugin files (max. 8 MB)
+		}
+		body, err := io.ReadAll(io.LimitReader(r.Body, limit))
 		if err != nil {
 			apiError(w, 400, "error.request.invalid")
 			return

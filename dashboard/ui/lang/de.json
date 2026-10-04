@@ -4121,5 +4121,8 @@
   "error.data.plugin_owned": "Diese Variable gehört zum Plugin {plugin}: nur das Plugin ändert oder löscht sie.",
   "data.plugin_badge": "Plugin",
   "sdk.perm.http.check": "Webseiten prüfen",
-  "sdk.perm.http.check_hint": "Fragt beliebige öffentliche Webseiten, ob sie antworten: nur Statuscode und Antwortzeit, nie die Seite selbst. Adressen im Heimnetz bleiben gesperrt."
+  "sdk.perm.http.check_hint": "Fragt beliebige öffentliche Webseiten, ob sie antworten: nur Statuscode und Antwortzeit, nie die Seite selbst. Adressen im Heimnetz bleiben gesperrt.",
+  "modset.file.upload": "Sound hochladen",
+  "modset.file.replace": "Sound ersetzen",
+  "modset.file.hint": "mp3, ogg, wav oder webm, max. 8 MB."
 }

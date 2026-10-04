@@ -11,15 +11,20 @@ import (
 	"github.com/Kljub/BothubV3/dashboard/internal/api"
 )
 
-// Images of a plugin (plugin_files): uploaded for "image" settings fields
-// (modsettings.js posts the file, the hidden field gets its name) and shown
-// as previews. The API checks type and size; the name is the content hash.
+// Files of a plugin (plugin_files): uploaded for "image" settings fields and
+// "file" fields with accept "audio" (modsettings.js posts the file, the
+// hidden field gets its name), shown as previews or players. The API checks
+// type and size; the name is the content hash.
 
-const pluginFileMax = 2 << 20
+const (
+	pluginFileMax  = 2 << 20
+	pluginAudioMax = 8 << 20
+)
 
-var pluginFileName = regexp.MustCompile(`^[0-9a-f]{16}\.(png|gif|webp|jpg)$`)
+var pluginFileName = regexp.MustCompile(`^[0-9a-f]{16}\.(png|gif|webp|jpg|mp3|ogg|wav|webm)$`)
 
-var pluginFileTypes = map[string]bool{"image/png": true, "image/gif": true, "image/webp": true, "image/jpeg": true}
+var pluginFileTypes = map[string]bool{"image/png": true, "image/gif": true, "image/webp": true, "image/jpeg": true,
+	"audio/mpeg": true, "audio/ogg": true, "audio/wav": true, "audio/webm": true}
 
 // handlePluginFileUpload takes one image (multipart field "file") and
 // answers {name, url} or {error}.
@@ -35,8 +40,12 @@ func (s *Server) handlePluginFileUpload(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 	plugin := r.PathValue("plugin")
-	r.Body = http.MaxBytesReader(w, r.Body, pluginFileMax+64<<10)
-	file, _, err := r.FormFile("file")
+	accept, limit := "image", int64(pluginFileMax)
+	if r.URL.Query().Get("accept") == "audio" {
+		accept, limit = "audio", pluginAudioMax
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, limit+64<<10)
+	file, header, err := r.FormFile("file")
 	if err != nil {
 		var tooBig *http.MaxBytesError
 		key := "error.files.bad_type"
@@ -47,13 +56,13 @@ func (s *Server) handlePluginFileUpload(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 	defer file.Close()
-	data, err := io.ReadAll(io.LimitReader(file, pluginFileMax+1))
-	if err != nil || len(data) > pluginFileMax {
+	data, err := io.ReadAll(io.LimitReader(file, limit+1))
+	if err != nil || int64(len(data)) > limit {
 		reply(http.StatusRequestEntityTooLarge, map[string]string{"error": s.i18n.T(p.Locale, "error.files.too_big")})
 		return
 	}
 	// The CSRF token comes as header (fetch); session() reads it.
-	f, err := s.api.UploadPluginFile(r.Context(), session(r), id, plugin, data)
+	f, err := s.api.UploadPluginFile(r.Context(), session(r), id, plugin, data, accept, header.Filename)
 	if err != nil {
 		status := api.AsError(err).Status
 		if status < 400 {
@@ -81,7 +90,7 @@ func (s *Server) handlePluginFile(w http.ResponseWriter, r *http.Request, p Page
 	h := w.Header()
 	h.Set("Content-Type", mime)
 	h.Set("X-Content-Type-Options", "nosniff")
-	h.Set("Content-Security-Policy", "default-src 'none'")
+	h.Set("Content-Security-Policy", "default-src 'none'; media-src 'self'")
 	// The name is the content hash: the same name is always the same picture.
 	h.Set("Cache-Control", "private, max-age=86400, immutable")
 	_, _ = w.Write(data)

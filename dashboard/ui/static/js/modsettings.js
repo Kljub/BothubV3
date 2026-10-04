@@ -221,7 +221,7 @@
     const hint = status.dataset.hint || status.textContent;
     status.dataset.hint = hint;
     status.classList.remove('error-text');
-    if (file.size > IMAGE_MAX) {
+    if (file.size > (Number(field.dataset.max) || IMAGE_MAX)) {
       status.textContent = status.dataset.tooBig;
       status.classList.add('error-text');
       input.value = '';
@@ -235,7 +235,7 @@
       const out = await res.json().catch(() => ({}));
       if (!res.ok || !out.name) throw new Error(out.error || res.statusText);
       field.querySelector('input[type=hidden]').value = out.name;
-      const img = field.querySelector('.modset-image-preview');
+      const img = field.querySelector('.modset-image-preview, .modset-audio-preview');
       img.src = out.url;
       img.hidden = false;
       field.querySelector('[data-image-clear]').hidden = false;
@@ -253,7 +253,7 @@
     if (!btn) return;
     const field = btn.closest('[data-image-field]');
     field.querySelector('input[type=hidden]').value = '';
-    const img = field.querySelector('.modset-image-preview');
+    const img = field.querySelector('.modset-image-preview, .modset-audio-preview');
     img.removeAttribute('src');
     img.hidden = true;
     btn.hidden = true;

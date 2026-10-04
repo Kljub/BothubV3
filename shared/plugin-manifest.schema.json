@@ -355,7 +355,8 @@
             "list",
             "permissions",
             "image",
-            "choices"
+            "choices",
+            "file"
           ]
         },
         "default": {},
@@ -398,6 +399,12 @@
         "dynamic": {
           "type": "boolean",
           "description": "choices: the plugin sets the options at run time (ctx.config.setOptions)."
+        },
+        "accept": {
+          "enum": [
+            "audio"
+          ],
+          "description": "file: what the upload takes (audio: mp3, ogg, wav, webm up to 8 MB)."
         },
         "channelTypes": {
           "type": "array",
@@ -551,7 +558,8 @@
             "message",
             "permissions",
             "image",
-            "choices"
+            "choices",
+            "file"
           ]
         },
         "default": {},
@@ -594,6 +602,12 @@
         "dynamic": {
           "type": "boolean",
           "description": "choices: the plugin sets the options at run time (ctx.config.setOptions)."
+        },
+        "accept": {
+          "enum": [
+            "audio"
+          ],
+          "description": "file: what the upload takes (audio: mp3, ogg, wav, webm up to 8 MB)."
         },
         "channelTypes": {
           "type": "array",

@@ -35,7 +35,7 @@ final class PluginStore
     private const CONNECT_PROVIDERS = ['plex'];
     private const ICON = '/^[^\s<>&"\']{1,16}$/u';
     private const CATEGORIES = ['utility', 'security', 'messages', 'fun', 'ticket', 'social'];
-    private const FIELD_TYPES = ['bool', 'text', 'number', 'select', 'color', 'channel', 'channels', 'role', 'roles', 'emojis', 'words', 'message', 'list', 'permissions', 'image', 'choices'];
+    private const FIELD_TYPES = ['bool', 'text', 'number', 'select', 'color', 'channel', 'channels', 'role', 'roles', 'emojis', 'words', 'message', 'list', 'permissions', 'image', 'choices', 'file'];
 
     /** Hosts that may receive the market token; every other host gets the request without it. */
     private const TOKEN_HOSTS = ['api.github.com', 'raw.githubusercontent.com'];
@@ -520,7 +520,7 @@ final class PluginStore
     private static function hasImageField(array $fields): bool
     {
         foreach ($fields as $f) {
-            if (($f['type'] ?? null) === 'image' || (($f['type'] ?? null) === 'list' && is_array($f['item'] ?? null) && self::hasImageField($f['item']))) {
+            if (in_array($f['type'] ?? null, ['image', 'file'], true) || (($f['type'] ?? null) === 'list' && is_array($f['item'] ?? null) && self::hasImageField($f['item']))) {
                 return true;
             }
         }
@@ -536,6 +536,9 @@ final class PluginStore
             }
             if (in_array($f['type'], ['text', 'words', 'emojis'], true) && (($f['max'] ?? 0) > 2000 || ($f['maxLength'] ?? 0) > 2000)) {
                 $fail("settings.{$f['key']}.max");
+            }
+            if ($f['type'] === 'file' && ($f['accept'] ?? null) !== 'audio') {
+                $fail("settings.{$f['key']}.accept");
             }
             if ($f['type'] === 'choices') {
                 $opts = $f['options'] ?? [];
