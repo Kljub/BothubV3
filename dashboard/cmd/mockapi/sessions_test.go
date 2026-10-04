@@ -159,3 +159,22 @@ func TestSessionLifecycle(t *testing.T) {
 		t.Fatalf("bad device key: %d", bad.Code)
 	}
 }
+
+func TestTOTPSkew(t *testing.T) {
+	secret := "JBSWY3DPEHPK3PXP"
+	now := time.Now().Unix() / 30
+	if !totpValid(secret, totpCode(secret, now)) {
+		t.Fatal("current code refused")
+	}
+	if skew, ok := totpSkew(secret, totpCode(secret, now+4)); !ok || skew != 120 {
+		t.Fatalf("2 minutes ahead: %d %v", skew, ok)
+	}
+	if _, ok := totpSkew(secret, "000000"); ok && totpCode(secret, now) != "000000" {
+		t.Log("000000 happened to fit; ignore")
+	}
+	w := httptest.NewRecorder()
+	totpError(w, 422, secret, totpCode(secret, now-6))
+	if !strings.Contains(w.Body.String(), "error.auth.totp_clock") {
+		t.Fatalf("clock hint missing: %s", w.Body)
+	}
+}

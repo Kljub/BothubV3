@@ -4512,5 +4512,6 @@
   "update.last_check": "Letzte Prüfung: {date}",
   "warning.update_available": "Ein BotHub-Update ist verfügbar: Admin → Server-Einstellungen → Updates.",
   "log.server.update_available": "{count} neue(r) Commit(s) verfügbar ({actor})",
-  "log.server.update_check_failed": "Update-Prüfung fehlgeschlagen: {reason}"
+  "log.server.update_check_failed": "Update-Prüfung fehlgeschlagen: {reason}",
+  "error.auth.totp_clock": "Der Code stimmt, aber die Uhr des Servers weicht um etwa {seconds} Sekunden ab. Schalte auf dem Server die Zeitsynchronisierung ein (Linux: sudo timedatectl set-ntp true) und versuche es dann erneut."
 }

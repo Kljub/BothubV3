@@ -210,7 +210,7 @@ func main() {
 	mux.HandleFunc("PUT /api/v1/admin/legal", s.auth(s.putAdminLegal))
 	mux.HandleFunc("POST /api/v1/setup", s.setup)
 	mux.HandleFunc("POST /api/v1/auth/login", s.audited("login", "login_failed", []string{"error.auth.invalid_credentials"}, s.login))
-	mux.HandleFunc("POST /api/v1/auth/login/totp", s.audited("login", "login_failed", []string{"error.auth.totp_invalid"}, s.loginTOTP))
+	mux.HandleFunc("POST /api/v1/auth/login/totp", s.audited("login", "login_failed", []string{"error.auth.totp_invalid", "error.auth.totp_clock"}, s.loginTOTP))
 	mux.HandleFunc("POST /api/v1/auth/passkeys/login/begin", s.loginPasskeyBegin)
 	mux.HandleFunc("POST /api/v1/auth/passkeys/login/finish", s.audited("login_passkey", "", nil, s.loginPasskeyFinish))
 	mux.HandleFunc("GET /api/v1/auth/passkeys", s.auth(s.listPasskeys))

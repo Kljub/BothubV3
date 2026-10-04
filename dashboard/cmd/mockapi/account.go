@@ -8,6 +8,7 @@ import (
 	"encoding/base32"
 	"encoding/binary"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/mail"
 	"net/url"
@@ -65,6 +66,33 @@ func totpValid(secret, code string) bool {
 	return false
 }
 
+// totpSkew finds a code that fits another time (up to ±10 minutes): then the
+// code is right but the server clock is off. Answers the offset in seconds
+// (positive: the server is behind).
+func totpSkew(secret, code string) (int, bool) {
+	step := time.Now().Unix() / 30
+	for d := int64(2); d <= 20; d++ {
+		for _, s := range []int64{d, -d} {
+			if subtle.ConstantTimeCompare([]byte(totpCode(secret, step+s)), []byte(code)) == 1 {
+				return int(s * 30), true
+			}
+		}
+	}
+	return 0, false
+}
+
+// totpError answers a refused code; with a clock offset it says so.
+func totpError(w http.ResponseWriter, status int, secret, code string) {
+	if secret != "" {
+		if skew, ok := totpSkew(secret, strings.TrimSpace(code)); ok {
+			slog.Warn("mockapi: 2FA code fits another time, check the server clock (NTP)", "offsetSeconds", skew)
+			apiErrorParams(w, status, "error.auth.totp_clock", map[string]any{"seconds": skew})
+			return
+		}
+	}
+	apiError(w, status, "error.auth.totp_invalid")
+}
+
 // checkSecondFactor accepts a TOTP code or an unused recovery code; caller holds s.mu.
 func (s *store) checkSecondFactor(u *mockUser, code string) bool {
 	code = strings.TrimSpace(code)
@@ -102,8 +130,9 @@ func (s *store) loginTOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !s.checkSecondFactor(u, in.Code) {
+		secret := u.totpSecret
 		s.mu.Unlock()
-		apiError(w, 401, "error.auth.totp_invalid")
+		totpError(w, 401, secret, in.Code)
 		return
 	}
 	delete(s.tickets, in.Ticket)
@@ -193,7 +222,7 @@ func (s *store) enableTwoFactor(w http.ResponseWriter, r *http.Request, sid stri
 	defer s.mu.Unlock()
 	u := s.sessUser(sid)
 	if u.pendingSecret == "" || !totpValid(u.pendingSecret, strings.TrimSpace(in.Code)) {
-		apiError(w, 422, "error.auth.totp_invalid")
+		totpError(w, 422, u.pendingSecret, in.Code)
 		return
 	}
 	u.totpSecret, u.pendingSecret = u.pendingSecret, ""
@@ -222,7 +251,7 @@ func (s *store) disableTwoFactor(w http.ResponseWriter, r *http.Request, sid str
 		return
 	}
 	if !s.checkSecondFactor(u, in.Code) {
-		apiError(w, 422, "error.auth.totp_invalid")
+		totpError(w, 422, u.totpSecret, in.Code)
 		return
 	}
 	u.totpSecret, u.recovery = "", nil
