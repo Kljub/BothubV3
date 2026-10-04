@@ -182,10 +182,15 @@
     {"title": "{{t "tour.welcome.title"}}", "text": "{{t "tour.welcome.text"}}"},
     {"sel": ".bot-switch", "title": "{{t "tour.bots.title"}}", "text": "{{t "tour.bots.text"}}"},
     {"sel": ".sidebar-search", "title": "{{t "tour.search.title"}}", "text": "{{t "tour.search.text"}}"},
-    {"sel": ".sidebar-nav", "title": "{{t "tour.nav.title"}}", "text": "{{t "tour.nav.text"}}"},
-    {"demo": "module", "title": "{{t "tour.demo_module.title"}}", "text": "{{t "tour.demo_module.text"}}"},
-    {"demo": "command", "title": "{{t "tour.demo_command.title"}}", "text": "{{t "tour.demo_command.text"}}"},
+    {"sel": ".sidebar-nav", "bot": true, "title": "{{t "tour.nav.title"}}", "text": "{{t "tour.nav.text"}}"},
+    {"page": "/bots/modules", "sel": ".module-group", "bot": true, "title": "{{t "tour.modules.title"}}", "text": "{{t "tour.modules.text"}}"},
+    {"page": "/bots/modules/economy", "sel": "#module-head", "bot": true, "title": "{{t "tour.module_head.title"}}", "text": "{{t "tour.module_head.text"}}"},
+    {"page": "/bots/modules/economy", "sel": "#modset-body", "bot": true, "title": "{{t "tour.module_settings.title"}}", "text": "{{t "tour.module_settings.text"}}"},
+    {"page": "/bots/modules/economy", "sel": ".module-page .command-row", "bot": true, "title": "{{t "tour.module_commands.title"}}", "text": "{{t "tour.module_commands.text"}}"},
     {"demo": "perms", "title": "{{t "tour.demo_perms.title"}}", "text": "{{t "tour.demo_perms.text"}}"},
+    {"page": "/bots/plugins", "sel": ".module-grid, .module-page, .main .box", "bot": true, "title": "{{t "tour.plugins.title"}}", "text": "{{t "tour.plugins.text"}}"},
+    {"dialog": "settings-dialog", "tab": "settings-general", "sel": ".settings-nav", "title": "{{t "tour.settings.title"}}", "text": "{{t "tour.settings.text"}}"},
+    {"dialog": "settings-dialog", "tab": "settings-secrets", "sel": ".settings-main", "title": "{{t "tour.secrets.title"}}", "text": "{{t "tour.secrets.text"}}"},
     {"sel": ".lang-switch", "title": "{{t "tour.lang.title"}}", "text": "{{t "tour.lang.text"}}"},
     {"sel": ".user-menu", "title": "{{t "tour.user.title"}}", "text": "{{t "tour.user.text"}}"},
     {"sel": "[data-tour-start]", "title": "{{t "tour.again.title"}}", "text": "{{t "tour.again.text"}}"},
@@ -194,17 +199,6 @@
 }</script>
 <div class="tour-demo" id="tour-demo" hidden inert aria-hidden="true">
   <span class="tour-demo-badge">{{t "tour.demo.badge"}}</span>
-  <article class="card module-card module-card-on" data-demo="card">
-    <div class="module-card-top">
-      <span class="module-card-icon" aria-hidden="true">🛡️</span>
-      <span class="module-card-toggle"><input type="checkbox" class="toggle toggle-sm" checked tabindex="-1" data-demo="module"></span>
-    </div>
-    <div class="module-card-body">
-      <h3>{{t "module.moderation.name"}}</h3>
-      <p class="muted">{{t "module.moderation.description"}}</p>
-      <span class="tour-demo-count" data-demo="count">{{t "tour.demo.on"}}</span>
-    </div>
-  </article>
   <div class="tour-demo-commands">
     <div class="command-row">
       <div class="command-text">

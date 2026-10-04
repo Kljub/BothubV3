@@ -1,9 +1,16 @@
 // Start tour: a guided walk through the dashboard. Everything is dimmed but
-// the element of the step (spotlight); a tip explains it. Demo steps show
-// the hidden stage #tour-demo (a module card, a command row, its
-// permissions) where an animated cursor clicks the toggles, so the tour
-// works without a bot. Steps and texts come from #tour-config (layout.html).
-// The first visit starts it once (localStorage "bh-tour-done"); the topbar
+// the element of the step (spotlight); a tip explains it. Steps come from
+// #tour-config (layout.html):
+//   sel     the element (CSS selector; none = centered tip)
+//   page    the step lives on this page: the tour goes there and goes on
+//           after the load (sessionStorage "bh-tour-step")
+//   bot     needs a selected bot (left out without one)
+//   dialog, tab  opens that dialog (and settings tab); the tour moves into
+//           the dialog, which sits above the page
+//   demo    shows the stage #tour-demo with example data where a cursor
+//           clicks (command rights)
+// A step whose element is missing on its page is passed over. The first
+// visit starts the tour once (localStorage "bh-tour-done"); the topbar
 // button [data-tour-start] starts it again. Positions are set through the
 // CSSOM (el.style.left …): the page's CSP allows no inline style attributes.
 (function () {
@@ -11,6 +18,7 @@
 
   const PAD = 6;
   const DONE_KEY = 'bh-tour-done';
+  const STEP_KEY = 'bh-tour-step';
   let steps = [];
   let idx = 0;
   let ui = null;
@@ -25,6 +33,14 @@
   };
   const label = (k) => config().labels?.[k] ?? k;
   const sleep = (ms) => new Promise((ok) => setTimeout(ok, ms));
+  const hasBot = () => Boolean(document.querySelector('.sidebar-nav .nav-item'));
+  const store = (fn) => {
+    try {
+      return fn();
+    } catch {
+      return null;
+    }
+  };
   const stage = () => document.getElementById('tour-demo');
   const demoEl = (name) => stage()?.querySelector(`[data-demo="${name}"]`);
 
@@ -60,18 +76,20 @@
     document.body.append(backdrop, spot, tip, cursor);
     ui = { backdrop, spot, tip, arrow, title, text, count, skip, back, next, cursor };
     skip.addEventListener('click', () => end());
-    back.addEventListener('click', () => show(idx - 1));
+    back.addEventListener('click', () => show(idx - 1, -1));
     next.addEventListener('click', () => (idx >= steps.length - 1 ? end() : show(idx + 1)));
     window.addEventListener('resize', reposition);
     document.addEventListener('scroll', reposition, true);
     document.addEventListener('keydown', onKey);
+    // Content loaded later (e.g. the secrets list) changes sizes.
+    document.addEventListener('htmx:afterSettle', reposition);
   }
 
   function onKey(e) {
     if (!ui) return;
     if (e.key === 'Escape') end();
     else if (e.key === 'ArrowRight') idx >= steps.length - 1 ? end() : show(idx + 1);
-    else if (e.key === 'ArrowLeft' && idx > 0) show(idx - 1);
+    else if (e.key === 'ArrowLeft' && idx > 0) show(idx - 1, -1);
   }
 
   /** The element of a step, or null (centered step, or the element is not on this page). */
@@ -167,9 +185,53 @@
 
   // ---------- steps ----------
 
-  function show(i) {
+  /** The open dialog of a dialog step (opened and on the right tab), else none (closed). */
+  function dialogFor(step) {
+    let open = null;
+    for (const d of document.querySelectorAll('dialog[open]')) {
+      if (step.dialog && d.id === step.dialog) open = d;
+      else if (d.dataset.tourOpened) {
+        d.close();
+        delete d.dataset.tourOpened;
+      }
+    }
+    if (!step.dialog) return null;
+    const d = open || document.getElementById(step.dialog);
+    if (!d) return null;
+    if (!d.open) {
+      d.showModal();
+      d.dataset.tourOpened = '1';
+    }
+    if (step.tab) d.querySelector(`[data-settings-tab="${step.tab}"]`)?.click();
+    return d;
+  }
+
+  /** The tour lives in the open dialog of the step (top layer), else in the page. */
+  function mount(host) {
+    for (const k of ['backdrop', 'spot', 'tip', 'cursor']) if (ui[k].parentElement !== host) host.append(ui[k]);
+  }
+
+  function show(i, dir = 1) {
     idx = Math.max(0, Math.min(i, steps.length - 1));
     const step = steps[idx];
+    if (step.page && location.pathname !== step.page) {
+      // Another page: go there; the tour goes on after the load.
+      store(() => sessionStorage.setItem(STEP_KEY, JSON.stringify({ idx, dir })));
+      hideDemo();
+      location.href = step.page;
+      return;
+    }
+    const dialog = dialogFor(step);
+    mount(dialog || document.body);
+    if (!step.demo && step.sel && !dialog && !targetOf(step)) {
+      // Not on this page (e.g. a module without settings): pass it over.
+      const nextIdx = idx + dir;
+      if (nextIdx >= 0 && nextIdx < steps.length) return show(nextIdx, dir);
+    }
+    if (dialog) {
+      // The dialog draws its content first.
+      setTimeout(() => { if (ui && steps[idx] === step) place(targetOf(step)); }, 120);
+    }
     ui.title.textContent = step.title;
     ui.text.textContent = step.text;
     ui.count.textContent = label('step_of').replace('{n}', String(idx + 1)).replace('{m}', String(steps.length));
@@ -187,8 +249,8 @@
     }
     hideDemo();
     const target = targetOf(step);
-    // A closed menu (bot switcher, user menu) shows its summary; that is enough.
-    target?.scrollIntoView({ block: 'nearest' });
+    // A tall element (settings, plugin grid) starts at the top; others just come into view.
+    target?.scrollIntoView({ block: target.getBoundingClientRect().height > innerHeight * 0.6 ? 'start' : 'nearest' });
     place(target);
     ui.next.focus();
   }
@@ -218,6 +280,14 @@
     let pos;
     let left;
     let top;
+    if (r.height > innerHeight * 0.6 && r.width > innerWidth * 0.5) {
+      // A big area: the tip sits in its lower right corner.
+      tip.dataset.pos = 'inside';
+      arrow.hidden = true;
+      tip.style.left = `${Math.min(r.right, innerWidth) - tw - 16}px`;
+      tip.style.top = `${Math.min(r.bottom, innerHeight) - th - 16}px`;
+      return;
+    }
     if (r.right + gap + tw <= innerWidth - 8) {
       pos = 'right';
       left = r.right + gap;
@@ -253,20 +323,35 @@
     place(step?.demo && stage() ? stage() : targetOf(step));
   }
 
-  function start() {
-    steps = (config().steps || []).filter((s) => (s.demo ? Boolean(stage()) : !s.sel || targetOf(s)));
+  /** The steps of this dashboard: bot steps only with a bot; page and dialog steps are checked when shown. */
+  function stepsNow() {
+    return (config().steps || []).filter((s) => {
+      if (s.bot && !hasBot()) return false;
+      // Same list on every page (a page step keeps its number); missing elements are passed over when shown.
+      return !s.demo || Boolean(stage());
+    });
+  }
+
+  function start(at = 0, dir = 1) {
+    steps = stepsNow();
     if (!steps.length) return;
     build();
-    show(0);
+    show(Math.min(at, steps.length - 1), dir);
   }
 
   function end() {
     hideDemo();
+    store(() => sessionStorage.removeItem(STEP_KEY));
+    for (const d of document.querySelectorAll('dialog[data-tour-opened]')) {
+      d.close();
+      delete d.dataset.tourOpened;
+    }
     if (ui) {
       for (const k of ['backdrop', 'spot', 'tip', 'cursor']) ui[k].remove();
       window.removeEventListener('resize', reposition);
       document.removeEventListener('scroll', reposition, true);
       document.removeEventListener('keydown', onKey);
+      document.removeEventListener('htmx:afterSettle', reposition);
       ui = null;
     }
     try {
@@ -284,8 +369,14 @@
     }
   });
 
-  // First visit: start once, after the page has its layout.
+  // A tour that went to another page goes on; the first visit starts it once.
   function autostart() {
+    const resume = store(() => JSON.parse(sessionStorage.getItem(STEP_KEY) || 'null'));
+    if (resume && document.querySelector('.shell')) {
+      store(() => sessionStorage.removeItem(STEP_KEY));
+      setTimeout(() => start(Number(resume.idx) || 0, resume.dir === -1 ? -1 : 1), 300);
+      return;
+    }
     let done = true;
     try {
       done = localStorage.getItem(DONE_KEY) === '1';
