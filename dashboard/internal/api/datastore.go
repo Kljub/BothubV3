@@ -12,18 +12,20 @@ import (
 // Data Storage module (openapi: tag data-storage).
 
 type DataVariable struct {
-	ID           int64     `json:"id,omitempty"`
-	Key          string    `json:"key,omitempty"`
-	Name         string    `json:"name"`
-	Description  string    `json:"description"`
-	Type         string    `json:"type"`
-	Owner        string    `json:"owner"`
-	PerServer    bool      `json:"perServer"`
-	DefaultValue string    `json:"defaultValue"`
-	Group        string    `json:"group"`
-	Values       int       `json:"values,omitempty"`
-	UsedIn       int       `json:"usedIn,omitempty"`
-	UpdatedAt    time.Time `json:"updatedAt,omitzero"`
+	ID           int64  `json:"id,omitempty"`
+	Key          string `json:"key,omitempty"`
+	Name         string `json:"name"`
+	Description  string `json:"description"`
+	Type         string `json:"type"`
+	Owner        string `json:"owner"`
+	PerServer    bool   `json:"perServer"`
+	DefaultValue string `json:"defaultValue"`
+	Group        string `json:"group"`
+	Values       int    `json:"values,omitempty"`
+	UsedIn       int    `json:"usedIn,omitempty"`
+	// Plugin: ID of the plugin that created it (SDK variables.create); only that plugin changes it.
+	Plugin    string    `json:"plugin,omitempty"`
+	UpdatedAt time.Time `json:"updatedAt,omitzero"`
 }
 
 type DataValue struct {

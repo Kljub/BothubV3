@@ -4115,5 +4115,9 @@
   "settings.secrets.intro": "Your own secrets: a name, the value and a description. An address (base URL) is a secret too. Your bots, their modules and plugins and the API Request block use them by name; other users never see or use them. Values are stored encrypted and never shown again after saving. You can only replace or delete them.",
   "admin.secrets.instance_intro": "Secrets of this BotHub itself. API keys of modules and plugins are kept by every user in their own settings (User settings → API / Secrets).",
   "modset.choices.none": "Nothing picked",
-  "modset.choices.no_options": "No options yet. The plugin fills them once the bot is running."
+  "modset.choices.no_options": "No options yet. The plugin fills them once the bot is running.",
+  "sdk.perm.data.variables": "Custom variables",
+  "sdk.perm.data.variables_hint": "Creates and deletes its own Data Storage variables ({var.<key>}) and reads and writes their values. The Custom Command Builder and the Message Builder can use them.",
+  "error.data.plugin_owned": "This variable belongs to the plugin {plugin}: only the plugin changes or deletes it.",
+  "data.plugin_badge": "Plugin"
 }

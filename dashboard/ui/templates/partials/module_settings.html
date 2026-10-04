@@ -77,7 +77,7 @@
     <details class="choices-drop">
       <summary><span class="choices-picked" data-empty="{{t "modset.choices.none"}}">{{range .Choices}}{{if .Picked}}<span class="badge-soft">{{if .Key}}{{t .Key}}{{else}}{{.Label}}{{end}}</span>{{end}}{{end}}</span></summary>
       <div class="choices-list">
-        {{range .Choices}}<label class="choices-item"><input type="checkbox" name="{{$f.Name}}" value="{{.Value}}" {{if .Picked}}checked{{end}}><span>{{if .Key}}{{t .Key}}{{else}}{{.Label}}{{end}}</span></label>
+        {{range .Choices}}<label class="choices-item"><span>{{if .Key}}{{t .Key}}{{else}}{{.Label}}{{end}}</span><input type="checkbox" name="{{$f.Name}}" value="{{.Value}}" {{if .Picked}}checked{{end}}></label>
         {{else}}<p class="hint">{{t "modset.choices.no_options"}}</p>{{end}}
       </div>
     </details>

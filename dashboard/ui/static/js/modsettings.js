@@ -203,7 +203,7 @@
     out.replaceChildren(...[...drop.querySelectorAll('input:checked')].map((box) => {
       const chip = document.createElement('span');
       chip.className = 'badge-soft';
-      chip.textContent = box.nextElementSibling?.textContent ?? box.value;
+      chip.textContent = box.previousElementSibling?.textContent ?? box.value;
       return chip;
     }));
   });

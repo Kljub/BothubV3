@@ -4,7 +4,7 @@ Generated from `shared/sdk-permissions.json` by `sdk/scripts/api-doc.mjs`; do no
 
 Call a function as `ctx.<area>.<name>(...)`. A call needs its permission declared in `bothub-plugin.json` and switched on in the SDK policies (admin). Planned calls exist already and answer `sdk.call.not_available`.
 
-**Status:** 131 of 220 calls available.
+**Status:** 138 of 227 calls available.
 
 Events (`discord.events`, `bothub.events`): messageCreate, messageUpdate, messageDelete, reactionAdd, reactionRemove; guildMemberAdd, guildMemberRemove, guildMemberUpdate; guildCreate, guildDelete, channelCreate, channelDelete, channelUpdate, roleCreate, roleDelete, roleUpdate; voiceStateUpdate; interactionCreate; bot.ready, bot.start, bot.stop, bot.restart, bot.shutdown, plugin.load, plugin.enable, plugin.disable, plugin.unload.
 
@@ -321,6 +321,17 @@ Events (`discord.events`, `bothub.events`): messageCreate, messageUpdate, messag
 | `collection.update()` | storage.collections | low | 🕓 planned |
 | `collection.upsert()` | storage.collections | low | 🕓 planned |
 | `collection.delete()` | storage.collections | low | 🕓 planned |
+
+## variables
+
+| Call | Permission | Risk | Status |
+|---|---|---|---|
+| `variables.create()` | data.variables | medium | ✅ |
+| `variables.delete()` | data.variables | medium | ✅ |
+| `variables.list()` | data.variables | medium | ✅ |
+| `variables.get()` | data.variables | medium | ✅ |
+| `variables.set()` | data.variables | medium | ✅ |
+| `variables.reset()` | data.variables | medium | ✅ |
 
 ## cache
 

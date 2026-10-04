@@ -84,6 +84,7 @@ final class DataStore
         $v = self::input($in);
         Connection::write($this->pdo, function (PDO $pdo) use ($botId, $id, $v): void {
             $old = $this->row($botId, $id);
+            self::notPlugin($old);
             if ($old['type'] !== $v['type'] || $old['owner'] !== $v['owner'] || (int) $old['per_server'] !== ($v['perServer'] ? 1 : 0)) {
                 $pdo->prepare('DELETE FROM data_values WHERE variable_id = ?')->execute([$id]);
             }
@@ -97,7 +98,7 @@ final class DataStore
     public function delete(int $botId, int $id): void
     {
         Connection::write($this->pdo, function (PDO $pdo) use ($botId, $id): void {
-            $this->row($botId, $id);
+            self::notPlugin($this->row($botId, $id));
             $pdo->prepare('DELETE FROM data_variables WHERE id = ?')->execute([$id]);
         });
     }
@@ -232,6 +233,14 @@ final class DataStore
         return rtrim(substr($k, 0, 32), '_');
     }
 
+    /** A plugin's variable: only the plugin changes or deletes its definition. */
+    private static function notPlugin(array $row): void
+    {
+        if (($row['plugin_id'] ?? null) !== null) {
+            throw new ApiError(409, 'error.data.plugin_owned', ['plugin' => $row['plugin_id']]);
+        }
+    }
+
     private function row(int $botId, int $id): array
     {
         $stmt = $this->pdo->prepare('SELECT * FROM data_variables WHERE id = ? AND bot_id = ?');
@@ -282,6 +291,8 @@ final class DataStore
             'perServer' => (int) $row['per_server'] === 1,
             'defaultValue' => $row['default_value'],
             'group' => $row['group_name'],
+            // Created by this plugin (SDK variables.create); null for dashboard variables.
+            'plugin' => $row['plugin_id'] ?? null,
             'values' => (int) $row['value_count'],
             'usedIn' => count(array_filter($graphs, static fn ($g) => preg_match($pattern, (string) $g) === 1)),
             'updatedAt' => $row['updated_at'],

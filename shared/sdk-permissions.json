@@ -848,6 +848,28 @@
       "$comment": "Images per bot (PNG, GIF, WEBP, JPEG; max. 2 MB each, 100 files, 25 MB). Uploaded in the dashboard for \"image\" settings fields, or stored by the plugin: base64 (files.put) or a Discord attachment link (files.fromDiscord, cdn.discordapp.com / media.discordapp.net only). Name = content hash + extension."
     },
     {
+      "key": "data.variables",
+      "group": "storage",
+      "risk": "medium",
+      "calls": [
+        "variables.create",
+        "variables.delete",
+        "variables.list",
+        "variables.get",
+        "variables.set",
+        "variables.reset"
+      ],
+      "implemented": [
+        "variables.create",
+        "variables.delete",
+        "variables.list",
+        "variables.get",
+        "variables.set",
+        "variables.reset"
+      ],
+      "$comment": "Data Storage variables of the bot ({var.<key>} in the Custom Command Builder and the Message Builder): the plugin creates, changes and deletes its own (data_variables.plugin_id) and reads and writes their values. Keys of other variables are refused; the plugin's variables go when it is uninstalled."
+    },
+    {
       "key": "cache",
       "group": "storage",
       "risk": "low",

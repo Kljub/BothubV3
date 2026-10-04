@@ -811,3 +811,51 @@ test('config.setOptions: options of a dynamic choices field per bot, choices val
     manager.stopAll();
   }
 });
+
+test('variables.*: a plugin creates its own Data Storage variables, values per server and member, others are refused', async () => {
+  const { db, pluginsDir, manager } = setup();
+  const id = 'plugin_vars';
+  const manifest = { id, name: 'Vars', version: '1.0.0', sdk: 1, main: 'index.js', permissions: ['data.variables'], blocks: [{ name: 'run', definition: {} }] };
+  const code = `export default { blocks: {
+    async run(ctx) {
+      const r = async (fn) => { try { return JSON.stringify(await fn()); } catch (e) { return e.message; } };
+      const where = { guildId: '100000000000000001', userId: '200000000000000001' };
+      return { results: {
+        '.create': await r(() => ctx.variables.create({ key: 'coins', name: 'Coins', type: 'number', owner: 'member', default: 5 })),
+        '.again': await r(() => ctx.variables.create({ key: 'coins', name: 'Coins!', type: 'number', owner: 'member', default: 5 })),
+        '.taken': await r(() => ctx.variables.create({ key: 'motd' })),
+        '.badkey': await r(() => ctx.variables.create({ key: 'Bad Key' })),
+        '.default': await r(() => ctx.variables.get('coins', where)),
+        '.set': await r(() => ctx.variables.set('coins', 12, where)),
+        '.get': await r(() => ctx.variables.get('coins', where)),
+        '.wrong': await r(() => ctx.variables.set('coins', 'abc', where)),
+        '.nowhere': await r(() => ctx.variables.set('coins', 1, {})),
+        '.foreign': await r(() => ctx.variables.get('motd', where)),
+        '.list': await r(() => (ctx.variables.list()).then((l) => l.map((v) => v.key + ':' + v.name + ':' + v.group))),
+      } };
+    },
+  } };`;
+  install(db, pluginsDir, id, { 'bothub-plugin.json': JSON.stringify(manifest), 'index.js': code });
+  db.prepare("INSERT INTO data_variables (bot_id, key, name, type, owner, per_server, default_value) VALUES (1, 'motd', 'MOTD', 'text', 'shared', 0, 'hi')").run();
+  db.prepare("INSERT INTO sdk_policies (permission, enabled) VALUES ('data.variables', 1)").run();
+  try {
+    await manager.startBot(1);
+    const { run, results } = fakeRun({});
+    await manager.blockHandlers(1).get(`plugin.${id}.run`)!(node(`plugin.${id}.run`), run);
+    assert.equal(results['.create'], '{"key":"coins","created":true}');
+    assert.equal(results['.again'], '{"key":"coins","created":false}', 'create again updates the own variable');
+    assert.equal(results['.taken'], 'sdk.variables.taken', 'a dashboard variable is not the plugin\'s');
+    assert.equal(results['.badkey'], 'sdk.variables.bad_key');
+    assert.equal(results['.default'], '"5"');
+    assert.equal(results['.set'], 'true');
+    assert.equal(results['.get'], '"12"');
+    assert.equal(results['.wrong'], 'sdk.variables.data_wrong_type');
+    assert.equal(results['.nowhere'], 'sdk.variables.data_needs_context');
+    assert.equal(results['.foreign'], 'sdk.variables.unknown');
+    assert.equal(results['.list'], '["coins:Coins!:Vars"]');
+    const row = db.prepare("SELECT plugin_id FROM data_variables WHERE key = 'coins'").get() as { plugin_id: string };
+    assert.equal(row.plugin_id, id, 'marked as the plugin\'s variable');
+  } finally {
+    manager.stopAll();
+  }
+});

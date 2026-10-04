@@ -157,6 +157,28 @@ a malformed list with `sdk.config.bad_options`. Core call, no SDK permission.
 { "key": "libraries", "type": "choices", "dynamic": true, "max": 50, "required": true }
 ```
 
+## Custom variables (data.variables)
+
+With the SDK permission `data.variables` a plugin creates Data Storage
+variables of the bot: `ctx.variables.create({ key, name, type, owner,
+perServer, default, description, group })`. They show up on the Data
+Storage page (badge "Plugin") and in the variable picker of the Custom
+Command Builder and the Message Builder as `{var.<key>}`, so commands and
+messages can use what the plugin stores. Calling `create` again updates the
+plugin's own variable (a new type, owner or server setting drops its
+values). A key that another variable uses fails with `sdk.variables.taken`;
+the dashboard cannot change or delete a plugin's variable. Values:
+`ctx.variables.get(key, where)`, `set(key, value, where)`, `reset(key,
+where)`, where `where` is `{ guildId, userId, channelId }` as the variable
+needs it. `ctx.variables.delete(key)` removes one with its values,
+`ctx.variables.list()` lists the plugin's own. Uninstalling the plugin deletes
+its variables.
+
+```js
+await ctx.variables.create({ key: 'plex_last_title', name: 'Plex: last title', type: 'text', perServer: true });
+await ctx.variables.set('plex_last_title', 'Frieren', { guildId });
+```
+
 ## Images (plugin files)
 
 An `image` field in `dashboard/settings.json` gets an upload button with a

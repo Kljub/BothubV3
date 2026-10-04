@@ -1039,6 +1039,9 @@ final class PluginStore
                 AND NOT EXISTS (SELECT 1 FROM secret_plugin_shares s WHERE s.owner_id = secrets.owner_id AND s.secret_key = secrets.key AND s.plugin_id <> ?)")->execute([$pluginId, $pluginId]);
             $pdo->prepare('DELETE FROM secret_plugin_shares WHERE plugin_id = ?')->execute([$pluginId]);
             $pdo->prepare('DELETE FROM plugin_files WHERE plugin_id = ?')->execute([$pluginId]);
+            // Variables the plugin created (with their values) go with it.
+            $pdo->prepare('DELETE FROM data_variables WHERE plugin_id = ?')->execute([$pluginId]);
+            $pdo->prepare('DELETE FROM plugin_field_options WHERE plugin_id = ?')->execute([$pluginId]);
             $this->log($pdo, 'log.server.plugin_uninstalled', ['plugin' => $pluginId, 'version' => $plugin['version'], 'actor' => $actor]);
         });
         self::removeDir($this->dataDir . '/plugins/' . $pluginId);

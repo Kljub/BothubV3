@@ -417,6 +417,21 @@ export interface PluginContext {
   readonly secrets: { get(name: string): Async<string | null>; has(name: string): Async<boolean> };
 
 
+  // "data.variables": Data Storage variables of this bot that the plugin
+  // creates; the Custom Command Builder and the Message Builder use them as
+  // {var.<key>}. Only the plugin's own variables; uninstalling deletes them.
+  readonly variables: {
+    /** Creates the variable or updates the plugin's own (a new type, owner or server setting drops its values). sdk.variables.taken, .bad_key, .bad_type, .limit. */
+    create(def: VariableDefinition): Async<{ key: string; created: boolean }>;
+    delete(key: string): Async<boolean>;
+    list(): Async<VariableDefinition[]>;
+    /** The value (else the default); where names the server / member / channel the variable is kept per. */
+    get(key: string, where?: VariableWhere): Async<string>;
+    /** Text for text and number, any JSON for lists and objects. */
+    set(key: string, value: Json, where?: VariableWhere): Async<boolean>;
+    /** Back to the default. */
+    reset(key: string, where?: VariableWhere): Async<boolean>;
+  };
   // "storage.files": images of this bot (PNG, GIF, WEBP, JPEG; max. 2 MB each,
   // 100 files, 25 MB). "image" fields of the settings page store their upload
   // here; the value of the field is the file name.
@@ -430,6 +445,29 @@ export interface PluginContext {
     fromDiscord(url: string): Async<StoredFile>;
     delete(name: string): Async<boolean>;
   };
+}
+
+/** A Data Storage variable ({var.<key>}). */
+export interface VariableDefinition {
+  /** a-z, 0-9, _; starts with a letter; max. 32. */
+  key: string;
+  name?: string;
+  description?: string;
+  type?: 'text' | 'number' | 'list' | 'object' | 'object_list';
+  /** One value, one per member or one per channel. */
+  owner?: 'shared' | 'member' | 'channel';
+  /** Separate values per server (default true). */
+  perServer?: boolean;
+  default?: Json;
+  /** Group on the Data Storage page (default: the plugin name). */
+  group?: string;
+}
+
+/** Where a value is kept: the IDs the variable needs (server if perServer, member or channel by owner). */
+export interface VariableWhere {
+  guildId?: string;
+  userId?: string;
+  channelId?: string;
 }
 
 /** What a builder block of the plugin gets: its config and the run's variables. */

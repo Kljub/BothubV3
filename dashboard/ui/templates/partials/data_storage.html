@@ -77,6 +77,7 @@
         <strong>{{$v.Name}}</strong>
         <code class="command-usage">{var.{{$v.Key}}}</code>
         <span class="badge-soft">{{t (printf "data.type.%s" $v.Type)}}</span>
+        {{with $v.Plugin}}<span class="badge-soft" title="{{t "error.data.plugin_owned" "plugin" .}}">{{t "data.plugin_badge"}} · {{.}}</span>{{end}}
       </span>
       <span class="command-desc">
         {{t (printf "data.shape.%s_%t" $v.Owner $v.PerServer)}}
@@ -87,8 +88,8 @@
     </span>
     <span class="command-actions">
       <button type="button" class="btn btn-sm" data-copy="{var.{{$v.Key}}}" data-copy-done="{{t "data.copied"}}">{{template "icon_copy"}} <span>{{t "data.copy"}}</span></button>
-      <button type="button" class="btn btn-sm" data-open-dialog="data-dialog"
-        hx-get="/bot/{{$bot}}/data/variables/{{$v.ID}}/edit" hx-target="#data-form-body">{{t "data.settings"}}</button>
+      {{if not $v.Plugin}}<button type="button" class="btn btn-sm" data-open-dialog="data-dialog"
+        hx-get="/bot/{{$bot}}/data/variables/{{$v.ID}}/edit" hx-target="#data-form-body">{{t "data.settings"}}</button>{{end}}
       {{template "icon_chevron"}}
     </span>
   </summary>

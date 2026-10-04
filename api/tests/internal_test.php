@@ -289,6 +289,12 @@ check('data used in counts graphs', call('GET', "{$b}/data/variables/{$coins['id
 [$s, $coins2] = call('PUT', "{$b}/data/variables/{$coins['id']}", '{"name":"Coins","type":"number","owner":"shared","perServer":true}');
 check('data owner change drops values', $s === 200 && $coins2['values'] === 0 && $coins2['key'] === 'daily_coins');
 check('data delete', call('DELETE', "{$b}/data/variables/{$coins['id']}")[0] === 204 && call('GET', "{$b}/data/variables/{$coins['id']}")[0] === 404);
+// A plugin's variable (SDK variables.create): listed with its plugin, the dashboard cannot change or delete it.
+$pdo->exec("INSERT INTO data_variables (bot_id, key, name, type, owner, per_server, plugin_id) VALUES ({$bot['id']}, 'plex_last', 'Plex last', 'text', 'shared', 1, 'plugin_plex')");
+$pv = array_values(array_filter(call('GET', "{$b}/data/variables")[1]['items'] ?? [], static fn ($v) => $v['key'] === 'plex_last'))[0] ?? null;
+check('plugin variable listed with its plugin', $pv !== null && $pv['plugin'] === 'plugin_plex');
+check('plugin variable cannot be changed or deleted here', call('PUT', "{$b}/data/variables/{$pv['id']}", '{"name":"x","type":"text","owner":"shared","perServer":true}')[0] === 409
+    && call('DELETE', "{$b}/data/variables/{$pv['id']}")[0] === 409);
 
 // SDK policies (global): allow / default / deny
 [$s, $pol] = call('GET', '/internal/admin/sdk-policies');

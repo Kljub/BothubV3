@@ -19,6 +19,7 @@ import { catalog } from './catalog.js';
 import { blockType, readManifest, type Permission } from './manifest.js';
 import { PluginProcess, type SdkLimits } from './process.js';
 import { PluginStorage, type StorageLimits } from './storage.js';
+import { pluginVariables } from './variables.js';
 import { discordAttachmentUrl, FILE_LIMITS, FILE_NAME, PluginFiles } from './files.js';
 import { lookup } from 'node:dns/promises';
 import { buildComponents, privateAddress, discordApi, interactionEvent, InteractionRegistry, parsePluginCustomId, pluginCode, type DiscordApiDeps, type RawHttp } from './discord-api.js';
@@ -747,6 +748,7 @@ export class PluginManager {
       if (!v) throw new SdkError('error.bot.not_running');
       return v;
     };
+    const variables = () => pluginVariables(this.db, botId, manifest.id, manifest.name);
     // Secret values the plugin read are masked in its log lines.
     const readSecrets = new Set<string>();
     const log = (level: 'info' | 'warning' | 'error') => (q: Record<string, unknown>) => {
@@ -824,6 +826,13 @@ export class PluginManager {
         }
         return this.deps.sendMessage(botId, sendSlot(channelId), msg, [{ name: fileName, data: file.data }]);
       },
+      // Data Storage variables the plugin creates (data.variables): {var.<key>} in the builders.
+      'variables.create': (q) => variables().create(a(q)[0]),
+      'variables.delete': (q) => variables().delete(a(q)[0]),
+      'variables.list': () => variables().list(),
+      'variables.get': (q) => variables().get(a(q)[0], a(q)[1]),
+      'variables.set': (q) => variables().set(a(q)[0], a(q)[1], a(q)[2]),
+      'variables.reset': (q) => variables().reset(a(q)[0], a(q)[1]),
       // Plugin files (storage.files): images per bot.
       'files.list': () => files.list(),
       'files.get': (q) => {

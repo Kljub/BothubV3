@@ -61,5 +61,11 @@
 .choices-picked { display: flex; flex-wrap: wrap; gap: 4px; }
 .choices-picked:empty::before { content: attr(data-empty); color: var(--muted); }
 .choices-list { margin-top: 4px; max-height: 260px; overflow: auto; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 4px; }
-.choices-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; font-weight: normal; }
+/* One row per option: name left, square checkbox right (the .field and .form label styles do not apply). */
+.choices-drop, .choices-drop * { text-transform: none; letter-spacing: 0; }
+.form .choices-item, .choices-item { display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 10px;
+  border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 400; }
+.choices-item + .choices-item { border-top: 1px solid var(--border); }
+.choices-item input { flex: none; margin: 0; }
+.choices-drop > summary { font-size: 14px; font-weight: 400; }
 .choices-item:hover { background: var(--surface-2); }
