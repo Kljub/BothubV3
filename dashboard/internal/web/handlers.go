@@ -216,6 +216,10 @@ func (s *Server) handleBot(w http.ResponseWriter, r *http.Request, p Page) {
 	case "invite":
 		if bot.ApplicationID != nil {
 			data["InviteURL"] = inviteURL(bot.ApplicationID)
+			if settings, err := s.api.InviteSettings(r.Context(), sess); err == nil && settings.Enabled {
+				data["CustomInviteURL"] = customInviteURL(r, bot.ApplicationID)
+				data["CustomInviteMode"] = settings.Mode
+			}
 		}
 	case "server":
 		if bot.Status != api.BotRunning {
@@ -227,6 +231,7 @@ func (s *Server) handleBot(w http.ResponseWriter, r *http.Request, p Page) {
 			return
 		}
 		data["Guilds"] = guilds
+		data["Access"] = s.accessView(r, id)
 	case "modules":
 		// Modules apply to all guilds of the bot, so there is no guild choice.
 		cats, err := s.moduleCategories(r, id)
@@ -309,7 +314,7 @@ func (s *Server) handleLeaveGuild(w http.ResponseWriter, r *http.Request, p Page
 		s.fail(w, r, p, err)
 		return
 	}
-	s.render(w, http.StatusOK, "bot", "server_list_fragment", withData(p, map[string]any{"Bot": bot, "Guilds": guilds}))
+	s.render(w, http.StatusOK, "bot", "server_list_fragment", withData(p, map[string]any{"Bot": bot, "Guilds": guilds, "Access": s.accessView(r, id)}))
 }
 
 // --- admin dialog ---
@@ -392,6 +397,8 @@ func (s *Server) handleAdminSection(w http.ResponseWriter, r *http.Request, p Pa
 		data["Server"] = settings
 		legal, _ := s.api.AdminLegal(r.Context(), session(r)) // optional: an empty form on error
 		data["Legal"] = legal
+		invite, _ := s.api.InviteSettings(r.Context(), session(r))
+		data["Invite"] = map[string]any{"Settings": invite, "Base": baseURL(r) + "/invite/"}
 	}
 	// The admin popup loads sections via htmx; a direct visit gets a full page.
 	if isHTMX(r) {

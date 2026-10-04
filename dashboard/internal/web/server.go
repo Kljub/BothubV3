@@ -133,6 +133,8 @@ func (s *Server) routes() http.Handler {
 	// Public legal pages (Discord Developer Portal: Terms of Service and Privacy Policy URLs).
 	mux.HandleFunc("GET /terms", s.legalPage("terms"))
 	mux.HandleFunc("GET /privacy", s.legalPage("privacy"))
+	// Custom invite link of a bot (Developer Portal install link).
+	mux.HandleFunc("GET /invite/{app}", s.handleInvitePage)
 	mux.HandleFunc("POST /login", s.handleLogin)
 	mux.HandleFunc("POST /login/totp", s.handleLoginTOTP)
 
@@ -257,6 +259,8 @@ func (s *Server) routes() http.Handler {
 	mux.Handle("POST /settings", auth(s.handleSettings))
 	mux.Handle("POST /admin/server-settings", auth(s.handleServerSettings))
 	mux.Handle("POST /admin/legal", auth(s.handleLegalSave))
+	mux.Handle("POST /admin/invite", auth(s.handleInviteSettings))
+	mux.Handle("PUT /bot/{id}/guild-access", auth(s.handleGuildAccess))
 	mux.Handle("GET /admin/sdk-policies", auth(s.handleSdkPolicySearch))
 	mux.Handle("PUT /admin/sdk-policies/{perm}", auth(s.handleSdkPolicy))
 	mux.Handle("GET /admin/resources/table", auth(s.handleResources))

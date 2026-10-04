@@ -1,0 +1,35 @@
+{{/* Public custom invite page (/invite/<application ID>). Receives an
+     invitePageView (internal/web/invite.go). */}}
+
+{{define "title"}}{{.Data.Bot.Name}}{{end}}
+
+{{define "invite_layout"}}<!doctype html>
+<html lang="{{.Data.Lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>{{.Data.Bot.Name}} · BotHub</title>
+<link rel="stylesheet" href="/static/css/bothub.css?v={{.AssetVersion}}">
+</head>
+<body class="auth" data-theme="{{.Theme}}">
+<main class="auth-card invite-card">
+  {{with .Data.Bot.AvatarURL}}<img class="invite-avatar" src="{{.}}" alt="" width="80" height="80">{{else}}<span class="invite-avatar invite-avatar-empty" aria-hidden="true">🤖</span>{{end}}
+  <h2>{{.Data.Bot.Name}}</h2>
+  {{if .Data.Bot.InvitesClosed}}<p class="invite-closed"><span class="badge-soft badge-soft-stopped">{{if eq .Data.Lang "de"}}Einladungen geschlossen{{else}}Invites closed{{end}}</span><br>
+    <span class="muted">{{if eq .Data.Lang "de"}}Dieser Bot kann nicht zu anderen Servern hinzugefügt werden.{{else}}This bot cannot be added to other servers.{{end}}</span></p>{{end}}
+  {{if .Data.Allowed}}
+  {{if .Data.Bot.InvitesClosed}}<p class="hint">{{if eq .Data.Lang "de"}}Gib den Server vorher unter Bot → Server frei, sonst verlässt der Bot ihn sofort wieder.{{else}}Allow the server first under Bot → Server, or the bot leaves it right away.{{end}}</p>{{end}}
+  <p class="muted">{{if eq .Data.Lang "de"}}Füge den Bot zu einem Server hinzu, auf dem du „Server verwalten“ hast.{{else}}Add the bot to a server where you have "Manage Server".{{end}}</p>
+  <a class="btn btn-primary btn-block" href="{{.Data.Link}}" rel="noopener noreferrer">{{if eq .Data.Lang "de"}}Zu Discord hinzufügen{{else}}Add to Discord{{end}}</a>
+  {{else if not .Data.Bot.InvitesClosed}}
+  <p class="muted">{{if eq .Data.Lang "de"}}Dieser Bot ist privat und kann nur von seinem Betreiber hinzugefügt werden.{{else}}This bot is private and can only be added by its operator.{{end}}</p>
+  {{end}}
+  {{if not .Data.Allowed}}
+  <a class="btn btn-block" href="/login">{{if eq .Data.Lang "de"}}Als Betreiber anmelden{{else}}Sign in as operator{{end}}</a>
+  {{end}}
+  <p class="legal-links"><a href="/terms">{{if eq .Data.Lang "de"}}Nutzungsbedingungen{{else}}Terms of Service{{end}}</a> · <a href="/privacy">{{if eq .Data.Lang "de"}}Datenschutz{{else}}Privacy{{end}}</a></p>
+</main>
+</body>
+</html>
+{{end}}

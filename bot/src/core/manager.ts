@@ -118,6 +118,9 @@ export class BotManager {
       case 'webhook.called':
         await this.bots.get(id)?.runWebhook(ev as unknown as WebhookCall);
         return;
+      case 'bot.guild_access':
+        await this.bots.get(id)?.enforceGuildAccess();
+        return;
       case 'timed.changed':
         this.bots.get(id)?.reloadTimed();
         return;

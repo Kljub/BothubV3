@@ -17,6 +17,7 @@
   {{template "resources" .Processes}}
 {{else if eq .Section "server_settings"}}
   {{template "server_settings" .Server}}
+  {{template "invite_settings" .Invite}}
   {{template "legal_settings" .Legal}}
 {{else if eq .Section "email"}}
   {{template "email_settings" .}}
@@ -153,6 +154,31 @@
   </section>
 
   <div data-save-own><button type="submit" class="btn btn-primary">{{t "action.save"}}</button></div>
+</form>
+{{end}}
+
+{{/* Custom invite link: <domain>/invite/<application ID> for the Developer Portal. */}}
+{{define "invite_settings"}}
+<div id="invite-flash"></div>
+<form class="form" hx-post="/admin/invite" hx-swap="none">
+  <section class="section">
+    <header class="section-head"><h3>{{t "invite_settings.title"}}</h3></header>
+    <p class="hint">{{t "invite_settings.hint"}}</p>
+    <div class="form">
+      <label class="toggle-row">
+        <span><strong>{{t "invite_settings.enabled"}}</strong><span class="hint mono">{{.Base}}&lt;Application-ID&gt;</span></span>
+        <input type="checkbox" class="toggle" name="enabled" value="true" {{if .Settings.Enabled}}checked{{end}}>
+      </label>
+      <label class="field">{{t "invite_settings.mode"}}
+        <select name="mode">
+          <option value="private" {{if ne .Settings.Mode "public"}}selected{{end}}>{{t "invite_settings.mode.private"}}</option>
+          <option value="public" {{if eq .Settings.Mode "public"}}selected{{end}}>{{t "invite_settings.mode.public"}}</option>
+        </select>
+        <span class="hint">{{t "invite_settings.mode_hint"}}</span>
+      </label>
+    </div>
+  </section>
+  <div><button type="submit" class="btn btn-primary">{{t "action.save"}}</button></div>
 </form>
 {{end}}
 

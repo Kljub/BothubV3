@@ -4,6 +4,36 @@
 
 {{define "server_list"}}
 <div id="server-list">
+  {{with .Access}}{{if .Loaded}}
+  <section class="box access-box">
+    <div class="box-body">
+      {{with .Error}}<div class="alert alert-error">{{.}}</div>{{end}}
+      <form class="form access-switch" hx-put="/bot/{{$.Bot.ID}}/guild-access" hx-trigger="change" hx-target="#server-list" hx-swap="outerHTML">
+        <input type="hidden" name="closed" value="false">
+        <label class="toggle-row">
+          <span><strong>{{t "access.closed"}}</strong><span class="hint">{{t "access.closed_hint"}}</span></span>
+          <input type="checkbox" class="toggle" name="closed" value="true" {{if .Closed}}checked{{end}}>
+        </label>
+      </form>
+      {{if .Closed}}
+      <form class="inline-form access-add" hx-put="/bot/{{$.Bot.ID}}/guild-access" hx-target="#server-list" hx-swap="outerHTML">
+        <label class="field">{{t "access.add"}}
+          <input name="add" inputmode="numeric" pattern="[0-9]{17,20}" maxlength="20" class="mono" placeholder="123456789012345678" required>
+          <span class="hint">{{t "access.add_hint"}}</span>
+        </label>
+        <button type="submit" class="btn btn-sm">{{t "access.add_button"}}</button>
+      </form>
+      {{with .Planned}}
+      <p class="hint">{{t "access.planned"}}</p>
+      <ul class="access-planned">
+        {{range .}}<li><span class="mono">{{.ID}}</span>{{with .Name}} · {{.}}{{end}}
+          <button type="button" class="btn btn-sm btn-danger-soft" hx-put="/bot/{{$.Bot.ID}}/guild-access" hx-vals='{"guild": "{{.ID}}", "allowed": "false"}' hx-target="#server-list" hx-swap="outerHTML">{{t "access.remove"}}</button></li>{{end}}
+      </ul>
+      {{end}}
+      {{end}}
+    </div>
+  </section>
+  {{end}}{{end}}
   <header class="list-head">
     <p class="list-count"><strong>{{len .Guilds}}</strong> <span class="muted">{{t "server.count"}}</span></p>
     <input type="search" class="sidebar-search list-search" placeholder="{{t "server.search"}}" aria-label="{{t "server.search"}}" data-card-filter="server-grid">
@@ -17,6 +47,15 @@
         <strong>{{.Name}}</strong>
         <span class="mono muted">{{.ID}}</span>
       </span>
+      {{if and $.Access.Loaded $.Access.Closed}}
+      <form class="server-allowed" hx-put="/bot/{{$.Bot.ID}}/guild-access" hx-trigger="change" hx-target="#server-list" hx-swap="outerHTML" title="{{t "access.allowed_hint"}}"
+        {{if index $.Access.Allowed .ID}}hx-confirm="{{t "access.disallow_confirm" "name" .Name}}"{{end}}>
+        <input type="hidden" name="guild" value="{{.ID}}">
+        <input type="hidden" name="allowed" value="false">
+        <label class="server-allowed-label"><span>{{t "access.allowed"}}</span>
+          <input type="checkbox" class="toggle" name="allowed" value="true" {{if index $.Access.Allowed .ID}}checked{{end}}></label>
+      </form>
+      {{end}}
       <button type="button" class="icon-btn server-leave" title="{{t "server.leave"}}" aria-label="{{t "server.leave_named" "name" .Name}}"
         hx-delete="/bot/{{$.Bot.ID}}/guilds/{{.ID}}" hx-target="#server-list" hx-swap="outerHTML"
         hx-confirm="{{t "server.leave_confirm" "name" .Name}}">{{template "icon_logout"}}</button>

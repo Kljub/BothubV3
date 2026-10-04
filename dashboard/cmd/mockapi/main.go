@@ -78,7 +78,8 @@ type store struct {
 	logSeq      int64
 
 	srvSettings    serverSettings
-	legal          legalInfo // without the PHP API
+	legal          legalInfo      // without the PHP API
+	invite         inviteSettings // without the PHP API
 	started        time.Time
 	roles          []*role
 	passkeys       *passkeyStore
@@ -142,6 +143,9 @@ func main() {
 	})
 	mux.HandleFunc("GET /api/v1/setup", s.setupState)
 	mux.HandleFunc("GET /api/v1/legal", s.getLegal)
+	mux.HandleFunc("GET /api/v1/invite/{app}", s.getInvitePage)
+	mux.HandleFunc("GET /api/v1/admin/invite-settings", s.auth(s.getInviteSettings))
+	mux.HandleFunc("PUT /api/v1/admin/invite-settings", s.auth(s.putInviteSettings))
 	mux.HandleFunc("GET /api/v1/admin/legal", s.auth(s.getAdminLegal))
 	mux.HandleFunc("PUT /api/v1/admin/legal", s.auth(s.putAdminLegal))
 	mux.HandleFunc("POST /api/v1/setup", s.setup)
@@ -197,6 +201,8 @@ func main() {
 	mux.HandleFunc("GET /api/v1/admin/server-settings", s.auth(s.getServerSettings))
 	mux.HandleFunc("GET /api/v1/admin/sdk-policies", s.auth(s.listSdkPolicies))
 	mux.HandleFunc("GET /api/v1/bots/{id}/backup", s.auth(s.withBot(s.viaPHP(phpRequired))))
+	mux.HandleFunc("GET /api/v1/bots/{id}/guild-access", s.auth(s.withBot(s.viaPHP(phpRequired))))
+	mux.HandleFunc("PUT /api/v1/bots/{id}/guild-access", s.auth(s.withBot(s.viaPHP(phpRequired))))
 	mux.HandleFunc("GET /api/v1/bots/{id}/backups", s.auth(s.withBot(s.viaPHP(phpRequired))))
 	mux.HandleFunc("POST /api/v1/bots/{id}/backups", s.auth(s.withBot(s.viaPHP(phpRequired))))
 	mux.HandleFunc("GET /api/v1/bots/{id}/backups/{tid}", s.auth(s.withBot(s.viaPHP(phpRequired))))

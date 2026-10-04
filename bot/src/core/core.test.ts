@@ -208,3 +208,12 @@ test('a secret placeholder ([NULL]) has no value', async () => {
   assert.equal(secretValue(repo(new Uint8Array()), key, 'PLEX_KEY'), null);
   assert.equal(secretValue(repo(undefined), key, 'NOPE'), null);
 });
+
+test('closed invites: null while open, else the allowed servers', () => {
+  const { repo } = migratedDb();
+  repo.db.prepare("INSERT INTO bots (name, autostart) VALUES ('Test', 0)").run();
+  assert.equal(repo.guildAccess(1), null);
+  repo.db.prepare('UPDATE bots SET invites_closed = 1 WHERE id = 1').run();
+  repo.db.prepare("INSERT INTO bot_allowed_guilds (bot_id, guild_id) VALUES (1, '100000000000000001')").run();
+  assert.deepEqual([...repo.guildAccess(1)!], ['100000000000000001']);
+});

@@ -30,6 +30,8 @@ final class InternalRouter
         private readonly ?BotBackup $backups = null,
         private readonly ?LogStore $logs = null,
         private readonly ?LegalStore $legal = null,
+        private readonly ?InviteStore $invite = null,
+        private readonly ?GuildAccessStore $guildAccess = null,
     ) {
     }
 
@@ -76,6 +78,27 @@ final class InternalRouter
             if ($this->data !== null && preg_match('#^/internal/bots/(\d+)/data/(variables|lookup)(?:/(\d+)(/values)?)?$#', $path, $m)) {
                 $this->bots->find((int) $m[1]) ?? throw ApiError::notFound();
                 return $this->dataRoute($method, (int) $m[1], $m[2], isset($m[3]) && $m[3] !== '' ? (int) $m[3] : null, isset($m[4]), $body, array_map(static fn ($v) => is_string($v) ? $v : '', $query));
+            }
+            // Closed invites: the servers a bot may be on.
+            if ($this->guildAccess !== null && preg_match('#^/internal/bots/(\d+)/guild-access$#', $path, $m)) {
+                return match ($method) {
+                    'GET' => [200, $this->guildAccess->get((int) $m[1])],
+                    'PUT' => [200, $this->guildAccess->save((int) $m[1], $body, $this->actor)],
+                    default => throw new ApiError(405, 'error.method_not_allowed'),
+                };
+            }
+            // Custom invite link: settings (admin) and the public page data of one bot.
+            if ($this->invite !== null && $path === '/internal/admin/invite-settings') {
+                return match ($method) {
+                    'GET' => [200, $this->invite->settings()],
+                    'PUT' => [200, $this->invite->save($body, $this->actor)],
+                    default => throw new ApiError(405, 'error.method_not_allowed'),
+                };
+            }
+            if ($this->invite !== null && preg_match('#^/internal/invite/(\d{17,20})$#', $path, $m)) {
+                return $method === 'GET'
+                    ? [200, $this->invite->lookup($m[1]) ?? throw ApiError::notFound()]
+                    : throw new ApiError(405, 'error.method_not_allowed');
             }
             // Operator details of the public Terms and Privacy pages (GET public in the dashboard, PUT admin).
             if ($this->legal !== null && in_array($path, ['/internal/legal', '/internal/admin/legal'], true)) {

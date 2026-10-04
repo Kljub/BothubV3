@@ -96,6 +96,14 @@ export class Repo {
     });
   }
 
+  /** Closed invites (migration 0026): null while open, else the servers the bot may stay on. */
+  guildAccess(botId: number): ReadonlySet<string> | null {
+    const row = this.db.prepare('SELECT invites_closed FROM bots WHERE id = ?').get(botId) as { invites_closed: number } | undefined;
+    if (!row || row.invites_closed !== 1) return null;
+    const rows = this.db.prepare('SELECT guild_id FROM bot_allowed_guilds WHERE bot_id = ?').all(botId) as { guild_id: string }[];
+    return new Set(rows.map((r) => r.guild_id));
+  }
+
   guildLeft(botId: number, guildId: string): void {
     this.db.prepare('UPDATE bot_guilds SET left_at = ?, updated_at = ? WHERE bot_id = ? AND guild_id = ?').run(now(), now(), botId, guildId);
   }

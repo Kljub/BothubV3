@@ -35,6 +35,10 @@
           "botId": "integer",
           "$comment": "status, activity, custom status or rotation changed; the bot reads bot_profiles.presence and applies it"
         },
+        "bot.guild_access": {
+          "botId": "integer",
+          "$comment": "closed invites or the allowed servers of a bot changed; the bot leaves every server that is not allowed"
+        },
         "timed.changed": {
           "botId": "integer",
           "$comment": "timed events, bot time zone or default server changed; the bot reloads its schedules"

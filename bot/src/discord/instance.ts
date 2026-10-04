@@ -339,7 +339,7 @@ export class BotInstance {
     });
     client.once(Events.ClientReady, (c) => void this.onReady(c.user, [...c.guilds.cache.values()]));
     client.on(Events.InteractionCreate, (i) => void this.onInteraction(i).catch((err) => log.error('interaction failed', { botId: this.botId, err })));
-    client.on(Events.GuildCreate, (g) => void this.syncGuilds());
+    client.on(Events.GuildCreate, (g) => void this.onGuildJoin(g));
     client.on(Events.GuildDelete, (g) => this.deps.repo.guildLeft(this.botId, g.id));
     client.on(Events.ShardDisconnect, (e) => this.deps.repo.logCode(this.botId, 'ERR-1006', { code: e.code }));
     client.on(Events.Error, (err) => log.error('discord client error', { botId: this.botId, err }));
@@ -363,9 +363,41 @@ export class BotInstance {
     this.deps.repo.setBotStatus(this.botId, 'running');
     this.deps.repo.logUpdate(this.botId, 'log.update.bot_started', { name: user.username });
     this.applyPresence();
+    await this.enforceGuildAccess();
     await this.syncGuilds();
     await this.registerCommands();
     void this.runEvent({ type: 'bot_ready', vars: {}, guild: null, channel: null, member: null, user: null });
+  }
+
+  /** A new server: with closed invites the bot leaves it at once unless it is allowed. */
+  private async onGuildJoin(g: Guild): Promise<void> {
+    if (!(await this.leaveIfNotAllowed(g, this.deps.repo.guildAccess(this.botId)))) await this.syncGuilds();
+  }
+
+  /**
+   * Closed invites (Bot → Invite in the dashboard): leaves every server that
+   * is not on the allowed list. At start, on join and after bot.guild_access.
+   */
+  async enforceGuildAccess(): Promise<void> {
+    const allowed = this.deps.repo.guildAccess(this.botId);
+    const c = this.client;
+    if (!allowed || !c) return;
+    let left = false;
+    for (const g of [...c.guilds.cache.values()]) left = (await this.leaveIfNotAllowed(g, allowed)) || left;
+    if (left) await this.syncGuilds();
+  }
+
+  private async leaveIfNotAllowed(g: Guild, allowed: ReadonlySet<string> | null): Promise<boolean> {
+    if (!allowed || allowed.has(g.id)) return false;
+    try {
+      await g.leave();
+    } catch (err) {
+      log.error('leave failed', { botId: this.botId, guild: g.id, err });
+      return false;
+    }
+    this.deps.repo.guildLeft(this.botId, g.id);
+    this.deps.repo.logUpdate(this.botId, 'log.update.guild_left_closed', { server: g.name, id: g.id });
+    return true;
   }
 
   private async syncGuilds(): Promise<void> {

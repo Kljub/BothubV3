@@ -1039,3 +1039,77 @@ func (c *Client) SaveLegal(ctx context.Context, s Session, in LegalInfo) (LegalI
 	_, err := c.do(ctx, s, http.MethodPut, "/api/v1/admin/legal", map[string]string{"operator": in.Operator, "address": in.Address, "email": in.Email, "sourceUrl": in.SourceURL}, &out)
 	return out, err
 }
+
+// InviteSettings: the custom invite link (<domain>/invite/<application ID>).
+// Mode "private": only signed-in dashboard users get the Discord link;
+// "public": everyone.
+type InviteSettings struct {
+	Enabled bool   `json:"enabled"`
+	Mode    string `json:"mode"`
+}
+
+// InviteBot is the public face of a bot on its invite page.
+type InviteBot struct {
+	Name          string  `json:"name"`
+	AvatarURL     *string `json:"avatarUrl"`
+	ApplicationID string  `json:"applicationId"`
+	// InvitesClosed: the bot leaves every server that is not allowed.
+	InvitesClosed bool `json:"invitesClosed"`
+}
+
+// InvitePageData is what the public invite page needs.
+type InvitePageData struct {
+	InviteSettings
+	Bot InviteBot `json:"bot"`
+}
+
+// InvitePage reads the invite page of one bot without a session; 404 when
+// the custom link is off or no bot has the application ID.
+func (c *Client) InvitePage(ctx context.Context, appID string) (InvitePageData, error) {
+	var out InvitePageData
+	_, err := c.do(ctx, Session{}, http.MethodGet, "/api/v1/invite/"+url.PathEscape(appID), nil, &out)
+	return out, err
+}
+
+func (c *Client) InviteSettings(ctx context.Context, s Session) (InviteSettings, error) {
+	var out InviteSettings
+	_, err := c.do(ctx, s, http.MethodGet, "/api/v1/admin/invite-settings", nil, &out)
+	return out, err
+}
+
+func (c *Client) SaveInviteSettings(ctx context.Context, s Session, in InviteSettings) (InviteSettings, error) {
+	var out InviteSettings
+	_, err := c.do(ctx, s, http.MethodPut, "/api/v1/admin/invite-settings", in, &out)
+	return out, err
+}
+
+// AccessGuild is a server of the closed-invites list: allowed, and whether
+// the bot is on it now.
+type AccessGuild struct {
+	ID      string  `json:"id"`
+	Name    string  `json:"name"`
+	IconURL *string `json:"iconUrl"`
+	Allowed bool    `json:"allowed"`
+	Current bool    `json:"current"`
+}
+
+// GuildAccess: with Closed the bot stays only on allowed servers and leaves others.
+type GuildAccess struct {
+	Closed bool          `json:"closed"`
+	Guilds []AccessGuild `json:"guilds"`
+}
+
+func (c *Client) GuildAccess(ctx context.Context, s Session, botID int64) (GuildAccess, error) {
+	var out GuildAccess
+	_, err := c.do(ctx, s, http.MethodGet, fmt.Sprintf("/api/v1/bots/%d/guild-access", botID), nil, &out)
+	return out, err
+}
+
+func (c *Client) SaveGuildAccess(ctx context.Context, s Session, botID int64, closed bool, allowed []string) (GuildAccess, error) {
+	var out GuildAccess
+	if allowed == nil {
+		allowed = []string{}
+	}
+	_, err := c.do(ctx, s, http.MethodPut, fmt.Sprintf("/api/v1/bots/%d/guild-access", botID), map[string]any{"closed": closed, "allowed": allowed}, &out)
+	return out, err
+}

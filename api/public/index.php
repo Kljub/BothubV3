@@ -23,6 +23,8 @@ use BotHub\Internal\TimedStore;
 use BotHub\Internal\WebhookStore;
 use BotHub\Internal\SecretStore;
 use BotHub\Internal\PluginStore;
+use BotHub\Internal\GuildAccessStore;
+use BotHub\Internal\InviteStore;
 use BotHub\Internal\LegalStore;
 use BotHub\Internal\LogStore;
 use BotHub\Internal\ApiError;
@@ -189,6 +191,8 @@ if (str_starts_with($path, '/internal/')) {
             new BotBackup($pdo, $botStore),
             new LogStore($pdo),
             new LegalStore($pdo),
+            new InviteStore($pdo),
+            new GuildAccessStore($pdo),
         );
         [$status, $out] = $router->handle($method, $path, $body, $raw === '' ? null : json_decode($raw, false), $_GET);
     } catch (\Throwable $e) {

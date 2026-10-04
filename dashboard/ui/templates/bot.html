@@ -23,6 +23,14 @@
   {{with $d.InviteURL}}
   <p class="muted">{{t "invite.text"}}</p>
   <div class="section-gap-sm"><a class="btn btn-primary" href="{{.}}" target="_blank" rel="noopener noreferrer" hx-boost="false">{{t "invite.button"}}</a></div>
+  {{with $d.CustomInviteURL}}
+  <div class="section-gap">
+    <h3>{{t "invite.custom.title"}}</h3>
+    <p class="muted">{{t "invite.custom.text"}}</p>
+    <input class="input-wide mono" readonly value="{{.}}" aria-label="{{t "invite.custom.title"}}">
+    <p class="hint">{{if eq $d.CustomInviteMode "public"}}{{t "invite.custom.public"}}{{else}}{{t "invite.custom.private"}}{{end}}</p>
+  </div>
+  {{end}}
   {{else}}
   <p class="muted">{{t "invite.no_app_id"}}</p>
   {{end}}
