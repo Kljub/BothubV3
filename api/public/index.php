@@ -174,8 +174,10 @@ if (str_starts_with($path, '/internal/')) {
     try {
         $pdo = Connection::open(Connection::defaultPath());
         $secrets = new SecretStore($pdo, SecretBox::loadOrCreate());
-        $plugins = new PluginStore($pdo, getenv('DATA_DIR') ?: '/data', static fn (): ?string => $secrets->value('MARKET_GITHUB_TOKEN'), SecretBox::loadOrCreate());
-        $botStore = new BotStore($pdo, SecretBox::loadOrCreate(), $plugins);
+        // Signed-in user, set by the auth layer (never by the browser).
+        $userId = max(1, (int) ($_SERVER['HTTP_X_BOTHUB_USER'] ?? 1));
+        $plugins = new PluginStore($pdo, getenv('DATA_DIR') ?: '/data', static fn (): ?string => $secrets->value(SecretStore::INSTANCE, 'MARKET_GITHUB_TOKEN'), SecretBox::loadOrCreate(), $userId);
+        $botStore = new BotStore($pdo, SecretBox::loadOrCreate(), $plugins, $userId);
         $router = new InternalRouter(
             $botStore,
             static fn () => new Jobs(RedisConnect::open(RedisConnect::url(), 1.0, true)),
@@ -193,6 +195,7 @@ if (str_starts_with($path, '/internal/')) {
             new LegalStore($pdo),
             new InviteStore($pdo),
             new GuildAccessStore($pdo),
+            $userId,
         );
         [$status, $out] = $router->handle($method, $path, $body, $raw === '' ? null : json_decode($raw, false), $_GET);
     } catch (\Throwable $e) {

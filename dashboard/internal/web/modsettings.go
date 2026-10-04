@@ -41,11 +41,21 @@ type settingsField struct {
 	// permissions: a group of members (who is exempt, …) instead of access:
 	// no @everyone, no open/restricted badge, no value is nobody.
 	Group bool `json:"group"`
+	// Vars: the placeholders the bot fills in this text or message field
+	// (the variable picker shows exactly these).
+	Vars []string `json:"vars"`
+	// Dynamic: a "choices" field whose options the plugin sets (ctx.config.setOptions).
+	Dynamic bool `json:"dynamic"`
 }
 
 type settingsSchema struct {
 	Module string          `json:"module"`
 	Fields []settingsField `json:"fields"`
+	// Integration: key of an integration (Admin → API / Secrets) the module
+	// uses; the page warns while its client ID or secret is missing.
+	// IntegrationOptional: the module also works without it (a tip only).
+	Integration         string `json:"integration"`
+	IntegrationOptional bool   `json:"integrationOptional"`
 }
 
 var (
@@ -101,6 +111,8 @@ type settingsScope struct {
 	FileBase    string // plugins: upload and preview URL of "image" fields
 	load        func(r *http.Request) (map[string]any, error)
 	save        func(r *http.Request, cfg map[string]any) error
+	// options: options of dynamic "choices" fields (plugins), field => options.
+	options func(r *http.Request) map[string][]api.ChoiceOption
 }
 
 // moduleScope is the settings form of a ready-made module.
@@ -133,6 +145,15 @@ type settingsView struct {
 	Top    []fieldView        // fields outside lists
 	Lists  []settingsListView // one section per list field
 	Values map[string]any     // for showIf of top-level fields
+	// Options of dynamic "choices" fields, by field key.
+	Options map[string][]api.ChoiceOption
+	// Integration: set while the module's integration is not set up.
+	Integration *integrationNotice
+}
+
+type integrationNotice struct {
+	Name     string
+	Optional bool
 }
 
 type settingsListView struct {
@@ -164,6 +185,15 @@ type fieldView struct {
 	PermJSON, PermLists string
 	// image: upload URL and preview of the stored file.
 	UploadURL, ImageURL string
+	// choices: every option with its pick state.
+	Choices []choiceItem
+}
+
+// choiceItem is one option of a "choices" field. Static options are i18n
+// keys (Key), dynamic ones come with their label from the plugin.
+type choiceItem struct {
+	Value, Label, Key string
+	Picked            bool
 }
 
 func refKey(v any) string {
@@ -183,6 +213,7 @@ func (s *Server) buildFields(v *settingsView, labels, prefix string, fields []se
 			continue
 		}
 		fv := fieldView{settingsField: f, Label: labels + prefix + f.Key, Name: f.Key, Value: values[f.Key], Selected: map[string]bool{}, View: v}
+
 		if len(f.ShowIf) > 0 {
 			b, _ := json.Marshal(f.ShowIf)
 			fv.ShowIfJSON = string(b)
@@ -225,6 +256,8 @@ func (s *Server) buildFields(v *settingsView, labels, prefix string, fields []se
 				sep = " "
 			}
 			fv.Text = strings.Join(parts, sep)
+		case "choices":
+			fv.Choices = choiceItems(f, labels+prefix+f.Key, values[f.Key], v.Options[f.Key])
 		case "image":
 			fv.Text, _ = values[f.Key].(string)
 			fv.UploadURL = v.Files
@@ -234,6 +267,9 @@ func (s *Server) buildFields(v *settingsView, labels, prefix string, fields []se
 		case "message":
 			fv.Message = map[string]string{}
 			m, _ := values[f.Key].(map[string]any)
+			if text, ok := values[f.Key].(string); ok {
+				m = map[string]any{"mode": "text", "content": text} // older plain-text value
+			}
 			for _, k := range []string{"mode", "content", "title", "description", "color", "image", "footer"} {
 				fv.Message[k], _ = m[k].(string)
 			}
@@ -277,6 +313,9 @@ func (s *Server) scopeData(r *http.Request, botID int64, scope settingsScope) (s
 		return settingsView{}, err
 	}
 	v := settingsView{BotID: botID, Module: sc.Module, Base: scope.URLBase, Files: scope.FileBase, Values: cfg}
+	if scope.options != nil && hasDynamic(sc.Fields) {
+		v.Options = scope.options(r)
+	}
 	needGuild := false
 	var walk func([]settingsField)
 	walk = func(fs []settingsField) {
@@ -303,6 +342,9 @@ func (s *Server) scopeData(r *http.Request, botID int64, scope settingsScope) (s
 			v.Guilds = append(v.Guilds, sg)
 		}
 		v.Picker = s.pickerData(v.Guilds)
+	}
+	if sc.Integration != "" {
+		v.Integration = s.integrationNotice(r, sc)
 	}
 	v.Top = s.buildFields(&v, scope.LabelPrefix, "", sc.Fields, cfg)
 	for _, f := range sc.Fields {
@@ -407,6 +449,14 @@ func formValues(fields []settingsField, form url.Values) map[string]any {
 			continue
 		case "bool":
 			out[k] = form.Get(k) == "true"
+		case "choices":
+			picked := []string{}
+			for _, c := range form[k] {
+				if c != "" && !slices.Contains(picked, c) {
+					picked = append(picked, c)
+				}
+			}
+			out[k] = picked
 		case "number":
 			if n, err := strconv.Atoi(strings.TrimSpace(form.Get(k))); err == nil {
 				out[k] = n
@@ -629,4 +679,74 @@ func (s *Server) permissionGroups() any {
 		}
 	}
 	return []any{}
+}
+
+// integrationNotice says whether the integration of a module still lacks its
+// client ID or secret (nil when set up or when the secrets cannot be read).
+func (s *Server) integrationNotice(r *http.Request, sc settingsSchema) *integrationNotice {
+	i := slices.IndexFunc(integrations, func(in integration) bool { return in.Key == sc.Integration })
+	if i < 0 {
+		return nil
+	}
+	in := integrations[i]
+	secrets, err := s.api.UserSecrets(r.Context(), session(r))
+	if err != nil {
+		return nil
+	}
+	set := map[string]bool{}
+	for _, x := range secrets {
+		set[x.Key] = x.Set
+	}
+	if set[in.IDKey] && set[in.SecretKey] {
+		return nil
+	}
+	return &integrationNotice{Name: in.Name, Optional: sc.IntegrationOptional}
+}
+
+// choiceItems lists the options of a "choices" field: static options (label
+// from the i18n key <label>.<option>) or the plugin's dynamic ones; a picked
+// value without an option (gone from the plugin's list) stays listed.
+func choiceItems(f settingsField, label string, value any, dynamic []api.ChoiceOption) []choiceItem {
+	picked := map[string]bool{}
+	switch v := value.(type) {
+	case []any:
+		for _, x := range v {
+			if s, ok := x.(string); ok {
+				picked[s] = true
+			}
+		}
+	case string: // older text value: "5, 2:3"
+		for _, s := range strings.FieldsFunc(v, func(r rune) bool { return r == ',' || r == ' ' }) {
+			picked[s] = true
+		}
+	}
+	var out []choiceItem
+	seen := map[string]bool{}
+	if f.Dynamic {
+		for _, o := range dynamic {
+			out = append(out, choiceItem{Value: o.Value, Label: o.Label, Picked: picked[o.Value]})
+			seen[o.Value] = true
+		}
+	} else {
+		for _, o := range f.Options {
+			out = append(out, choiceItem{Value: o, Key: label + "." + o, Picked: picked[o]})
+			seen[o] = true
+		}
+	}
+	rest := []string{}
+	for p := range picked {
+		if !seen[p] {
+			rest = append(rest, p)
+		}
+	}
+	slices.Sort(rest)
+	for _, p := range rest {
+		out = append(out, choiceItem{Value: p, Label: p, Picked: true})
+	}
+	return out
+}
+
+// hasDynamic reports whether a form has a "choices" field the plugin fills.
+func hasDynamic(fields []settingsField) bool {
+	return slices.ContainsFunc(fields, func(f settingsField) bool { return f.Dynamic || hasDynamic(f.Item) })
 }

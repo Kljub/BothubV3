@@ -29,3 +29,37 @@
 .modset-image-preview[hidden] { display: none; }
 .modset-image .error-text { color: var(--red); }
 .modset-thumb { width: 28px; height: 28px; object-fit: contain; border-radius: 6px; background: var(--surface-2); flex: none; }
+
+/* Variable picker: clipboard icon inside the text field, list below it. */
+.modset-var-wrap { position: relative; display: block; }
+.modset-var-wrap > input, .modset-var-wrap > textarea { width: 100%; }
+.modset-var-wrap:has(.modset-var-tool) > input, .modset-var-wrap:has(.modset-var-tool) > textarea { padding-right: 34px; }
+.modset-var-tool { position: absolute; top: 6px; right: 6px; display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 6px;
+  background: transparent; color: var(--muted); cursor: pointer; }
+.modset-var-tool:hover, .modset-var-tool[aria-expanded="true"] { background: var(--surface-2); color: var(--accent); }
+.modset-var-tool .icon { width: 15px; height: 15px; }
+.modset-vars-pop { position: relative; z-index: 30; margin-top: 4px; max-height: 260px; overflow: auto; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 6px; box-shadow: 0 8px 24px rgb(0 0 0 / 0.35); display: grid; gap: 2px; }
+.modset-vars-pop[hidden] { display: none; }
+.modset-vars-pop, .modset-vars-pop * { text-transform: none; letter-spacing: normal; }
+.modset-vars-head { margin: 2px 8px 6px; font-size: 12px; font-weight: 400; color: var(--muted); }
+.modset-var { display: flex; align-items: center; gap: 10px; width: 100%; padding: 6px 8px; border: 0; border-radius: 6px; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.modset-var:hover, .modset-var:focus-visible { background: var(--surface-2); }
+.modset-var code { flex: none; color: var(--accent); font-size: 12px; }
+.modset-var span { color: var(--muted); font-size: 12px; }
+
+/* Module needs an integration of Admin → API / Secrets. */
+.modset-integration { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+
+/* "choices" field: several picks in a dropdown with square checkboxes. */
+.choices-drop { position: relative; }
+.choices-drop > summary { list-style: none; cursor: pointer; display: flex; align-items: center; min-height: 36px; padding: 6px 30px 6px 10px; border: 1px solid var(--border);
+  border-radius: 8px; background: var(--surface); position: relative; }
+.choices-drop > summary::-webkit-details-marker { display: none; }
+.choices-drop > summary::after { content: "▾"; position: absolute; right: 10px; color: var(--muted); }
+.choices-drop[open] > summary::after { content: "▴"; }
+.choices-picked { display: flex; flex-wrap: wrap; gap: 4px; }
+.choices-picked:empty::before { content: attr(data-empty); color: var(--muted); }
+.choices-list { margin-top: 4px; max-height: 260px; overflow: auto; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 4px; }
+.choices-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; font-weight: normal; }
+.choices-item:hover { background: var(--surface-2); }

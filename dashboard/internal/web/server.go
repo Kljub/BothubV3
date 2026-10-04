@@ -3,6 +3,7 @@
 package web
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -94,6 +95,12 @@ func New(cfg Config) (*Server, error) {
 		return nil, err
 	}
 	s.handler = securityHeaders(s.routes())
+	customInviteOn.Lock()
+	customInviteOn.fetch = func(ctx context.Context, appID string) bool {
+		page, err := cfg.API.InvitePage(ctx, appID)
+		return err == nil && page.Enabled
+	}
+	customInviteOn.Unlock()
 	return s, nil
 }
 
@@ -290,6 +297,12 @@ func (s *Server) routes() http.Handler {
 	mux.Handle("POST /admin/secrets", auth(s.handleSecretSave))
 	mux.Handle("PUT /admin/secrets/{key}", auth(s.handleSecretSave))
 	mux.Handle("DELETE /admin/secrets/{key}", auth(s.handleSecretDelete))
+	mux.Handle("GET /account/secrets", auth(s.handleUserSecrets))
+	mux.Handle("POST /account/secrets", auth(s.handleSecretSave))
+	mux.Handle("PUT /account/secrets/{key}", auth(s.handleSecretSave))
+	mux.Handle("DELETE /account/secrets/{key}", auth(s.handleSecretDelete))
+	mux.Handle("POST /account/integrations/{name}", auth(s.handleIntegrationSave))
+	mux.Handle("DELETE /account/integrations/{name}", auth(s.handleIntegrationDelete))
 	mux.Handle("POST /admin/email/test", auth(s.handleSMTPTest))
 	mux.Handle("POST /account/password", auth(s.handleChangePassword))
 	mux.Handle("POST /account/email", auth(s.handleChangeEmail))

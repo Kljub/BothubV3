@@ -64,7 +64,7 @@ async function main(): Promise<void> {
       if (!bot) throw new Error('error.bot.not_running');
       return bot.pluginGuildList();
     },
-    secret: (key) => secretValue(repo, () => loadSecretKey(config.dataDir), key),
+    secret: (botId, key) => secretValue(repo, () => loadSecretKey(config.dataDir), botId, key),
     voice: (botId) => manager!.instance(botId)?.voice,
     discord: (botId) => manager!.instance(botId)?.pluginApi(),
     log: (botId, level, plugin, text) => {

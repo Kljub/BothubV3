@@ -38,6 +38,7 @@ Events (`discord.events`, `bothub.events`): messageCreate, messageUpdate, messag
 | `config.set()` | core (always) |  | ✅ |
 | `config.has()` | core (always) |  | ✅ |
 | `config.delete()` | core (always) |  | ✅ |
+| `config.setOptions()` | core (always) |  | ✅ |
 | `config.getAll()` | core (always) |  | ✅ |
 | `config.checkAccess()` | core (always) |  | ✅ |
 

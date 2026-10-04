@@ -17,8 +17,9 @@
   {{template "resources" .Processes}}
 {{else if eq .Section "server_settings"}}
   {{template "server_settings" .Server}}
-  {{template "invite_settings" .Invite}}
   {{template "legal_settings" .Legal}}
+{{else if eq .Section "invite_policies"}}
+  {{template "invite_settings" .Invite}}
 {{else if eq .Section "email"}}
   {{template "email_settings" .}}
 {{else if eq .Section "api_secrets"}}
@@ -430,7 +431,8 @@
 {{/* Global secrets (name, value write-only, description). Receives a secretsView. */}}
 {{define "api_secrets"}}
 {{with .Notice}}<div class="alert alert-success">{{t .}}</div>{{end}}
-<p class="muted">{{t "admin.secrets.intro"}}</p>
+{{if .User}}
+<p class="muted">{{t "settings.secrets.intro"}}</p>
 
 <h3 class="settings-group">{{t "admin.secrets.title"}} <span class="badge-soft">{{len .Secrets}}</span></h3>
 <div class="settings-card secrets-card">
@@ -445,7 +447,7 @@
       </span>
       <span class="settings-action">{{if not .Set}}<span class="badge-soft secret-null" title="{{t "admin.secrets.unset_hint"}}">[NULL]</span>{{end}}<span class="badge-soft">{{if .Address}}{{t "admin.secrets.kind.address"}}{{else}}{{t "admin.secrets.kind.key"}}{{end}}</span>{{if .Set}}{{t "settings.change"}}{{else}}{{t "admin.secrets.fill"}}{{end}} ›</span>
     </summary>
-    <form class="form settings-expand-body secret-form" hx-put="/admin/secrets/{{.Key}}" hx-target="#secrets-body" hx-swap="innerHTML">
+    <form class="form settings-expand-body secret-form" hx-put="{{$.Base}}/{{.Key}}" hx-target="{{$.Target}}" hx-swap="innerHTML">
       <div class="secret-grid">
         <label class="field">{{t "admin.secrets.new_value"}}
           <input type="password" name="value" autocomplete="new-password" maxlength="4096" {{if .Set}}placeholder="{{t "admin.secrets.keep_value"}}"{{else}}placeholder="{{t "admin.secrets.paste_value"}}" required{{end}}>
@@ -454,7 +456,7 @@
       </div>
       <p class="hint">{{t "admin.secrets.value_hint"}}{{with .UsedBy}} {{t "admin.secrets.used_by_hint"}}{{end}}</p>
       <div class="secret-actions">
-        <button type="button" class="btn btn-sm btn-danger-soft" hx-delete="/admin/secrets/{{.Key}}" hx-target="#secrets-body" hx-swap="innerHTML"
+        <button type="button" class="btn btn-sm btn-danger-soft" hx-delete="{{$.Base}}/{{.Key}}" hx-target="{{$.Target}}" hx-swap="innerHTML"
           hx-confirm="{{t "admin.secrets.delete_confirm" "key" .Key}}">{{t "admin.secrets.delete"}}</button>
         <button type="submit" class="btn btn-primary btn-sm">{{t "admin.secrets.save"}}</button>
       </div>
@@ -469,7 +471,7 @@
       <span class="settings-row-text"><strong>{{t "admin.secrets.add"}}</strong><span class="hint">{{t "admin.secrets.add_hint"}}</span></span>
       <span class="settings-action">{{t "settings.add"}} ›</span>
     </summary>
-    <form class="form settings-expand-body secret-form" hx-post="/admin/secrets" hx-target="#secrets-body" hx-swap="innerHTML">
+    <form class="form settings-expand-body secret-form" hx-post="{{$.Base}}" hx-target="{{$.Target}}" hx-swap="innerHTML">
       <div class="secret-grid">
         <label class="field">{{t "admin.secrets.key"}}
           <input name="key" required pattern="[A-Za-z][A-Za-z0-9_]{1,39}" maxlength="40" class="mono" placeholder="WEATHER_KEY" spellcheck="false">
@@ -485,6 +487,48 @@
   </details>
 </div>
 
+<h3 class="settings-group">{{t "admin.integrations.title"}}</h3>
+<div class="settings-card secrets-card">
+  {{range .Integrations}}
+  <details class="settings-row settings-expand secret-row">
+    <summary>
+      <span class="secret-icon" aria-hidden="true">{{.Icon}}</span>
+      <span class="settings-row-text">
+        <strong>{{.Name}}</strong>
+        <span class="hint">{{if .Set}}{{t "admin.secrets.updated" "date" .Secret.Updated}}{{else if or .ID .Secret}}{{t "admin.integrations.partial"}}{{else}}{{t "admin.integrations.not_set"}}{{end}}</span>
+      </span>
+      <span class="settings-action">{{if .Set}}<span class="badge-soft badge-soft-running">{{t "admin.integrations.connected"}}</span>{{t "settings.change"}}{{else}}{{t "settings.add"}}{{end}} ›</span>
+    </summary>
+    <form class="form settings-expand-body secret-form" hx-post="{{$.Integ}}/{{.Key}}" hx-target="{{$.Target}}" hx-swap="innerHTML">
+      <div class="secret-grid">
+        <label class="field">Client ID
+          <input type="password" name="client_id" autocomplete="off" maxlength="255" class="mono" spellcheck="false" {{if .ID}}placeholder="{{t "admin.secrets.keep_value"}}"{{else}}required{{end}}>
+          <span class="hint mono">{{.IDKey}}</span>
+        </label>
+        <label class="field">Client Secret
+          <input type="password" name="client_secret" autocomplete="new-password" maxlength="255" class="mono" spellcheck="false" {{if .Secret}}placeholder="{{t "admin.secrets.keep_value"}}"{{else}}required{{end}}>
+          <span class="hint mono">{{.SecretKey}}</span>
+        </label>
+        {{with .RedirectURI}}
+        <label class="field secret-wide">Redirect URI
+          <input type="text" value="{{.}}" readonly class="mono" spellcheck="false">
+          <span class="hint">{{t "admin.integrations.redirect_hint"}}</span>
+        </label>
+        {{end}}
+      </div>
+      <p class="hint">{{t (printf "admin.integrations.%s_hint" .Key)}} <a href="{{.Console}}" target="_blank" rel="noopener noreferrer">{{.Console}}</a></p>
+      <div class="secret-actions">
+        {{if or .ID .Secret}}<button type="button" class="btn btn-sm btn-danger-soft" hx-delete="{{$.Integ}}/{{.Key}}" hx-target="{{$.Target}}" hx-swap="innerHTML"
+          hx-confirm="{{t "admin.integrations.delete_confirm" "name" .Name}}">{{t "admin.secrets.delete"}}</button>{{end}}
+        <button type="submit" class="btn btn-primary btn-sm">{{t "admin.secrets.save"}}</button>
+      </div>
+    </form>
+  </details>
+  {{end}}
+</div>
+
+{{else}}
+<p class="muted">{{t "admin.secrets.instance_intro"}}</p>
 <h3 class="settings-group">{{t "admin.market.title"}}</h3>
 <div class="settings-card secrets-card">
   <details class="settings-row settings-expand secret-row">
@@ -508,6 +552,6 @@
     </form>
   </details>
 </div>
-
+{{end}}
 {{end}}
 

@@ -1,0 +1,92 @@
+{
+  "module": "twitter-linkfix",
+  "fields": [
+    {
+      "key": "mode",
+      "type": "select",
+      "options": [
+        "reply",
+        "replace"
+      ],
+      "default": "reply"
+    },
+    {
+      "key": "service",
+      "type": "select",
+      "options": [
+        "fxtwitter",
+        "vxtwitter",
+        "fixupx"
+      ],
+      "default": "fxtwitter"
+    },
+    {
+      "key": "channels",
+      "type": "channels",
+      "channelTypes": [
+        "text",
+        "announcement"
+      ],
+      "max": 50,
+      "hint": true
+    },
+    {
+      "key": "ignoreBots",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "replyMessage",
+      "type": "message",
+      "default": {
+        "mode": "text",
+        "content": "{links}"
+      },
+      "vars": [
+        "user",
+        "user.mention",
+        "user.name",
+        "user.id",
+        "user.avatar",
+        "server",
+        "server.id",
+        "members",
+        "channel",
+        "channel.mention",
+        "links"
+      ],
+      "showIf": {
+        "mode": [
+          "reply"
+        ]
+      }
+    },
+    {
+      "key": "replaceMessage",
+      "type": "message",
+      "default": {
+        "mode": "text",
+        "content": "**{user}:** {message.content}"
+      },
+      "vars": [
+        "user",
+        "user.mention",
+        "user.name",
+        "user.id",
+        "user.avatar",
+        "server",
+        "server.id",
+        "members",
+        "channel",
+        "channel.mention",
+        "message.content",
+        "links"
+      ],
+      "showIf": {
+        "mode": [
+          "replace"
+        ]
+      }
+    }
+  ]
+}

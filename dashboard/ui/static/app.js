@@ -13,6 +13,8 @@ document.addEventListener('click', (event) => {
   if (opener) {
     const dialog = document.getElementById(opener.dataset.openDialog);
     if (dialog && !dialog.open) dialog.showModal();
+    // data-settings-open="<section id>": the settings popup opens on that tab.
+    if (dialog && opener.dataset.settingsOpen) dialog.querySelector(`[data-settings-tab="${opener.dataset.settingsOpen}"]`)?.click();
     return;
   }
   if (event.target.closest('[data-close-dialog]')) {
@@ -38,9 +40,18 @@ document.addEventListener('htmx:afterSettle', () => {
   const app = document.querySelector('.app[data-locale]');
   if (app) document.documentElement.lang = app.dataset.locale;
 });
+// Dropdown menus (bot switcher, user menu, language): a click outside or
+// Escape closes them.
+const MENUS = 'details.bot-switch[open], details.lang-switch[open], details.user-menu[open]';
 document.addEventListener('click', (event) => {
-  document.querySelectorAll('details.bot-switch[open], details.lang-switch[open]').forEach((menu) => {
+  document.querySelectorAll(MENUS).forEach((menu) => {
     if (!menu.contains(event.target)) menu.open = false;
+  });
+});
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') return;
+  document.querySelectorAll(MENUS).forEach((menu) => {
+    menu.open = false;
   });
 });
 

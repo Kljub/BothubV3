@@ -29,7 +29,7 @@ function setup(): { db: Db; pluginsDir: string; logs: string[]; manager: PluginM
     guildInfo: async (_b, id) => ({ id, name: 'Home', memberCount: 3 }),
     guildList: async () => [{ id: '100000000000000001', name: 'Home', memberCount: 3 }],
     voice: () => fakeVoice,
-    secret: (key) => ({ WEATHER_URL: 'https://api.example.com/v1', LAN_URL: 'http://192.168.1.10:32400', WEATHER_KEY: 's3cr3t-value', OTHER_KEY: 'other-value' })[key] ?? null,
+    secret: (_botId, key) => ({ WEATHER_URL: 'https://api.example.com/v1', LAN_URL: 'http://192.168.1.10:32400', WEATHER_KEY: 's3cr3t-value', OTHER_KEY: 'other-value' })[key] ?? null,
     fetch: (async (url: URL, init: RequestInit) => {
       fetched.push({ url: String(url), init });
       const body = String(url).includes('/big') ? 'x'.repeat(1024 * 1024 + 10) : JSON.stringify({ ok: true, echo: 'token s3cr3t-value' });
@@ -513,10 +513,10 @@ test('secrets.read: only declared and shared names, no listing, masked in logs',
   install(db, pluginsDir, id, { 'bothub-plugin.json': JSON.stringify(manifest), 'index.js': code });
   // What the API stored at install; a file changed later does not count.
   db.prepare('UPDATE plugins SET manifest = ? WHERE id = ?').run(JSON.stringify({ secrets: ['WEATHER_API_KEY', 'NOT_SHARED'] }), id);
-  for (const k of ['WEATHER_API_KEY', 'NOT_SHARED', 'DISCORD_TOKEN']) db.prepare("INSERT INTO secrets (key, value_enc) VALUES (?, x'00')").run(k);
-  db.prepare("INSERT INTO secret_plugin_shares (secret_key, plugin_id) VALUES ('WEATHER_API_KEY', ?)").run(id);
+  for (const k of ['WEATHER_API_KEY', 'NOT_SHARED', 'DISCORD_TOKEN']) db.prepare("INSERT INTO secrets (owner_id, key, value_enc) VALUES (1, ?, x'00')").run(k);
+  db.prepare("INSERT INTO secret_plugin_shares (owner_id, secret_key, plugin_id) VALUES (1, 'WEATHER_API_KEY', ?)").run(id);
   const values: Record<string, string> = { WEATHER_API_KEY: 'owm-1234567890', NOT_SHARED: 'nope-123456', DISCORD_TOKEN: 'tok-123456' };
-  (manager as unknown as { deps: PluginDeps }).deps.secret = (k) => values[k] ?? null;
+  (manager as unknown as { deps: PluginDeps }).deps.secret = (_botId, k) => values[k] ?? null;
   db.prepare("INSERT INTO sdk_policies (permission, enabled) VALUES ('secrets.read', 1)").run();
   try {
     await manager.startBot(1);
@@ -534,7 +534,7 @@ test('secrets.read: only declared and shared names, no listing, masked in logs',
     const fileManifest = { ...manifest, secrets: ['WEATHER_API_KEY', 'NOT_SHARED', 'DISCORD_TOKEN'] };
     writeFileSync(join(pluginsDir, id, '1.0.0', 'bothub-plugin.json'), JSON.stringify(fileManifest));
     writeFileSync(join(pluginsDir, id, '1.0.0', 'index.js'), `export default { blocks: { async read(ctx) { return { results: { '.tok': JSON.stringify((await ctx.secrets.get('DISCORD_TOKEN')) ?? null) } }; } } };`);
-    db.prepare("INSERT INTO secret_plugin_shares (secret_key, plugin_id) VALUES ('DISCORD_TOKEN', ?)").run(id);
+    db.prepare("INSERT INTO secret_plugin_shares (owner_id, secret_key, plugin_id) VALUES (1, 'DISCORD_TOKEN', ?)").run(id);
     await manager.startBot(1);
     const second = fakeRun({});
     await manager.blockHandlers(1).get(`plugin.${id}.read`)!(node(`plugin.${id}.read`), second.run);
@@ -572,8 +572,8 @@ test('http.secret: address and key from shared secrets, the plugin never sees th
   } } };`);
   register(db, id);
   db.prepare('UPDATE plugins SET manifest = ? WHERE id = ?').run(JSON.stringify({ secrets: manifest.services.secrets }), id);
-  for (const k of ['WEATHER_URL', 'WEATHER_KEY', 'LAN_URL', 'OTHER_KEY']) db.prepare("INSERT INTO secrets (key, value_enc) VALUES (?, x'00')").run(k);
-  for (const k of ['WEATHER_URL', 'WEATHER_KEY', 'LAN_URL']) db.prepare('INSERT INTO secret_plugin_shares (secret_key, plugin_id) VALUES (?, ?)').run(k, id);
+  for (const k of ['WEATHER_URL', 'WEATHER_KEY', 'LAN_URL', 'OTHER_KEY']) db.prepare("INSERT INTO secrets (owner_id, key, value_enc) VALUES (1, ?, x'00')").run(k);
+  for (const k of ['WEATHER_URL', 'WEATHER_KEY', 'LAN_URL']) db.prepare('INSERT INTO secret_plugin_shares (owner_id, secret_key, plugin_id) VALUES (1, ?, ?)').run(k, id);
   db.prepare("INSERT INTO sdk_policies (permission, enabled) VALUES ('secrets.use', 1), ('http.outbound', 1)").run();
   (manager as unknown as { deps: PluginDeps }).deps.outbound = { resolve: async (h) => (h === 'api.example.com' ? ['93.184.216.34'] : ['10.0.0.1']) };
   try {
@@ -619,11 +619,11 @@ test('http.secret with plugin files: multipart upload of a stored image, image a
   } } };`;
   install(db, pluginsDir, id, { 'bothub-plugin.json': JSON.stringify(manifest), 'index.js': code });
   db.prepare('UPDATE plugins SET manifest = ? WHERE id = ?').run(JSON.stringify({ secrets: ['GEN_KEY'] }), id);
-  db.prepare("INSERT INTO secrets (key, value_enc) VALUES ('GEN_KEY', x'00')").run();
-  db.prepare("INSERT INTO secret_plugin_shares (secret_key, plugin_id) VALUES ('GEN_KEY', ?)").run(id);
+  db.prepare("INSERT INTO secrets (owner_id, key, value_enc) VALUES (1, 'GEN_KEY', x'00')").run();
+  db.prepare("INSERT INTO secret_plugin_shares (owner_id, secret_key, plugin_id) VALUES (1, 'GEN_KEY', ?)").run(id);
   db.prepare("INSERT INTO sdk_policies (permission, enabled) VALUES ('secrets.use', 1)").run();
   const deps = (manager as unknown as { deps: PluginDeps }).deps;
-  deps.secret = (k) => (k === 'GEN_KEY' ? 'gen-key-123456' : null);
+  deps.secret = (_botId, k) => (k === 'GEN_KEY' ? 'gen-key-123456' : null);
   deps.outbound = { resolve: async () => ['93.184.216.34'] };
   let form: FormData | null = null;
   let keyHeader = '';
@@ -764,6 +764,49 @@ test('market example plugins start and their blocks run', { skip: marketPlugins.
       await hello(node('plugin.starter.hello'), run);
       assert.ok(Object.keys(results).length > 0, 'hello returned results');
     }
+  } finally {
+    manager.stopAll();
+  }
+});
+
+test('config.setOptions: options of a dynamic choices field per bot, choices values checked', async () => {
+  const { db, pluginsDir, manager } = setup();
+  const id = 'plugin_choices';
+  const manifest = { id, name: 'Choices', version: '1.0.0', sdk: 1, main: 'index.js', permissions: [], blocks: [{ name: 'run', definition: {} }] };
+  const code = `export default { blocks: {
+    async run(ctx) {
+      const r = async (fn) => { try { return JSON.stringify(await fn()); } catch (e) { return e.message; } };
+      return { results: {
+        '.default': JSON.stringify(ctx.config.get('libraries')),
+        '.set': await r(() => ctx.config.setOptions('libraries', [{ value: '1:5', label: 'Njetflix:Filme' }, '1:7', { value: '1:5', label: 'dup' }])),
+        '.static': await r(() => ctx.config.setOptions('kind', ['x'])),
+        '.bad': await r(() => ctx.config.setOptions('libraries', [{ value: '' }])),
+        '.pick': await r(() => ctx.config.set('libraries', ['1:5', '9:9', '1:5'])),
+        '.kind_bad': await r(() => ctx.config.set('kind', ['nope'])),
+      } };
+    },
+  } };`;
+  install(db, pluginsDir, id, { 'bothub-plugin.json': JSON.stringify(manifest), 'index.js': code });
+  const dash = join(pluginsDir, id, '1.0.0', 'dashboard');
+  mkdirSync(dash);
+  writeFileSync(join(dash, 'settings.json'), JSON.stringify({ fields: [
+    { key: 'libraries', type: 'choices', dynamic: true, max: 10 },
+    { key: 'kind', type: 'choices', options: ['a', 'b'] },
+  ] }));
+  try {
+    await manager.startBot(1);
+    const { run, results } = fakeRun({});
+    await manager.blockHandlers(1).get(`plugin.${id}.run`)!(node(`plugin.${id}.run`), run);
+    assert.equal(results['.default'], '[]');
+    assert.equal(results['.set'], '2', 'duplicates dropped, plain strings allowed');
+    assert.equal(results['.static'], 'sdk.config.not_dynamic');
+    assert.equal(results['.bad'], 'sdk.config.bad_options');
+    assert.equal(results['.pick'], 'null', 'set worked');
+    assert.equal(results['.kind_bad'], 'sdk.config.bad_value', 'static choices: only the listed options');
+    const row = db.prepare('SELECT options FROM plugin_field_options WHERE bot_id = 1 AND plugin_id = ? AND field = ?').get(id, 'libraries') as { options: string };
+    assert.deepEqual(JSON.parse(row.options), [{ value: '1:5', label: 'dup' }, { value: '1:7', label: '1:7' }]);
+    const saved = db.prepare('SELECT config FROM plugin_settings WHERE bot_id = 1 AND plugin_id = ?').get(id) as { config: string };
+    assert.deepEqual(JSON.parse(saved.config).libraries, ['1:5', '9:9'], 'picked values stay even without an option');
   } finally {
     manager.stopAll();
   }

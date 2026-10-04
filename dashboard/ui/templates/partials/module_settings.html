@@ -7,6 +7,12 @@
 {{$v := .}}
 {{/* Data and texts of the role/channel pickers and the permissions block (static/js/permissions.js). */}}
 {{/* Attributes, not <script> blocks: hx-boost drops script tags of swapped pages. */}}
+{{with .Integration}}
+<div class="alert {{if .Optional}}alert-info{{else}}alert-warning{{end}} modset-integration">
+  <span>{{if .Optional}}{{t "modset.integration.optional" "name" .Name}}{{else}}{{t "modset.integration.missing" "name" .Name}}{{end}}</span>
+  <button type="button" class="btn btn-sm" data-open-dialog="settings-dialog" data-settings-open="settings-secrets">{{t "modset.integration.open"}} ›</button>
+</div>
+{{end}}
 {{with .Picker}}<div hidden data-picker-data="{{printf "%s" .}}" data-picker-texts="{{printf "%s" pickerTexts}}"></div>{{end}}
 {{if .Top}}
 <section class="box">
@@ -65,13 +71,28 @@
   <label class="field">{{t .Label}}
     <select name="{{.Name}}">{{range .Options}}<option value="{{.}}" {{if eq . $f.Text}}selected{{end}}>{{t (printf "%s.%s" $f.Label .)}}</option>{{end}}</select>
   </label>
+{{else if eq .Type "choices"}}
+  {{/* Several picks in a dropdown with square checkboxes (static options or the plugin's, ctx.config.setOptions). */}}
+  <div class="field">{{t .Label}}
+    <details class="choices-drop">
+      <summary><span class="choices-picked" data-empty="{{t "modset.choices.none"}}">{{range .Choices}}{{if .Picked}}<span class="badge-soft">{{if .Key}}{{t .Key}}{{else}}{{.Label}}{{end}}</span>{{end}}{{end}}</span></summary>
+      <div class="choices-list">
+        {{range .Choices}}<label class="choices-item"><input type="checkbox" name="{{$f.Name}}" value="{{.Value}}" {{if .Picked}}checked{{end}}><span>{{if .Key}}{{t .Key}}{{else}}{{.Label}}{{end}}</span></label>
+        {{else}}<p class="hint">{{t "modset.choices.no_options"}}</p>{{end}}
+      </div>
+    </details>
+  </div>
 {{else if eq .Type "color"}}
   <label class="field">{{t .Label}}<input type="color" name="{{.Name}}" value="{{if .Text}}{{.Text}}{{else}}#a78bfa{{end}}"></label>
 {{else if eq .Type "text"}}
   <label class="field">{{t .Label}}
-    {{if .Multiline}}<textarea name="{{.Name}}" rows="3" {{with .Max}}maxlength="{{.}}"{{end}}>{{.Text}}</textarea>{{else}}<input name="{{.Name}}" value="{{.Text}}" {{with .Max}}maxlength="{{.}}"{{end}} {{with .Pattern}}pattern="{{.}}"{{end}}>{{end}}
-    <span class="hint">{{t "modset.placeholders_hint"}}</span>
+    <span class="modset-var-wrap">
+      {{if .Multiline}}<textarea name="{{.Name}}" rows="3" {{with .Max}}maxlength="{{.}}"{{end}}>{{.Text}}</textarea>{{else}}<input name="{{.Name}}" value="{{.Text}}" {{with .Max}}maxlength="{{.}}"{{end}} {{with .Pattern}}pattern="{{.}}"{{end}}>{{end}}
+      {{if .Vars}}{{template "modset_var_tool"}}{{end}}
+    </span>
+    {{if not .Vars}}<span class="hint">{{t "modset.placeholders_hint"}}</span>{{end}}
   </label>
+  {{with .Vars}}{{template "modset_vars" .}}{{end}}
 {{else if eq .Type "words"}}
   <label class="field">{{t .Label}}<textarea name="{{.Name}}" rows="3">{{.Text}}</textarea><span class="hint">{{t "modset.words_hint"}}</span></label>
 {{else if eq .Type "emojis"}}
@@ -127,18 +148,29 @@
         <option value="embed" {{if eq (index .Message "mode") "embed"}}selected{{end}}>{{t "modset.message.mode_embed"}}</option>
       </select>
     </label>
-    <label class="field">{{t "modset.message.content"}}<textarea name="{{.Name}}.content" rows="3" maxlength="2000">{{index .Message "content"}}</textarea></label>
+    <label class="field">{{t "modset.message.content"}}<span class="modset-var-wrap"><textarea name="{{.Name}}.content" rows="3" maxlength="2000">{{index .Message "content"}}</textarea>{{if .Vars}}{{template "modset_var_tool"}}{{end}}</span></label>
     <div class="modset-embed">
-      <label class="field">{{t "modset.message.title"}}<input name="{{.Name}}.title" value="{{index .Message "title"}}" maxlength="256"></label>
-      <label class="field">{{t "modset.message.description"}}<textarea name="{{.Name}}.description" rows="4" maxlength="4000">{{index .Message "description"}}</textarea></label>
+      <label class="field">{{t "modset.message.title"}}<span class="modset-var-wrap"><input name="{{.Name}}.title" value="{{index .Message "title"}}" maxlength="256">{{if .Vars}}{{template "modset_var_tool"}}{{end}}</span></label>
+      <label class="field">{{t "modset.message.description"}}<span class="modset-var-wrap"><textarea name="{{.Name}}.description" rows="4" maxlength="4000">{{index .Message "description"}}</textarea>{{if .Vars}}{{template "modset_var_tool"}}{{end}}</span></label>
       <div class="modset-grid">
         <label class="field">{{t "modset.message.color"}}<input type="color" name="{{.Name}}.color" value="{{with index .Message "color"}}{{.}}{{else}}#a78bfa{{end}}"></label>
         <label class="field">{{t "modset.message.image"}}<input name="{{.Name}}.image" value="{{index .Message "image"}}" placeholder="https://…"></label>
       </div>
-      <label class="field">{{t "modset.message.footer"}}<input name="{{.Name}}.footer" value="{{index .Message "footer"}}" maxlength="2048"></label>
+      <label class="field">{{t "modset.message.footer"}}<span class="modset-var-wrap"><input name="{{.Name}}.footer" value="{{index .Message "footer"}}" maxlength="2048">{{if .Vars}}{{template "modset_var_tool"}}{{end}}</span></label>
     </div>
-    <span class="hint">{{t "modset.placeholders_hint"}}</span>
+    {{with .Vars}}{{template "modset_vars" .}}{{else}}<span class="hint">{{t "modset.placeholders_hint"}}</span>{{end}}
   </fieldset>
 {{end}}
+</div>
+{{end}}
+
+{{/* Variable picker of a text or message field: the clipboard icon inside
+     each text field opens the list of the placeholders the bot fills there
+     (field "vars"); a click inserts one at the cursor of that text field. */}}
+{{define "modset_var_tool"}}<button type="button" class="modset-var-tool" title="{{t "modset.vars.button"}}" aria-label="{{t "modset.vars.button"}}" aria-expanded="false"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg></button>{{end}}
+{{define "modset_vars"}}
+<div class="modset-vars-pop" role="listbox" aria-label="{{t "modset.vars.button"}}" hidden>
+  <p class="modset-vars-head">{{t "modset.vars.hint"}}</p>
+  {{range .}}<button type="button" class="modset-var" data-token="{{printf "{%s}" .}}"><code>{{printf "{%s}" .}}</code><span>{{t (printf "modset.var.%s" .)}}</span></button>{{end}}
 </div>
 {{end}}

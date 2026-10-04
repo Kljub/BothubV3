@@ -23,7 +23,12 @@
             "title": "📌 Sticky message",
             "description": "Please read the rules.",
             "color": "#a78bfa"
-          }
+          },
+          "vars": [
+            "server",
+            "server.id",
+            "members"
+          ]
         },
         {
           "key": "every",

@@ -154,11 +154,11 @@ export class BotInstance {
     readonly botId: number,
     private readonly deps: InstanceDeps,
   ) {
-    this.modules = new ModuleContext(botId, deps.repo);
+    this.modules = new ModuleContext(botId, deps.repo, (key) => (deps.secretKey ? secretValue(deps.repo, deps.secretKey, botId, key) : null));
     const vars = deps.repo.varStore(botId);
     const core = {
       vars,
-      secret: (key: string) => (deps.secretKey ? secretValue(deps.repo, deps.secretKey, key) : null),
+      secret: (key: string) => (deps.secretKey ? secretValue(deps.repo, deps.secretKey, botId, key) : null),
       data: dataStore(deps.repo.db, botId),
       logError: (run: Run, text: string) => this.logRun(run, 'ERR-1007', { text }),
       resetCooldown: (command: string, scopeKey: string) => {

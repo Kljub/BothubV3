@@ -1,5 +1,5 @@
 {{/* User settings popup (only the signed-in user's own settings, never admin
-     settings): General, Account, Security & sign-in. Tabs switch in the
+     settings): General, Account, Security & sign-in, API / Secrets. Tabs switch in the
      browser; the search looks through every tab. Each tab is a list of cards
      with rows: label and description left, value or action right; rows with
      a form open in place (<details>). */}}
@@ -12,6 +12,7 @@
       <button type="button" class="settings-nav-item" data-settings-tab="settings-general" aria-current="page">{{template "icon_gear"}}<span>{{t "settings.general"}}</span></button>
       <button type="button" class="settings-nav-item" data-settings-tab="settings-account">{{template "icon_users"}}<span>{{t "settings.account"}}</span></button>
       <button type="button" class="settings-nav-item" data-settings-tab="settings-security">{{template "icon_shield"}}<span>{{t "settings.security"}}</span></button>
+      <button type="button" class="settings-nav-item" data-settings-tab="settings-secrets">{{template "icon_key"}}<span>{{t "settings.secrets"}}</span></button>
     </nav>
     <div class="settings-main">
       <div id="account-flash"></div>
@@ -45,6 +46,13 @@
       <section class="settings-content" id="settings-security" hidden>
         <h2>{{t "settings.security"}}</h2>
         {{template "security_panel" .Me}}
+      </section>
+
+      {{/* Own secrets: loaded when the tab opens (not with every page). */}}
+      <section class="settings-content" id="settings-secrets" hidden>
+        <h2>{{t "settings.secrets"}}</h2>
+        <div id="user-secrets-body-error"></div>
+        <div id="user-secrets-body" hx-get="/account/secrets" hx-trigger="intersect once" hx-swap="innerHTML"><p class="muted">{{t "settings.secrets.loading"}}</p></div>
       </section>
     </div>
   </div>

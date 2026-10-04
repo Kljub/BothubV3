@@ -8886,6 +8886,159 @@
   {
    "module": "birthday",
    "group": "Birthday",
+   "name": "birthday remove",
+   "title": "Remove birthday",
+   "description": "Remove someone's birthday (Moderator)",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "birthday remove",
+       "description": "Remove someone's birthday (Moderator)",
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "everyone"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [
+         "manage_guild"
+        ],
+        "banned_channels": [],
+        "hide_without_permission": true
+       }
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 760
+      }
+     },
+     {
+      "id": "option_user",
+      "type": "option.user",
+      "typeVersion": 1,
+      "config": {
+       "name": "user",
+       "description": "The member",
+       "required": true,
+       "variable": "user"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.birthday_remove",
+      "typeVersion": 1,
+      "config": {
+       "user": "{option_user}"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "✅ Birthday of <@{option_user}> removed."
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_user",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "birthday",
+   "group": "Birthday",
    "name": "birthday list",
    "title": "Birthday list",
    "description": "Show all registered birthdays on the server",

@@ -53,13 +53,15 @@ var baseFuncs = template.FuncMap{
 		}
 		return *p
 	},
-	"inviteURL":   inviteURL,
-	"pager":       pager,
-	"clientI18n":  func() template.JS { return "{}" },
-	"pickerTexts": func() template.JS { return "{}" },
-	"rangeForm":   newRangeForm,
-	"twofaState":  func(enabled bool) map[string]any { return map[string]any{"TwoFactorEnabled": enabled} },
-	"minutes":     func(sec int) int { return sec / 60 },
+	"inviteURL": inviteURL,
+	// "Invite Bot": the custom invite page when it is on, else Discord's link.
+	"botInviteURL": botInviteURL,
+	"pager":        pager,
+	"clientI18n":   func() template.JS { return "{}" },
+	"pickerTexts":  func() template.JS { return "{}" },
+	"rangeForm":    newRangeForm,
+	"twofaState":   func(enabled bool) map[string]any { return map[string]any{"TwoFactorEnabled": enabled} },
+	"minutes":      func(sec int) int { return sec / 60 },
 	"initial": func(name string) string {
 		for _, r := range strings.TrimSpace(name) {
 			return strings.ToUpper(string(r))

@@ -1,8 +1,36 @@
 {
   "module": "leavemer",
   "fields": [
-    { "key": "channel", "type": "channel", "channelTypes": ["text", "announcement"] },
-    { "key": "message", "type": "message", "default": { "mode": "text", "content": "**{user.name}** left the server. We are now {members} members." } },
-    { "key": "ignoreBots", "type": "bool", "default": true }
+    {
+      "key": "channel",
+      "type": "channel",
+      "channelTypes": [
+        "text",
+        "announcement"
+      ]
+    },
+    {
+      "key": "message",
+      "type": "message",
+      "default": {
+        "mode": "text",
+        "content": "**{user.name}** left the server. We are now {members} members."
+      },
+      "vars": [
+        "user",
+        "user.mention",
+        "user.name",
+        "user.id",
+        "user.avatar",
+        "server",
+        "server.id",
+        "members"
+      ]
+    },
+    {
+      "key": "ignoreBots",
+      "type": "bool",
+      "default": true
+    }
   ]
 }

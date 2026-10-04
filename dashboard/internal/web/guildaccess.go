@@ -1,22 +1,22 @@
 package web
 
 import (
+	"log/slog"
 	"net/http"
 	"slices"
-	"strings"
 
 	"github.com/Kljub/BothubV3/dashboard/internal/api"
 )
 
 // Closed invites on the server page: one main switch ("only allowed
-// servers") and one switch per server. While closed, the bot leaves every
-// server that is not allowed (on join, at start, right after a change).
+// servers") and "+ Allow" on every server card. While closed, the bot leaves
+// every server that is not allowed (on join, at start, right after a change).
+// An allowed server is removed only by leaving it through the dashboard.
 
 type accessView struct {
 	Closed  bool
-	Allowed map[string]bool   // guild ID -> allowed
-	Planned []api.AccessGuild // allowed servers the bot is not on yet
-	Error   string            // translated, after a refused save
+	Allowed map[string]bool // guild ID -> allowed
+	Error   string          // translated, after a refused save
 	Loaded  bool
 }
 
@@ -30,16 +30,14 @@ func (s *Server) accessView(r *http.Request, botID int64) accessView {
 		if g.Allowed {
 			v.Allowed[g.ID] = true
 		}
-		if g.Allowed && !g.Current {
-			v.Planned = append(v.Planned, g)
-		}
 	}
 	return v
 }
 
-// handleGuildAccess changes the main switch (form field closed), one
-// server's switch (guild + allowed) or adds a server ID ahead of an invite
-// (add), then renders the server list again.
+// handleGuildAccess changes the main switch (form field closed) or allows
+// one server the bot is on (guild + allowed=true), then renders the server
+// list again. To add the bot to a new server: switch off, invite, "Allow",
+// switch on.
 func (s *Server) handleGuildAccess(w http.ResponseWriter, r *http.Request, p Page) {
 	id, ok := s.botID(w, r, p)
 	if !ok {
@@ -83,13 +81,8 @@ func (s *Server) handleGuildAccess(w http.ResponseWriter, r *http.Request, p Pag
 			s.fail(w, r, p, &api.Error{Status: http.StatusUnprocessableEntity, Key: "error.validation.failed"})
 			return
 		}
-		allowed = slices.DeleteFunc(allowed, func(x string) bool { return x == gid })
-		if last("allowed") == "true" {
-			allowed = append(allowed, gid)
-		}
-	case r.Form.Has("add"):
-		gid := strings.TrimSpace(r.FormValue("add"))
-		if applicationIDPattern.MatchString(gid) && !slices.Contains(allowed, gid) {
+		// Only servers the bot is on; taking it back means leaving the server (handleLeaveGuild).
+		if last("allowed") == "true" && slices.Contains(current, gid) && !slices.Contains(allowed, gid) {
 			allowed = append(allowed, gid)
 		}
 	}
@@ -106,4 +99,24 @@ func (s *Server) handleGuildAccess(w http.ResponseWriter, r *http.Request, p Pag
 	v := s.accessView(r, id)
 	v.Error = errText
 	s.render(w, http.StatusOK, "bot", "server_list_fragment", withData(p, map[string]any{"Bot": bot, "Guilds": guilds, "Access": v}))
+}
+
+// forgetAllowed removes a server the bot left through the dashboard from the
+// allowed list. With closed invites and no server left the switch goes off
+// (the API refuses an empty list while closed).
+func (s *Server) forgetAllowed(r *http.Request, botID int64, guildID string) {
+	cur, err := s.api.GuildAccess(r.Context(), session(r), botID)
+	if err != nil {
+		return
+	}
+	allowed := []string{}
+	for _, g := range cur.Guilds {
+		if g.Allowed && g.ID != guildID {
+			allowed = append(allowed, g.ID)
+		}
+	}
+	closed := cur.Closed && len(allowed) > 0
+	if _, err := s.api.SaveGuildAccess(r.Context(), session(r), botID, closed, allowed); err != nil {
+		slog.Warn("allowed server not removed", "bot", botID, "guild", guildID, "err", err)
+	}
 }

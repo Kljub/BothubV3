@@ -26,7 +26,12 @@
         "title": "✅ Verification",
         "description": "Press the button below to get access to {server}.",
         "color": "#4ade80"
-      }
+      },
+      "vars": [
+        "server",
+        "server.id",
+        "members"
+      ]
     },
     {
       "key": "buttonLabel",
@@ -47,13 +52,33 @@
       "key": "successMessage",
       "type": "text",
       "max": 1000,
-      "default": "You are verified. Welcome to {server}!"
+      "default": "You are verified. Welcome to {server}!",
+      "vars": [
+        "user",
+        "user.mention",
+        "user.name",
+        "user.id",
+        "user.avatar",
+        "server",
+        "server.id",
+        "members"
+      ]
     },
     {
       "key": "failMessage",
       "type": "text",
       "max": 1000,
-      "default": "That was not correct. Please try again."
+      "default": "That was not correct. Please try again.",
+      "vars": [
+        "user",
+        "user.mention",
+        "user.name",
+        "user.id",
+        "user.avatar",
+        "server",
+        "server.id",
+        "members"
+      ]
     }
   ]
 }

@@ -78,6 +78,9 @@ func (s *store) forward(w http.ResponseWriter, r *http.Request, body []byte) {
 		return
 	}
 	req.Header.Set("X-BotHub-Internal", s.php.key)
+	// The signed-in user: owner of their secrets and of the bots they add.
+	// Only the admin (user 1) can sign in to the mock; a browser never sets it.
+	req.Header.Set("X-BotHub-User", "1")
 	if actor := r.Header.Get("X-BotHub-Actor"); actor != "" {
 		req.Header.Set("X-BotHub-Actor", actor)
 	}

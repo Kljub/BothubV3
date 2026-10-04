@@ -3,6 +3,7 @@ package web
 import (
 	"net/url"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -140,5 +141,28 @@ func TestFormValues(t *testing.T) {
 	}
 	if m := got["m"].(map[string]string); m["mode"] != "embed" || m["title"] != "Hi" {
 		t.Errorf("message: %v", m)
+	}
+}
+
+func TestChoicesField(t *testing.T) {
+	f := settingsField{Key: "libraries", Type: "choices", Dynamic: true}
+	got := choiceItems(f, "plugin.x.setting.libraries", []any{"1:5", "9:9"}, []api.ChoiceOption{{Value: "1:5", Label: "Njetflix:Filme"}, {Value: "1:7", Label: "Njetflix:Serien"}})
+	want := []choiceItem{{Value: "1:5", Label: "Njetflix:Filme", Picked: true}, {Value: "1:7", Label: "Njetflix:Serien"}, {Value: "9:9", Label: "9:9", Picked: true}}
+	if !slices.Equal(got, want) {
+		t.Fatalf("items = %+v", got)
+	}
+	if old := choiceItems(f, "", "5, 2:3", nil); len(old) != 2 || !old[0].Picked {
+		t.Fatalf("older text value: %+v", old)
+	}
+	static := choiceItems(settingsField{Key: "kind", Type: "choices", Options: []string{"a", "b"}}, "modset.m.kind", []any{"b"}, nil)
+	if static[0].Key != "modset.m.kind.a" || static[0].Picked || !static[1].Picked {
+		t.Fatalf("static: %+v", static)
+	}
+	out := formValues([]settingsField{f}, url.Values{"libraries": {"1:5", "", "1:5", "1:7"}})
+	if v, _ := out["libraries"].([]string); !slices.Equal(v, []string{"1:5", "1:7"}) {
+		t.Fatalf("form = %v", out)
+	}
+	if v, _ := formValues([]settingsField{f}, url.Values{})["libraries"].([]string); v == nil || len(v) != 0 {
+		t.Fatal("nothing ticked must save an empty list")
 	}
 }

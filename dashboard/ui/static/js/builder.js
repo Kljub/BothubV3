@@ -2534,9 +2534,23 @@
     problemsBtn.querySelector('[data-problems-count]').textContent = n ? String(n) : '✓';
     problemsBtn.classList.toggle('has-problems', n > 0);
   }
+  // A node with a problem blinks its outline a few times (problems list).
+  function blinkNodes(ids) {
+    for (const id of new Set(ids.filter(Boolean))) {
+      const box = world.querySelector(`[data-node="${id}"]`);
+      if (!box) continue;
+      box.classList.remove('bnode-blink');
+      void box.offsetWidth; // restart the animation
+      box.classList.add('bnode-blink');
+      clearTimeout(box.blinkTimer);
+      box.blinkTimer = setTimeout(() => box.classList.remove('bnode-blink'), 1900); // 3 × 0.6 s
+    }
+  }
+
   function openProblems(anchor) {
     const pop = topPop(anchor, 'btop-problems');
     const list = validate();
+    blinkNodes(list.map((p) => p.node));
     pop.append(el('strong', '', t('builder.problems.title')), el('p', 'bfield-hint', t('builder.problems.hint')));
     if (!list.length) pop.append(el('p', 'bproblems-ok', t('builder.problems.none')));
     for (const p of list) {
@@ -2551,6 +2565,7 @@
         selected = { kind: 'node', id: node.id };
         focusNode(node);
         render();
+        blinkNodes([node.id]);
       });
       pop.append(row);
     }

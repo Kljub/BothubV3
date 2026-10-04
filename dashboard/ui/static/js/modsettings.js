@@ -146,6 +146,68 @@
     if (ev.target.matches && ev.target.matches('input[type=file][data-image-upload]')) upload(ev.target);
   });
 
+  // ---- variable picker (field "vars") ----
+  // The clipboard icon inside a text field opens the field's list right below
+  // that text field; a placeholder goes in at its cursor.
+
+  let varTarget = null;
+
+  function insertAt(field, token) {
+    const start = field.selectionStart ?? field.value.length;
+    const end = field.selectionEnd ?? start;
+    field.value = field.value.slice(0, start) + token + field.value.slice(end);
+    field.focus();
+    field.setSelectionRange(start + token.length, start + token.length);
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    field.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  function closeVars() {
+    document.querySelectorAll('.modset-vars-pop:not([hidden])').forEach((p) => { p.hidden = true; });
+    document.querySelectorAll('.modset-var-tool[aria-expanded="true"]').forEach((b) => b.setAttribute('aria-expanded', 'false'));
+    varTarget = null;
+  }
+
+  document.addEventListener('click', (ev) => {
+    const tool = ev.target.closest && ev.target.closest('.modset-var-tool');
+    if (tool) {
+      ev.preventDefault(); // inside a <label>: do not jump into the field first
+      const open = tool.getAttribute('aria-expanded') === 'true';
+      closeVars();
+      if (open) return;
+      const wrap = tool.closest('.modset-var-wrap');
+      const pop = tool.closest('.modset-field')?.querySelector('.modset-vars-pop');
+      if (!wrap || !pop) return;
+      varTarget = wrap.querySelector('textarea, input');
+      wrap.after(pop); // the list shows under the text field it belongs to
+      pop.hidden = false;
+      tool.setAttribute('aria-expanded', 'true');
+      return;
+    }
+    const item = ev.target.closest && ev.target.closest('.modset-var');
+    if (item) {
+      ev.preventDefault();
+      if (varTarget) insertAt(varTarget, item.dataset.token);
+      closeVars();
+      return;
+    }
+    if (!(ev.target.closest && ev.target.closest('.modset-vars-pop'))) closeVars();
+  });
+  document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') closeVars(); });
+
+  // ---- choices fields: the summary shows the picks ----
+  document.addEventListener('change', (ev) => {
+    const drop = ev.target.closest && ev.target.closest('.choices-drop');
+    if (!drop) return;
+    const out = drop.querySelector('.choices-picked');
+    out.replaceChildren(...[...drop.querySelectorAll('input:checked')].map((box) => {
+      const chip = document.createElement('span');
+      chip.className = 'badge-soft';
+      chip.textContent = box.nextElementSibling?.textContent ?? box.value;
+      return chip;
+    }));
+  });
+
   // ---- image fields ----
 
   const IMAGE_MAX = 2 * 1024 * 1024;

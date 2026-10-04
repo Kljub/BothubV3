@@ -215,7 +215,7 @@ func (s *Server) handleBot(w http.ResponseWriter, r *http.Request, p Page) {
 		data["Logs"] = logs
 	case "invite":
 		if bot.ApplicationID != nil {
-			data["InviteURL"] = inviteURL(bot.ApplicationID)
+			data["InviteURL"] = botInviteURL(bot.ApplicationID)
 			if settings, err := s.api.InviteSettings(r.Context(), sess); err == nil && settings.Enabled {
 				data["CustomInviteURL"] = customInviteURL(r, bot.ApplicationID)
 				data["CustomInviteMode"] = settings.Mode
@@ -304,6 +304,8 @@ func (s *Server) handleLeaveGuild(w http.ResponseWriter, r *http.Request, p Page
 		s.fail(w, r, p, err)
 		return
 	}
+	// Leaving through the dashboard is the only way to take back "allowed".
+	s.forgetAllowed(r, id, r.PathValue("guildId"))
 	bot, err := s.api.GetBot(r.Context(), sess, id)
 	if err != nil {
 		s.fail(w, r, p, err)
@@ -322,7 +324,7 @@ func (s *Server) handleLeaveGuild(w http.ResponseWriter, r *http.Request, p Page
 var themes = []string{"system", "light", "dark"}
 
 // adminSections are the entries of the admin dialog's sidebar, in order.
-var adminSections = []string{"overview", "resources", "users_roles", "logs", "sdk_policies", "server_settings", "email", "api_secrets"}
+var adminSections = []string{"overview", "resources", "users_roles", "logs", "sdk_policies", "server_settings", "invite_policies", "email", "api_secrets"}
 
 func (s *Server) handleAdminSection(w http.ResponseWriter, r *http.Request, p Page) {
 	section := r.PathValue("section")
@@ -381,7 +383,7 @@ func (s *Server) handleAdminSection(w http.ResponseWriter, r *http.Request, p Pa
 		data["SdkPolicies"] = v
 	}
 	if section == "api_secrets" {
-		v, err := s.secretsData(r, p)
+		v, err := s.secretsData(r, p, adminSecrets)
 		if err != nil {
 			s.fail(w, r, p, err)
 			return
@@ -397,7 +399,13 @@ func (s *Server) handleAdminSection(w http.ResponseWriter, r *http.Request, p Pa
 		data["Server"] = settings
 		legal, _ := s.api.AdminLegal(r.Context(), session(r)) // optional: an empty form on error
 		data["Legal"] = legal
-		invite, _ := s.api.InviteSettings(r.Context(), session(r))
+	}
+	if section == "invite_policies" {
+		invite, err := s.api.InviteSettings(r.Context(), session(r))
+		if err != nil {
+			s.fail(w, r, p, err)
+			return
+		}
 		data["Invite"] = map[string]any{"Settings": invite, "Base": baseURL(r) + "/invite/"}
 	}
 	// The admin popup loads sections via htmx; a direct visit gets a full page.

@@ -3,7 +3,8 @@
 .settings-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 20px; }
 .settings-head-main { display: flex; align-items: center; gap: 16px; }
 .settings-head .avatar { width: 56px; height: 56px; }
-.settings-head-name { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+/* Name and its save button, the status badge right of them. */
+.settings-head-name { display: flex; flex-direction: row; align-items: center; flex-wrap: wrap; gap: 10px; }
 .settings-head-actions { display: flex; gap: 8px; }
 .media { position: relative; padding-bottom: 36px; }
 .media form { margin: 0; }

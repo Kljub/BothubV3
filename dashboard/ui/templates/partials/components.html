@@ -65,7 +65,7 @@
 
 {{define "avatar"}}{{with .AvatarURL}}<img class="avatar" src="{{.}}" alt="" width="40" height="40">{{else}}<span class="avatar avatar-fallback" aria-hidden="true">{{initial $.Name}}</span>{{end}}{{end}}
 
-{{define "admin_icon"}}{{if eq . "overview"}}{{template "icon_gear"}}{{else if eq . "resources"}}{{template "icon_activity"}}{{else if eq . "users_roles"}}{{template "icon_users"}}{{else if eq . "email"}}{{template "icon_mail"}}{{else if eq . "server_settings"}}{{template "icon_server"}}{{else if eq . "logs"}}{{template "icon_log"}}{{else if eq . "sdk_policies"}}{{template "icon_plugin"}}{{else if eq . "api_secrets"}}{{template "icon_key"}}{{else}}{{template "icon_gear"}}{{end}}{{end}}
+{{define "admin_icon"}}{{if eq . "overview"}}{{template "icon_gear"}}{{else if eq . "resources"}}{{template "icon_activity"}}{{else if eq . "users_roles"}}{{template "icon_users"}}{{else if eq . "email"}}{{template "icon_mail"}}{{else if eq . "server_settings"}}{{template "icon_server"}}{{else if eq . "logs"}}{{template "icon_log"}}{{else if eq . "sdk_policies"}}{{template "icon_plugin"}}{{else if eq . "api_secrets"}}{{template "icon_key"}}{{else if eq . "invite_policies"}}{{template "icon_user_plus"}}{{else}}{{template "icon_gear"}}{{end}}{{end}}
 
 {{define "bot_icon"}}{{if eq . "overview"}}{{template "icon_chip"}}{{else if eq . "docs"}}{{template "icon_book"}}{{else if eq . "invite"}}{{template "icon_user_plus"}}{{else if eq . "status"}}{{template "icon_activity"}}{{else if eq . "server"}}{{template "icon_server"}}{{else if eq . "logs"}}{{template "icon_log"}}{{else if eq . "modules"}}{{template "icon_grid"}}{{else}}{{template "icon_plugin"}}{{end}}{{end}}
 

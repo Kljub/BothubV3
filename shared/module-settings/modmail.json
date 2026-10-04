@@ -27,13 +27,24 @@
         "title": "📬 Message received",
         "description": "Thanks for your message. The team of {server} will answer you here.",
         "color": "#60a5fa"
-      }
+      },
+      "vars": [
+        "server",
+        "server.id",
+        "members",
+        "user"
+      ]
     },
     {
       "key": "closeMessage",
       "type": "text",
       "max": 1000,
-      "default": "Your conversation with the team of {server} was closed. Write again any time."
+      "default": "Your conversation with the team of {server} was closed. Write again any time.",
+      "vars": [
+        "server",
+        "server.id",
+        "members"
+      ]
     },
     {
       "key": "anonymousStaff",

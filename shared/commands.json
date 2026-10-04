@@ -84,7 +84,10 @@
     { "name": "suggest-reject", "usage": "/suggest-reject [id] [grund]", "module": "suggestions" },
     { "name": "suggest-list", "usage": "/suggest-list", "module": "suggestions" },
 
-    { "name": "birthday", "usage": "/birthday [datum]", "module": "birthday" },
+    { "name": "birthday add", "usage": "/birthday add [datum]", "module": "birthday" },
+    { "name": "birthday delete", "usage": "/birthday delete", "module": "birthday" },
+    { "name": "birthday list", "usage": "/birthday list", "module": "birthday" },
+    { "name": "birthday remove", "usage": "/birthday remove @user", "module": "birthday" },
     { "name": "ticket setup", "usage": "/ticket setup #channel", "module": "ticket" },
     { "name": "ticket create", "usage": "/ticket create", "module": "ticket" },
     { "name": "ticket close", "usage": "/ticket close [reason]", "module": "ticket" },

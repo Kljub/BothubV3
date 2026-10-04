@@ -99,6 +99,10 @@ $id = $saved['messages'][0]['_id'] ?? '';
 check('list entry gets a stable id', preg_match('/^[a-z0-9]{12}$/', $id) === 1);
 check('id kept on save', ModuleSettings::normalize($tm, $saved)['messages'][0]['_id'] === $id);
 check('bad id replaced', ModuleSettings::normalize($tm, ['messages' => [['channel' => $ref, '_id' => 'X!']]])['messages'][0]['_id'] !== 'X!');
+$tc = ['fields' => [['key' => 'libs', 'type' => 'choices', 'dynamic' => true, 'max' => 3], ['key' => 'kind', 'type' => 'choices', 'options' => ['a', 'b']]]];
+check('choices: picks kept once, default empty', ModuleSettings::normalize($tc, ['libs' => ['1:5', '1:5', '2:3']])['libs'] === ['1:5', '2:3'] && ModuleSettings::normalize($tc, [])['kind'] === []);
+check('choices: older text value split', ModuleSettings::read($tc, ['libs' => '5, 2:3'])['libs'] === ['5', '2:3']);
+check('choices: static options only', (function () use ($tc) { try { ModuleSettings::normalize($tc, ['kind' => ['c']]); return false; } catch (\Throwable) { return true; } })());
 check('no schema for unknown module', ModuleSettings::schema('nope') === null && ModuleSettings::schema('../x') === null);
 
 exit($failed === 0 ? 0 : 1);

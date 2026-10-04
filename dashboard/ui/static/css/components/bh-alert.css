@@ -5,3 +5,4 @@
 .alert-warning { border-color: var(--yellow); color: var(--text); background: color-mix(in srgb, var(--yellow) 10%, transparent); }
 .alert-success { border-color: var(--green); color: var(--green); background: color-mix(in srgb, var(--green) 10%, transparent); }
 #flash:empty { display: none; }
+.alert-info { border-color: var(--accent); color: var(--text); background: color-mix(in srgb, var(--accent) 8%, transparent); }

@@ -32,6 +32,8 @@ final class InternalRouter
         private readonly ?LegalStore $legal = null,
         private readonly ?InviteStore $invite = null,
         private readonly ?GuildAccessStore $guildAccess = null,
+        // The signed-in user (auth layer): owner of their secrets and new bots.
+        private readonly int $userId = 1,
     ) {
     }
 
@@ -129,12 +131,15 @@ final class InternalRouter
                     default => throw new ApiError(405, 'error.method_not_allowed'),
                 };
             }
-            if ($this->plugins !== null && preg_match('#^/internal/bots/(\d+)/plugins(?:/([a-z0-9_-]{2,64})(/config|/commands)?)?$#', $path, $m)) {
+            if ($this->plugins !== null && preg_match('#^/internal/bots/(\d+)/plugins(?:/([a-z0-9_-]{2,64})(/config|/commands|/options)?)?$#', $path, $m)) {
                 $this->bots->find((int) $m[1]) ?? throw ApiError::notFound();
                 return $this->botPluginRoute($method, (int) $m[1], $m[2] ?? null, $m[3] ?? '', $body);
             }
             if ($this->secrets !== null && preg_match('#^/internal/admin/secrets(?:/([^/]+))?$#', $path, $m)) {
-                return $this->secretRoute($method, isset($m[1]) ? rawurldecode($m[1]) : null, $body);
+                return $this->secretRoute(SecretStore::INSTANCE, $method, isset($m[1]) ? rawurldecode($m[1]) : null, $body);
+            }
+            if ($this->secrets !== null && preg_match('#^/internal/me/secrets(?:/([^/]+))?$#', $path, $m)) {
+                return $this->secretRoute($this->userId, $method, isset($m[1]) ? rawurldecode($m[1]) : null, $body);
             }
             if ($this->webhooks !== null && preg_match('#^/internal/bots/(\d+)/(webhooks|webhook-key)(?:/(\d+)(/test)?)?$#', $path, $m)) {
                 $this->bots->find((int) $m[1]) ?? throw ApiError::notFound();
@@ -213,17 +218,20 @@ final class InternalRouter
         throw ApiError::notFound('error.not_found');
     }
 
-    /** Admin tab "API / Secrets": secrets are write-only, never returned. */
-    private function secretRoute(string $method, ?string $key, array $body): array
+    /**
+     * "API / Secrets": the instance's (admin tab) or the user's own (user
+     * settings). Secrets are write-only, never returned.
+     */
+    private function secretRoute(int $owner, string $method, ?string $key, array $body): array
     {
         $s = $this->secrets;
         if ($key === null) {
-            return $method === 'GET' ? [200, ['items' => $s->secrets()]] : throw new ApiError(405, 'error.method_not_allowed');
+            return $method === 'GET' ? [200, ['items' => $s->secrets($owner)]] : throw new ApiError(405, 'error.method_not_allowed');
         }
         return match ($method) {
-            'PUT' => [200, $s->saveSecret($key, $body, $this->actor)],
-            'DELETE' => (function () use ($s, $key) {
-                $s->deleteSecret($key, $this->actor);
+            'PUT' => [200, $s->saveSecret($owner, $key, $body, $this->actor)],
+            'DELETE' => (function () use ($s, $owner, $key) {
+                $s->deleteSecret($owner, $key, $this->actor);
                 return [204, null];
             })(),
             default => throw new ApiError(405, 'error.method_not_allowed'),
@@ -285,6 +293,7 @@ final class InternalRouter
             $rest === '/config' && $method === 'GET' => [200, ['config' => (object) $p->settings($botId, $pid)]],
             $rest === '/config' && $method === 'PUT' => [200, ['config' => (object) $p->saveSettings($botId, $pid, $body['config'] ?? $body)]],
             $rest === '/commands' && $method === 'POST' => [200, $p->syncBot($botId, $pid)],
+            $rest === '/options' && $method === 'GET' => [200, ['options' => (object) $p->fieldOptions($botId, $pid)]],
             default => throw new ApiError(405, 'error.method_not_allowed'),
         };
     }

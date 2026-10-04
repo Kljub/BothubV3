@@ -17,6 +17,7 @@ list item use `modset.<module>.<list>.<key>`.
 | `text`     | string                                                  | `default`, `max`, `multiline`, `pattern` (regex; empty text always passes) |
 | `number`   | integer                                                 | `default`, `min`, `max`              |
 | `select`   | one of `options`                                        | `options`, `default`                 |
+| `choices`  | `["value", …]` (several picks)                          | `options` (strings), `dynamic` (plugins: options from `ctx.config.setOptions`), `max` |
 | `color`    | `#rrggbb`                                               | `default`                            |
 | `channel`  | `{id, guild}` or `null`                                 | `channelTypes`                       |
 | `channels` | `[{id, guild}]`                                         | `channelTypes`, `max`                |
@@ -47,3 +48,8 @@ field on the same level has one of the values (booleans as `"true"`/`"false"`);
 the API still stores it. Channel types: `text`, `voice`, `category`, `forum`,
 `announcement`. Messages support the placeholders of `shared/events.json`,
 e.g. `{user.mention}`, `{server}`, `{members}`.
+
+`vars: ["user.mention", "server", …]` on a text or message field lists the
+placeholders the bot really fills there (bot/src/modules: `baseVars` plus the
+field's extras). The settings page shows exactly these in its variable
+picker; keep the list in step with the module code.

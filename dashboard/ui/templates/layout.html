@@ -48,6 +48,7 @@
           {{end}}
         </summary>
         <ul class="bot-switch-list">
+          <li class="bot-switch-add"><button type="button" data-open-dialog="add-bot-dialog"><span class="bot-switch-plus" aria-hidden="true">+</span><span>{{t "bots.add.title"}}</span></button></li>
           {{range $.Bots}}
           <li><a href="/select-bot/{{.ID}}">{{template "avatar" .}}<span>{{.Name}}</span><span class="status-dot status-dot-{{.Status}}" aria-hidden="true"{{with uptime .}} title="{{t "bot.uptime" "time" .}}"{{end}}></span></a></li>
           {{end}}
@@ -68,7 +69,7 @@
         <summary class="nav-group-title">{{.Name}} {{template "icon_chevron"}}</summary>
         {{range $.BotSections}}
         {{if and (eq . "invite") $.SelectedBot.ApplicationID}}
-        <a class="nav-item" href="{{inviteURL $.SelectedBot.ApplicationID}}" target="_blank" rel="noopener noreferrer" hx-boost="false">
+        <a class="nav-item" href="{{botInviteURL $.SelectedBot.ApplicationID}}" target="_blank" rel="noopener noreferrer" hx-boost="false">
         {{else}}
         <a class="nav-item" href="/bots{{if ne . "overview"}}/{{.}}{{end}}" {{if eq (printf "bot_%s" .) $.Nav}}aria-current="page"{{end}}>
         {{end}}

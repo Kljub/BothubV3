@@ -51,7 +51,12 @@
             "title": "Reminder",
             "description": "Don't forget to read the rules!",
             "color": "#a78bfa"
-          }
+          },
+          "vars": [
+            "server",
+            "server.id",
+            "members"
+          ]
         },
         {
           "key": "skipStacked",

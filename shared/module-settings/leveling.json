@@ -95,7 +95,19 @@
           "dm"
         ]
       },
-      "default": "🎉 {user.mention} reached level **{level}**!"
+      "default": "🎉 {user.mention} reached level **{level}**!",
+      "vars": [
+        "user",
+        "user.mention",
+        "user.name",
+        "user.id",
+        "user.avatar",
+        "server",
+        "server.id",
+        "members",
+        "level",
+        "level.old"
+      ]
     },
     {
       "key": "clearOnLeave",

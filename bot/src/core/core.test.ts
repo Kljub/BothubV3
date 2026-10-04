@@ -205,8 +205,8 @@ test('a secret placeholder ([NULL]) has no value', async () => {
   const { secretValue } = await import('./secrets-global.js');
   const repo = (blob: Uint8Array | undefined) => ({ db: { prepare: () => ({ get: () => (blob ? { value_enc: blob } : undefined) }) } }) as never;
   const key = () => { throw new Error('no decrypt for a placeholder'); };
-  assert.equal(secretValue(repo(new Uint8Array()), key, 'PLEX_KEY'), null);
-  assert.equal(secretValue(repo(undefined), key, 'NOPE'), null);
+  assert.equal(secretValue(repo(new Uint8Array()), key, 1, 'PLEX_KEY'), null);
+  assert.equal(secretValue(repo(undefined), key, 1, 'NOPE'), null);
 });
 
 test('closed invites: null while open, else the allowed servers', () => {

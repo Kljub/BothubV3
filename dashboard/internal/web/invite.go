@@ -1,15 +1,18 @@
 package web
 
 import (
+	"context"
 	"html"
 	"net/http"
 	"regexp"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/Kljub/BothubV3/dashboard/internal/api"
 )
 
-// Custom invite link (Admin → Server settings): the Discord Developer Portal
+// Custom invite link (Admin → Invite Policies): the Discord Developer Portal
 // points its install link to <domain>/invite/<application ID>. This public
 // page shows the bot and, depending on the mode, the real Discord link:
 // "private" only to signed-in dashboard users, "public" to everyone. Discord
@@ -84,5 +87,54 @@ func (s *Server) handleInviteSettings(w http.ResponseWriter, r *http.Request, p 
 		s.failTo(w, r, p, err, "#invite-flash")
 		return
 	}
+	clearInviteCache()
 	s.flashTo(w, p, "invite_settings.saved", "#invite-flash")
+}
+
+// customInviteOn caches per application ID whether its custom invite page is
+// on (public lookup, 30 s), so every page with the "Invite Bot" link does not
+// ask the API. Saving the invite settings clears it.
+var customInviteOn = struct {
+	sync.Mutex
+	fetch func(ctx context.Context, appID string) bool
+	m     map[string]inviteCacheEntry
+}{m: map[string]inviteCacheEntry{}}
+
+type inviteCacheEntry struct {
+	on bool
+	at time.Time
+}
+
+func clearInviteCache() {
+	customInviteOn.Lock()
+	customInviteOn.m = map[string]inviteCacheEntry{}
+	customInviteOn.Unlock()
+}
+
+// botInviteURL is the "Invite Bot" link: the custom invite page when it is
+// on (Admin → Invite Policies), else Discord's own link.
+func botInviteURL(appID *string) string {
+	if appID == nil || !applicationIDPattern.MatchString(*appID) {
+		return inviteURL(appID)
+	}
+	customInviteOn.Lock()
+	e, ok := customInviteOn.m[*appID]
+	fetch := customInviteOn.fetch
+	customInviteOn.Unlock()
+	if !ok || time.Since(e.at) > 30*time.Second {
+		on := false
+		if fetch != nil {
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			on = fetch(ctx, *appID)
+			cancel()
+		}
+		e = inviteCacheEntry{on: on, at: time.Now()}
+		customInviteOn.Lock()
+		customInviteOn.m[*appID] = e
+		customInviteOn.Unlock()
+	}
+	if e.on {
+		return "/invite/" + *appID
+	}
+	return inviteURL(appID)
 }

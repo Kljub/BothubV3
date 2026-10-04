@@ -24,7 +24,18 @@
         "title": "🎂 Happy birthday!",
         "description": "Happy {age}. birthday, {user.mention}! 🎉",
         "color": "#f472b6"
-      }
+      },
+      "vars": [
+        "user",
+        "user.mention",
+        "user.name",
+        "user.id",
+        "user.avatar",
+        "server",
+        "server.id",
+        "members",
+        "age"
+      ]
     },
     {
       "key": "messageNoYear",
@@ -34,7 +45,17 @@
         "title": "🎂 Happy birthday!",
         "description": "Happy birthday, {user.mention}! 🎉",
         "color": "#f472b6"
-      }
+      },
+      "vars": [
+        "user",
+        "user.mention",
+        "user.name",
+        "user.id",
+        "user.avatar",
+        "server",
+        "server.id",
+        "members"
+      ]
     },
     {
       "key": "reactions",

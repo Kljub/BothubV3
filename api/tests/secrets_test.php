@@ -29,7 +29,7 @@ mkdir($tmp);
 $pdo = Connection::open($tmp . '/bothub.sqlite');
 (new Migrator($pdo, __DIR__ . '/../migrations'))->migrate();
 $box = new SecretBox(random_bytes(32));
-$router = new InternalRouter(new BotStore($pdo, $box), static fn () => throw new \RuntimeException('no jobs'), secrets: new SecretStore($pdo, $box), actor: 'admin');
+$router = new InternalRouter(new BotStore($pdo, $box), static fn () => throw new \RuntimeException('no jobs'), secrets: new SecretStore($pdo, $box), actor: 'admin', userId: 7);
 $value = 'sk-VERY-SECRET-' . bin2hex(random_bytes(8));
 $answers = '';
 
@@ -51,17 +51,23 @@ $enc = $pdo->query("SELECT value_enc FROM secrets WHERE key = 'OPENAI_KEY'")->fe
 check('empty value keeps the stored one', $box->decrypt($enc) === $value);
 check('stored encrypted', !str_contains($enc, $value));
 $store = new SecretStore($pdo, $box);
-check('internal value read', $store->value('OPENAI_KEY') === $value && $store->value('NOPE') === null);
+check('internal value read', $store->value(0, 'OPENAI_KEY') === $value && $store->value(0, 'NOPE') === null);
 [$s, $list] = call('GET', '/internal/admin/secrets');
 check('list has description and set flag only', $s === 200 && $list['items'][0]['description'] === 'OpenAI (renamed)' && $list['items'][0]['set'] === true && count($list['items'][0]) === 5);
+
+// Own secrets of the signed-in user (User settings → API / Secrets).
+[$s] = call('PUT', '/internal/me/secrets/OPENAI_KEY', ['value' => 'user-key']);
+check('user secret saved apart from the instance one', $s === 200 && $store->value(7, 'OPENAI_KEY') === 'user-key' && $store->value(0, 'OPENAI_KEY') === $value);
+check('user list has own secrets only', array_column(call('GET', '/internal/me/secrets')[1]['items'], 'key') === ['OPENAI_KEY'] && $store->value(8, 'OPENAI_KEY') === null);
+check('user secret delete', call('DELETE', '/internal/me/secrets/OPENAI_KEY')[0] === 204 && $store->value(0, 'OPENAI_KEY') === $value);
 
 check('endpoints are gone', call('GET', '/internal/admin/endpoints')[0] === 404);
 check('secret delete', call('DELETE', '/internal/admin/secrets/OPENAI_KEY')[0] === 204 && call('DELETE', '/internal/admin/secrets/OPENAI_KEY')[0] === 404);
 
 $logs = $pdo->query("SELECT key, params, source FROM logs WHERE bot_id IS NULL ORDER BY id")->fetchAll();
-check('server log entries', array_column($logs, 'key') === ['log.server.secret_saved', 'log.server.secret_saved', 'log.server.secret_deleted']
+check('server log entries', array_column($logs, 'key') === ['log.server.secret_saved', 'log.server.secret_saved', 'log.server.secret_saved', 'log.server.secret_deleted', 'log.server.secret_deleted']
     && json_decode($logs[0]['params'], true) === ['key' => 'OPENAI_KEY', 'actor' => 'admin'] && $logs[0]['source'] === 'api');
-check('outbox secrets.changed', (int) $pdo->query("SELECT COUNT(*) FROM outbox WHERE type = 'secrets.changed'")->fetchColumn() === 3);
+check('outbox secrets.changed', (int) $pdo->query("SELECT COUNT(*) FROM outbox WHERE type = 'secrets.changed'")->fetchColumn() === 5);
 check('no answer or log contains the value', !str_contains($answers, $value) && !str_contains(json_encode($logs), $value) && !str_contains($answers, substr($value, 0, 12)));
 
 exit($failed === 0 ? 0 : 1);

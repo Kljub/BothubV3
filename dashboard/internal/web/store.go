@@ -279,7 +279,7 @@ func (s *Server) storeDetail(w http.ResponseWriter, r *http.Request, p Page, id 
 			if it.Info != nil && len(it.Info.Connect) > 0 {
 				// Server names come from the address secrets the sign-in created.
 				names := map[string]string{}
-				if secrets, err := s.api.GlobalSecrets(r.Context(), session(r)); err == nil {
+				if secrets, err := s.api.UserSecrets(r.Context(), session(r)); err == nil {
 					for _, x := range secrets {
 						names[x.Key] = strings.TrimPrefix(x.Description, "Plex server ")
 					}

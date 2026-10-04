@@ -128,6 +128,27 @@ final class ModuleSettings
                     $refs[$ref['guild'] . ':' . $ref['id']] = $ref;
                 }
                 return array_values($refs);
+            case 'choices':
+                // Several of the field's options (static "options", or with
+                // "dynamic": true the ones the plugin set, ctx.config.setOptions).
+                if ($missing || $v === null) {
+                    return array_values($default ?? []);
+                }
+                if (is_string($v)) {
+                    $v = preg_split('/[\s,]+/', trim($v), -1, PREG_SPLIT_NO_EMPTY); // older text value: "5, 2:3"
+                }
+                if (!is_array($v) || !array_is_list($v) || count($v) > ($f['max'] ?? self::LIST_MAX)) {
+                    self::fail($path);
+                }
+                foreach ($v as $c) {
+                    if (!is_string($c) || $c === '' || mb_strlen($c) > 100) {
+                        self::fail($path);
+                    }
+                    if (empty($f['dynamic']) && !in_array($c, $f['options'] ?? [], true)) {
+                        self::fail($path);
+                    }
+                }
+                return array_values(array_unique($v));
             case 'emojis':
             case 'words':
                 if ($missing || $v === null) {
@@ -281,6 +302,10 @@ final class ModuleSettings
 
     private static function message(mixed $v, string $path): array
     {
+        // Older configs stored some messages as plain text (e.g. YouTube).
+        if (is_string($v)) {
+            $v = ['mode' => 'text', 'content' => $v];
+        }
         if (!is_array($v)) {
             self::fail($path);
         }

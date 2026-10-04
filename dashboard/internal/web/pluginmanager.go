@@ -176,12 +176,7 @@ func installedDetails(pl api.AdminPlugin, m manifestSummary, locale string) inst
 		}
 	}
 	for _, sec := range info.Secrets {
-		// Switched off (not shared) is the admin's choice: the plugin works
-		// without it (e.g. Overseerr for Plex). Missing: no secret yet, or
-		// switched on but still empty ([NULL]).
-		if sec.Exists && (!sec.Shared || sec.Set) {
-			continue
-		}
+		// Sign-in slots: one connected account of the provider is enough.
 		if provider := m.Connect[sec.Key]; provider != "" {
 			if !connected[provider] && !slices.Contains(info.Missing, missingSecret{Provider: provider}) {
 				info.Missing = append(info.Missing, missingSecret{Provider: provider})
@@ -190,6 +185,12 @@ func installedDetails(pl api.AdminPlugin, m manifestSummary, locale string) inst
 		}
 		if isAddressKey(sec.Key) && connectAddress(m.Connect, sec.Key) {
 			continue // filled by the sign-in together with its token
+		}
+		// Switched off (not shared) is the admin's choice: the plugin works
+		// without it (e.g. Overseerr for Plex). Missing: switched on but no
+		// value yet (the empty placeholder [NULL]).
+		if !sec.Shared || (sec.Exists && sec.Set) {
+			continue
 		}
 		info.Missing = append(info.Missing, missingSecret{Key: sec.Key})
 	}

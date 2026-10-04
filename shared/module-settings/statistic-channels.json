@@ -36,7 +36,13 @@
           "key": "name",
           "type": "text",
           "max": 90,
-          "default": "👥 Members: {count}"
+          "default": "👥 Members: {count}",
+          "vars": [
+            "server",
+            "server.id",
+            "members",
+            "count"
+          ]
         }
       ],
       "unique": [

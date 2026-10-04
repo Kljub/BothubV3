@@ -354,7 +354,8 @@
             "message",
             "list",
             "permissions",
-            "image"
+            "image",
+            "choices"
           ]
         },
         "default": {},
@@ -393,6 +394,10 @@
             "type": "string",
             "pattern": "^[a-z0-9_]{1,32}$"
           }
+        },
+        "dynamic": {
+          "type": "boolean",
+          "description": "choices: the plugin sets the options at run time (ctx.config.setOptions)."
         },
         "channelTypes": {
           "type": "array",
@@ -465,7 +470,8 @@
                   "roles",
                   "emojis",
                   "words",
-                  "list"
+                  "list",
+                  "choices"
                 ]
               }
             },
@@ -544,7 +550,8 @@
             "words",
             "message",
             "permissions",
-            "image"
+            "image",
+            "choices"
           ]
         },
         "default": {},
@@ -584,6 +591,10 @@
             "pattern": "^[a-z0-9_]{1,32}$"
           }
         },
+        "dynamic": {
+          "type": "boolean",
+          "description": "choices: the plugin sets the options at run time (ctx.config.setOptions)."
+        },
         "channelTypes": {
           "type": "array",
           "uniqueItems": true,
@@ -619,7 +630,8 @@
                   "roles",
                   "emojis",
                   "words",
-                  "list"
+                  "list",
+                  "choices"
                 ]
               }
             },

@@ -30,7 +30,14 @@
         "title": "❓ Question of the day #{number}",
         "description": "{question}",
         "color": "#60a5fa"
-      }
+      },
+      "vars": [
+        "server",
+        "server.id",
+        "members",
+        "question",
+        "number"
+      ]
     },
     {
       "key": "thread",
@@ -46,7 +53,14 @@
           "true"
         ]
       },
-      "default": "QOTD #{number}"
+      "default": "QOTD #{number}",
+      "vars": [
+        "server",
+        "server.id",
+        "members",
+        "question",
+        "number"
+      ]
     },
     {
       "key": "questions",

@@ -33,7 +33,17 @@
         "title": "Welcome {user.name}!",
         "description": "{user.mention} joined **{server}**. We are now {members} members.",
         "color": "#a78bfa"
-      }
+      },
+      "vars": [
+        "user",
+        "user.mention",
+        "user.name",
+        "user.id",
+        "user.avatar",
+        "server",
+        "server.id",
+        "members"
+      ]
     },
     {
       "key": "reactions",
@@ -62,7 +72,17 @@
       "default": {
         "mode": "text",
         "content": "Welcome to {server}, {user.name}!"
-      }
+      },
+      "vars": [
+        "user",
+        "user.mention",
+        "user.name",
+        "user.id",
+        "user.avatar",
+        "server",
+        "server.id",
+        "members"
+      ]
     },
     {
       "key": "roles",

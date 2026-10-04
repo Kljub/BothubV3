@@ -35,7 +35,7 @@ final class PluginStore
     private const CONNECT_PROVIDERS = ['plex'];
     private const ICON = '/^[^\s<>&"\']{1,16}$/u';
     private const CATEGORIES = ['utility', 'security', 'messages', 'fun', 'ticket', 'social'];
-    private const FIELD_TYPES = ['bool', 'text', 'number', 'select', 'color', 'channel', 'channels', 'role', 'roles', 'emojis', 'words', 'message', 'list', 'permissions', 'image'];
+    private const FIELD_TYPES = ['bool', 'text', 'number', 'select', 'color', 'channel', 'channels', 'role', 'roles', 'emojis', 'words', 'message', 'list', 'permissions', 'image', 'choices'];
 
     /** Hosts that may receive the market token; every other host gets the request without it. */
     private const TOKEN_HOSTS = ['api.github.com', 'raw.githubusercontent.com'];
@@ -45,7 +45,11 @@ final class PluginStore
      * $marketToken returns the GitHub token for a private market repo (secret
      * MARKET_GITHUB_TOKEN) or null; it is read only when the market is used.
      */
-    public function __construct(private readonly PDO $pdo, private readonly string $dataDir, private readonly ?\Closure $marketToken = null, private readonly ?\BotHub\BotCore\SecretBox $box = null)
+    /**
+     * $owner: the signed-in user; placeholders, shares and the share state
+     * of list() are that user's secrets (a bot uses its owner's).
+     */
+    public function __construct(private readonly PDO $pdo, private readonly string $dataDir, private readonly ?\Closure $marketToken = null, private readonly ?\BotHub\BotCore\SecretBox $box = null, private readonly int $owner = 1)
     {
     }
 
@@ -533,6 +537,13 @@ final class PluginStore
             if (in_array($f['type'], ['text', 'words', 'emojis'], true) && (($f['max'] ?? 0) > 2000 || ($f['maxLength'] ?? 0) > 2000)) {
                 $fail("settings.{$f['key']}.max");
             }
+            if ($f['type'] === 'choices') {
+                $opts = $f['options'] ?? [];
+                $ok = is_bool($f['dynamic'] ?? false) && is_array($opts) && array_is_list($opts) && count($opts) <= 200
+                    && array_filter($opts, static fn ($o) => !is_string($o) || $o === '' || mb_strlen($o) > 100) === []
+                    && (($f['dynamic'] ?? false) || $opts !== []);
+                $ok || $fail("settings.{$f['key']}");
+            }
             if ($f['type'] === 'list') {
                 if ($inList || ($f['max'] ?? 50) > 50 || !is_array($f['item'] ?? null)) {
                     $fail("settings.{$f['key']}");
@@ -804,9 +815,13 @@ final class PluginStore
     public function list(): array
     {
         $rows = $this->pdo->query('SELECT i.plugin_id, i.version, i.enabled, i.installed_at, p.sha256, p.manifest FROM plugin_installs i JOIN plugins p ON p.id = i.plugin_id AND p.version = i.version ORDER BY i.plugin_id')->fetchAll();
-        $secretKeys = $this->pdo->query('SELECT key, length(value_enc) > 0 FROM secrets')->fetchAll(PDO::FETCH_KEY_PAIR);
+        $keys = $this->pdo->prepare('SELECT key, length(value_enc) > 0 FROM secrets WHERE owner_id = ?');
+        $keys->execute([$this->owner]);
+        $secretKeys = $keys->fetchAll(PDO::FETCH_KEY_PAIR);
         $secretShares = [];
-        foreach ($this->pdo->query('SELECT plugin_id, secret_key FROM secret_plugin_shares')->fetchAll() as $s) {
+        $shares = $this->pdo->prepare('SELECT plugin_id, secret_key FROM secret_plugin_shares WHERE owner_id = ?');
+        $shares->execute([$this->owner]);
+        foreach ($shares->fetchAll() as $s) {
             $secretShares[$s['plugin_id']][$s['secret_key']] = true;
         }
         $on = array_column(array_filter((new SdkPolicyStore($this->pdo))->list(), fn ($p) => $p['enabled']), 'permission');
@@ -853,23 +868,25 @@ final class PluginStore
             $i = strrpos($token, '_TOKEN');
             $skip[$i === false ? $token . '_URL' : substr($token, 0, $i) . '_URL' . substr($token, $i + 6)] = true;
         }
-        $exists = $pdo->prepare('SELECT 1 FROM secrets WHERE key = ?');
-        $add = $pdo->prepare("INSERT INTO secrets (key, value_enc, description) VALUES (?, x'', ?)");
-        $share = $pdo->prepare('INSERT OR IGNORE INTO secret_plugin_shares (secret_key, plugin_id) VALUES (?, ?)');
+        $exists = $pdo->prepare('SELECT 1 FROM secrets WHERE owner_id = ? AND key = ?');
+        $add = $pdo->prepare("INSERT INTO secrets (owner_id, key, value_enc, description) VALUES (?, ?, x'', ?)");
+        $share = $pdo->prepare('INSERT OR IGNORE INTO secret_plugin_shares (owner_id, secret_key, plugin_id) VALUES (?, ?, ?)');
+        $count = $pdo->prepare('SELECT COUNT(*) FROM secrets WHERE owner_id = ?');
         $made = [];
         foreach ($m['secrets'] ?? [] as $key) {
             if (!is_string($key) || isset($skip[$key])) {
                 continue;
             }
-            $exists->execute([$key]);
+            $exists->execute([$this->owner, $key]);
             if ($exists->fetchColumn() !== false) {
                 continue;
             }
-            if ((int) $pdo->query('SELECT COUNT(*) FROM secrets')->fetchColumn() >= 100) {
-                break; // the admin page's limit; the rest the admin adds by hand
+            $count->execute([$this->owner]);
+            if ((int) $count->fetchColumn() >= 100) {
+                break; // the page's limit; the rest the user adds by hand
             }
-            $add->execute([$key, mb_substr("Plugin {$m['name']}", 0, 200)]);
-            $share->execute([$key, $m['id']]);
+            $add->execute([$this->owner, $key, mb_substr("Plugin {$m['name']}", 0, 200)]);
+            $share->execute([$this->owner, $key, $m['id']]);
             $made[] = $key;
         }
         if ($made !== []) {
@@ -880,23 +897,43 @@ final class PluginStore
 
     public function shareSecrets(string $pluginId, mixed $shared, string $actor): object
     {
-        $declared = $this->installed($pluginId)['manifest']['secrets'] ?? [];
+        $manifest = $this->installed($pluginId)['manifest'];
+        $declared = $manifest['secrets'] ?? [];
         if (!is_array($shared) || !array_is_list($shared) || count($shared) > 20) {
             throw new ApiError(422, 'error.validation', ['field' => 'shared']);
         }
         $keys = array_values(array_unique($shared, SORT_REGULAR));
-        $exists = $this->pdo->prepare('SELECT 1 FROM secrets WHERE key = ?');
         foreach ($keys as $key) {
-            $exists->execute([$key]);
-            if (!is_string($key) || !in_array($key, $declared, true) || $exists->fetchColumn() === false) {
+            if (!is_string($key) || !in_array($key, $declared, true)) {
                 throw new ApiError(422, 'error.plugin.secret', ['key' => is_string($key) ? mb_substr($key, 0, 40) : '']);
             }
         }
-        Connection::write($this->pdo, function (PDO $pdo) use ($pluginId, $keys, $actor): void {
-            $pdo->prepare('DELETE FROM secret_plugin_shares WHERE plugin_id = ?')->execute([$pluginId]);
-            $add = $pdo->prepare('INSERT INTO secret_plugin_shares (secret_key, plugin_id) VALUES (?, ?)');
+        Connection::write($this->pdo, function (PDO $pdo) use ($pluginId, $keys, $actor, $manifest): void {
+            // Switched on but not in API / Secrets yet: an empty placeholder
+            // ([NULL]) is created, the admin pastes the value there.
+            $exists = $pdo->prepare('SELECT 1 FROM secrets WHERE owner_id = ? AND key = ?');
+            $create = $pdo->prepare("INSERT INTO secrets (owner_id, key, value_enc, description) VALUES (?, ?, x'', ?)");
+            $count = $pdo->prepare('SELECT COUNT(*) FROM secrets WHERE owner_id = ?');
+            $made = [];
             foreach ($keys as $key) {
-                $add->execute([$key, $pluginId]);
+                $exists->execute([$this->owner, $key]);
+                if ($exists->fetchColumn() !== false) {
+                    continue;
+                }
+                $count->execute([$this->owner]);
+                if ((int) $count->fetchColumn() >= 100) {
+                    throw new ApiError(422, 'error.secret.limit', ['max' => 100]);
+                }
+                $create->execute([$this->owner, $key, mb_substr('Plugin ' . ($manifest['name'] ?? $pluginId), 0, 200)]);
+                $made[] = $key;
+            }
+            if ($made !== []) {
+                $this->log($pdo, 'log.server.plugin_secret_placeholders', ['plugin' => $pluginId, 'secrets' => implode(', ', $made), 'actor' => $actor]);
+            }
+            $pdo->prepare('DELETE FROM secret_plugin_shares WHERE owner_id = ? AND plugin_id = ?')->execute([$this->owner, $pluginId]);
+            $add = $pdo->prepare('INSERT INTO secret_plugin_shares (owner_id, secret_key, plugin_id) VALUES (?, ?, ?)');
+            foreach ($keys as $key) {
+                $add->execute([$this->owner, $key, $pluginId]);
             }
             Outbox::add($pdo, 'secrets.changed', []);
             $this->log($pdo, 'log.server.plugin_secrets_shared', ['plugin' => $pluginId, 'secrets' => implode(', ', $keys), 'actor' => $actor]);
@@ -998,13 +1035,26 @@ final class PluginStore
             $pdo->prepare('DELETE FROM plugin_settings WHERE plugin_id = ?')->execute([$pluginId]);
             // Placeholders still without a value, used by no other plugin, go with it.
             $pdo->prepare("DELETE FROM secrets WHERE length(value_enc) = 0
-                AND key IN (SELECT secret_key FROM secret_plugin_shares WHERE plugin_id = ?)
-                AND key NOT IN (SELECT secret_key FROM secret_plugin_shares WHERE plugin_id <> ?)")->execute([$pluginId, $pluginId]);
+                AND EXISTS (SELECT 1 FROM secret_plugin_shares s WHERE s.owner_id = secrets.owner_id AND s.secret_key = secrets.key AND s.plugin_id = ?)
+                AND NOT EXISTS (SELECT 1 FROM secret_plugin_shares s WHERE s.owner_id = secrets.owner_id AND s.secret_key = secrets.key AND s.plugin_id <> ?)")->execute([$pluginId, $pluginId]);
             $pdo->prepare('DELETE FROM secret_plugin_shares WHERE plugin_id = ?')->execute([$pluginId]);
             $pdo->prepare('DELETE FROM plugin_files WHERE plugin_id = ?')->execute([$pluginId]);
             $this->log($pdo, 'log.server.plugin_uninstalled', ['plugin' => $pluginId, 'version' => $plugin['version'], 'actor' => $actor]);
         });
         self::removeDir($this->dataDir . '/plugins/' . $pluginId);
+    }
+
+    /** Options the plugin set for its dynamic "choices" fields: field => [{value, label}]. */
+    public function fieldOptions(int $botId, string $pluginId): array
+    {
+        $this->installed($pluginId);
+        $stmt = $this->pdo->prepare('SELECT field, options FROM plugin_field_options WHERE bot_id = ? AND plugin_id = ?');
+        $stmt->execute([$botId, $pluginId]);
+        $out = [];
+        foreach ($stmt->fetchAll() as $r) {
+            $out[$r['field']] = json_decode($r['options'], true) ?: [];
+        }
+        return $out;
     }
 
     public function settings(int $botId, string $pluginId): array

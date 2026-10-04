@@ -32,6 +32,8 @@ export class ModuleContext {
   constructor(
     readonly botId: number,
     readonly repo: Repo,
+    /** Global secret (Admin → API / Secrets), e.g. the Twitch client ID; null when not set. */
+    readonly secret: (key: string) => string | null = () => null,
   ) {}
 
   get db(): Db {

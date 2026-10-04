@@ -114,3 +114,9 @@
 .menu-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; font: inherit; color: var(--text); background: none; border: 0; border-radius: 8px; text-align: left; cursor: pointer; }
 .menu-item:hover { background: color-mix(in srgb, var(--surface-2) 70%, var(--text) 8%); }
 .menu-item .icon { color: var(--text-2); }
+
+/* "Add new bot" at the top of the bot switcher. */
+.bot-switch-add { border-bottom: 1px solid var(--border); margin-bottom: 4px; padding-bottom: 4px; }
+.bot-switch-add button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 8px; border: 0; border-radius: var(--radius-sm); background: none; color: var(--accent); font: inherit; cursor: pointer; text-align: left; }
+.bot-switch-add button:hover { background: var(--surface-2); }
+.bot-switch-plus { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; border: 1px dashed currentColor; font-weight: 700; flex: none; }

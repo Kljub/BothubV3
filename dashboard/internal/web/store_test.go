@@ -223,8 +223,8 @@ func TestInstalledDetailsMissing(t *testing.T) {
 		Connect: map[string]string{"PLEX_TOKEN": "plex", "PLEX_TOKEN_2": "plex"},
 	}
 	got := installedDetails(pl, m, "en").Missing
-	// OTHER_KEY is switched off (not shared): the admin does not need it.
-	want := []missingSecret{{Provider: "plex"}, {Key: "OVERSEERR_KEY"}, {Key: "GONE_KEY"}}
+	// OTHER_KEY and GONE_KEY are switched off (not shared): the admin does not need them.
+	want := []missingSecret{{Provider: "plex"}, {Key: "OVERSEERR_KEY"}}
 	if !slices.Equal(got, want) {
 		t.Fatalf("missing = %v, want %v", got, want)
 	}

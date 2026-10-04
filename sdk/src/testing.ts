@@ -165,7 +165,7 @@ export interface TestContextOptions {
    * dashboard/settings.json: its "permissions" fields are what
    * config.checkAccess checks; config.set takes only its keys.
    */
-  settings?: { fields: Array<{ key: string; type: string; default?: Json; item?: Array<{ key: string; type: string; default?: Json }> }> };
+  settings?: { fields: Array<{ key: string; type: string; default?: Json; dynamic?: boolean; item?: Array<{ key: string; type: string; default?: Json }> }> };
   /** Start content of ctx.files: name ("<16 hex>.png") -> base64. */
   files?: Record<string, string>;
   /** files.fromDiscord: attachment URL -> base64 content. Other URLs fail like a dead link. */
@@ -241,6 +241,8 @@ export interface TestContext {
   readonly fileStore: Map<string, string>;
   /** Current settings (config.set changes them). */
   readonly settingsNow: Record<string, Json>;
+  /** Options set with config.setOptions, per field. */
+  readonly fieldOptions: Record<string, { value: string; label: string }[]>;
   [area: string]: unknown;
 }
 
@@ -250,6 +252,8 @@ export function createTestContext(options: TestContextOptions = {}): TestContext
   const botId = options.botId ?? 1;
   const permissions = new Set((options.permissions ?? []).flatMap((p) => REPLACED[p] ?? [p]));
   const config = structuredClone(options.config ?? {});
+  const fieldOptions: Record<string, { value: string; label: string }[]> = {};
+  const options_settings = () => options.settings?.fields ?? [];
   const store = new Map(Object.entries(options.storage ?? {}));
   const globalStore = new Map(Object.entries(options.globalStorage ?? {}));
   const sent: SentMessage[] = [];
@@ -656,6 +660,17 @@ export function createTestContext(options: TestContextOptions = {}): TestContext
         const now = new Set(JSON.stringify(config).match(FILE_NAMES) ?? []);
         for (const name of before) if (!now.has(name)) fileStore.delete(name);
       },
+      setOptions: async (key: string, options: Array<{ value: string; label?: string } | string>) => {
+        calls.push('config.setOptions');
+        const field = options_settings().find((f) => f.key === key);
+        if (!field) throw new SdkCallError('sdk.config.unknown_key');
+        if (field.type !== 'choices' || field.dynamic !== true) throw new SdkCallError('sdk.config.not_dynamic');
+        if (!Array.isArray(options) || options.length > 200) throw new SdkCallError('sdk.config.bad_options');
+        const list = options.map((o) => (typeof o === 'string' ? { value: o, label: o } : { value: o?.value, label: o?.label ?? o?.value }));
+        if (list.some((o) => typeof o.value !== 'string' || o.value === '' || o.value.length > 100 || typeof o.label !== 'string' || o.label.length > 100)) throw new SdkCallError('sdk.config.bad_options');
+        fieldOptions[key] = list as { value: string; label: string }[];
+        return list.length;
+      },
       delete: async (key: string) => {
         calls.push('config.delete');
         const field = options.settings?.fields.find((f) => f.key === key);
@@ -716,7 +731,7 @@ export function createTestContext(options: TestContextOptions = {}): TestContext
     return areas.get(name);
   };
 
-  return new Proxy({ botId, sent, logs, store, globalStore, calls, played, requests, web: webRequests, actions, answers, balances, fileStore, settingsNow: config } as TestContext, {
+  return new Proxy({ botId, sent, logs, store, globalStore, calls, played, requests, web: webRequests, actions, answers, balances, fileStore, settingsNow: config, fieldOptions } as TestContext, {
     get: (target, prop) => {
       if (typeof prop !== 'string') return undefined;
       if (prop in target) return target[prop];

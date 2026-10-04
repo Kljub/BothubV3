@@ -1,17 +1,18 @@
 {
-  "module": "youtube-notifs",
+  "module": "reddit-notifs",
   "fields": [
     {
-      "key": "feeds",
+      "key": "subreddits",
       "type": "list",
       "max": 25,
-      "titleField": "youtubeChannel",
+      "titleField": "subreddit",
+      "hint": true,
       "item": [
         {
-          "key": "youtubeChannel",
+          "key": "subreddit",
           "type": "text",
-          "max": 31,
-          "pattern": "^(UC[A-Za-z0-9_-]{22}|@[A-Za-z0-9._-]{3,30})$",
+          "max": 21,
+          "pattern": "^[A-Za-z0-9_]{2,21}$",
           "required": true
         },
         {
@@ -33,31 +34,30 @@
           "type": "message",
           "default": {
             "mode": "embed",
-            "content": "📺 **{video.author}** uploaded a new video!",
-            "title": "{video.title}",
-            "description": "{video.url}",
-            "color": "#ff0000",
-            "image": "{video.thumbnail}",
-            "footer": "YouTube"
+            "title": "{title}",
+            "description": "{url}",
+            "color": "#ff4500",
+            "image": "{image}",
+            "footer": "r/{subreddit} · u/{author} {flair}"
           },
           "vars": [
             "server",
             "server.id",
             "members",
-            "video.title",
-            "video.author",
-            "video.url",
-            "video.id",
-            "video.description",
-            "video.thumbnail"
+            "subreddit",
+            "title",
+            "author",
+            "url",
+            "flair",
+            "link",
+            "image"
           ]
         }
       ],
       "unique": [
-        "youtubeChannel",
+        "subreddit",
         "channel"
-      ],
-      "hint": true
+      ]
     }
   ]
 }

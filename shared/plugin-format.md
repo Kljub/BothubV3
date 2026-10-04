@@ -141,6 +141,22 @@ value must fit its type (`sdk.config.bad_value`). List entries get an `_id`.
 `ctx.config.delete(key)` sets a field back to its default. Both are core
 calls and need no SDK permission.
 
+## Options the plugin fills (choices)
+
+A `choices` field is a dropdown with several picks; its value is the list of
+picked option values. Fixed options go in `options` (strings). With
+`"dynamic": true` the plugin fills the options at run time, per bot, with
+`ctx.config.setOptions(key, options)`: a list of `{ value, label }` (or plain
+strings), at most 200, value and label up to 100 characters each. Example:
+the Plex plugin lists the libraries of the owner's servers as
+`Njetflix:Filme`. Picked values stay saved when an option disappears later.
+A key that is no dynamic `choices` field fails with `sdk.config.not_dynamic`,
+a malformed list with `sdk.config.bad_options`. Core call, no SDK permission.
+
+```json
+{ "key": "libraries", "type": "choices", "dynamic": true, "max": 50, "required": true }
+```
+
 ## Images (plugin files)
 
 An `image` field in `dashboard/settings.json` gets an upload button with a

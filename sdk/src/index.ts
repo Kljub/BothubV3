@@ -152,6 +152,13 @@ export interface PluginContext {
     set(key: string, value: Json): Async<void>;
     /** Back to the field's default. */
     delete(key: string): Async<void>;
+    /**
+     * Options of a "choices" field with "dynamic": true, for this bot (e.g.
+     * Plex libraries as { value: "1:5", label: "Njetflix:Filme" }); the
+     * dashboard shows them in the field's dropdown. At most 200; answers the
+     * number stored. sdk.config.not_dynamic, sdk.config.bad_options.
+     */
+    setOptions(key: string, options: Array<{ value: string; label?: string } | string>): Async<number>;
   };
   readonly utils: {
     uuid(): string;

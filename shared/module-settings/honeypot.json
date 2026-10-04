@@ -47,7 +47,13 @@
           "type": "text",
           "max": 200,
           "required": true,
-          "default": "⚠️ Do not send messages in this channel!"
+          "default": "⚠️ Do not send messages in this channel!",
+          "vars": [
+            "server",
+            "server.id",
+            "members",
+            "action"
+          ]
         },
         {
           "key": "description",
@@ -55,7 +61,13 @@
           "max": 2000,
           "multiline": true,
           "hint": true,
-          "default": "This channel is a honeypot to detect and catch spam bots.\nEvery message leads **automatically** to a **{action}**."
+          "default": "This channel is a honeypot to detect and catch spam bots.\nEvery message leads **automatically** to a **{action}**.",
+          "vars": [
+            "server",
+            "server.id",
+            "members",
+            "action"
+          ]
         },
         {
           "key": "counter",

@@ -20,7 +20,8 @@ final class BotStore
         b.token_enc IS NOT NULL AS token_set, b.autostart, b.created_at, b.started_at,
         (SELECT COUNT(*) FROM bot_guilds g WHERE g.bot_id = b.id AND g.left_at IS NULL) AS guild_count";
 
-    public function __construct(private readonly PDO $pdo, private readonly SecretBox $box, private readonly ?PluginStore $plugins = null)
+    /** $owner: the signed-in user; a new bot belongs to them and uses their secrets. */
+    public function __construct(private readonly PDO $pdo, private readonly SecretBox $box, private readonly ?PluginStore $plugins = null, private readonly int $owner = 1)
     {
     }
 
@@ -56,13 +57,14 @@ final class BotStore
         $id = Connection::write($this->pdo, function (PDO $pdo) use ($in): int {
             $fingerprint = $this->box->fingerprint($in['token']);
             $this->assertUnique($fingerprint, $in['applicationId'], null);
-            $stmt = $pdo->prepare('INSERT INTO bots (name, application_id, avatar_url, token_enc, token_fingerprint, autostart) VALUES (?, ?, ?, ?, ?, ?)');
+            $stmt = $pdo->prepare('INSERT INTO bots (name, application_id, avatar_url, token_enc, token_fingerprint, autostart, owner_id) VALUES (?, ?, ?, ?, ?, ?, ?)');
             $stmt->bindValue(1, $in['name']);
             $stmt->bindValue(2, $in['applicationId']);
             $stmt->bindValue(3, $in['avatarUrl']);
             $stmt->bindValue(4, $this->box->encrypt($in['token']), PDO::PARAM_LOB);
             $stmt->bindValue(5, $fingerprint, PDO::PARAM_LOB);
             $stmt->bindValue(6, $in['autostart'] ? 1 : 0, PDO::PARAM_INT);
+            $stmt->bindValue(7, $this->owner, PDO::PARAM_INT);
             $stmt->execute();
             $id = (int) $pdo->lastInsertId();
             $pdo->prepare('INSERT INTO bot_profiles (bot_id) VALUES (?)')->execute([$id]);

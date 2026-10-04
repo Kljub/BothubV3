@@ -38,7 +38,18 @@
       "default": {
         "mode": "text",
         "content": "Welcome back to {server}! You got your roles back: {roles}"
-      }
+      },
+      "vars": [
+        "user",
+        "user.mention",
+        "user.name",
+        "user.id",
+        "user.avatar",
+        "server",
+        "server.id",
+        "members",
+        "roles"
+      ]
     }
   ]
 }

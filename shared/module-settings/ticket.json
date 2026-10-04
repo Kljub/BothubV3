@@ -29,7 +29,12 @@
             "title": "🎫 Support",
             "description": "Press the button to open a ticket. Our team will help you soon.",
             "color": "#a78bfa"
-          }
+          },
+          "vars": [
+            "server",
+            "server.id",
+            "members"
+          ]
         },
         {
           "key": "buttonLabel",
@@ -58,7 +63,19 @@
           "key": "channelName",
           "type": "text",
           "max": 90,
-          "default": "ticket-{number}"
+          "default": "ticket-{number}",
+          "vars": [
+            "user",
+            "user.mention",
+            "user.name",
+            "user.id",
+            "user.avatar",
+            "server",
+            "server.id",
+            "members",
+            "number",
+            "panel"
+          ]
         },
         {
           "key": "welcome",
@@ -68,7 +85,19 @@
             "title": "Ticket #{number}",
             "description": "Hi {user.mention}, please describe your request. The team will answer here.",
             "color": "#a78bfa"
-          }
+          },
+          "vars": [
+            "user",
+            "user.mention",
+            "user.name",
+            "user.id",
+            "user.avatar",
+            "server",
+            "server.id",
+            "members",
+            "number",
+            "panel"
+          ]
         },
         {
           "key": "pingSupport",

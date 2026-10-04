@@ -30,8 +30,8 @@ export interface PluginDeps {
   sendMessage(botId: number, channelId: string, message: unknown, files?: { name: string; data: Buffer }[]): Promise<string>;
   guildInfo(botId: number, guildId: string): Promise<{ id: string; name: string; memberCount: number }>;
   guildList(botId: number): Promise<{ id: string; name: string; memberCount: number }[]>;
-  /** Value of a global secret (core/secrets-global.ts), null when unknown. */
-  secret?(key: string): string | null;
+  /** A secret of the bot's owner (core/secrets-global.ts), null when unknown. */
+  secret?(botId: number, key: string): string | null;
   /** Voice of a running bot (discord/voice.ts); undefined when the bot is not running. */
   voice?(botId: number): VoiceApi | undefined;
   /** HTTP for http.secret; tests pass their own. */
@@ -69,8 +69,25 @@ interface SettingsField {
   maxLength?: number;
   pattern?: string;
   options?: unknown[];
+  /** choices: the plugin sets the options at run time (config.setOptions). */
+  dynamic?: boolean;
   group?: boolean;
   item?: SettingsField[];
+}
+
+const MAX_OPTIONS = 200;
+
+/** Options of a dynamic choices field: [{value, label}] (label defaults to value), null when malformed. */
+export function fieldOptions(v: unknown): { value: string; label: string }[] | null {
+  if (!Array.isArray(v) || v.length > MAX_OPTIONS) return null;
+  const out = new Map<string, string>();
+  for (const o of v) {
+    const value = typeof o === 'string' ? o : (o as { value?: unknown })?.value;
+    const label = typeof o === 'string' ? o : ((o as { label?: unknown })?.label ?? value);
+    if (typeof value !== 'string' || value === '' || value.length > 100 || typeof label !== 'string' || label.length > 100) return null;
+    out.set(value, label || value);
+  }
+  return [...out].map(([value, label]) => ({ value, label }));
 }
 
 /** The fields of a plugin's settings page. */
@@ -94,6 +111,8 @@ function permissionFields(dir: string): Map<string, { default?: unknown }> {
 function fieldDefault(f: SettingsField): unknown {
   if (f.default !== undefined) return structuredClone(f.default);
   switch (f.type) {
+    case 'choices':
+      return [];
     case 'bool':
       return false;
     case 'number':
@@ -140,6 +159,10 @@ function checkSetting(f: SettingsField, v: unknown, path: string): unknown {
       return v;
     case 'select':
       return f.options?.includes(v) ? v : bad();
+    case 'choices':
+      return Array.isArray(v) && v.length <= (f.max ?? 100) && v.every((c) => typeof c === 'string' && c !== '' && c.length <= 100 && (f.dynamic === true || !!f.options?.includes(c)))
+        ? [...new Set(v as string[])]
+        : bad();
     case 'color':
       return v === '' || (typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v)) ? (v as string).toLowerCase() : bad();
     case 'image':
@@ -748,8 +771,11 @@ export class PluginManager {
     })();
     const secretOf = (key: unknown): string | null => {
       if (typeof key !== 'string' || !installedSecrets.includes(key)) return null;
-      const shared = this.db.prepare('SELECT 1 FROM secret_plugin_shares WHERE secret_key = ? AND plugin_id = ?').get(key, manifest.id);
-      const value = shared ? (this.deps.secret?.(key) ?? null) : null;
+      // Shared by the bot's owner: every user decides for their own secrets.
+      const shared = this.db
+        .prepare('SELECT 1 FROM secret_plugin_shares s JOIN bots b ON b.owner_id = s.owner_id WHERE b.id = ? AND s.secret_key = ? AND s.plugin_id = ?')
+        .get(botId, key, manifest.id);
+      const value = shared ? (this.deps.secret?.(botId, key) ?? null) : null;
       if (value) readSecrets.add(value);
       return value;
     };
@@ -838,6 +864,22 @@ export class PluginManager {
       },
       'config.set': (q) => writeSetting(a(q)[0], a(q)[1], false),
       'config.delete': (q) => writeSetting(a(q)[0], undefined, true),
+      // Options of a dynamic "choices" field (e.g. Plex libraries as "Server:Library").
+      'config.setOptions': (q) => {
+        const [key, options] = a(q);
+        const field = settingsFields(dir).find((f) => f.key === key);
+        if (!field) throw new SdkError('sdk.config.unknown_key', { key: String(key).slice(0, 40) });
+        if (field.type !== 'choices' || field.dynamic !== true) throw new SdkError('sdk.config.not_dynamic', { key: field.key });
+        const clean = fieldOptions(options);
+        if (!clean) throw new SdkError('sdk.config.bad_options', { max: MAX_OPTIONS });
+        this.db
+          .prepare(
+            `INSERT INTO plugin_field_options (bot_id, plugin_id, field, options) VALUES (?, ?, ?, ?)
+             ON CONFLICT (bot_id, plugin_id, field) DO UPDATE SET options = excluded.options, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')`,
+          )
+          .run(botId, manifest.id, field.key, JSON.stringify(clean));
+        return clean.length;
+      },
       'guild.get': (q) => {
         const guildId = a(q)[0];
         if (typeof guildId !== 'string' || !SNOWFLAKE.test(guildId)) throw new SdkError('sdk.discord.bad_guild');

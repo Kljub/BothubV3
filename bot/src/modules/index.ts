@@ -14,6 +14,7 @@ import { globalChat, tempVoice } from './social.js';
 import { ensurePanels, modmailMessage, onModuleInteraction } from './support.js';
 import { ensureHoneypots, honeypotMessage } from './honeypot.js';
 import { ModuleTimers } from './timers.js';
+import { linkfixMessage } from './linkfix.js';
 
 export { ModuleContext } from './context.js';
 
@@ -65,6 +66,7 @@ export function bindModules(client: Client, ctx: ModuleContext, timezone: () => 
     guard('modmail', modmailMessage(ctx, msg));
     guard('honeypot', honeypotMessage(ctx, msg));
     guard('automod-media', automodMedia(ctx, msg));
+    guard('twitter-linkfix', linkfixMessage(ctx, msg));
   });
   client.on(Events.MessageUpdate, (old, msg) => {
     // Link previews arrive with an edit: the media filter checks them then.

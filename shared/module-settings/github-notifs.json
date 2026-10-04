@@ -1,0 +1,98 @@
+{
+  "module": "github-notifs",
+  "fields": [
+    {
+      "key": "feeds",
+      "type": "list",
+      "max": 25,
+      "titleField": "target",
+      "hint": true,
+      "item": [
+        {
+          "key": "target",
+          "type": "text",
+          "max": 140,
+          "pattern": "^[A-Za-z0-9-]{1,39}(/[A-Za-z0-9._-]{1,100})?$",
+          "required": true
+        },
+        {
+          "key": "channel",
+          "type": "channel",
+          "channelTypes": [
+            "text",
+            "announcement"
+          ],
+          "required": true
+        },
+        {
+          "key": "mentionRoles",
+          "type": "roles",
+          "max": 5
+        },
+        {
+          "key": "push",
+          "type": "bool",
+          "default": true
+        },
+        {
+          "key": "releases",
+          "type": "bool",
+          "default": true
+        },
+        {
+          "key": "issues",
+          "type": "bool",
+          "default": false
+        },
+        {
+          "key": "pullRequests",
+          "type": "bool",
+          "default": true
+        },
+        {
+          "key": "newRepos",
+          "type": "bool",
+          "default": true
+        },
+        {
+          "key": "forks",
+          "type": "bool",
+          "default": false
+        },
+        {
+          "key": "stars",
+          "type": "bool",
+          "default": false
+        },
+        {
+          "key": "message",
+          "type": "message",
+          "default": {
+            "mode": "embed",
+            "title": "{title}",
+            "description": "{url}",
+            "color": "#8b949e",
+            "footer": "{repo} · {actor}"
+          },
+          "vars": [
+            "server",
+            "server.id",
+            "members",
+            "event",
+            "title",
+            "url",
+            "actor",
+            "repo",
+            "repo.url",
+            "branch",
+            "commits"
+          ]
+        }
+      ],
+      "unique": [
+        "target",
+        "channel"
+      ]
+    }
+  ]
+}

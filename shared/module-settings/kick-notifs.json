@@ -1,17 +1,20 @@
 {
-  "module": "youtube-notifs",
+  "module": "kick-notifs",
+  "integration": "kick",
+  "integrationOptional": true,
   "fields": [
     {
-      "key": "feeds",
+      "key": "streamers",
       "type": "list",
       "max": 25,
-      "titleField": "youtubeChannel",
+      "titleField": "slug",
+      "hint": true,
       "item": [
         {
-          "key": "youtubeChannel",
+          "key": "slug",
           "type": "text",
-          "max": 31,
-          "pattern": "^(UC[A-Za-z0-9_-]{22}|@[A-Za-z0-9._-]{3,30})$",
+          "max": 30,
+          "pattern": "^[A-Za-z0-9_-]{2,30}$",
           "required": true
         },
         {
@@ -33,31 +36,30 @@
           "type": "message",
           "default": {
             "mode": "embed",
-            "content": "📺 **{video.author}** uploaded a new video!",
-            "title": "{video.title}",
-            "description": "{video.url}",
-            "color": "#ff0000",
-            "image": "{video.thumbnail}",
-            "footer": "YouTube"
+            "content": "🟢 **{streamer}** is live on Kick!",
+            "title": "{title}",
+            "description": "Category: **{category}**\n{url}",
+            "color": "#53fc18",
+            "image": "{thumbnail}",
+            "footer": "Kick"
           },
           "vars": [
             "server",
             "server.id",
             "members",
-            "video.title",
-            "video.author",
-            "video.url",
-            "video.id",
-            "video.description",
-            "video.thumbnail"
+            "streamer",
+            "title",
+            "category",
+            "url",
+            "viewers",
+            "thumbnail"
           ]
         }
       ],
       "unique": [
-        "youtubeChannel",
+        "slug",
         "channel"
-      ],
-      "hint": true
+      ]
     }
   ]
 }

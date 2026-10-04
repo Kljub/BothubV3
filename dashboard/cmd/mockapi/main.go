@@ -181,6 +181,10 @@ func main() {
 	mux.HandleFunc("GET /api/v1/admin/secrets", s.auth(s.adminViaPHP(s.listSecrets)))
 	mux.HandleFunc("PUT /api/v1/admin/secrets/{key}", s.auth(s.adminViaPHP(s.putSecret)))
 	mux.HandleFunc("DELETE /api/v1/admin/secrets/{key}", s.auth(s.adminViaPHP(s.deleteSecret)))
+	// Own secrets of the signed-in user (without PHP: the same in-memory list).
+	mux.HandleFunc("GET /api/v1/me/secrets", s.auth(s.adminViaPHP(s.listSecrets)))
+	mux.HandleFunc("PUT /api/v1/me/secrets/{key}", s.auth(s.adminViaPHP(s.putSecret)))
+	mux.HandleFunc("DELETE /api/v1/me/secrets/{key}", s.auth(s.adminViaPHP(s.deleteSecret)))
 	mux.HandleFunc("GET /api/v1/settings", s.auth(s.settings))
 	mux.HandleFunc("PATCH /api/v1/settings", s.auth(s.updateSettings))
 	mux.HandleFunc("GET /api/v1/bots", s.auth(s.listBots))
@@ -280,6 +284,7 @@ func main() {
 	mux.HandleFunc("GET /api/v1/bots/{id}/plugins", s.auth(s.withBot(s.viaPHP(s.listPlugins))))
 	mux.HandleFunc("PATCH /api/v1/bots/{id}/plugins/{plugin}", s.auth(s.withBot(s.viaPHP(s.patchPlugin))))
 	mux.HandleFunc("GET /api/v1/bots/{id}/plugins/{plugin}/config", s.auth(s.withBot(s.viaPHP(phpRequired))))
+	mux.HandleFunc("GET /api/v1/bots/{id}/plugins/{plugin}/options", s.auth(s.withBot(s.viaPHP(phpRequired))))
 	mux.HandleFunc("PUT /api/v1/bots/{id}/plugins/{plugin}/config", s.auth(s.withBot(s.viaPHP(phpRequired))))
 	mux.HandleFunc("GET /api/v1/bots/{id}/plugins/{plugin}/files", s.auth(s.withBot(s.viaPHP(phpRequired))))
 	mux.HandleFunc("POST /api/v1/bots/{id}/plugins/{plugin}/files", s.auth(s.withBot(s.viaPHP(phpRequired))))

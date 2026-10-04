@@ -171,7 +171,7 @@ test('verification codes and transcripts', async () => {
 });
 
 test('youtube feed parsing', async () => {
-  const { parseFeed, newVideos } = await import('./timers.js');
+  const { parseFeed, newVideos } = await import('./feeds.js');
   const xml = `<feed><entry><yt:videoId>v2</yt:videoId><title>Second &amp; best</title><author>\n<name>Chan</name></author></entry>
     <entry><yt:videoId>v1</yt:videoId><title><![CDATA[First]]></title><author><name>Chan</name></author></entry></feed>`;
   const videos = parseFeed(xml);
@@ -221,9 +221,12 @@ test('global secrets are read from the database and decrypted', async () => {
   const { encrypt } = await import('../core/secrets.js');
   const ctx = context();
   const key = Buffer.alloc(32, 7);
-  ctx.db.prepare("INSERT INTO secrets (key, value_enc) VALUES ('TOKEN', ?)").run(encrypt(key, 'abcd-1234'));
-  assert.equal(secretValue(ctx.repo, () => key, 'TOKEN'), 'abcd-1234');
-  assert.equal(secretValue(ctx.repo, () => key, 'NONE'), null);
+  ctx.db.prepare("INSERT INTO secrets (owner_id, key, value_enc) VALUES (1, 'TOKEN', ?)").run(encrypt(key, 'abcd-1234'));
+  assert.equal(secretValue(ctx.repo, () => key, 1, 'TOKEN'), 'abcd-1234');
+  assert.equal(secretValue(ctx.repo, () => key, 1, 'NONE'), null);
+  // A bot uses its owner's secrets only, never another user's.
+  ctx.db.prepare("INSERT INTO bots (id, name, owner_id) VALUES (2, 'Other', 5)").run();
+  assert.equal(secretValue(ctx.repo, () => key, 2, 'TOKEN'), null);
   assert.equal(mask('x abcd-1234 y', ['abcd-1234']), 'x •••• y');
 });
 
@@ -337,4 +340,40 @@ test('tickets: panel by name', async () => {
   assert.equal(ticketPanelIndex(cfg, 'bewerbung'), 1);
   assert.equal(ticketPanelIndex(cfg, 'nope'), -1);
   assert.equal(ticketPanelIndex({}, ''), -1, 'no panels');
+});
+
+test('social feeds: messages, Reddit, GitHub, YouTube handles', async () => {
+  const { messageOf, notification, parseReddit, newPosts, githubEntry, newerId, channelIdOfPage } = await import('./feeds.js');
+  assert.deepEqual(messageOf('hi {title}', { mode: 'text', content: 'x' }), { mode: 'text', content: 'hi {title}' });
+  assert.deepEqual(messageOf(undefined, { mode: 'text', content: 'x' }), { mode: 'text', content: 'x' });
+  const n = notification({ mode: 'embed', title: '{title}', image: '{thumbnail}' }, { title: 'Live', thumbnail: '' }, ['5']);
+  assert.equal(n?.content, '<@&5>');
+  assert.equal(n?.embeds?.[0] && 'title' in n.embeds[0] ? n.embeds[0].title : '', 'Live');
+  assert.deepEqual(n?.allowedMentions, { roles: ['5'] });
+
+  const posts = parseReddit({ data: { children: [
+    { data: { name: 't3_b', created_utc: 20, title: 'B', author: 'u', permalink: '/r/x/b', url: 'https://i.redd.it/b.png', link_flair_text: 'News' } },
+    { data: { name: 't3_a', created_utc: 10, title: 'A', author: 'u', permalink: '/r/x/a', url: 'https://example.com', over_18: true } },
+  ] } });
+  assert.deepEqual(posts.map((p) => [p.name, p.url, p.image, p.nsfw]), [['t3_b', 'https://www.reddit.com/r/x/b', 'https://i.redd.it/b.png', false], ['t3_a', 'https://www.reddit.com/r/x/a', '', true]]);
+  assert.deepEqual(newPosts(posts, undefined), []);
+  assert.deepEqual(newPosts(posts, 10).map((p) => p.name), ['t3_b']);
+  assert.deepEqual(newPosts(posts, 0).map((p) => p.name), ['t3_a', 't3_b']);
+
+  const push = githubEntry({ type: 'PushEvent', actor: { login: 'ann' }, repo: { name: 'ann/x' }, payload: { ref: 'refs/heads/main', before: 'a'.repeat(40), head: 'b'.repeat(40), commits: [{ sha: 'c'.repeat(40), message: 'fix: y\nbody' }] } });
+  assert.equal(push?.key, 'push');
+  assert.equal(push?.vars.branch, 'main');
+  assert.equal(push?.vars.commits, '`ccccccc` fix: y');
+  assert.equal(githubEntry({ type: 'PullRequestEvent', repo: { name: 'a/b' }, payload: { action: 'closed', pull_request: { number: 3, title: 'T', merged: true } } })?.vars.event, 'pull request merged');
+  assert.equal(githubEntry({ type: 'IssuesEvent', repo: { name: 'a/b' }, payload: { action: 'labeled' } }), null);
+  assert.equal(newerId('100', '99'), true);
+  assert.equal(newerId('99', '100'), false);
+  assert.equal(channelIdOfPage('<meta itemprop="identifier" content="UCabcdefghijklmnopqrstuv">'), 'UCabcdefghijklmnopqrstuv');
+});
+
+test('twitter link fix', async () => {
+  const { fixLinks } = await import('./linkfix.js');
+  const r = fixLinks('look https://x.com/ann/status/123?s=20 and <https://twitter.com/b/status/9> https://x.com/home', 'vxtwitter');
+  assert.deepEqual(r.links, ['https://vxtwitter.com/ann/status/123']);
+  assert.equal(r.text, 'look https://vxtwitter.com/ann/status/123 and <https://twitter.com/b/status/9> https://x.com/home');
 });

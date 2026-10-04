@@ -191,7 +191,7 @@ func (s *Server) finishPlex(r *http.Request, p Page, f connectFlow) error {
 	sess := session(r)
 	sess.CSRF = p.CSRF
 	// The token is kept even when no server is found (the admin enters the address as a secret).
-	if err := s.api.SaveGlobalSecret(ctx, sess, f.key, "Plex token (App Store sign-in)", &token); err != nil {
+	if err := s.api.SaveUserSecret(ctx, sess, f.key, "Plex token (App Store sign-in)", &token); err != nil {
 		return err
 	}
 	server, address, err := plexServer(ctx, f.clientID, token)
@@ -199,7 +199,7 @@ func (s *Server) finishPlex(r *http.Request, p Page, f connectFlow) error {
 		return err
 	}
 	addressKey := addressKeyFor(f.key)
-	if err := s.api.SaveGlobalSecret(ctx, sess, addressKey, truncate("Plex server "+server, 200), &address); err != nil {
+	if err := s.api.SaveUserSecret(ctx, sess, addressKey, truncate("Plex server "+server, 200), &address); err != nil {
 		return err
 	}
 	// Share both with the plugin, keeping the secrets already shared.
@@ -249,7 +249,7 @@ func (s *Server) handleConnectRemove(w http.ResponseWriter, r *http.Request, p P
 		return
 	}
 	for _, k := range []string{key, addressKeyFor(key)} {
-		if err := s.api.DeleteGlobalSecret(r.Context(), session(r), k); err != nil && api.AsError(err).Status != http.StatusNotFound {
+		if err := s.api.DeleteUserSecret(r.Context(), session(r), k); err != nil && api.AsError(err).Status != http.StatusNotFound {
 			s.fail(w, r, p, err)
 			return
 		}

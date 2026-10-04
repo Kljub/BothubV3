@@ -14,13 +14,39 @@
       "key": "joinMessage",
       "type": "text",
       "max": 1000,
-      "default": "{user.mention} joined, invited by **{inviter.name}** ({invites} invites)."
+      "default": "{user.mention} joined, invited by **{inviter.name}** ({invites} invites).",
+      "vars": [
+        "user",
+        "user.mention",
+        "user.name",
+        "user.id",
+        "user.avatar",
+        "server",
+        "server.id",
+        "members",
+        "inviter.mention",
+        "inviter.name",
+        "inviter.id",
+        "invites",
+        "invite.code"
+      ]
     },
     {
       "key": "unknownMessage",
       "type": "text",
       "max": 1000,
-      "default": "{user.mention} joined. I could not find out who invited them."
+      "default": "{user.mention} joined. I could not find out who invited them.",
+      "vars": [
+        "user",
+        "user.mention",
+        "user.name",
+        "user.id",
+        "user.avatar",
+        "server",
+        "server.id",
+        "members",
+        "invite.code"
+      ]
     },
     {
       "key": "registerLeaves",
@@ -36,7 +62,20 @@
           "true"
         ]
       },
-      "default": "{user.name} left. They were invited by **{inviter.name}** ({invites} invites)."
+      "default": "{user.name} left. They were invited by **{inviter.name}** ({invites} invites).",
+      "vars": [
+        "user",
+        "user.mention",
+        "user.name",
+        "user.id",
+        "user.avatar",
+        "server",
+        "server.id",
+        "members",
+        "inviter.mention",
+        "inviter.name",
+        "invites"
+      ]
     },
     {
       "key": "minAccountAge",

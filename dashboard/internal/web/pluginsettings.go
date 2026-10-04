@@ -44,6 +44,10 @@ func (s *Server) pluginScope(botID int64, pl api.InstalledPlugin, sc settingsSch
 			var out map[string]any
 			return s.api.SetPluginConfigRaw(r.Context(), session(r), botID, pl.ID, cfg, &out)
 		},
+		options: func(r *http.Request) map[string][]api.ChoiceOption {
+			opts, _ := s.api.PluginFieldOptions(r.Context(), session(r), botID, pl.ID)
+			return opts
+		},
 	}
 }
 

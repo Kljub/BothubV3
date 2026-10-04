@@ -16,19 +16,19 @@ func TestServerListAccess(t *testing.T) {
 	data := map[string]any{
 		"Bot":    api.Bot{ID: 3},
 		"Guilds": []api.Guild{{ID: "100000000000000001", Name: "Home"}, {ID: "100000000000000002", Name: "Other"}},
-		"Access": accessView{Loaded: true, Closed: true, Allowed: map[string]bool{"100000000000000001": true}, Planned: []api.AccessGuild{{ID: "200000000000000009"}}},
+		"Access": accessView{Loaded: true, Closed: true, Allowed: map[string]bool{"100000000000000001": true}},
 	}
 	var out strings.Builder
 	if err := tpl.sets["bot"].ExecuteTemplate(&out, "server_list_fragment", Page{Data: data}); err != nil {
 		t.Fatal(err)
 	}
 	html := out.String()
-	for _, want := range []string{`hx-put="/bot/3/guild-access"`, `name="closed" value="true" checked`, `value="100000000000000001"`, "200000000000000009", "access.disallow_confirm"} {
+	for _, want := range []string{`hx-put="/bot/3/guild-access"`, `name="closed" value="true" checked`, "✓ access.allowed", `{"guild": "100000000000000002", "allowed": "true"}`} {
 		if !strings.Contains(html, want) {
 			t.Errorf("missing %q", want)
 		}
 	}
-	if strings.Count(html, `name="allowed" value="true" checked`) != 1 {
-		t.Error("only the allowed server is switched on")
+	if strings.Contains(html, `{"guild": "100000000000000001", "allowed": "true"}`) || strings.Contains(html, `name="allowed"`) || strings.Contains(html, `name="add"`) {
+		t.Error("an allowed server has no add button and no switch to take it back")
 	}
 }

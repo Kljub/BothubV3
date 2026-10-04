@@ -31,7 +31,22 @@
           "default": {
             "mode": "text",
             "content": "Hi {user.mention}!"
-          }
+          },
+          "vars": [
+            "user",
+            "user.mention",
+            "user.name",
+            "user.id",
+            "user.avatar",
+            "server",
+            "server.id",
+            "members",
+            "channel",
+            "channel.mention",
+            "channel.id",
+            "message.content",
+            "message.url"
+          ]
         },
         {
           "key": "reply",

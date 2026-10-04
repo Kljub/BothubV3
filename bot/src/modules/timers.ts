@@ -1,5 +1,5 @@
 // Time-driven modules: Timed Messages, Statistic Channels, Birthdays,
-// Question of the Day, Free Games. tick() runs every 30 seconds per bot; times and days
+// Question of the Day, Free Games, social feeds (feeds.ts). tick() runs every 30 seconds per bot; times and days
 // use the bot's time zone (Timed Events settings).
 
 import { ChannelType, type Client, type Guild } from 'discord.js';
@@ -7,6 +7,7 @@ import { localTime } from '../core/timed.js';
 import { log } from '../core/log.js';
 import { baseVars, buildMessage, fill, idIn, idsIn, reactionOf, type MessageConfig, type ModuleContext } from './context.js';
 import { allow, assignable, send, warn } from './guard.js';
+import { pollFeeds } from './feeds.js';
 import { postFreeGames } from './freegames.js';
 
 // ---------- pure helpers ----------
@@ -51,41 +52,6 @@ export function age(year: number | null, now: { year: number }): string {
   return year ? String(now.year - year) : '';
 }
 
-export interface Video {
-  id: string;
-  title: string;
-  author: string;
-  url: string;
-}
-
-function xmlText(s: string): string {
-  return s.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").trim();
-}
-
-/** Videos of a YouTube channel feed, newest first. */
-export function parseFeed(xml: string): Video[] {
-  const out: Video[] = [];
-  for (const m of xml.matchAll(/<entry>([\s\S]*?)<\/entry>/g)) {
-    const e = m[1]!;
-    const id = /<yt:videoId>([^<]+)<\/yt:videoId>/.exec(e)?.[1];
-    if (!id) continue;
-    out.push({
-      id,
-      title: xmlText(/<title>([\s\S]*?)<\/title>/.exec(e)?.[1] ?? ''),
-      author: xmlText(/<author>\s*<name>([\s\S]*?)<\/name>/.exec(e)?.[1] ?? ''),
-      url: `https://www.youtube.com/watch?v=${id}`,
-    });
-  }
-  return out;
-}
-
-/** Videos newer than the last one seen (oldest first, at most 3). */
-export function newVideos(videos: Video[], lastSeen: string | undefined): Video[] {
-  if (!lastSeen) return [];
-  const i = videos.findIndex((v) => v.id === lastSeen);
-  return (i < 0 ? videos.slice(0, 1) : videos.slice(0, i)).slice(0, 3).reverse();
-}
-
 /** Stable key of a list entry (not its position, so reordering keeps the state). */
 export function entryKey(parts: string[]): string {
   let h = 5381;
@@ -125,7 +91,7 @@ export class ModuleTimers {
       const guilds = [...client.guilds.cache.values()];
       await this.timedMessages(guilds, now);
       if (Math.floor(now / 600_000) !== Math.floor((now - 30_000) / 600_000)) await this.statChannels(guilds);
-      if (Math.floor(now / 300_000) !== Math.floor((now - 30_000) / 300_000)) await this.youtube(guilds);
+      await pollFeeds(this.ctx, guilds, now);
       const local = localTime(now, this.timezone());
       await this.birthdays(guilds, local);
       await this.qotd(guilds, local);
@@ -168,44 +134,6 @@ export class ModuleTimers {
       if (!payload) continue;
       const sent = await send(ctx, 'timed-messages', channel, payload);
       ctx.setState('timed-messages', guild.id, key, { at: now, message: sent?.id ?? last.message });
-    }
-  }
-
-  private async youtube(guilds: Guild[]): Promise<void> {
-    const ctx = this.ctx;
-    if (!ctx.enabled('youtube-notifs')) return;
-    let budget = 10; // feed requests per 5-minute round
-    for (const f of ctx.config<{ feeds: { youtubeChannel: string; channel: unknown; mentionRoles: unknown; message: string }[] }>('youtube-notifs').feeds ?? []) {
-      if (!/^UC[A-Za-z0-9_-]{22}$/.test(f.youtubeChannel ?? '')) continue;
-      const guild = guilds.find((g) => idIn(f.channel, g.id));
-      const channel = guild?.channels.cache.get(idIn(f.channel, guild.id) ?? '');
-      if (!guild || !channel?.isSendable()) continue;
-      const failKey = `fail:${f.youtubeChannel}`;
-      const fail = ctx.getState<{ count: number; until: number }>('youtube-notifs', guild.id, failKey);
-      if (fail && Date.now() < fail.until) continue; // back off after failed requests
-      if (budget-- <= 0) break;
-      const res = await fetch(`https://www.youtube.com/feeds/videos.xml?channel_id=${f.youtubeChannel}`, { signal: AbortSignal.timeout(10_000) }).catch(() => null);
-      if (!res?.ok) {
-        const count = (fail?.count ?? 0) + 1;
-        ctx.setState('youtube-notifs', guild.id, failKey, { count, until: Date.now() + Math.min(6 * 3600_000, 300_000 * 2 ** count) });
-        if (count >= 3) warn(ctx, 'WAR-2008', { module: 'youtube-notifs', problem: `the feed of ${f.youtubeChannel} cannot be read (HTTP ${res?.status ?? 'error'})` });
-        continue;
-      }
-      if (fail) ctx.deleteState('youtube-notifs', guild.id, failKey);
-      const videos = parseFeed(await res.text());
-      if (!videos.length) continue;
-      const key = `yt:${f.youtubeChannel}:${channel.id}`;
-      const fresh = newVideos(videos, ctx.getState<string>('youtube-notifs', guild.id, key));
-      if (!fresh.length) ctx.setState('youtube-notifs', guild.id, key, videos[0]!.id);
-      const roles = idsIn(f.mentionRoles, guild.id);
-      for (const v of fresh) {
-        const text = fill(f.message || '{video.title} {video.url}', { ...baseVars(guild, null), 'video.title': v.title, 'video.author': v.author, 'video.url': v.url, 'video.id': v.id });
-        const mentions = roles.map((r) => `<@&${r}>`).join(' ');
-        const content = (mentions ? `${mentions}\n${text}` : text).slice(0, 2000);
-        // The last seen video moves on only after a successful post.
-        if (!(await send(ctx, 'youtube-notifs', channel, { content, allowedMentions: { roles } }))) break;
-        ctx.setState('youtube-notifs', guild.id, key, v.id);
-      }
     }
   }
 

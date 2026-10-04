@@ -634,6 +634,21 @@ func (c *Client) SetBotPluginEnabled(ctx context.Context, s Session, botID int64
 }
 
 // PluginConfigRaw reads this bot's saved settings of a plugin into out.
+// ChoiceOption is one option of a dynamic "choices" field (ctx.config.setOptions).
+type ChoiceOption struct {
+	Value string `json:"value"`
+	Label string `json:"label"`
+}
+
+// PluginFieldOptions: the options a plugin set for its dynamic choices fields on this bot.
+func (c *Client) PluginFieldOptions(ctx context.Context, s Session, botID int64, pluginID string) (map[string][]ChoiceOption, error) {
+	var out struct {
+		Options map[string][]ChoiceOption `json:"options"`
+	}
+	_, err := c.do(ctx, s, http.MethodGet, fmt.Sprintf("/api/v1/bots/%d/plugins/%s/options", botID, url.PathEscape(pluginID)), nil, &out)
+	return out.Options, err
+}
+
 func (c *Client) PluginConfigRaw(ctx context.Context, s Session, botID int64, pluginID string, out any) error {
 	var wrap struct {
 		Config json.RawMessage `json:"config"`
@@ -978,6 +993,31 @@ func (c *Client) SaveGlobalSecret(ctx context.Context, s Session, key, descripti
 
 func (c *Client) DeleteGlobalSecret(ctx context.Context, s Session, key string) error {
 	_, err := c.do(ctx, s, http.MethodDelete, "/api/v1/admin/secrets/"+url.PathEscape(key), nil, nil)
+	return err
+}
+
+// --- own secrets of the signed-in user (User settings → API / Secrets) ---
+
+// UserSecrets lists the signed-in user's secrets; their bots and the plugins
+// on them use these.
+func (c *Client) UserSecrets(ctx context.Context, s Session) ([]GlobalSecret, error) {
+	var out list[GlobalSecret]
+	_, err := c.do(ctx, s, http.MethodGet, "/api/v1/me/secrets", nil, &out)
+	return out.Items, err
+}
+
+// SaveUserSecret creates or updates an own secret; value nil keeps the stored value.
+func (c *Client) SaveUserSecret(ctx context.Context, s Session, key, description string, value *string) error {
+	in := map[string]any{"description": description}
+	if value != nil {
+		in["value"] = *value
+	}
+	_, err := c.do(ctx, s, http.MethodPut, "/api/v1/me/secrets/"+url.PathEscape(key), in, nil)
+	return err
+}
+
+func (c *Client) DeleteUserSecret(ctx context.Context, s Session, key string) error {
+	_, err := c.do(ctx, s, http.MethodDelete, "/api/v1/me/secrets/"+url.PathEscape(key), nil, nil)
 	return err
 }
 

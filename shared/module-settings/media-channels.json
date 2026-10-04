@@ -81,7 +81,22 @@
           "true"
         ]
       },
-      "default": "{user.mention}, only media can be posted in this channel."
+      "default": "{user.mention}, only media can be posted in this channel.",
+      "vars": [
+        "user",
+        "user.mention",
+        "user.name",
+        "user.id",
+        "user.avatar",
+        "server",
+        "server.id",
+        "members",
+        "channel",
+        "channel.mention",
+        "channel.id",
+        "message.content",
+        "message.url"
+      ]
     }
   ]
 }
