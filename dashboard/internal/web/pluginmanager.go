@@ -28,6 +28,9 @@ var (
 type secretShareRow struct {
 	Key                 string
 	Exists, Set, Shared bool
+	// Slot: a sign-in slot (token or its address, e.g. PLEX_TOKEN_2) the
+	// sign-in fills; an empty one is a free place for another server.
+	Slot bool
 }
 
 // manifestSummary is the part of an installed plugin's normalized manifest
@@ -69,9 +72,9 @@ type installedInfo struct {
 	BlockedBy []string
 	// Connect: sign-in helpers (services.connect) with their state.
 	Connect []connectRow
-	// Missing: declared secrets the plugin cannot use yet (not created, still
-	// empty [NULL], or not shared). Sign-in slots count only when none is
-	// connected: one Plex server is enough.
+	// Missing: declared secrets the plugin cannot use yet: not created, or
+	// switched on but still empty [NULL]. Switched off ones do not count.
+	// Sign-in slots count only when none is connected: one Plex server is enough.
 	Missing []missingSecret
 }
 
@@ -160,7 +163,8 @@ func installedDetails(pl api.AdminPlugin, m manifestSummary, locale string) inst
 	}
 	for _, key := range m.Secrets {
 		share := pl.SecretShares[key]
-		info.Secrets = append(info.Secrets, secretShareRow{Key: key, Exists: share.Exists, Set: share.Set, Shared: share.Shared})
+		slot := m.Connect[key] != "" || connectAddress(m.Connect, key)
+		info.Secrets = append(info.Secrets, secretShareRow{Key: key, Exists: share.Exists, Set: share.Set, Shared: share.Shared, Slot: slot})
 		if provider := m.Connect[key]; provider != "" {
 			info.Connect = append(info.Connect, connectRow{Key: key, Provider: provider, Connected: share.Exists && share.Set && share.Shared})
 		}
@@ -172,7 +176,10 @@ func installedDetails(pl api.AdminPlugin, m manifestSummary, locale string) inst
 		}
 	}
 	for _, sec := range info.Secrets {
-		if sec.Exists && sec.Set && sec.Shared {
+		// Switched off (not shared) is the admin's choice: the plugin works
+		// without it (e.g. Overseerr for Plex). Missing: no secret yet, or
+		// switched on but still empty ([NULL]).
+		if sec.Exists && (!sec.Shared || sec.Set) {
 			continue
 		}
 		if provider := m.Connect[sec.Key]; provider != "" {

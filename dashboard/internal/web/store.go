@@ -308,7 +308,7 @@ func (s *Server) handleStorePlugin(w http.ResponseWriter, r *http.Request, p Pag
 	if key := r.URL.Query().Get("connected"); secretKeyPattern.MatchString(key) {
 		d.Notice = s.i18n.T(p.Locale, "store.connect.done", "secret", key)
 	}
-	if reason := r.URL.Query().Get("connect_error"); slices.Contains([]string{"expired", "plex", "no_server", "no_token"}, reason) {
+	if reason := r.URL.Query().Get("connect_error"); slices.Contains([]string{"expired", "plex", "no_server", "no_token", "save"}, reason) {
 		d.ConnectError = s.i18n.T(p.Locale, "store.connect.error."+reason)
 	}
 	s.render(w, http.StatusOK, "store", "layout", withData(p, storePage{Detail: &d}))

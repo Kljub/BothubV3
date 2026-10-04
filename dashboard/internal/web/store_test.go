@@ -1,6 +1,7 @@
 package web
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"slices"
 	"strings"
@@ -222,12 +223,38 @@ func TestInstalledDetailsMissing(t *testing.T) {
 		Connect: map[string]string{"PLEX_TOKEN": "plex", "PLEX_TOKEN_2": "plex"},
 	}
 	got := installedDetails(pl, m, "en").Missing
-	want := []missingSecret{{Provider: "plex"}, {Key: "OVERSEERR_KEY"}, {Key: "OTHER_KEY"}, {Key: "GONE_KEY"}}
+	// OTHER_KEY is switched off (not shared): the admin does not need it.
+	want := []missingSecret{{Provider: "plex"}, {Key: "OVERSEERR_KEY"}, {Key: "GONE_KEY"}}
 	if !slices.Equal(got, want) {
 		t.Fatalf("missing = %v, want %v", got, want)
 	}
 	pl.SecretShares["PLEX_TOKEN_2"] = api.SecretShare{Exists: true, Set: true, Shared: true}
 	if got := installedDetails(pl, m, "en").Missing; got[0] != (missingSecret{Key: "OVERSEERR_KEY"}) {
 		t.Fatalf("one connected Plex server is enough, got %v", got)
+	}
+}
+
+func TestConnectBounce(t *testing.T) {
+	s := &Server{}
+	state := strings.Repeat("ab", 16)
+	req := httptest.NewRequest(http.MethodGet, "/store/plugin_plex/connect/PLEX_TOKEN/done?state="+state, nil)
+	req.SetPathValue("plugin", "plugin_plex")
+	req.SetPathValue("secret", "PLEX_TOKEN")
+	rec := httptest.NewRecorder()
+	s.handleConnectBounce(rec, req)
+	body := rec.Body.String()
+	if rec.Code != http.StatusOK || !strings.Contains(body, `content="0;url=/store/plugin_plex/connect/PLEX_TOKEN/finish?state=`+state+`"`) {
+		t.Fatalf("bounce page: %d %s", rec.Code, body)
+	}
+	if rec.Header().Get("Content-Security-Policy") != "default-src 'none'" {
+		t.Fatal("bounce page needs a strict CSP")
+	}
+	bad := httptest.NewRequest(http.MethodGet, "/store/plugin_plex/connect/PLEX_TOKEN/done?state=%22%3E%3Cscript%3E", nil)
+	bad.SetPathValue("plugin", "plugin_plex")
+	bad.SetPathValue("secret", "PLEX_TOKEN")
+	rec = httptest.NewRecorder()
+	s.handleConnectBounce(rec, bad)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("bad state must be refused, got %d", rec.Code)
 	}
 }

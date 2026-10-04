@@ -78,12 +78,28 @@ export interface SecretRequest {
   headers?: Record<string, string>;
   /** The key: secret name, where it goes (default header Authorization, "Bearer <key>"). */
   auth?: { secret: string; header?: string; format?: 'bearer' | 'plain' | 'query'; param?: string };
+  /**
+   * "storage.files": send one image of the plugin files as
+   * multipart/form-data (field name, default "file"), with text `fields`.
+   * Not together with `json`.
+   */
+  file?: { name: string; field?: string };
+  fields?: Record<string, string>;
+  /**
+   * "storage.files": 'file' stores a successful answer (an image: PNG, GIF,
+   * WEBP or JPEG, max. 2 MB) in the plugin files; the answer is then
+   * { status, headers, file } (see SecretFileAnswer). Error answers come as text.
+   */
+  saveAs?: 'file';
 }
 
 export interface HttpAnswer { status: number; headers: Record<string, string>; json: Json; text: string; base64?: string }
+/** ctx.http.secret with saveAs 'file' and a 2xx answer. */
+export interface SecretFileAnswer { status: number; headers: Record<string, string>; file: StoredFile }
 export interface MemberInfo { id: Id; name: string; displayName: string; bot: boolean; avatar: string; joinedAt: string | null; roles: Id[] }
 export interface RoleInfo { id: Id; name: string; color: string; position: number; managed: boolean; mentionable: boolean; hoist: boolean; members: number }
-export interface ChannelInfo { id: Id; name: string; type: string; parentId: Id | null; position?: number; guildId?: Id; topic?: string | null }
+/** nsfw: age-restricted channel (channel.get). */
+export interface ChannelInfo { id: Id; name: string; type: string; parentId: Id | null; position?: number; guildId?: Id; topic?: string | null; nsfw?: boolean }
 export interface MessageInfo { id: Id; channelId: Id; guildId: Id | null; content: string; authorId: Id; authorName: string; bot: boolean; createdAt: string; url: string; attachments: Array<{ name: string; url: string; size: number; contentType: string | null }>; embeds: number; stickers: number }
 
 /** A file of the plugin files: name = content hash + extension (e.g. "3f2a9c0d1b7e4a55.png"). */
@@ -257,9 +273,9 @@ export interface PluginContext {
      * "discord.messages.files": posts an image of the plugin files as an
      * attachment, with an optional message. In an embed, image_url or
      * thumbnail_url "attachment" shows the file there. Max. 5 messages per 5 s
-     * (shared with send).
+     * (shared with send). spoiler: true blurs the image until clicked.
      */
-    sendFile(channelId: Id, fileName: string, message?: Message | string): Async<Id>;
+    sendFile(channelId: Id, fileName: string, message?: (Message & { spoiler?: boolean }) | string): Async<Id>;
     /** "discord.messages.send": returns the message ID. No pings, max. 5 per 5 s. */
     send(channelId: Id, message: Message | string): Async<Id>;
     /** "discord.messages.send": direct message to a user; returns the message ID. */
@@ -375,7 +391,7 @@ export interface PluginContext {
     post(url: string, json?: Json, options?: { query?: Record<string, string>; headers?: Record<string, string>; body?: string }): Async<HttpAnswer>;
     put(url: string, json?: Json, options?: { query?: Record<string, string>; headers?: Record<string, string>; body?: string }): Async<HttpAnswer>;
     patch(url: string, json?: Json, options?: { query?: Record<string, string>; headers?: Record<string, string>; body?: string }): Async<HttpAnswer>;
-    secret(request: SecretRequest): Async<{ status: number; headers: Record<string, string>; json: Json; text: string }>;
+    secret(request: SecretRequest): Async<{ status: number; headers: Record<string, string | SecretFileAnswer>; json: Json; text: string }>;
   };
   /** "discord.voice": play files of the plugin folder (sounds/<name>.ogg|mp3|wav). */
   readonly voice: {

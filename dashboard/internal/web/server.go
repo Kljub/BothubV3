@@ -272,7 +272,11 @@ func (s *Server) routes() http.Handler {
 	mux.Handle("PUT /store/{plugin}/secrets", auth(s.handleStoreSecrets))
 	mux.Handle("POST /store/{plugin}/grant", auth(s.handleStoreGrant))
 	mux.Handle("POST /store/{plugin}/connect/{secret}", auth(s.handleConnectStart))
-	mux.Handle("GET /store/{plugin}/connect/{secret}/done", auth(s.handleConnectDone))
+	// Plex sends the browser back from app.plex.tv: a cross-site navigation, so
+	// the SameSite=Strict session cookie is not sent. "done" is public and only
+	// forwards (same-site) to "finish", which has the cookie again.
+	mux.HandleFunc("GET /store/{plugin}/connect/{secret}/done", s.handleConnectBounce)
+	mux.Handle("GET /store/{plugin}/connect/{secret}/finish", auth(s.handleConnectDone))
 	mux.Handle("DELETE /store/{plugin}/connect/{secret}", auth(s.handleConnectRemove))
 	mux.Handle("PUT /store/{plugin}/enabled", auth(s.handleStoreEnabled))
 	mux.Handle("POST /admin/secrets", auth(s.handleSecretSave))

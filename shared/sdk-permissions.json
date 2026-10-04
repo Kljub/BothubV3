@@ -164,7 +164,7 @@
       "implemented": [
         "message.sendFile"
       ],
-      "$comment": "Posts an image of the plugin files (storage.files) as an attachment: message.sendFile(channelId, fileName, message?). In the message, image \"attachment\" shows it inside the embed."
+      "$comment": "Posts an image of the plugin files (storage.files) as an attachment: message.sendFile(channelId, fileName, message?). In the message, image \"attachment\" shows it inside the embed. spoiler: true blurs it until clicked."
     },
     {
       "key": "discord.messages.react",
@@ -2037,7 +2037,7 @@
       "implemented": [
         "http.secret"
       ],
-      "$comment": "HTTP requests with admin secrets the plugin never sees: the address from a secret (any address the admin set) or an https URL of services.hosts (public only), a key from a secret into a header or URL parameter. Only names of services.secrets the admin shared; values masked in the answer. Response max. 1 MB, timeout 10 s."
+      "$comment": "HTTP requests with admin secrets the plugin never sees: the address from a secret (any address the admin set) or an https URL of services.hosts (public only), a key from a secret into a header or URL parameter. Only names of services.secrets the admin shared; values masked in the answer. Response max. 1 MB, timeout 10 s. With storage.files: file { name, field } sends a stored image as multipart/form-data (plus text fields); saveAs 'file' stores an image answer (max. 2 MB) in the plugin files."
     },
     {
       "key": "secrets.read",

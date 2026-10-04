@@ -443,8 +443,13 @@ export class PluginManager {
    * addresses only). request.auth puts a secret into a header or a URL
    * parameter. Only names of "services.secrets" that the admin shared count
    * (secretOf); the values are masked in the answer.
+   *
+   * With the plugin files (storage.files): request.file sends one stored
+   * image as multipart/form-data ({ field, name }, plus text request.fields);
+   * request.saveAs 'file' stores a successful answer (an image, max. 2 MB)
+   * in the plugin files and answers { status, headers, file }.
    */
-  private async callSecret(request: unknown, secretOf: (name: unknown) => string | null, hosts: string[]): Promise<unknown> {
+  private async callSecret(request: unknown, secretOf: (name: unknown) => string | null, hosts: string[], files: PluginFiles | null = null): Promise<unknown> {
     const r = (request && typeof request === 'object' && !Array.isArray(request) ? request : {}) as Record<string, unknown>;
     const hide: string[] = [];
     const method = typeof r.method === 'string' ? r.method.toUpperCase() : 'GET';
@@ -520,19 +525,45 @@ export class PluginManager {
         headers[k] = v;
       }
     }
-    let body: string | undefined;
-    if (r.json !== undefined) {
+    const needFiles = (): PluginFiles => {
+      if (!files) throw new SdkError('sdk.call.denied', { permission: 'storage.files' });
+      return files;
+    };
+    const saveAsFile = r.saveAs !== undefined;
+    if (saveAsFile && r.saveAs !== 'file') throw new SdkError('sdk.http.bad_save_as');
+    let body: string | FormData | undefined;
+    if (r.file !== undefined) {
+      // multipart/form-data: one image of the plugin files plus text fields.
+      const f = (r.file && typeof r.file === 'object' && !Array.isArray(r.file) ? r.file : {}) as Record<string, unknown>;
+      const field = f.field ?? 'file';
+      if (typeof field !== 'string' || !/^[A-Za-z0-9_.-]{1,64}$/.test(field) || r.json !== undefined) throw new SdkError('sdk.http.bad_file');
+      const stored = needFiles().get(f.name);
+      if (!stored) throw new SdkError('sdk.files.unknown');
+      const form = new FormData();
+      if (r.fields !== undefined) {
+        if (!r.fields || typeof r.fields !== 'object' || Array.isArray(r.fields) || Object.keys(r.fields).length > 30) throw new SdkError('sdk.http.bad_file');
+        for (const [k, v] of Object.entries(r.fields as Record<string, unknown>)) {
+          if (!/^[A-Za-z0-9_.-]{1,64}$/.test(k) || String(v).length > 4000) throw new SdkError('sdk.http.bad_file');
+          form.append(k, String(v));
+        }
+      }
+      form.append(field, new Blob([new Uint8Array(stored.data)], { type: stored.mime }), stored.name);
+      body = form;
+      delete headers['content-type'];
+    } else if (r.json !== undefined) {
       body = JSON.stringify(r.json);
       if (body.length > 65_536) throw new SdkError('sdk.http.too_big');
       headers['content-type'] = 'application/json';
     }
+    if (saveAsFile) needFiles();
     let res: Response;
     try {
       res = await (this.deps.fetch ?? fetch)(url, { method, headers: { ...headers, ...authHeaders }, body, redirect: 'manual', signal: AbortSignal.timeout(HTTP_TIMEOUT_MS) });
     } catch (err) {
       throw new SdkError((err as Error)?.name === 'TimeoutError' ? 'sdk.http.timeout' : 'sdk.http.failed');
     }
-    // Read at most 1 MB.
+    // Read at most 1 MB (an image saved as a file: the file limit).
+    const max = saveAsFile && res.ok ? FILE_LIMITS.maxBytes : HTTP_MAX_BYTES;
     const reader = res.body?.getReader();
     const chunks: Uint8Array[] = [];
     let size = 0;
@@ -540,15 +571,17 @@ export class PluginManager {
       const { done, value } = await reader.read();
       if (done) break;
       size += value.byteLength;
-      if (size > HTTP_MAX_BYTES) {
+      if (size > max) {
         await reader.cancel();
-        throw new SdkError('sdk.http.too_big');
+        throw new SdkError(saveAsFile && res.ok ? 'sdk.files.too_big' : 'sdk.http.too_big', { max });
       }
       chunks.push(value);
     }
-    const text = mask(Buffer.concat(chunks).toString('utf8'), hide);
     const outHeaders: Record<string, string> = {};
     for (const [k, v] of res.headers) if (!/^(set-cookie|www-authenticate)$/.test(k) && Object.keys(outHeaders).length < 50) outHeaders[k] = mask(v, hide);
+    // The answer is an image: into the plugin files (type checked like an upload).
+    if (saveAsFile && res.ok) return { status: res.status, headers: outHeaders, file: needFiles().put(Buffer.concat(chunks)) };
+    const text = mask(Buffer.concat(chunks).toString('utf8'), hide);
     let json: unknown = null;
     if ((res.headers.get('content-type') ?? '').includes('json')) {
       try {
@@ -748,15 +781,19 @@ export class PluginManager {
         const file = files.get(name);
         if (!file) throw new SdkError('sdk.files.unknown');
         const msg = message === undefined || message === null ? {} : pluginMessage(message);
+        // spoiler: Discord blurs the image until clicked (file name SPOILER_…).
+        const spoiler = msg.spoiler === true;
+        delete msg.spoiler;
+        const fileName = spoiler ? `SPOILER_${file.name}` : file.name;
         if (Array.isArray(msg.embeds)) {
           msg.embeds = msg.embeds.map((e: unknown) => {
             if (!e || typeof e !== 'object') return e;
             const embed = { ...(e as Record<string, unknown>) };
-            for (const k of ['image_url', 'thumbnail_url']) if (embed[k] === 'attachment') embed[k] = `attachment://${file.name}`;
+            for (const k of ['image_url', 'thumbnail_url']) if (embed[k] === 'attachment') embed[k] = `attachment://${fileName}`;
             return embed;
           });
         }
-        return this.deps.sendMessage(botId, sendSlot(channelId), msg, [{ name: file.name, data: file.data }]);
+        return this.deps.sendMessage(botId, sendSlot(channelId), msg, [{ name: fileName, data: file.data }]);
       },
       // Plugin files (storage.files): images per bot.
       'files.list': () => files.list(),
@@ -804,7 +841,7 @@ export class PluginManager {
         return this.deps.guildInfo(botId, guildId);
       },
       'guild.list': () => this.deps.guildList(botId),
-      'http.secret': (q) => this.callSecret(a(q)[0], secretOf, manifest.hosts),
+      'http.secret': (q) => this.callSecret(a(q)[0], secretOf, manifest.hosts, allowed.has('storage.files' as Permission) ? files : null),
       'secrets.get': (q) => secretOf(a(q)[0]),
       'secrets.has': (q) => secretOf(a(q)[0]) !== null,
       // Voice: files of the plugin folder only; another owner's play is not replaced.

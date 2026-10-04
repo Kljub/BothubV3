@@ -218,6 +218,19 @@ const res = await ctx.http.secret({
 - `auth.format`: `bearer` (default, header `Authorization: Bearer <key>`),
   `plain` (header with the key as it is) or `query` (URL parameter `param`).
 - Secret values are masked in the answer. Answer max. 1 MB, timeout 10 s.
+- With `storage.files` too: `file: { name, field }` sends an image of the
+  plugin files as multipart/form-data (text values in `fields`, not together
+  with `json`); `saveAs: 'file'` stores a successful image answer (PNG, GIF,
+  WEBP or JPEG, max. 2 MB) in the plugin files and answers
+  `{ status, headers, file }`.
+
+```js
+const auth = { secret: 'EXAMPLE_KEY', header: 'x-api-key', format: 'plain' };
+const src = await ctx.files.fromDiscord(attachmentUrl);
+const up = await ctx.http.secret({ url: 'https://api.example.com/upload', method: 'POST', auth, file: { name: src.name, field: 'image' } });
+const out = await ctx.http.secret({ url: 'https://api.example.com/result.png', auth, saveAs: 'file' });
+await ctx.message.sendFile(channelId, out.file.name, { spoiler: false });
+```
 
 **Reading a value** (SDK permission `secrets.read`, high risk): when a library
 needs the key itself.

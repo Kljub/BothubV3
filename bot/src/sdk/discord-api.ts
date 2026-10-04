@@ -536,7 +536,7 @@ export function discordApi(botId: number, pluginId: string, hosts: string[], dep
     // --- channel ---
     'channel.get': async (q) => {
       const c = await channelOf(a(q)[0]);
-      return { id: c.id, guildId: c.guildId, name: c.name, type: ChannelType[c.type], parentId: c.parentId, topic: 'topic' in c ? c.topic : null };
+      return { id: c.id, guildId: c.guildId, name: c.name, type: ChannelType[c.type], parentId: c.parentId, topic: 'topic' in c ? c.topic : null, nsfw: 'nsfw' in c ? c.nsfw === true : false };
     },
     'channel.list': (q) => [...guildOf(a(q)[0]).channels.cache.values()].slice(0, 500).map((c) => ({ id: c.id, name: c.name, type: ChannelType[c.type], parentId: c.parentId })),
     'channel.create': async (q) => {

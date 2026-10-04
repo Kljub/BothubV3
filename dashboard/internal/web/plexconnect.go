@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
 	"io"
 	"log/slog"
 	"net/http"
@@ -123,6 +124,27 @@ func (s *Server) handleConnectStart(w http.ResponseWriter, r *http.Request, p Pa
 	http.Redirect(w, r, to, http.StatusSeeOther)
 }
 
+var connectStatePattern = regexp.MustCompile(`^[0-9a-f]{32}$`)
+
+// handleConnectBounce is where Plex sends the browser back. Coming from
+// another site the browser leaves out the SameSite=Strict session cookie, so
+// this page (no session needed, no data) moves on to ".../finish" with a
+// same-site navigation that carries the cookie again.
+func (s *Server) handleConnectBounce(w http.ResponseWriter, r *http.Request) {
+	plugin, key, state := r.PathValue("plugin"), r.PathValue("secret"), r.URL.Query().Get("state")
+	if !pluginIDPattern.MatchString(plugin) || !secretKeyPattern.MatchString(key) || !connectStatePattern.MatchString(state) {
+		http.NotFound(w, r)
+		return
+	}
+	next := html.EscapeString("/store/" + plugin + "/connect/" + key + "/finish?state=" + state)
+	h := w.Header()
+	h.Set("Content-Type", "text/html; charset=utf-8")
+	h.Set("Cache-Control", "no-store")
+	h.Set("Referrer-Policy", "no-referrer")
+	h.Set("Content-Security-Policy", "default-src 'none'")
+	_, _ = fmt.Fprintf(w, `<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=%s"><title>BotHub</title><p><a href="%s">Continue</a></p>`, next, next)
+}
+
 // handleConnectDone finishes the sign-in when Plex sends the browser back.
 func (s *Server) handleConnectDone(w http.ResponseWriter, r *http.Request, p Page) {
 	plugin, key := r.PathValue("plugin"), r.PathValue("secret")
@@ -136,13 +158,15 @@ func (s *Server) handleConnectDone(w http.ResponseWriter, r *http.Request, p Pag
 		http.Redirect(w, r, back+"?connect_error=expired", http.StatusSeeOther)
 		return
 	}
-	if err := s.finishPlex(r, flow); err != nil {
+	if err := s.finishPlex(r, p, flow); err != nil {
 		slog.Warn("plex sign-in failed", "plugin", plugin, "err", err)
 		reason := "plex"
 		if errors.Is(err, errNoPlexServer) {
 			reason = "no_server"
 		} else if errors.Is(err, errNoPlexToken) {
 			reason = "no_token"
+		} else if apiErr := (*api.Error)(nil); errors.As(err, &apiErr) {
+			reason = "save" // BotHub's API refused to store or share the secrets
 		}
 		http.Redirect(w, r, back+"?connect_error="+reason, http.StatusSeeOther)
 		return
@@ -157,13 +181,15 @@ var (
 
 // finishPlex fetches the token and the server, then stores both secrets
 // (token and address) and shares them with the plugin.
-func (s *Server) finishPlex(r *http.Request, f connectFlow) error {
+func (s *Server) finishPlex(r *http.Request, p Page, f connectFlow) error {
 	ctx := r.Context()
 	token, err := plexPinToken(ctx, f.clientID, f.pinID)
 	if err != nil {
 		return err
 	}
+	// A GET (the way back from Plex) carries no CSRF token; the API's writes need the session's.
 	sess := session(r)
+	sess.CSRF = p.CSRF
 	// The token is kept even when no server is found (the admin enters the address as a secret).
 	if err := s.api.SaveGlobalSecret(ctx, sess, f.key, "Plex token (App Store sign-in)", &token); err != nil {
 		return err

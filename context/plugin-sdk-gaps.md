@@ -39,3 +39,13 @@ automatic punishments), `storage.global` (ctx.globalStorage).
   `/emoji-menu add` and `delete`).
 - **Use counts on the dashboard**: counted in plugin storage, but a plugin
   cannot show values on its settings page (no read-only/stat field).
+
+## ArcEnCiel (v2 -> plugin_arcenciel 1.0.0)
+
+- Solved 2026-10-04 (user decision "SDK erweitern"): `ctx.http.secret` sends
+  a stored image as multipart (`file`) and saves an image answer in the plugin
+  files (`saveAs: 'file'`); `message.sendFile` has `spoiler`; `channel.get`
+  reports `nsfw`.
+- Open: the v2 "Test connection" button (a plugin cannot add a button to its
+  settings page).
+

@@ -3951,7 +3951,11 @@
   "store.live": "Checking the market for new plugins and updates…",
   "store.badge.setup": "Not set up",
   "store.setup.title": "Not set up yet: the plugin is missing these values.",
-  "store.setup.secret": "paste the value in Admin → API / Secrets (and share it below)",
+  "store.setup.secret": "paste the value in Admin → API / Secrets, or switch it off below if you do not use it",
   "store.setup.connect.plex": "Sign in with Plex (button below)",
-  "store.setup.open_secrets": "Open API / Secrets"
+  "store.setup.open_secrets": "Open API / Secrets",
+  "sdk.perm.storage.files": "Plugin files (images)",
+  "sdk.perm.storage.files_hint": "Images per bot: uploads of image settings fields, Discord attachments and images from requests with secrets. PNG, GIF, WEBP, JPEG; max. 2 MB each, 100 files, 25 MB.",
+  "store.connect.error.save": "Signed in to Plex, but BotHub could not store the token and address as secrets. Please try again; the server log has details.",
+  "admin.plugins.secret_free_slot": "free slot"
 }

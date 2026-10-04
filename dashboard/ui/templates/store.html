@@ -254,7 +254,7 @@
     <form class="form" hx-put="/store/{{$it.ID}}/secrets" hx-target="#store-detail" hx-swap="innerHTML">
       <span class="hint">{{t "admin.plugins.secrets_hint"}}</span>
       {{range $it.Info.Secrets}}
-      <label class="toggle-row"><span class="mono">{{.Key}}{{if not .Exists}} <span class="badge-soft">{{t "admin.plugins.secret_missing"}}</span>{{else if not .Set}} <span class="badge-soft secret-null">[NULL]</span>{{end}}</span>
+      <label class="toggle-row"><span class="mono">{{.Key}}{{if and (not .Exists) .Slot}} <span class="badge-soft">{{t "admin.plugins.secret_free_slot"}}</span>{{else if not .Exists}} <span class="badge-soft">{{t "admin.plugins.secret_missing"}}</span>{{else if not .Set}} <span class="badge-soft secret-null">[NULL]</span>{{end}}</span>
         <input type="checkbox" class="toggle" name="shared" value="{{.Key}}" {{if .Shared}}checked{{end}} {{if not .Exists}}disabled{{end}}></label>
       {{end}}
       <div><button type="submit" class="btn btn-primary btn-sm">{{t "admin.plugins.secrets_save"}}</button></div>

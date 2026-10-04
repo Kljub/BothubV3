@@ -360,6 +360,7 @@ test('plugin files, message.sendFile and config.set: images per bot, settings th
         '.perm': await r(() => ctx.config.set('who', { allowed_roles: [] })),
         '.send': await r(() => ctx.message.sendFile('300000000000000001', put.name, { embeds: [{ title: 'hi', image_url: 'attachment' }] })),
         '.missing': await r(() => ctx.message.sendFile('300000000000000001', '0000000000000000.png')),
+        '.spoiler': await r(() => ctx.message.sendFile('300000000000000001', put.name, { spoiler: true, embeds: [{ image_url: 'attachment' }] })),
         '.evil': await r(() => ctx.files.fromDiscord('https://evil.example/attachments/1/2/x.png')),
         '.cdn': await r(() => ctx.files.fromDiscord('https://cdn.discordapp.com/attachments/1/2/x.png')),
         '.get': JSON.stringify((await ctx.files.get(put.name)).data === '${png}'),
@@ -406,10 +407,13 @@ test('plugin files, message.sendFile and config.set: images per bot, settings th
     assert.equal(results['.bad_image'], 'sdk.config.bad_value');
     assert.equal(results['.perm'], 'sdk.config.not_settable', 'access rules stay with the dashboard');
     assert.equal(results['.send'], '"9"');
-    assert.equal(sentFiles.length, 1);
+    assert.equal(sentFiles.length, 2);
     assert.equal(sentFiles[0]!.files?.[0]?.name, put.name);
     assert.equal((sentFiles[0]!.message as { embeds: { image_url: string }[] }).embeds[0]!.image_url, `attachment://${put.name}`);
     assert.equal(results['.missing'], 'sdk.files.unknown');
+    assert.equal(sentFiles[1]!.files?.[0]?.name, `SPOILER_${put.name}`, 'spoiler: blurred until clicked');
+    assert.equal((sentFiles[1]!.message as { embeds: { image_url: string }[]; spoiler?: boolean }).embeds[0]!.image_url, `attachment://SPOILER_${put.name}`);
+    assert.equal((sentFiles[1]!.message as { spoiler?: boolean }).spoiler, undefined);
     assert.equal(results['.evil'], 'sdk.files.bad_url');
     assert.equal(results['.cdn'], 'sdk.files.bad_type', 'Discord attachment fetched, then checked like an upload');
     assert.equal(results['.get'], 'true');
@@ -590,6 +594,67 @@ test('http.secret: address and key from shared secrets, the plugin never sees th
       [results['.not_shared'], results['.undeclared'], results['.host'], results['.http'], results['.path'], results['.method'], results['.header'], results['.big'], results['.read']],
       ['sdk.secret.not_shared', 'sdk.secret.not_shared', 'sdk.http.host_not_allowed', 'sdk.http.bad_url', 'sdk.http.bad_path', 'sdk.http.bad_method', 'sdk.http.bad_header', 'sdk.http.too_big', 'sdk.call.denied'],
     );
+  } finally {
+    manager.stopAll();
+  }
+});
+
+test('http.secret with plugin files: multipart upload of a stored image, image answer saved as a file', async () => {
+  const { db, pluginsDir, manager } = setup();
+  const id = 'plugin_imagegen';
+  const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+  const manifest = { id, name: 'ImageGen', version: '1.0.0', sdk: 1, main: 'index.js', permissions: ['secrets.use', 'storage.files'], secrets: ['GEN_KEY'], hosts: ['api.example.com'], blocks: [{ name: 'go', definition: {} }] };
+  const code = `export default { blocks: { async go(ctx) {
+    const r = async (fn) => { try { return JSON.stringify(await fn()); } catch (e) { return e.message; } };
+    const auth = { secret: 'GEN_KEY', header: 'x-api-key', format: 'plain' };
+    const src = await ctx.files.put('${png}');
+    return { results: {
+      '.upload': await r(() => ctx.http.secret({ url: 'https://api.example.com/upload', method: 'POST', auth, file: { name: src.name, field: 'image' }, fields: { kind: 'SOURCE' } }).then((a) => a.json)),
+      '.saved': await r(() => ctx.http.secret({ url: 'https://api.example.com/out.png', auth, saveAs: 'file' }).then((a) => a.file)),
+      '.error': await r(() => ctx.http.secret({ url: 'https://api.example.com/missing', auth, saveAs: 'file' }).then((a) => a.status)),
+      '.text': await r(() => ctx.http.secret({ url: 'https://api.example.com/text.txt', auth, saveAs: 'file' })),
+      '.unknown': await r(() => ctx.http.secret({ url: 'https://api.example.com/upload', method: 'POST', auth, file: { name: '0000000000000000.png' } })),
+      '.both': await r(() => ctx.http.secret({ url: 'https://api.example.com/upload', method: 'POST', auth, file: { name: src.name }, json: {} })),
+    } };
+  } } };`;
+  install(db, pluginsDir, id, { 'bothub-plugin.json': JSON.stringify(manifest), 'index.js': code });
+  db.prepare('UPDATE plugins SET manifest = ? WHERE id = ?').run(JSON.stringify({ secrets: ['GEN_KEY'] }), id);
+  db.prepare("INSERT INTO secrets (key, value_enc) VALUES ('GEN_KEY', x'00')").run();
+  db.prepare("INSERT INTO secret_plugin_shares (secret_key, plugin_id) VALUES ('GEN_KEY', ?)").run(id);
+  db.prepare("INSERT INTO sdk_policies (permission, enabled) VALUES ('secrets.use', 1)").run();
+  const deps = (manager as unknown as { deps: PluginDeps }).deps;
+  deps.secret = (k) => (k === 'GEN_KEY' ? 'gen-key-123456' : null);
+  deps.outbound = { resolve: async () => ['93.184.216.34'] };
+  let form: FormData | null = null;
+  let keyHeader = '';
+  deps.fetch = (async (url: URL, init: RequestInit) => {
+    keyHeader = String((init.headers as Record<string, string>)['x-api-key'] ?? '');
+    const path = new URL(url).pathname;
+    if (path === '/upload') {
+      form = init.body as FormData;
+      return new Response(JSON.stringify({ path: 'generator/abc.png' }), { status: 200, headers: { 'content-type': 'application/json' } });
+    }
+    if (path === '/out.png') return new Response(Buffer.from(png, 'base64'), { status: 200, headers: { 'content-type': 'image/png' } });
+    if (path === '/text.txt') return new Response('not an image', { status: 200 });
+    return new Response('{"error":"gone"}', { status: 404, headers: { 'content-type': 'application/json' } });
+  }) as unknown as typeof fetch;
+  try {
+    await manager.startBot(1);
+    const { run, results } = fakeRun({});
+    await manager.blockHandlers(1).get(`plugin.${id}.go`)!(node(`plugin.${id}.go`), run);
+    assert.equal(results['.upload'], '{"path":"generator/abc.png"}');
+    assert.equal(keyHeader, 'gen-key-123456', 'the bot adds the key');
+    const sent = (form as unknown as FormData).get('image') as File;
+    assert.equal(sent.type, 'image/png');
+    assert.equal(Buffer.from(await sent.arrayBuffer()).toString('base64'), png, 'the stored image goes as multipart');
+    assert.equal((form as unknown as FormData).get('kind'), 'SOURCE');
+    const saved = JSON.parse(results['.saved']!);
+    assert.match(saved.name, /^[0-9a-f]{16}\.png$/);
+    assert.equal(saved.mime, 'image/png');
+    assert.equal(results['.error'], '404', 'an error answer is not saved');
+    assert.equal(results['.text'], 'sdk.files.bad_type');
+    assert.equal(results['.unknown'], 'sdk.files.unknown');
+    assert.equal(results['.both'], 'sdk.http.bad_file');
   } finally {
     manager.stopAll();
   }

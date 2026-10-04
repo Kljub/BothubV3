@@ -177,7 +177,11 @@ export interface TestContextOptions {
   members?: Record<string, { roles?: string[]; permissions?: string[] }>;
 }
 
-export interface WebRequest { method: string; url: string; query: Record<string, string>; json: Json | undefined; headers: Record<string, string> }
+export interface WebRequest {
+  method: string; url: string; query: Record<string, string>; json: Json | undefined; headers: Record<string, string>;
+  /** http.secret with `file`: the multipart image (base64) and its text fields. */
+  file?: { field: string; name: string; mime: string; data: string }; fields?: Record<string, string>;
+}
 /** An answer of the plugin to a command or click (ctx.interaction.*). */
 export interface InteractionAnswer { handle: string; kind: 'reply' | 'editReply' | 'deferReply' | 'followUp' | 'update' | 'showModal'; message?: Message | string; ephemeral?: boolean; modal?: Json }
 
@@ -190,6 +194,9 @@ export interface SecretRequestKit {
   json?: Json;
   headers?: Record<string, string>;
   auth?: { secret: string; header?: string; format?: 'bearer' | 'plain' | 'query'; param?: string };
+  file?: { name: string; field?: string };
+  fields?: Record<string, string>;
+  saveAs?: 'file';
 }
 
 export interface EndpointRequest {
@@ -199,7 +206,8 @@ export interface EndpointRequest {
   json: Json | undefined;
   headers: Record<string, string>;
 }
-export interface EndpointReply { status?: number; json?: Json; text?: string; headers?: Record<string, string> }
+/** base64: a binary answer (e.g. an image for saveAs 'file'). */
+export interface EndpointReply { status?: number; json?: Json; text?: string; base64?: string; headers?: Record<string, string> }
 export interface PlayedSound { guildId: string; channelId: string; file: string; volume: number }
 
 /** A sent message; file: the image of message.sendFile. */
@@ -435,15 +443,32 @@ export function createTestContext(options: TestContextOptions = {}): TestContext
           else headers[request.auth.header ?? 'Authorization'] = format === 'bearer' ? `Bearer ${key}` : key;
         }
         if (request.json !== undefined && bytes(JSON.stringify(request.json)) > HTTP_BODY_BYTES) throw new SdkCallError('sdk.http.too_big');
+        const filesAllowed = permissions.has('storage.files');
+        if ((request.file !== undefined || request.saveAs !== undefined) && !filesAllowed) throw new SdkCallError('sdk.call.denied');
+        if (request.saveAs !== undefined && request.saveAs !== 'file') throw new SdkCallError('sdk.http.bad_save_as');
+        let sentFile: WebRequest['file'];
+        if (request.file !== undefined) {
+          const field = request.file.field ?? 'file';
+          if (!/^[A-Za-z0-9_.-]{1,64}$/.test(field) || request.json !== undefined) throw new SdkCallError('sdk.http.bad_file');
+          const f = fileOf(request.file.name);
+          if (!f) throw new SdkCallError('sdk.files.unknown');
+          sentFile = { field, name: f.name, mime: f.mime, data: f.data };
+        }
         const server = options.web?.[u.hostname];
         if (!server) throw new SdkCallError('sdk.http.failed');
-        const req: WebRequest = { method, url: u.toString(), query: Object.fromEntries(u.searchParams), json: request.json, headers };
+        const req: WebRequest = { method, url: u.toString(), query: Object.fromEntries(u.searchParams), json: request.json, headers, ...(sentFile ? { file: sentFile, fields: { ...(request.fields ?? {}) } } : {}) };
         requests.push(structuredClone(req));
         let timer: ReturnType<typeof setTimeout> | undefined;
         const timeout = new Promise<never>((_, reject) => {
           timer = setTimeout(() => reject(new SdkCallError('sdk.http.timeout')), HTTP_TIMEOUT_MS);
         });
         const reply = await Promise.race([Promise.resolve().then(() => server(structuredClone(req))), timeout]).finally(() => clearTimeout(timer));
+        const status = reply.status ?? 200;
+        if (request.saveAs === 'file' && status >= 200 && status < 300) {
+          const out: Record<string, string> = {};
+          for (const [h, value] of Object.entries(reply.headers ?? {})) if (h.toLowerCase() !== 'set-cookie') out[h.toLowerCase()] = value;
+          return { status, headers: out, file: await putFile(base64Bytes(reply.base64 ?? btoa(reply.text ?? ''))) };
+        }
         const hide = [request.auth ? secretOf(request.auth.secret) : null, /^[A-Z][A-Z0-9_]{1,39}$/.test(name) ? secretOf(name) : null].filter((v): v is string => !!v);
         const masked = (t: string) => hide.reduce((acc, v) => (v.length >= 4 ? acc.split(v).join('••••') : acc), t);
         const text = masked(reply.text ?? (reply.json !== undefined ? JSON.stringify(reply.json) : ''));
@@ -484,13 +509,16 @@ export function createTestContext(options: TestContextOptions = {}): TestContext
         if (sendTimes.length >= SEND_MAX) throw new SdkCallError('sdk.discord.rate_limited');
         sendTimes.push(now);
         const msg = structuredClone(message ?? {}) as Message | string;
+        const spoiler = typeof msg === 'object' && (msg as Record<string, unknown>).spoiler === true;
+        if (typeof msg === 'object') delete (msg as Record<string, unknown>).spoiler;
+        const fileName = spoiler ? `SPOILER_${file.name}` : file.name;
         if (typeof msg === 'object' && Array.isArray(msg.embeds)) {
           for (const e of msg.embeds as Array<Record<string, unknown>>) {
-            for (const k of ['image_url', 'thumbnail_url']) if (e[k] === 'attachment') e[k] = `attachment://${file.name}`;
+            for (const k of ['image_url', 'thumbnail_url']) if (e[k] === 'attachment') e[k] = `attachment://${fileName}`;
           }
         }
         const msgId = String(nextId++);
-        sent.push({ channelId, message: msg, id: msgId, file: file.name });
+        sent.push({ channelId, message: msg, id: msgId, file: fileName });
         return msgId;
       },
       send: async (channelId: string, message: Message | string) => {
