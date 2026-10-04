@@ -179,6 +179,15 @@ func main() {
 	mux.HandleFunc("PATCH /api/v1/admin/plugins/{plugin}", s.auth(s.adminViaPHP(adminPHPRequired)))
 	mux.HandleFunc("PUT /api/v1/admin/plugins/{plugin}/secrets", s.auth(s.adminViaPHP(adminPHPRequired)))
 	mux.HandleFunc("GET /api/v1/admin/secrets", s.auth(s.adminViaPHP(s.listSecrets)))
+	// Docs written in the dashboard (without the PHP API: none, read-only).
+	mux.HandleFunc("GET /api/v1/docs", s.auth(s.adminViaPHP(noDocs)))
+	mux.HandleFunc("POST /api/v1/docs", s.auth(s.adminViaPHP(adminPHPRequired)))
+	mux.HandleFunc("GET /api/v1/docs/categories", s.auth(s.adminViaPHP(noDocs)))
+	mux.HandleFunc("POST /api/v1/docs/categories", s.auth(s.adminViaPHP(adminPHPRequired)))
+	mux.HandleFunc("DELETE /api/v1/docs/categories/{slug}", s.auth(s.adminViaPHP(adminPHPRequired)))
+	mux.HandleFunc("GET /api/v1/docs/{id}", s.auth(s.adminViaPHP(adminPHPRequired)))
+	mux.HandleFunc("PUT /api/v1/docs/{id}", s.auth(s.adminViaPHP(adminPHPRequired)))
+	mux.HandleFunc("DELETE /api/v1/docs/{id}", s.auth(s.adminViaPHP(adminPHPRequired)))
 	mux.HandleFunc("PUT /api/v1/admin/secrets/{key}", s.auth(s.adminViaPHP(s.putSecret)))
 	mux.HandleFunc("DELETE /api/v1/admin/secrets/{key}", s.auth(s.adminViaPHP(s.deleteSecret)))
 	// Own secrets of the signed-in user (without PHP: the same in-memory list).

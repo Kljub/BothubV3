@@ -157,6 +157,11 @@ func (s *Server) handleBot(w http.ResponseWriter, r *http.Request, p Page) {
 		s.fail(w, r, p, &api.Error{Status: http.StatusNotFound, Key: "error.not_found"})
 		return
 	}
+	if section == "docs" {
+		// The docs are the same for every bot.
+		redirect(w, r, "/docs")
+		return
+	}
 	bot, ok := s.selectedBotOrHome(w, r, p)
 	if !ok {
 		return

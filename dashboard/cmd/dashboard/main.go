@@ -55,6 +55,11 @@ func run() error {
 		return err
 	}
 
+	docs, err := web.LoadDocs(filepath.Join(envOr("SHARED_DIR", "/shared"), "docs"))
+	if err != nil {
+		return err
+	}
+
 	srv, err := web.New(web.Config{
 		API:           client,
 		I18n:          bundle,
@@ -64,6 +69,7 @@ func run() error {
 		Commands:      commands,
 		NodeDefs:      nodeDefs,
 		Events:        events,
+		Docs:          docs,
 	})
 	if err != nil {
 		return err

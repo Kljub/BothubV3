@@ -1,0 +1,7 @@
+[
+  { "slug": "getting-started", "icon": "🚀", "title": { "en": "Getting started", "de": "Erste Schritte" }, "sort": 1 },
+  { "slug": "modules", "icon": "🧩", "title": { "en": "Modules", "de": "Module" }, "sort": 2, "generated": "modules" },
+  { "slug": "builder", "icon": "🛠️", "title": { "en": "Builder", "de": "Builder" }, "sort": 3 },
+  { "slug": "plugins", "icon": "🔌", "title": { "en": "Plugins & SDK", "de": "Plugins & SDK" }, "sort": 4 },
+  { "slug": "updates", "icon": "📣", "title": { "en": "Updates", "de": "Updates" }, "sort": 5, "newestFirst": true }
+]

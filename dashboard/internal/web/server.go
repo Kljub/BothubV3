@@ -32,6 +32,7 @@ type Config struct {
 	Commands      map[string][]CommandInfo // module key -> built-in commands
 	NodeDefs      []json.RawMessage        // shared/nodes/*.json for the editor
 	Events        []EventCategory          // shared/events.json for custom events
+	Docs          DocsLibrary              // shared/docs: shipped guides
 }
 
 // Server is the dashboard HTTP handler.
@@ -45,6 +46,7 @@ type Server struct {
 	commands      map[string][]CommandInfo
 	nodeDefs      []json.RawMessage
 	events        []EventCategory
+	docs          DocsLibrary
 	self          *selfSampler
 	assetVersion  string
 	mainCSS       []byte // css/bothub.css with ?v=<hash> on every @import
@@ -84,6 +86,7 @@ func New(cfg Config) (*Server, error) {
 		commands:      cfg.Commands,
 		nodeDefs:      cfg.NodeDefs,
 		events:        cfg.Events,
+		docs:          cfg.Docs,
 		self:          newSelfSampler(),
 		exit: func() {
 			slog.Info("restart requested from the resource overview")
@@ -148,6 +151,18 @@ func (s *Server) routes() http.Handler {
 	// Pages behind login.
 	auth := func(h authHandler) http.Handler { return s.requireAuth(h) }
 	mux.Handle("POST /logout", auth(s.handleLogout))
+	// Docs: shipped guides, module reference, own articles (editor).
+	mux.Handle("GET /docs", auth(s.handleDocs))
+	mux.Handle("GET /docs/new", auth(s.handleDocEditor))
+	mux.Handle("GET /docs/edit/{id}", auth(s.handleDocEditor))
+	mux.Handle("GET /docs/manage", auth(s.handleDocManage))
+	mux.Handle("POST /docs/preview", auth(s.handleDocPreview))
+	mux.Handle("POST /docs/save", auth(s.handleDocSave))
+	mux.Handle("POST /docs/delete/{id}", auth(s.handleDocDelete))
+	mux.Handle("POST /docs/categories", auth(s.handleDocCategorySave))
+	mux.Handle("POST /docs/categories/{slug}/delete", auth(s.handleDocCategoryDelete))
+	mux.Handle("GET /docs/{category}", auth(s.handleDocs))
+	mux.Handle("GET /docs/{category}/{slug}", auth(s.handleDocArticle))
 	mux.Handle("GET /{$}", auth(s.handleOverview))
 	mux.Handle("GET /overview/tiles", auth(s.handleOverviewTiles))
 	mux.Handle("GET /overview/bots", auth(s.handleBotGrid))

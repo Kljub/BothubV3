@@ -71,6 +71,8 @@
         {{range $.BotSections}}
         {{if and (eq . "invite") $.SelectedBot.ApplicationID}}
         <a class="nav-item" href="{{botInviteURL $.SelectedBot.ApplicationID}}" target="_blank" rel="noopener noreferrer" hx-boost="false">
+        {{else if eq . "docs"}}
+        <a class="nav-item" href="/docs" {{if eq $.Nav "docs"}}aria-current="page"{{end}}>
         {{else}}
         <a class="nav-item" href="/bots{{if ne . "overview"}}/{{.}}{{end}}" {{if eq (printf "bot_%s" .) $.Nav}}aria-current="page"{{end}}>
         {{end}}

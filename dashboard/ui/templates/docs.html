@@ -1,0 +1,225 @@
+{{define "title"}}{{with .Data.Article}}{{.Entry.Title}}{{else}}{{with .Data.Module}}{{.Name}}{{else}}{{t "docs.title"}}{{end}}{{end}}{{end}}
+
+{{/* Docs (internal/web/docs.go): sidebar with search and categories, and on
+     the right the start page, a category, search results, an article, a
+     module reference, the editor or the list of own docs. */}}
+{{define "content"}}
+{{$d := .Data}}
+<div class="docs">
+  <aside class="docs-nav" aria-label="{{t "docs.title"}}">
+    <form class="docs-search" action="/docs" method="get" role="search">
+      <input type="search" name="q" value="{{$d.Query}}" placeholder="{{t "docs.search"}}" aria-label="{{t "docs.search"}}">
+    </form>
+    {{range $d.Categories}}
+    <details class="docs-cat" {{if .Active}}open{{end}}>
+      <summary><span aria-hidden="true">{{.Icon}}</span> {{.Title}}<span class="docs-count">{{len .Entries}}</span></summary>
+      <a class="docs-cat-link" href="/docs/{{.Slug}}">{{t "docs.overview"}}</a>
+      {{$group := ""}}
+      {{range .Entries}}
+      {{if and .Group (ne .Group $group)}}{{$group = .Group}}<span class="docs-group">{{.Group}}</span>{{end}}
+      <a class="docs-link" href="{{.URL}}" {{if .Active}}aria-current="page"{{end}}>{{.Title}}{{if .Draft}} <span class="badge-disabled">{{t "docs.draft"}}</span>{{end}}</a>
+      {{end}}
+    </details>
+    {{end}}
+    {{if $d.CanEdit}}
+    <div class="docs-tools">
+      <a class="btn btn-sm" href="/docs/new">+ {{t "docs.new"}}</a>
+      <a class="btn btn-sm" href="/docs/manage">{{t "docs.manage"}}</a>
+    </div>
+    {{end}}
+  </aside>
+
+  <div class="docs-main">
+    {{if $d.OwnFailing}}<p class="muted docs-note">{{t "docs.own_unavailable"}}</p>{{end}}
+    {{if $d.Editor}}{{template "doc_editor" $d.Editor}}
+    {{else if $d.Manage}}{{template "doc_manage" $d.Manage}}
+    {{else if $d.Module}}{{template "doc_module" $d}}
+    {{else if $d.Article}}{{template "doc_article" $d.Article}}
+    {{else if $d.Query}}
+      <h1>{{t "docs.results" "query" $d.Query}}</h1>
+      {{if $d.Results}}{{template "doc_cards" $d.Results}}{{else}}<p class="muted">{{t "docs.no_results"}}</p>{{end}}
+    {{else if $d.Category}}
+      <h1><span aria-hidden="true">{{$d.Category.Icon}}</span> {{$d.Category.Title}}</h1>
+      {{if $d.Category.Entries}}{{template "doc_cards" $d.Category.Entries}}{{else}}<p class="muted">{{t "docs.empty_category"}}</p>{{end}}
+    {{else}}
+      <section class="docs-hero">
+        <h1>📖 {{t "docs.welcome.title"}}</h1>
+        <p class="muted">{{t "docs.welcome.text"}}</p>
+      </section>
+      <div class="docs-cats">
+        {{range $d.Categories}}
+        <a class="card docs-cat-card" href="/docs/{{.Slug}}">
+          <span class="docs-cat-icon" aria-hidden="true">{{.Icon}}</span>
+          <strong>{{.Title}}</strong>
+          <span class="muted">{{t "docs.articles" "count" (len .Entries)}}</span>
+        </a>
+        {{end}}
+      </div>
+    {{end}}
+  </div>
+</div>
+{{end}}
+
+{{define "doc_cards"}}
+<div class="docs-list">
+  {{range .}}
+  <a class="docs-item" href="{{.URL}}">
+    <strong>{{.Title}}{{if .Draft}} <span class="badge-disabled">{{t "docs.draft"}}</span>{{end}}</strong>
+    {{with .Summary}}<span class="muted">{{.}}</span>{{end}}
+  </a>
+  {{end}}
+</div>
+{{end}}
+
+{{define "doc_article"}}
+<div class="docs-article-wrap">
+  <article class="docs-article">
+    <nav class="module-breadcrumb"><a href="/docs">{{t "docs.title"}}</a> › <a href="/docs/{{.Entry.Category}}">{{.CategoryTitle}}</a> › <strong>{{.Entry.Title}}</strong></nav>
+    <h1>{{.Entry.Title}}</h1>
+    {{if or .Entry.Summary .Updated .Author}}
+    <p class="docs-meta">{{with .Entry.Summary}}<span>{{.}}</span>{{end}}{{with .Updated}}<span>{{t "docs.updated" "date" .}}</span>{{end}}{{with .Author}}<span>{{t "docs.by" "name" .}}</span>{{end}}</p>
+    {{end}}
+    {{if .Entry.Own}}<p><a class="btn btn-sm" href="/docs/edit/{{.Entry.ID}}">✏️ {{t "docs.edit"}}</a></p>{{end}}
+    <div class="docs-body">{{.HTML}}</div>
+    {{template "doc_pager" .}}
+  </article>
+  {{if gt (len .Headings) 2}}
+  <nav class="docs-toc" aria-label="{{t "docs.on_this_page"}}">
+    <strong>{{t "docs.on_this_page"}}</strong>
+    {{range .Headings}}{{if eq .Level 2}}<a href="#{{.ID}}">{{.Text}}</a>{{else if eq .Level 3}}<a class="docs-toc-sub" href="#{{.ID}}">{{.Text}}</a>{{end}}{{end}}
+  </nav>
+  {{end}}
+</div>
+{{end}}
+
+{{define "doc_pager"}}
+{{if or .Prev .Next}}
+<nav class="docs-pager">
+  {{with .Prev}}<a href="{{.URL}}"><span class="muted">← {{t "docs.prev"}}</span><strong>{{.Title}}</strong></a>{{else}}<span></span>{{end}}
+  {{with .Next}}<a class="docs-pager-next" href="{{.URL}}"><span class="muted">{{t "docs.next"}} →</span><strong>{{.Title}}</strong></a>{{end}}
+</nav>
+{{end}}
+{{end}}
+
+{{/* Module reference, built from the module catalog, its settings, commands, blocks and texts. */}}
+{{define "doc_module"}}
+{{$m := .Module}}
+<div class="docs-article-wrap">
+  <article class="docs-article">
+    <nav class="module-breadcrumb"><a href="/docs">{{t "docs.title"}}</a> › <a href="/docs/modules">{{t "docs.modules"}}</a> › <span>{{$m.Category}}</span> › <strong>{{$m.Name}}</strong></nav>
+    <h1><span aria-hidden="true">{{$m.Icon}}</span> {{$m.Name}}</h1>
+    <p class="docs-meta"><span>{{$m.Description}}</span></p>
+    <p><a class="btn btn-sm btn-primary" href="/bots/modules/{{$m.Key}}">{{t "docs.module.open"}} →</a></p>
+    <div class="docs-body">
+      {{with $m.About}}
+      <h2 id="how">{{t "docs.module.how"}}</h2>
+      <ol>{{range .}}<li><strong>{{.Title}}</strong>{{with .Text}} — {{.}}{{end}}</li>{{end}}</ol>
+      {{end}}
+      {{with $m.Settings}}
+      <h2 id="settings">{{t "docs.module.settings"}}</h2>
+      <div class="doc-table"><table><thead><tr><th>{{t "docs.module.setting"}}</th><th>{{t "docs.module.meaning"}}</th></tr></thead><tbody>
+        {{range .}}
+        <tr><td><strong>{{.Label}}</strong></td><td>{{.Hint}}{{if .Items}}<ul class="docs-items">{{range .Items}}<li><strong>{{.Label}}</strong>{{with .Hint}} — {{.}}{{end}}</li>{{end}}</ul>{{end}}</td></tr>
+        {{end}}
+      </tbody></table></div>
+      {{else}}
+      <p class="muted">{{t "docs.module.no_settings"}}</p>
+      {{end}}
+      {{with $m.Commands}}
+      <h2 id="commands">{{t "docs.module.commands"}}</h2>
+      <div class="doc-table"><table><thead><tr><th>{{t "docs.module.command"}}</th><th>{{t "docs.module.meaning"}}</th></tr></thead><tbody>
+        {{range .}}<tr><td><code>{{.Usage}}</code></td><td>{{with .Title}}<strong>{{.}}</strong> {{end}}{{.Description}}</td></tr>{{end}}
+      </tbody></table></div>
+      <p class="muted">{{t "docs.module.commands_hint"}}</p>
+      {{end}}
+      {{with $m.Blocks}}
+      <h2 id="blocks">{{t "docs.module.blocks"}}</h2>
+      <ul>{{range .}}<li><strong>{{.Label}}</strong>{{with .Description}} — {{.}}{{end}}</li>{{end}}</ul>
+      <p class="muted">{{t "docs.module.blocks_hint"}}</p>
+      {{end}}
+    </div>
+    {{template "doc_pager" .Article}}
+  </article>
+</div>
+{{end}}
+
+{{/* Editor of an own article: Markdown on the left, preview on the right. */}}
+{{define "doc_editor"}}
+{{$a := .Article}}
+<h1>{{if $a.ID}}{{t "docs.edit"}}: {{$a.Title}}{{else}}{{t "docs.new"}}{{end}}</h1>
+<div id="doc-editor-error"></div>
+<form class="form docs-editor" hx-post="/docs/save" hx-target="#doc-editor-error">
+  <input type="hidden" name="id" value="{{$a.ID}}">
+  <div class="docs-editor-meta">
+    <label>{{t "docs.field.title"}}<input name="title" value="{{$a.Title}}" maxlength="160" required></label>
+    <label>{{t "docs.field.slug"}}<input name="slug" value="{{$a.Slug}}" maxlength="80" pattern="[a-z0-9][a-z0-9\-]{1,79}" required></label>
+    <label>{{t "docs.field.category"}}
+      <select name="category">{{range .Categories}}{{if ne .Slug "modules"}}<option value="{{.Slug}}" {{if eq .Slug $a.Category}}selected{{end}}>{{.Icon}} {{.Title}}</option>{{end}}{{end}}</select>
+    </label>
+    <label>{{t "docs.field.lang"}}
+      <select name="lang">
+        <option value="" {{if eq $a.Lang ""}}selected{{end}}>{{t "docs.lang.all"}}</option>
+        <option value="de" {{if eq $a.Lang "de"}}selected{{end}}>Deutsch</option>
+        <option value="en" {{if eq $a.Lang "en"}}selected{{end}}>English</option>
+      </select>
+    </label>
+    <label>{{t "docs.field.sort"}}<input name="sort" type="number" min="0" max="10000" value="{{$a.Sort}}"></label>
+    <label class="docs-editor-wide">{{t "docs.field.summary"}}<input name="summary" value="{{$a.Summary}}" maxlength="300"></label>
+  </div>
+  <p class="hint">{{t "docs.editor.hint"}}</p>
+  <div class="docs-editor-split">
+    <textarea name="content" rows="24" maxlength="100000" spellcheck="true" hx-post="/docs/preview" hx-trigger="input changed delay:400ms" hx-target="#doc-preview" hx-swap="innerHTML">{{$a.Content}}</textarea>
+    <div class="docs-body docs-preview" id="doc-preview">{{.Preview}}</div>
+  </div>
+  <div class="docs-editor-actions">
+    <label class="toggle-inline"><input type="checkbox" class="toggle" name="published" value="true" {{if $a.Published}}checked{{end}}> {{t "docs.field.published"}}</label>
+    <button type="submit" class="btn btn-primary">{{t "docs.save"}}</button>
+  </div>
+</form>
+{{if $a.ID}}
+<form class="docs-delete" hx-post="/docs/delete/{{$a.ID}}" hx-confirm="{{t "docs.delete_confirm"}}" hx-target="#doc-editor-error">
+  <button type="submit" class="btn btn-danger btn-sm">{{t "docs.delete"}}</button>
+</form>
+{{end}}
+{{end}}
+
+{{/* Own articles (drafts too) and own categories. */}}
+{{define "doc_manage"}}
+<h1>{{t "docs.manage"}}</h1>
+<section class="box">
+  <header class="box-head"><h2>{{t "docs.manage.articles"}}</h2><a class="btn btn-sm" href="/docs/new">+ {{t "docs.new"}}</a></header>
+  <div class="box-body">
+    {{if .Articles}}
+    <div class="doc-table"><table><thead><tr><th>{{t "docs.field.title"}}</th><th>{{t "docs.field.category"}}</th><th>{{t "docs.field.lang"}}</th><th>{{t "docs.field.updated"}}</th><th></th></tr></thead><tbody>
+      {{range .Articles}}
+      <tr>
+        <td><strong>{{.Title}}</strong>{{if not .Published}} <span class="badge-disabled">{{t "docs.draft"}}</span>{{end}}<br><span class="muted mono">{{.Slug}}</span></td>
+        <td>{{.Category}}</td><td>{{if .Lang}}{{upper .Lang}}{{else}}{{t "docs.lang.all"}}{{end}}</td><td class="muted">{{.UpdatedAt}}</td>
+        <td><a class="btn btn-sm" href="/docs/edit/{{.ID}}">{{t "docs.edit"}}</a></td>
+      </tr>
+      {{end}}
+    </tbody></table></div>
+    {{else}}<p class="muted">{{t "docs.manage.none"}}</p>{{end}}
+  </div>
+</section>
+<section class="box">
+  <header class="box-head"><h2>{{t "docs.manage.categories"}}</h2></header>
+  <div class="box-body">
+    <p class="muted">{{t "docs.manage.categories_hint"}}</p>
+    <div id="doc-category-error"></div>
+    {{range .Own}}
+    <div class="settings-row">
+      <span class="settings-row-text"><strong>{{.Icon}} {{.Title}}</strong><span class="hint mono">{{.Slug}} · {{.Sort}}</span></span>
+      <form hx-post="/docs/categories/{{.Slug}}/delete" hx-confirm="{{t "docs.category.delete_confirm"}}" hx-target="#doc-category-error"><button type="submit" class="btn btn-sm btn-danger">{{t "docs.delete"}}</button></form>
+    </div>
+    {{end}}
+    <form class="form docs-category-form" hx-post="/docs/categories" hx-target="#doc-category-error">
+      <label>{{t "docs.field.icon"}}<input name="icon" maxlength="8" placeholder="❓"></label>
+      <label>{{t "docs.field.title"}}<input name="title" maxlength="80" required></label>
+      <label>{{t "docs.field.slug"}}<input name="slug" maxlength="60" pattern="[a-z0-9][a-z0-9\-]{1,59}" required></label>
+      <label>{{t "docs.field.sort"}}<input name="sort" type="number" min="0" max="10000" value="100"></label>
+      <button type="submit" class="btn btn-primary btn-sm">{{t "docs.category.save"}}</button>
+    </form>
+  </div>
+</section>
+{{end}}

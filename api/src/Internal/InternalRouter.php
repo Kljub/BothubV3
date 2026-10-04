@@ -35,6 +35,7 @@ final class InternalRouter
         // The signed-in user (auth layer): owner of their secrets and new bots.
         private readonly int $userId = 1,
         private readonly ?StatsStore $stats = null,
+        private readonly ?DocsStore $docs = null,
     ) {
     }
 
@@ -135,6 +136,9 @@ final class InternalRouter
             if ($this->plugins !== null && preg_match('#^/internal/bots/(\d+)/plugins(?:/([a-z0-9_-]{2,64})(/config|/commands|/options)?)?$#', $path, $m)) {
                 $this->bots->find((int) $m[1]) ?? throw ApiError::notFound();
                 return $this->botPluginRoute($method, (int) $m[1], $m[2] ?? null, $m[3] ?? '', $body);
+            }
+            if ($this->docs !== null && preg_match('#^/internal/docs(?:/categories(?:/([a-z0-9-]{1,60}))?|/(\d+))?$#', $path, $m)) {
+                return $this->docsRoute($method, $path, $m, $body);
             }
             if ($this->stats !== null && preg_match('#^/internal/bots/(\d+)/stats$#', $path, $m)) {
                 $this->bots->find((int) $m[1]) ?? throw ApiError::notFound();
@@ -613,5 +617,35 @@ final class InternalRouter
             throw new ApiError(422, 'error.validation', ['field' => 'avatarUrl']);
         }
         return $v;
+    }
+
+    /** Docs of the dashboard: list, one article, save, delete; own categories. */
+    private function docsRoute(string $method, string $path, array $m, array $body): array
+    {
+        $d = $this->docs;
+        if (str_starts_with($path, '/internal/docs/categories')) {
+            $slug = $m[1] ?? '';
+            return match (true) {
+                $slug === '' && $method === 'GET' => [200, ['items' => $d->categories()]],
+                $slug === '' && $method === 'POST' => [200, ['items' => $d->saveCategory($body)]],
+                $slug !== '' && $method === 'DELETE' => (function () use ($d, $slug): array {
+                    $d->deleteCategory($slug);
+                    return [204, null];
+                })(),
+                default => throw new ApiError(405, 'error.method_not_allowed'),
+            };
+        }
+        $id = isset($m[2]) && $m[2] !== '' ? (int) $m[2] : null;
+        return match (true) {
+            $id === null && $method === 'GET' => [200, $d->list()],
+            $id === null && $method === 'POST' => [201, $d->save(null, $body, $this->actor)],
+            $id !== null && $method === 'GET' => [200, $d->get($id)],
+            $id !== null && $method === 'PUT' => [200, $d->save($id, $body, $this->actor)],
+            $id !== null && $method === 'DELETE' => (function () use ($d, $id): array {
+                $d->delete($id);
+                return [204, null];
+            })(),
+            default => throw new ApiError(405, 'error.method_not_allowed'),
+        };
     }
 }

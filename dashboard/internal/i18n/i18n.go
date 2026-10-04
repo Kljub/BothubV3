@@ -122,6 +122,16 @@ func (b *Bundle) T(locale, key string, args ...any) string {
 	return msg
 }
 
+// Lookup is T without the warning: ok false when the key has no text
+// (e.g. optional "how it works" texts of the docs).
+func (b *Bundle) Lookup(locale, key string) (string, bool) {
+	msg, ok := b.messages[locale][key]
+	if !ok {
+		msg, ok = b.messages[Fallback][key]
+	}
+	return msg, ok
+}
+
 // SetPlugin replaces the texts of one installed plugin (its lang files).
 // Only keys under "plugin.<id>." are kept, so a plugin can never change
 // dashboard texts or another plugin's texts; long values are dropped.

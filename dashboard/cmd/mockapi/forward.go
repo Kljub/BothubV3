@@ -147,6 +147,11 @@ func phpRequired(w http.ResponseWriter, _ *http.Request, _ *bot) {
 }
 
 // adminPHPRequired is phpRequired for admin routes.
+// noDocs: without the PHP API there are no own docs (the shipped ones still show).
+func noDocs(w http.ResponseWriter, _ *http.Request, _ string) {
+	writeJSON(w, 200, map[string]any{"articles": []any{}, "categories": []any{}, "items": []any{}})
+}
+
 func adminPHPRequired(w http.ResponseWriter, _ *http.Request, _ string) {
 	apiError(w, 503, "error.api.unreachable")
 }
