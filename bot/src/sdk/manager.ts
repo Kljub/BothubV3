@@ -305,7 +305,8 @@ export class PluginManager {
     if (!id) return false;
     const p = (this.running.get(botId) ?? []).find((x) => pluginCode(x.manifest.id) === id.code);
     const ri = i as RepliableInteraction;
-    if (!p || !p.permissions.has('discord.interactions')) {
+    // Clicks and modals: answering needs discord.interactions.reply or discord.modals (the old key discord.interactions is split into both).
+    if (!p || !(p.permissions.has('discord.interactions.reply' as Permission) || p.permissions.has('discord.modals' as Permission))) {
       void ri.reply({ content: 'This button is not available any more.', flags: 64 }).catch(() => undefined);
       return true;
     }
@@ -423,7 +424,9 @@ export class PluginManager {
     }
     // The command/click of the run: the plugin may answer it (ctx.interaction.*) when allowed.
     const interaction = (run.data as { interaction?: RepliableInteraction } | undefined)?.interaction;
-    const handle = interaction && p.permissions.has('discord.interactions') ? this.interactions.hold(p.botId, p.manifest.id, interaction, false) : undefined;
+    const handle = interaction && (p.permissions.has('discord.interactions.reply' as Permission) || p.permissions.has('discord.modals' as Permission))
+      ? this.interactions.hold(p.botId, p.manifest.id, interaction, false)
+      : undefined;
     const res = (await p.runBlock(name, config, vars, handle)) as { port?: unknown; results?: unknown } | null;
     if (res && typeof res === 'object') {
       if (res.results && typeof res.results === 'object') {

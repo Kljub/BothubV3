@@ -660,6 +660,27 @@ test('http.secret with plugin files: multipart upload of a stored image, image a
   }
 });
 
+test('a block run by a command gets the interaction handle with discord.interactions.reply (also from the old key)', async () => {
+  const { db, pluginsDir, manager } = setup();
+  for (const [id, perms] of [['plugin_answers', ['discord.interactions.reply']], ['plugin_oldkey', ['discord.interactions']], ['plugin_silent', []]] as const) {
+    const manifest = { id, name: id, version: '1.0.0', sdk: 1, main: 'index.js', permissions: perms, blocks: [{ name: 'run', definition: {} }] };
+    install(db, pluginsDir, id, { 'bothub-plugin.json': JSON.stringify(manifest), 'index.js': `export default { blocks: { async run(ctx, input) { return { results: { '.handle': typeof input.interaction } }; } } };` });
+  }
+  db.prepare("INSERT INTO sdk_policies (permission, enabled) VALUES ('discord.interactions.reply', 1), ('discord.modals', 1)").run();
+  try {
+    await manager.startBot(1);
+    const interaction = { replied: false, deferred: false, isMessageComponent: () => false };
+    for (const [id, want] of [['plugin_answers', 'string'], ['plugin_oldkey', 'string'], ['plugin_silent', 'undefined']] as const) {
+      const { run, results } = fakeRun({});
+      (run as { data?: unknown }).data = { interaction };
+      await manager.blockHandlers(1).get(`plugin.${id}.run`)!(node(`plugin.${id}.run`), run);
+      assert.equal(results['.handle'], want, id);
+    }
+  } finally {
+    manager.stopAll();
+  }
+});
+
 test('voice: files of the plugin folder only, needs discord.voice, keys like the template', async () => {
   const { db, pluginsDir, manager } = setup();
   Object.assign(voiceState, { channelId: null, playing: false, label: null, owner: null, played: [] });
