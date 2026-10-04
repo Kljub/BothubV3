@@ -270,13 +270,16 @@ check('other zip same version refused', $r[0] === 409);
 $bot2 = (int) call('POST', '/internal/bots', ['name' => 'Two', 'token' => 'y.' . str_repeat('b', 60)])[1]['id'];
 check('new bot gets copies', (int) $pdo->query("SELECT COUNT(*) FROM commands WHERE plugin_id = 'plugin_greeter' AND bot_id = {$bot2}")->fetchColumn() === 1);
 
-// Update: new command added, changed one reported, user edits kept.
-$pdo->exec("UPDATE commands SET enabled = 1 WHERE plugin_id = 'plugin_greeter' AND bot_id = {$bot1}");
+// Update: new command added, unsaved copies follow, saved ones are reported, user edits kept.
+$pdo->exec("UPDATE commands SET enabled = 1, hidden = 0 WHERE plugin_id = 'plugin_greeter' AND bot_id = {$bot1}");
 $v2 = pluginFiles('1.1.0', ['hello', 'bye']);
 $v2['commands/hello.json'] = json_encode(['name' => 'hello', 'description' => 'Changed', 'graph' => graph('hello')]);
 $r = install(zipOf($v2));
 check('update 201', $r[0] === 201 && $r[1]['version'] === '1.1.0');
 check('update adds only new', $r[1]['commands']['created'] === 2 && $r[1]['commands']['changed'] === ['hello']);
+check('update brings the unsaved copy along', $r[1]['commands']['updated'] === 1
+    && (string) $pdo->query("SELECT plugin_version FROM commands WHERE plugin_id = 'plugin_greeter' AND preset_name = 'hello' AND bot_id = {$bot2}")->fetchColumn() === '1.1.0'
+    && (string) $pdo->query("SELECT plugin_version FROM commands WHERE plugin_id = 'plugin_greeter' AND preset_name = 'hello' AND bot_id = {$bot1}")->fetchColumn() !== '1.1.0');
 check('user state kept', (int) $pdo->query("SELECT enabled FROM commands WHERE plugin_id = 'plugin_greeter' AND preset_name = 'hello' AND bot_id = {$bot1}")->fetchColumn() === 1);
 $v3 = pluginFiles('1.2.0', ['bye']);
 install(zipOf($v3));

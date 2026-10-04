@@ -152,10 +152,12 @@ final class PluginStore
                     ->execute([$m['id'], $m['version']]);
                 $this->createSecretPlaceholders($pdo, $m, $actor);
                 $created = 0;
+                $updated = 0;
                 $changed = [];
                 foreach ($pdo->query('SELECT id FROM bots')->fetchAll(PDO::FETCH_COLUMN) as $botId) {
                     $r = $this->copyCommands($pdo, (int) $botId, $m, $plugin['commands']);
                     $created += $r['created'];
+                    $updated += $r['updated'];
                     if ($r['created'] > 0) {
                         Outbox::add($pdo, 'commands.changed', ['botId' => (int) $botId]);
                     }
@@ -163,7 +165,7 @@ final class PluginStore
                 }
                 Outbox::add($pdo, 'plugins.changed', []);
                 $this->log($pdo, 'log.server.plugin_installed', ['plugin' => $m['id'], 'version' => $m['version'], 'actor' => $actor]);
-                return ['created' => $created, 'changed' => $changed];
+                return ['created' => $created, 'updated' => $updated, 'changed' => $changed];
             });
             return ['id' => $m['id'], 'version' => $m['version'], 'sha256' => $sha, 'manifest' => $m, 'commands' => $result];
         } finally {
@@ -560,26 +562,38 @@ final class PluginStore
 
     /**
      * Creates missing disabled copies of the plugin's commands for one bot,
-     * in a group named after the plugin. Existing copies are never
-     * overwritten; a changed graph is reported.
+     * in a group named after the plugin. Copies the user never saved
+     * (hidden = 1) follow a new plugin version (graph and version; the
+     * enabled switch stays); saved copies are never overwritten, their
+     * changed graph is reported.
      *
-     * @return array{created: int, changed: list<string>, conflicts: list<string>}
+     * @return array{created: int, updated: int, changed: list<string>, conflicts: list<string>}
      */
     public function copyCommands(PDO $pdo, int $botId, array $m, array $commands): array
     {
-        $out = ['created' => 0, 'changed' => [], 'conflicts' => []];
+        $out = ['created' => 0, 'updated' => 0, 'changed' => [], 'conflicts' => []];
         if ($commands === []) {
             return $out;
         }
         $group = null;
-        $find = $pdo->prepare('SELECT id, graph FROM commands WHERE bot_id = ? AND plugin_id = ? AND preset_name = ? AND deleted_at IS NULL');
+        $find = $pdo->prepare('SELECT id, graph, hidden FROM commands WHERE bot_id = ? AND plugin_id = ? AND preset_name = ? AND deleted_at IS NULL');
         $taken = $pdo->prepare("SELECT 1 FROM commands WHERE bot_id = ? AND kind = 'command' AND builtin = 0 AND deleted_at IS NULL AND name = ?");
         foreach ($commands as $preset => $c) {
             $graph = json_encode($c['graph'], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             $find->execute([$botId, $m['id'], $preset]);
             $existing = $find->fetch();
             if ($existing) {
-                if ($existing['graph'] !== $graph) {
+                // Compare decoded: key order or escaping alone is no change.
+                if (json_decode((string) $existing['graph'], true) == json_decode($graph, true)) {
+                    continue;
+                }
+                if ((int) $existing['hidden'] === 1) {
+                    $pdo->prepare("UPDATE commands SET graph = ?, description = ?, plugin_version = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?")
+                        ->execute([$graph, mb_substr($c['description'], 0, 100), $m['version'], (int) $existing['id']]);
+                    $pdo->prepare('INSERT INTO command_versions (command_id, nodes, graph) VALUES (?, ?, ?)')->execute([(int) $existing['id'], $c['nodes'], $graph]);
+                    Outbox::add($pdo, 'command.saved', ['botId' => $botId, 'commandId' => (int) $existing['id']]);
+                    $out['updated']++;
+                } else {
                     $out['changed'][] = $preset;
                 }
                 continue;
