@@ -9,6 +9,8 @@ import (
 	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -49,19 +51,27 @@ type sessionData struct {
 	lastSeen  time.Time
 	userAgent string
 	ip        string
+	userID    int64 // the signed-in user
+}
+
+// loginTicket: password right, 2FA asked next (valid 5 minutes).
+type loginTicket struct {
+	userID  int64
+	expires time.Time
 }
 
 type store struct {
-	mu       sync.Mutex
-	user     string
-	password string
-	locale   string
-	theme    string
-	sessions map[string]*sessionData
-	bots     map[int64]*bot
-	nextID   int64
-	modules  map[string]bool // "<botID>/<key>"
-	known    map[string]bool // valid module keys
+	mu            sync.Mutex
+	syncMu        sync.Mutex // orders the writes of account data to the PHP API
+	defaultLocale string
+	tickets       map[string]loginTicket
+	sessions      map[string]*sessionData
+	// envPasswordPlain: BOTHUB_ADMIN_PASSWORD is set as plain text (admins see a warning).
+	envPasswordPlain bool
+	bots             map[int64]*bot
+	nextID           int64
+	modules          map[string]bool // "<botID>/<key>"
+	known            map[string]bool // valid module keys
 
 	discord *discordClient
 	php     *phpBots // nil: bots stay in memory
@@ -99,22 +109,35 @@ type store struct {
 	users          []*mockUser
 	roleSeq        int64
 	userSeq        int64
-	account        accountData
 	smtp           smtpData
 	activePorts    [3]int // ports the running instance uses (public, api, redis)
 }
 
 func main() {
+	// "app hash-password": prints the Argon2id hash of a password (stdin or
+	// argument) for BOTHUB_ADMIN_PASSWORD.
+	if len(os.Args) > 1 && os.Args[1] == "hash-password" {
+		pw := strings.Join(os.Args[2:], " ")
+		if pw == "" {
+			b, _ := io.ReadAll(io.LimitReader(os.Stdin, 1024))
+			pw = strings.TrimRight(string(b), "\r\n")
+		}
+		if pw == "" {
+			fmt.Fprintln(os.Stderr, "usage: app hash-password <password>   (or the password on stdin)")
+			os.Exit(2)
+		}
+		fmt.Println(hashPassword(pw))
+		return
+	}
+	envUser, envPassword := os.Getenv("BOTHUB_ADMIN_USER"), os.Getenv("BOTHUB_ADMIN_PASSWORD")
 	s := &store{
-		user:     os.Getenv("BOTHUB_ADMIN_USER"),
-		password: os.Getenv("BOTHUB_ADMIN_PASSWORD"),
-		locale:   "en",
-		theme:    "system",
-		sessions: map[string]*sessionData{},
-		bots:     map[int64]*bot{},
-		nextID:   1,
-		modules:  map[string]bool{},
-		known:    loadModuleKeys(),
+		defaultLocale: "en",
+		tickets:       map[string]loginTicket{},
+		sessions:      map[string]*sessionData{},
+		bots:          map[int64]*bot{},
+		nextID:        1,
+		modules:       map[string]bool{},
+		known:         loadModuleKeys(),
 	}
 	s.srvSettings = defaultServerSettings()
 	s.started = time.Now()
@@ -133,8 +156,24 @@ func main() {
 	}
 	s.passkeys = newPasskeyStore()
 	s.cmdStates, s.commandCatalog = map[string]bool{}, loadCommandCatalog()
-	if s.user != "" && s.password != "" {
-		slog.Warn("mockapi: admin user taken from ENV", "user", s.user)
+	s.loadAccounts()
+	// BOTHUB_ADMIN_PASSWORD may be plain text or an Argon2id hash
+	// ("$argon2id$…", see "app hash-password"). Plain text works, but admins see
+	// a warning until the variable holds a hash.
+	envHashed := strings.HasPrefix(envPassword, "$argon2id$")
+	s.envPasswordPlain = envPassword != "" && !envHashed
+	if s.envPasswordPlain {
+		slog.Warn("mockapi: BOTHUB_ADMIN_PASSWORD is plain text; put an Argon2id hash there (app hash-password)")
+	}
+	if len(s.users) == 0 && envUser != "" && envPassword != "" {
+		s.mu.Lock()
+		u := s.newUser(envUser, envPassword, 1, nil)
+		if envHashed {
+			u.passwordHash = envPassword
+			s.persistUser(u)
+		}
+		s.mu.Unlock()
+		slog.Info("mockapi: admin user taken from ENV", "user", envUser)
 	}
 
 	mux := http.NewServeMux()
@@ -339,8 +378,12 @@ func (s *store) auth(next authed) http.HandlerFunc {
 		if err == nil {
 			sess = s.sessions[c.Value]
 		}
+		if sess != nil && s.userByID(sess.userID) == nil {
+			sess = nil // the user was deleted
+		}
 		if sess != nil {
 			touchSession(sess, r)
+			r = r.WithContext(withUser(r.Context(), sess.userID))
 		}
 		s.mu.Unlock()
 		if sess == nil {
@@ -361,7 +404,7 @@ func (s *store) auth(next authed) http.HandlerFunc {
 func (s *store) setupState(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	writeJSON(w, 200, map[string]bool{"required": s.user == ""})
+	writeJSON(w, 200, map[string]bool{"required": len(s.users) == 0})
 }
 
 func (s *store) setup(w http.ResponseWriter, r *http.Request) {
@@ -370,22 +413,22 @@ func (s *store) setup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.mu.Lock()
-	if s.user != "" {
+	if len(s.users) > 0 {
 		s.mu.Unlock()
 		apiError(w, 409, "error.setup.already_done")
 		return
 	}
-	if len(in.Username) < 3 || len(in.Password) < 12 {
+	if len(in.Username) < 3 || len(in.Username) > 32 || len(in.Password) < minPassword {
 		s.mu.Unlock()
 		apiError(w, 422, "error.field.too_short")
 		return
 	}
-	s.user, s.password = in.Username, in.Password
 	if in.Locale != "" {
-		s.locale = in.Locale
+		s.defaultLocale = in.Locale
 	}
+	u := s.newUser(in.Username, in.Password, 1, nil)
 	s.mu.Unlock()
-	s.startSession(w, r, 201)
+	s.startSession(w, r, 201, u.ID)
 }
 
 func (s *store) login(w http.ResponseWriter, r *http.Request) {
@@ -394,12 +437,25 @@ func (s *store) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.mu.Lock()
-	ok := s.user != "" &&
-		subtle.ConstantTimeCompare([]byte(in.Username), []byte(s.user)) == 1 &&
-		subtle.ConstantTimeCompare([]byte(in.Password), []byte(s.password)) == 1
-	if ok && s.account.totpSecret != "" {
+	u := s.userByName(in.Username)
+	hash := ""
+	if u != nil {
+		hash = u.passwordHash
+	}
+	s.mu.Unlock()
+	// The hash is checked outside the lock (Argon2id takes a moment); an unknown
+	// name costs the same as a wrong password.
+	if hash == "" {
+		hash = dummyHash
+	}
+	ok := checkPassword(hash, in.Password) && u != nil
+	s.mu.Lock()
+	if ok && s.roleKey(u.RoleID) == "banned" {
+		ok = false
+	}
+	if ok && u.totpSecret != "" {
 		// Password right, 2FA on: hand out a short-lived ticket for the second step.
-		ticket := s.newTicket()
+		ticket := s.newTicket(u.ID)
 		s.mu.Unlock()
 		apiErrorParams(w, 401, "error.auth.totp_required", map[string]any{"ticket": ticket})
 		return
@@ -409,22 +465,27 @@ func (s *store) login(w http.ResponseWriter, r *http.Request) {
 		apiError(w, 401, "error.auth.invalid_credentials")
 		return
 	}
-	s.startSession(w, r, 200)
+	s.startSession(w, r, 200, u.ID)
 }
 
 // startSession always creates a new session ID (no fixation).
-func (s *store) startSession(w http.ResponseWriter, r *http.Request, status int) {
+func (s *store) startSession(w http.ResponseWriter, r *http.Request, status int, userID int64) {
 	sid, csrf := randomHex(32), randomHex(32)
 	s.mu.Lock()
-	sess := &sessionData{csrf: csrf, id: randomHex(8), createdAt: time.Now().UTC()}
+	sess := &sessionData{csrf: csrf, id: randomHex(8), createdAt: time.Now().UTC(), userID: userID}
 	touchSession(sess, r)
 	s.sessions[sid] = sess
+	if u := s.userByID(userID); u != nil {
+		now := time.Now().UTC()
+		u.LastLoginAt = &now
+		s.persistUser(u)
+	}
 	s.mu.Unlock()
 	http.SetCookie(w, &http.Cookie{
 		Name: "bothub_session", Value: sid, Path: "/",
 		HttpOnly: true, SameSite: http.SameSiteStrictMode,
 	})
-	writeJSON(w, status, s.meFor(csrf))
+	writeJSON(w, status, s.meFor(userID, csrf))
 }
 
 func (s *store) logout(w http.ResponseWriter, r *http.Request, sid string) {
@@ -437,24 +498,37 @@ func (s *store) logout(w http.ResponseWriter, r *http.Request, sid string) {
 
 func (s *store) me(w http.ResponseWriter, r *http.Request, sid string) {
 	s.mu.Lock()
-	csrf := s.sessions[sid].csrf
+	sess := s.sessions[sid]
 	s.mu.Unlock()
-	writeJSON(w, 200, s.meFor(csrf))
+	writeJSON(w, 200, s.meFor(sess.userID, sess.csrf))
 }
 
-func (s *store) meFor(csrf string) map[string]any {
+func (s *store) meFor(userID int64, csrf string) map[string]any {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return map[string]any{"username": s.user, "email": s.account.email, "twoFactorEnabled": s.account.totpSecret != "",
-		"locale": s.locale, "theme": s.theme, "csrfToken": csrf}
+	u := s.userByID(userID)
+	if u == nil {
+		return map[string]any{"csrfToken": csrf}
+	}
+	perms := s.permissionsOf(u)
+	if perms == nil {
+		perms = []string{}
+	}
+	warnings := []string{}
+	if s.envPasswordPlain && slices.Contains(perms, "admin.access") {
+		warnings = append(warnings, "env_password_plain")
+	}
+	return map[string]any{"id": u.ID, "username": u.Username, "email": u.Email, "twoFactorEnabled": u.totpSecret != "",
+		"locale": u.localeOr(s.defaultLocale), "theme": u.themeOr(), "roleId": u.RoleID, "permissions": perms, "warnings": warnings, "csrfToken": csrf}
 }
 
 // --- settings ---
 
-func (s *store) settings(w http.ResponseWriter, r *http.Request, _ string) {
+func (s *store) settings(w http.ResponseWriter, r *http.Request, sid string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	writeJSON(w, 200, map[string]string{"locale": s.locale, "theme": s.theme})
+	u := s.sessUser(sid)
+	writeJSON(w, 200, map[string]string{"locale": u.localeOr(s.defaultLocale), "theme": u.themeOr()})
 }
 
 func (s *store) updateSettings(w http.ResponseWriter, r *http.Request, sid string) {
@@ -470,13 +544,15 @@ func (s *store) updateSettings(w http.ResponseWriter, r *http.Request, sid strin
 		apiError(w, 422, "error.settings.invalid")
 		return
 	}
+	u := s.sessUser(sid)
 	if in.Locale != "" {
-		s.locale = in.Locale
+		u.locale = in.Locale
 	}
 	if in.Theme != "" {
-		s.theme = in.Theme
+		u.theme = in.Theme
 	}
-	writeJSON(w, 200, map[string]string{"locale": s.locale, "theme": s.theme})
+	s.persistUser(u)
+	writeJSON(w, 200, map[string]string{"locale": u.localeOr(s.defaultLocale), "theme": u.themeOr()})
 }
 
 // --- bots ---

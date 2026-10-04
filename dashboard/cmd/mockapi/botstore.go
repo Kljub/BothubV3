@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -61,6 +62,9 @@ func (p *phpBots) do(ctx context.Context, method, path string, body, out any) er
 		return err
 	}
 	req.Header.Set("X-BotHub-Internal", p.key)
+	if uid := userFrom(ctx); uid > 0 {
+		req.Header.Set("X-BotHub-User", strconv.FormatInt(uid, 10))
+	}
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}

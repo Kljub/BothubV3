@@ -44,7 +44,7 @@ func (s *store) listSecrets(w http.ResponseWriter, r *http.Request, _ string) {
 
 // putSecret creates or updates a secret. A new secret needs a value; an
 // empty value on update keeps the stored one.
-func (s *store) putSecret(w http.ResponseWriter, r *http.Request, _ string) {
+func (s *store) putSecret(w http.ResponseWriter, r *http.Request, sid string) {
 	key := r.PathValue("key")
 	var in struct {
 		Value       *string `json:"value"`
@@ -90,11 +90,11 @@ func (s *store) putSecret(w http.ResponseWriter, r *http.Request, _ string) {
 		x.value = *in.Value
 	}
 	x.Description, x.UpdatedAt = in.Description, now
-	s.addServerLog(time.Now(), "change", "", "log.server.secret_saved", "api", s.user, map[string]any{"key": key}, nil)
+	s.addServerLog(time.Now(), "change", "", "log.server.secret_saved", "api", s.nameOfLocked(sid), map[string]any{"key": key}, nil)
 	writeJSON(w, 200, x)
 }
 
-func (s *store) deleteSecret(w http.ResponseWriter, r *http.Request, _ string) {
+func (s *store) deleteSecret(w http.ResponseWriter, r *http.Request, sid string) {
 	key := r.PathValue("key")
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -103,6 +103,6 @@ func (s *store) deleteSecret(w http.ResponseWriter, r *http.Request, _ string) {
 		return
 	}
 	delete(s.secrets, key)
-	s.addServerLog(time.Now(), "change", "", "log.server.secret_deleted", "api", s.user, map[string]any{"key": key}, nil)
+	s.addServerLog(time.Now(), "change", "", "log.server.secret_deleted", "api", s.nameOfLocked(sid), map[string]any{"key": key}, nil)
 	w.WriteHeader(204)
 }

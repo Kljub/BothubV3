@@ -128,6 +128,7 @@
       </div>
     </header>
     <main class="main">
+      {{range .Me.Warnings}}<div class="alert alert-warning app-warning">{{t (printf "warning.%s" .)}}</div>{{end}}
       <div id="flash" role="status" aria-live="polite"></div>
       {{template "content" .}}
     </main>

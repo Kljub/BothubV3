@@ -15,16 +15,12 @@ import (
 	"time"
 )
 
-// Account security (password, email, TOTP 2FA) and SMTP settings of the mock
-// API. Development only: everything lives in memory.
+// Account security of the signed-in user (password, email, TOTP 2FA,
+// recovery codes) and the SMTP settings. Accounts are stored through
+// accounts.go.
 
-type accountData struct {
-	email         *string
-	totpSecret    string // active secret; empty = 2FA off
-	pendingSecret string // set by setup, active after enable
-	recoveryCodes []string
-	tickets       map[string]time.Time // 2FA login tickets -> expiry
-}
+// dummyHash: checked for unknown user names, so they cost the same time.
+var dummyHash = hashPassword(randomHex(16))
 
 type smtpData struct {
 	Enabled     bool   `json:"enabled"`
@@ -70,22 +66,24 @@ func totpValid(secret, code string) bool {
 }
 
 // checkSecondFactor accepts a TOTP code or an unused recovery code; caller holds s.mu.
-func (s *store) checkSecondFactor(code string) bool {
+func (s *store) checkSecondFactor(u *mockUser, code string) bool {
 	code = strings.TrimSpace(code)
-	if s.account.totpSecret != "" && totpValid(s.account.totpSecret, code) {
+	if u.totpSecret != "" && totpValid(u.totpSecret, code) {
 		return true
 	}
-	for i, rc := range s.account.recoveryCodes {
-		if subtle.ConstantTimeCompare([]byte(strings.ToLower(code)), []byte(rc)) == 1 {
-			s.account.recoveryCodes = append(s.account.recoveryCodes[:i], s.account.recoveryCodes[i+1:]...)
+	h := recoveryHash(code)
+	for i, rc := range u.recovery {
+		if subtle.ConstantTimeCompare([]byte(h), []byte(rc)) == 1 {
+			u.recovery = append(u.recovery[:i], u.recovery[i+1:]...)
+			s.persistUser(u)
 			return true
 		}
 	}
 	return false
 }
 
-func (s *store) passwordOK(pw string) bool {
-	return subtle.ConstantTimeCompare([]byte(pw), []byte(s.password)) == 1
+func passwordOK(u *mockUser, pw string) bool {
+	return u != nil && checkPassword(u.passwordHash, pw)
 }
 
 // loginTOTP finishes a login that needed a second factor.
@@ -95,47 +93,47 @@ func (s *store) loginTOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.mu.Lock()
-	exp, ok := s.account.tickets[in.Ticket]
-	if !ok || time.Now().After(exp) {
-		delete(s.account.tickets, in.Ticket)
+	t, ok := s.tickets[in.Ticket]
+	u := s.userByID(t.userID)
+	if !ok || u == nil || time.Now().After(t.expires) {
+		delete(s.tickets, in.Ticket)
 		s.mu.Unlock()
 		apiError(w, 401, "error.auth.ticket_expired")
 		return
 	}
-	if !s.checkSecondFactor(in.Code) {
+	if !s.checkSecondFactor(u, in.Code) {
 		s.mu.Unlock()
 		apiError(w, 401, "error.auth.totp_invalid")
 		return
 	}
-	delete(s.account.tickets, in.Ticket)
+	delete(s.tickets, in.Ticket)
 	s.mu.Unlock()
-	s.startSession(w, r, 200)
+	s.startSession(w, r, 200, u.ID)
 }
 
 // newTicket is handed out when the password was right but 2FA is on; caller holds s.mu.
-func (s *store) newTicket() string {
-	if s.account.tickets == nil {
-		s.account.tickets = map[string]time.Time{}
-	}
+func (s *store) newTicket(userID int64) string {
 	t := randomHex(24)
-	s.account.tickets[t] = time.Now().Add(5 * time.Minute)
+	s.tickets[t] = loginTicket{userID: userID, expires: time.Now().Add(5 * time.Minute)}
 	return t
 }
 
-func (s *store) changePassword(w http.ResponseWriter, r *http.Request, _ string) {
+func (s *store) changePassword(w http.ResponseWriter, r *http.Request, sid string) {
 	var in struct{ CurrentPassword, NewPassword string }
 	if !readJSON(w, r, &in) {
 		return
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	u := s.sessUser(sid)
 	switch {
-	case !s.passwordOK(in.CurrentPassword):
+	case !passwordOK(u, in.CurrentPassword):
 		apiError(w, 403, "error.auth.wrong_password")
 	case len([]rune(in.NewPassword)) < minPassword:
 		apiErrorParams(w, 422, "error.password.too_short", map[string]any{"min": minPassword})
 	default:
-		s.password = in.NewPassword
+		u.passwordHash = hashPassword(in.NewPassword)
+		s.persistUser(u)
 		w.WriteHeader(204)
 	}
 }
@@ -150,25 +148,29 @@ func (s *store) changeEmail(w http.ResponseWriter, r *http.Request, sid string) 
 		return
 	}
 	s.mu.Lock()
-	if !s.passwordOK(in.CurrentPassword) {
+	u := s.sessUser(sid)
+	if !passwordOK(u, in.CurrentPassword) {
 		s.mu.Unlock()
 		apiError(w, 403, "error.auth.wrong_password")
 		return
 	}
 	email := in.Email
-	s.account.email = &email
-	csrf := s.sessions[sid].csrf
+	u.Email = &email
+	s.persistUser(u)
+	sess := s.sessions[sid]
 	s.mu.Unlock()
-	writeJSON(w, 200, s.meFor(csrf))
+	writeJSON(w, 200, s.meFor(sess.userID, sess.csrf))
 }
 
-func (s *store) setupTwoFactor(w http.ResponseWriter, r *http.Request, _ string) {
+func (s *store) setupTwoFactor(w http.ResponseWriter, r *http.Request, sid string) {
 	raw := make([]byte, 20)
 	_, _ = rand.Read(raw)
 	secret := b32.EncodeToString(raw)
 	s.mu.Lock()
-	s.account.pendingSecret = secret
-	user := s.user
+	u := s.sessUser(sid)
+	u.pendingSecret = secret
+	s.persistUser(u)
+	user := u.Username
 	s.mu.Unlock()
 	uri := "otpauth://totp/" + url.PathEscape("BotHub:"+user) + "?" + url.Values{
 		"secret": {secret}, "issuer": {"BotHub"}, "algorithm": {"SHA1"}, "digits": {"6"}, "period": {"30"},
@@ -176,42 +178,49 @@ func (s *store) setupTwoFactor(w http.ResponseWriter, r *http.Request, _ string)
 	writeJSON(w, 200, map[string]string{"secret": secret, "otpauthUri": uri})
 }
 
-func (s *store) enableTwoFactor(w http.ResponseWriter, r *http.Request, _ string) {
+func (s *store) enableTwoFactor(w http.ResponseWriter, r *http.Request, sid string) {
 	var in struct{ Code string }
 	if !readJSON(w, r, &in) {
 		return
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.account.pendingSecret == "" || !totpValid(s.account.pendingSecret, strings.TrimSpace(in.Code)) {
+	u := s.sessUser(sid)
+	if u.pendingSecret == "" || !totpValid(u.pendingSecret, strings.TrimSpace(in.Code)) {
 		apiError(w, 422, "error.auth.totp_invalid")
 		return
 	}
-	s.account.totpSecret, s.account.pendingSecret = s.account.pendingSecret, ""
-	s.account.recoveryCodes = nil
+	u.totpSecret, u.pendingSecret = u.pendingSecret, ""
+	// The codes are shown once; only their hashes are kept.
+	codes := make([]string, 0, 8)
+	u.recovery = nil
 	for range 8 {
 		c := randomHex(5)
-		s.account.recoveryCodes = append(s.account.recoveryCodes, c[:5]+"-"+c[5:])
+		codes = append(codes, c[:5]+"-"+c[5:])
+		u.recovery = append(u.recovery, recoveryHash(c[:5]+"-"+c[5:]))
 	}
-	writeJSON(w, 200, map[string]any{"recoveryCodes": s.account.recoveryCodes})
+	s.persistUser(u)
+	writeJSON(w, 200, map[string]any{"recoveryCodes": codes})
 }
 
-func (s *store) disableTwoFactor(w http.ResponseWriter, r *http.Request, _ string) {
+func (s *store) disableTwoFactor(w http.ResponseWriter, r *http.Request, sid string) {
 	var in struct{ CurrentPassword, Code string }
 	if !readJSON(w, r, &in) {
 		return
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if !s.passwordOK(in.CurrentPassword) {
+	u := s.sessUser(sid)
+	if !passwordOK(u, in.CurrentPassword) {
 		apiError(w, 403, "error.auth.wrong_password")
 		return
 	}
-	if !s.checkSecondFactor(in.Code) {
+	if !s.checkSecondFactor(u, in.Code) {
 		apiError(w, 422, "error.auth.totp_invalid")
 		return
 	}
-	s.account.totpSecret, s.account.recoveryCodes = "", nil
+	u.totpSecret, u.recovery = "", nil
+	s.persistUser(u)
 	w.WriteHeader(204)
 }
 

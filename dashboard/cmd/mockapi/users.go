@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -32,7 +33,33 @@ type mockUser struct {
 	Self             bool       `json:"self"`
 	CreatedAt        time.Time  `json:"createdAt"`
 	LastLoginAt      *time.Time `json:"lastLoginAt"`
-	password         string
+	passwordHash     string     // Argon2id (PHC string)
+	locale, theme    string
+	totpSecret       string   // active secret; empty = 2FA off
+	pendingSecret    string   // set by setup, active after enable
+	recovery         []string // hashes of the unused recovery codes
+}
+
+func (u *mockUser) localeOr(fallback string) string {
+	if u == nil || u.locale == "" {
+		return fallback
+	}
+	return u.locale
+}
+
+func (u *mockUser) themeOr() string {
+	if u == nil || u.theme == "" {
+		return "system"
+	}
+	return u.theme
+}
+
+// roleKey: "admin", "user", "banned", … ("" for an unknown role); caller holds s.mu.
+func (s *store) roleKey(id int64) string {
+	if r := s.roleByID(id); r != nil {
+		return r.Key
+	}
+	return ""
 }
 
 var allPermissions = []string{"admin.access", "users.manage", "bots.create", "bots.manage", "bots.view", "modules.manage", "plugins.manage", "logs.view"}
@@ -45,9 +72,8 @@ func (s *store) seedUsers() {
 		{ID: 4, Key: "guest", Name: "Guest", Builtin: true, Permissions: []string{"bots.view"}},
 	}
 	s.roleSeq = 4
-	// Only the admin (setup wizard or ENV); further users come from Users & Roles.
-	s.users = []*mockUser{{ID: 1, Username: s.user, RoleID: 1, CreatedAt: time.Now().UTC()}}
-	s.userSeq = 1
+	// No users yet: the setup wizard (or ENV) creates the first admin; further
+	// users come from Users & Roles. Stored ones are loaded by loadAccounts.
 }
 
 func (s *store) rolesJSON() []*role {
@@ -109,8 +135,9 @@ func (s *store) createRole(w http.ResponseWriter, r *http.Request, _ string) {
 		}
 	}
 	s.roleSeq++
-	nr := &role{ID: s.roleSeq, Name: in.Name, Permissions: validPermissions(in.Permissions)}
+	nr := &role{ID: s.roleSeq, Key: fmt.Sprintf("custom%d", s.roleSeq), Name: in.Name, Permissions: validPermissions(in.Permissions)}
 	s.roles = append(s.roles, nr)
+	s.persistRole(nr)
 	writeJSON(w, 201, nr)
 }
 
@@ -131,6 +158,7 @@ func (s *store) updateRole(w http.ResponseWriter, r *http.Request, _ string) {
 	}
 	if ro.Key != "admin" { // admin keeps every permission
 		ro.Permissions = validPermissions(in.Permissions)
+		s.persistRole(ro)
 	}
 	writeJSON(w, 200, ro)
 }
@@ -151,20 +179,21 @@ func (s *store) deleteRole(w http.ResponseWriter, r *http.Request, _ string) {
 	for _, u := range s.users {
 		if u.RoleID == id {
 			u.RoleID = 2 // back to "User"
+			s.persistUser(u)
 		}
 	}
 	s.roles = slices.DeleteFunc(s.roles, func(x *role) bool { return x.ID == id })
+	s.phpDelete(fmt.Sprintf("/internal/accounts/roles/%d", id))
 	w.WriteHeader(204)
 }
 
-func (s *store) listUsers(w http.ResponseWriter, r *http.Request, _ string) {
+func (s *store) listUsers(w http.ResponseWriter, r *http.Request, sid string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	me := s.sessUser(sid)
 	for _, u := range s.users {
-		u.Self = u.ID == 1
-		if u.ID == 1 {
-			u.Username, u.Email, u.TwoFactorEnabled = s.user, s.account.email, s.account.totpSecret != ""
-		}
+		u.Self = me != nil && u.ID == me.ID
+		u.TwoFactorEnabled = u.totpSecret != ""
 	}
 	writeJSON(w, 200, map[string]any{"items": s.users})
 }
@@ -198,17 +227,16 @@ func (s *store) createUser(w http.ResponseWriter, r *http.Request, _ string) {
 			return
 		}
 	}
-	s.userSeq++
-	nu := &mockUser{ID: s.userSeq, Username: in.Username, RoleID: in.RoleID, CreatedAt: time.Now().UTC(), password: in.Password}
+	var email *string
 	if in.Email != "" {
 		e := in.Email
-		nu.Email = &e
+		email = &e
 	}
-	s.users = append(s.users, nu)
+	nu := s.newUser(in.Username, in.Password, in.RoleID, email)
 	writeJSON(w, 201, nu)
 }
 
-func (s *store) patchUser(w http.ResponseWriter, r *http.Request, _ string) {
+func (s *store) patchUser(w http.ResponseWriter, r *http.Request, sid string) {
 	var in struct {
 		RoleID int64 `json:"roleId"`
 	}
@@ -218,7 +246,7 @@ func (s *store) patchUser(w http.ResponseWriter, r *http.Request, _ string) {
 	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if id == 1 {
+	if me := s.sessUser(sid); me != nil && me.ID == id {
 		apiError(w, 409, "error.user.self")
 		return
 	}
@@ -229,6 +257,7 @@ func (s *store) patchUser(w http.ResponseWriter, r *http.Request, _ string) {
 	for _, u := range s.users {
 		if u.ID == id {
 			u.RoleID = in.RoleID
+			s.persistUser(u)
 			writeJSON(w, 200, u)
 			return
 		}
@@ -236,11 +265,11 @@ func (s *store) patchUser(w http.ResponseWriter, r *http.Request, _ string) {
 	apiError(w, 404, "error.not_found")
 }
 
-func (s *store) deleteUser(w http.ResponseWriter, r *http.Request, _ string) {
+func (s *store) deleteUser(w http.ResponseWriter, r *http.Request, sid string) {
 	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if id == 1 {
+	if me := s.sessUser(sid); me != nil && me.ID == id {
 		apiError(w, 409, "error.user.self")
 		return
 	}
@@ -250,6 +279,13 @@ func (s *store) deleteUser(w http.ResponseWriter, r *http.Request, _ string) {
 		apiError(w, 404, "error.not_found")
 		return
 	}
+	// Their sessions end with them.
+	for k, sess := range s.sessions {
+		if sess.userID == id {
+			delete(s.sessions, k)
+		}
+	}
+	s.phpDelete(fmt.Sprintf("/internal/accounts/users/%d", id))
 	w.WriteHeader(204)
 }
 

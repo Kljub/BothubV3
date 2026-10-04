@@ -36,6 +36,7 @@ final class InternalRouter
         private readonly int $userId = 1,
         private readonly ?StatsStore $stats = null,
         private readonly ?DocsStore $docs = null,
+        private readonly ?AccountStore $accounts = null,
     ) {
     }
 
@@ -136,6 +137,9 @@ final class InternalRouter
             if ($this->plugins !== null && preg_match('#^/internal/bots/(\d+)/plugins(?:/([a-z0-9_-]{2,64})(/config|/commands|/options)?)?$#', $path, $m)) {
                 $this->bots->find((int) $m[1]) ?? throw ApiError::notFound();
                 return $this->botPluginRoute($method, (int) $m[1], $m[2] ?? null, $m[3] ?? '', $body);
+            }
+            if ($this->accounts !== null && preg_match('#^/internal/accounts(?:/(users|roles|passkeys)/([^/]{1,400}))?$#', $path, $m)) {
+                return $this->accountsRoute($method, $m[1] ?? '', isset($m[2]) ? rawurldecode($m[2]) : '', $body);
             }
             if ($this->docs !== null && preg_match('#^/internal/docs(?:/categories(?:/([a-z0-9-]{1,60}))?|/(\d+))?$#', $path, $m)) {
                 return $this->docsRoute($method, $path, $m, $body);
@@ -647,5 +651,25 @@ final class InternalRouter
             })(),
             default => throw new ApiError(405, 'error.method_not_allowed'),
         };
+    }
+
+    /** Accounts of the gateway (users, roles, passkeys): load all, save or delete one. */
+    private function accountsRoute(string $method, string $kind, string $id, array $body): array
+    {
+        $a = $this->accounts;
+        if ($kind === '') {
+            return $method === 'GET' ? [200, $a->all()] : throw new ApiError(405, 'error.method_not_allowed');
+        }
+        $num = ctype_digit($id) ? (int) $id : 0;
+        match (true) {
+            $kind === 'users' && $method === 'PUT' => $a->saveUser($num, $body),
+            $kind === 'users' && $method === 'DELETE' => $a->deleteUser($num),
+            $kind === 'roles' && $method === 'PUT' => $a->saveRole($num, $body),
+            $kind === 'roles' && $method === 'DELETE' => $a->deleteRole($num),
+            $kind === 'passkeys' && $method === 'PUT' => $a->savePasskey($id, $body),
+            $kind === 'passkeys' && $method === 'DELETE' => $a->deletePasskey($id),
+            default => throw new ApiError(405, 'error.method_not_allowed'),
+        };
+        return [204, null];
     }
 }

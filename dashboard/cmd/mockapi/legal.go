@@ -48,10 +48,13 @@ func (s *store) readLegal(r *http.Request) (legalInfo, bool) {
 func (s *store) adminEmail() string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.account.email == nil {
-		return ""
+	// The first admin's e-mail.
+	for _, u := range s.users {
+		if u.RoleID == 1 && u.Email != nil {
+			return *u.Email
+		}
 	}
-	return *s.account.email
+	return ""
 }
 
 // getLegal is public: operator details plus the admin's e-mail as fallback.

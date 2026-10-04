@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -66,10 +67,7 @@ func (s *store) adminViaPHP(local authed) authed {
 			apiError(w, 400, "error.request.invalid")
 			return
 		}
-		s.mu.Lock()
-		actor := truncate(s.user, 64)
-		s.mu.Unlock()
-		r.Header.Set("X-BotHub-Actor", actor)
+		r.Header.Set("X-BotHub-Actor", truncate(s.requestUserName(r), 64))
 		s.forward(w, r, body)
 	}
 }
@@ -84,7 +82,12 @@ func (s *store) forward(w http.ResponseWriter, r *http.Request, body []byte) {
 	req.Header.Set("X-BotHub-Internal", s.php.key)
 	// The signed-in user: owner of their secrets and of the bots they add.
 	// Only the admin (user 1) can sign in to the mock; a browser never sets it.
-	req.Header.Set("X-BotHub-User", "1")
+	// The signed-in user: owner of their secrets and new bots.
+	uid := int64(1)
+	if u := s.requestUser(r); u != nil {
+		uid = u.ID
+	}
+	req.Header.Set("X-BotHub-User", strconv.FormatInt(uid, 10))
 	if actor := r.Header.Get("X-BotHub-Actor"); actor != "" {
 		req.Header.Set("X-BotHub-Actor", actor)
 	}

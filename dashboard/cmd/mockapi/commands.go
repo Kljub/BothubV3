@@ -328,6 +328,10 @@ func (s *store) simulateCommand(w http.ResponseWriter, r *http.Request, b *bot) 
 		return
 	}
 	g := in.Graph
+	simUser := s.requestUserName(r)
+	if simUser == "" {
+		simUser = "user"
+	}
 	byID := map[string]simNode{}
 	var start, errorHandler string
 	for _, n := range g.Nodes {
@@ -359,7 +363,7 @@ func (s *store) simulateCommand(w http.ResponseWriter, r *http.Request, b *bot) 
 		port := "next"
 		switch {
 		case strings.HasPrefix(n.Type, "trigger."):
-			step(n, "ok", "builder.sim.trigger", map[string]any{"user": s.user})
+			step(n, "ok", "builder.sim.trigger", map[string]any{"user": simUser})
 			// Options hang above the trigger: the member filled them in.
 			for _, e := range g.Edges {
 				if e.To.Node == n.ID && e.To.Port == "options" {
@@ -380,11 +384,11 @@ func (s *store) simulateCommand(w http.ResponseWriter, r *http.Request, b *bot) 
 		case strings.HasPrefix(n.Type, "condition."):
 			// The query node checks, then one of its state nodes matches.
 			if subject := str("subject"); subject != "" {
-				step(n, "ok", "builder.sim.condition", map[string]any{"subject": sampleValue(subject, s.user)})
+				step(n, "ok", "builder.sim.condition", map[string]any{"subject": sampleValue(subject, simUser)})
 			} else {
 				step(n, "ok", "builder.sim.check", nil)
 			}
-			state := pickState(n, g, byID, s.user)
+			state := pickState(n, g, byID, simUser)
 			if state.ID == "" {
 				cur = ""
 				continue

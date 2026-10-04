@@ -3,9 +3,11 @@ package main
 import (
 	"bytes"
 	"encoding/base64"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -14,8 +16,8 @@ import (
 	"github.com/go-webauthn/webauthn/webauthn"
 )
 
-// Passkeys (WebAuthn) of the mock API, verified with go-webauthn. Only the
-// admin account (user 1) has passkeys. Relying party from ENV:
+// Passkeys (WebAuthn), verified with go-webauthn; every user has their own
+// (user handle "bothub-user-<id>"), stored through accounts.go. Relying party from ENV:
 // WEBAUTHN_RP_ID (default "localhost"), WEBAUTHN_ORIGINS (comma-separated,
 // default "http://localhost:8080").
 
@@ -25,6 +27,7 @@ type passkey struct {
 	CreatedAt  time.Time  `json:"createdAt"`
 	LastUsedAt *time.Time `json:"lastUsedAt"`
 	cred       webauthn.Credential
+	userID     int64
 }
 
 type passkeyStore struct {
@@ -39,15 +42,16 @@ type ceremony struct {
 	expires time.Time
 }
 
-// adminHandle is the WebAuthn user handle of user 1 (stable, not the name).
-var adminHandle = []byte("bothub-user-1")
+// userHandle is the WebAuthn user handle of a user (stable, not the name).
+func userHandle(id int64) []byte { return []byte(fmt.Sprintf("bothub-user-%d", id)) }
 
 type waUser struct {
+	id   int64
 	name string
 	keys []*passkey
 }
 
-func (u waUser) WebAuthnID() []byte          { return adminHandle }
+func (u waUser) WebAuthnID() []byte          { return userHandle(u.id) }
 func (u waUser) WebAuthnName() string        { return u.name }
 func (u waUser) WebAuthnDisplayName() string { return u.name }
 func (u waUser) WebAuthnCredentials() []webauthn.Credential {
@@ -85,27 +89,47 @@ func (p *passkeyStore) take(id string) (webauthn.SessionData, bool) {
 	return c.data, true
 }
 
-func (s *store) waUser() waUser {
-	return waUser{name: s.user, keys: s.passkeys.keys}
+// waUser: a user with their passkeys; caller holds s.passkeys.mu.
+func (s *store) waUser(id int64, name string) waUser {
+	u := waUser{id: id, name: name}
+	for _, k := range s.passkeys.keys {
+		if k.userID == id {
+			u.keys = append(u.keys, k)
+		}
+	}
+	return u
 }
 
-func (s *store) listPasskeys(w http.ResponseWriter, r *http.Request, _ string) {
+// sidUser: ID and name of the session's user.
+func (s *store) sidUser(sid string) (int64, string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if u := s.sessUser(sid); u != nil {
+		return u.ID, u.Username
+	}
+	return 0, ""
+}
+
+func (s *store) listPasskeys(w http.ResponseWriter, r *http.Request, sid string) {
+	id, name := s.sidUser(sid)
 	s.passkeys.mu.Lock()
 	defer s.passkeys.mu.Unlock()
-	items := s.passkeys.keys
+	items := s.waUser(id, name).keys
 	if items == nil {
 		items = []*passkey{}
 	}
 	writeJSON(w, 200, map[string]any{"items": items})
 }
 
-func (s *store) deletePasskey(w http.ResponseWriter, r *http.Request, _ string) {
+func (s *store) deletePasskey(w http.ResponseWriter, r *http.Request, sid string) {
 	id := r.PathValue("id")
+	uid, _ := s.sidUser(sid)
 	s.passkeys.mu.Lock()
 	defer s.passkeys.mu.Unlock()
 	for i, k := range s.passkeys.keys {
-		if k.ID == id {
+		if k.ID == id && k.userID == uid {
 			s.passkeys.keys = append(s.passkeys.keys[:i], s.passkeys.keys[i+1:]...)
+			s.phpDelete("/internal/accounts/passkeys/" + id)
 			w.WriteHeader(204)
 			return
 		}
@@ -114,10 +138,11 @@ func (s *store) deletePasskey(w http.ResponseWriter, r *http.Request, _ string) 
 }
 
 // registerBegin: logged-in user adds a passkey. Answer: {ceremony, options}.
-func (s *store) registerPasskeyBegin(w http.ResponseWriter, r *http.Request, _ string) {
+func (s *store) registerPasskeyBegin(w http.ResponseWriter, r *http.Request, sid string) {
+	uid, name := s.sidUser(sid)
 	s.passkeys.mu.Lock()
 	defer s.passkeys.mu.Unlock()
-	user := s.waUser()
+	user := s.waUser(uid, name)
 	exclude := make([]protocol.CredentialDescriptor, len(user.keys))
 	for i, k := range user.keys {
 		exclude[i] = k.cred.Descriptor()
@@ -135,7 +160,8 @@ func (s *store) registerPasskeyBegin(w http.ResponseWriter, r *http.Request, _ s
 
 // registerFinish: body = the credential JSON from the browser;
 // ?ceremony=<id>&name=<label>.
-func (s *store) registerPasskeyFinish(w http.ResponseWriter, r *http.Request, _ string) {
+func (s *store) registerPasskeyFinish(w http.ResponseWriter, r *http.Request, sid string) {
+	uid, uname := s.sidUser(sid)
 	name := strings.TrimSpace(r.URL.Query().Get("name"))
 	if name == "" || len([]rune(name)) > 50 {
 		apiError(w, 422, "error.passkey.name")
@@ -148,14 +174,15 @@ func (s *store) registerPasskeyFinish(w http.ResponseWriter, r *http.Request, _ 
 		apiError(w, 409, "error.passkey.expired")
 		return
 	}
-	cred, err := s.passkeys.wa.FinishRegistration(s.waUser(), data, r)
+	cred, err := s.passkeys.wa.FinishRegistration(s.waUser(uid, uname), data, r)
 	if err != nil {
 		slog.Warn("mockapi: passkey registration failed", "err", err)
 		apiError(w, 422, "error.passkey.failed")
 		return
 	}
-	pk := &passkey{ID: base64.RawURLEncoding.EncodeToString(cred.ID), Name: name, CreatedAt: time.Now().UTC(), cred: *cred}
+	pk := &passkey{ID: base64.RawURLEncoding.EncodeToString(cred.ID), Name: name, CreatedAt: time.Now().UTC(), cred: *cred, userID: uid}
 	s.passkeys.keys = append(s.passkeys.keys, pk)
+	s.persistPasskey(pk)
 	writeJSON(w, 201, pk)
 }
 
@@ -181,11 +208,21 @@ func (s *store) loginPasskeyFinish(w http.ResponseWriter, r *http.Request) {
 		apiError(w, 409, "error.passkey.expired")
 		return
 	}
-	handler := func(rawID, userHandle []byte) (webauthn.User, error) {
-		if !bytes.Equal(userHandle, adminHandle) {
+	var who int64
+	handler := func(rawID, handle []byte) (webauthn.User, error) {
+		id, err := strconv.ParseInt(strings.TrimPrefix(string(handle), "bothub-user-"), 10, 64)
+		if err != nil || !bytes.Equal(handle, userHandle(id)) {
 			return nil, protocol.ErrBadRequest.WithDetails("unknown user")
 		}
-		return s.waUser(), nil
+		s.mu.Lock()
+		u := s.userByID(id)
+		banned := u != nil && s.roleKey(u.RoleID) == "banned"
+		s.mu.Unlock()
+		if u == nil || banned {
+			return nil, protocol.ErrBadRequest.WithDetails("unknown user")
+		}
+		who = id
+		return s.waUser(u.ID, u.Username), nil
 	}
 	_, cred, err := s.passkeys.wa.FinishPasskeyLogin(handler, data, r)
 	if err == nil {
@@ -194,6 +231,7 @@ func (s *store) loginPasskeyFinish(w http.ResponseWriter, r *http.Request) {
 			if bytes.Equal(k.cred.ID, cred.ID) {
 				k.cred.Authenticator.UpdateCounter(cred.Authenticator.SignCount)
 				k.LastUsedAt = &now
+				s.persistPasskey(k)
 			}
 		}
 	}
@@ -203,5 +241,5 @@ func (s *store) loginPasskeyFinish(w http.ResponseWriter, r *http.Request) {
 		apiError(w, 401, "error.passkey.failed")
 		return
 	}
-	s.startSession(w, r, 200)
+	s.startSession(w, r, 200, who)
 }

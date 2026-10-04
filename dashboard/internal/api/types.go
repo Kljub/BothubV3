@@ -20,6 +20,12 @@ type Me struct {
 	Locale           string  `json:"locale"`
 	Theme            string  `json:"theme"`
 	CSRFToken        string  `json:"csrfToken"`
+	// ID, role and permissions of the signed-in user.
+	ID          int64    `json:"id"`
+	RoleID      int64    `json:"roleId"`
+	Permissions []string `json:"permissions"`
+	// Warnings for this user, e.g. "env_password_plain" (admins).
+	Warnings []string `json:"warnings"`
 }
 
 type Settings struct {

@@ -4359,5 +4359,6 @@
   "error.docs.slug_taken": "Diese Kategorie hat schon einen Artikel mit dieser Adresse in dieser Sprache.",
   "error.docs.category_not_empty": "Die Kategorie hat noch Artikel. Verschieb oder lösch sie zuerst.",
   "error.docs.unknown_category": "Diese Kategorie gibt es nicht.",
-  "error.docs.category_shipped": "Diese Adresse gehört einer mitgelieferten Kategorie."
+  "error.docs.category_shipped": "Diese Adresse gehört einer mitgelieferten Kategorie.",
+  "warning.env_password_plain": "Das Admin-Passwort in BOTHUB_ADMIN_PASSWORD (.env) steht im Klartext. Das funktioniert, aber speichere stattdessen seinen Argon2id-Hash: docker compose exec mockapi app hash-password \"<passwort>\", dann den ausgegebenen $argon2id$…-Wert in die .env eintragen in einfachen Anführungszeichen, z. B. BOTHUB_ADMIN_PASSWORD='$argon2id$…', und neu starten. Die Warnung verschwindet, sobald dort ein Hash steht."
 }
