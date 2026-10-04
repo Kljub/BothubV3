@@ -251,9 +251,44 @@ export interface VoiceApi {
 }
 const HTTP_TIMEOUT_MS = 10_000;
 const HTTP_MAX_BYTES = 1024 * 1024;
+/** Longest wait of http.secret (request.timeoutMs), e.g. for image generation. */
+const HTTP_MAX_TIMEOUT_MS = 300_000;
 const FORBIDDEN_HEADERS = /^(authorization|cookie|host|content-length|connection|transfer-encoding|proxy-.*|x-forwarded-.*|forwarded)$/;
 /** Discord messages a plugin may send: 5 per 5 seconds per bot and plugin. */
 const SEND_MAX = 5;
+
+/** A JSON path of http.secret ("images.0", "init_images.0"): up to 6 keys or indexes. */
+function jsonPath(v: unknown): string[] {
+  if (typeof v !== 'string' || !/^[A-Za-z0-9_]{1,64}(\.[A-Za-z0-9_]{1,64}){0,5}$/.test(v)) throw new SdkError('sdk.http.bad_path');
+  return v.split('.');
+}
+
+function getAt(doc: unknown, path: string[]): unknown {
+  let cur = doc;
+  for (const k of path) {
+    if (cur === null || typeof cur !== 'object') return undefined;
+    cur = Array.isArray(cur) ? cur[Number(k)] : (cur as Record<string, unknown>)[k];
+  }
+  return cur;
+}
+
+/** Sets a value at path; arrays grow by one at most. false when the path does not fit. */
+function setAt(doc: unknown, path: string[], value: unknown): boolean {
+  let cur = doc;
+  for (let i = 0; i < path.length; i++) {
+    if (cur === null || typeof cur !== 'object') return false;
+    const k = path[i]!;
+    const last = i === path.length - 1;
+    if (Array.isArray(cur)) {
+      const n = Number(k);
+      if (!/^\d+$/.test(k) || n > cur.length) return false;
+      if (last) cur[n] = value;
+      else cur = cur[n];
+    } else if (last) (cur as Record<string, unknown>)[k] = value;
+    else cur = (cur as Record<string, unknown>)[k];
+  }
+  return true;
+}
 const SEND_WINDOW_MS = 5000;
 const RESULT_SUFFIX = /^(\.[a-z0-9_]{1,32})?$/;
 
@@ -482,8 +517,13 @@ export class PluginManager {
    *
    * With the plugin files (storage.files): request.file sends one stored
    * image as multipart/form-data ({ field, name }, plus text request.fields);
-   * request.saveAs 'file' stores a successful answer (an image, max. 2 MB)
-   * in the plugin files and answers { status, headers, file }.
+   * request.saveAs 'file' stores a successful answer (an image, max. 8 MB)
+   * in the plugin files and answers { status, headers, file }. With
+   * request.fileFrom ("images.0") the image is base64 inside a JSON answer
+   * (Stable Diffusion APIs): that value becomes the file, the rest of the
+   * JSON comes back without it. request.jsonFile { name, path } puts a
+   * plugin file as base64 into request.json at path (e.g. "init_images.0").
+   * auth.format 'basic' sends the secret "user:password" as HTTP Basic.
    */
   private async callSecret(request: unknown, secretOf: (name: unknown) => string | null, hosts: string[], files: PluginFiles | null = null): Promise<unknown> {
     const r = (request && typeof request === 'object' && !Array.isArray(request) ? request : {}) as Record<string, unknown>;
@@ -544,8 +584,12 @@ export class PluginManager {
         url.searchParams.set(param, value);
       } else {
         const header = a.header ?? 'Authorization';
-        if (typeof header !== 'string' || !/^[A-Za-z0-9-]{1,64}$/.test(header) || !['bearer', 'plain'].includes(String(format))) throw new SdkError('sdk.http.bad_header');
-        authHeaders[header] = format === 'bearer' ? `Bearer ${value}` : value;
+        if (typeof header !== 'string' || !/^[A-Za-z0-9-]{1,64}$/.test(header) || !['bearer', 'plain', 'basic'].includes(String(format))) throw new SdkError('sdk.http.bad_header');
+        if (format === 'basic') {
+          const encoded = Buffer.from(value, 'utf8').toString('base64');
+          hide.push(encoded);
+          authHeaders[header] = `Basic ${encoded}`;
+        } else authHeaders[header] = format === 'bearer' ? `Bearer ${value}` : value;
       }
     }
 
@@ -567,6 +611,8 @@ export class PluginManager {
     };
     const saveAsFile = r.saveAs !== undefined;
     if (saveAsFile && r.saveAs !== 'file') throw new SdkError('sdk.http.bad_save_as');
+    const fileFrom = r.fileFrom === undefined ? null : jsonPath(r.fileFrom);
+    if (fileFrom && !saveAsFile) throw new SdkError('sdk.http.bad_save_as');
     let body: string | FormData | undefined;
     if (r.file !== undefined) {
       // multipart/form-data: one image of the plugin files plus text fields.
@@ -589,19 +635,32 @@ export class PluginManager {
     } else if (r.json !== undefined) {
       body = JSON.stringify(r.json);
       if (body.length > 65_536) throw new SdkError('sdk.http.too_big');
+      if (r.jsonFile !== undefined) {
+        // A plugin file as base64 into the JSON body (it may be bigger than 64 KB).
+        const f = (r.jsonFile && typeof r.jsonFile === 'object' && !Array.isArray(r.jsonFile) ? r.jsonFile : {}) as Record<string, unknown>;
+        const path = jsonPath(f.path);
+        const stored = needFiles().get(f.name);
+        if (!stored) throw new SdkError('sdk.files.unknown');
+        const doc = JSON.parse(body) as unknown;
+        if (!setAt(doc, path, stored.data.toString('base64'))) throw new SdkError('sdk.http.bad_file');
+        body = JSON.stringify(doc);
+      }
       headers['content-type'] = 'application/json';
+    } else if (r.jsonFile !== undefined) {
+      throw new SdkError('sdk.http.bad_file');
     }
     if (saveAsFile) needFiles();
     let res: Response;
     try {
-      // request.timeoutMs: slow APIs (e.g. AI answers) may take up to 60 s; default 10 s.
-      const timeout = Number.isInteger(r.timeoutMs) ? Math.min(60_000, Math.max(1000, r.timeoutMs as number)) : HTTP_TIMEOUT_MS;
+      // request.timeoutMs: slow APIs (e.g. AI answers, image generation) may take up to 5 minutes; default 10 s.
+      const timeout = Number.isInteger(r.timeoutMs) ? Math.min(HTTP_MAX_TIMEOUT_MS, Math.max(1000, r.timeoutMs as number)) : HTTP_TIMEOUT_MS;
       res = await (this.deps.fetch ?? fetch)(url, { method, headers: { ...headers, ...authHeaders }, body, redirect: 'manual', signal: AbortSignal.timeout(timeout) });
     } catch (err) {
       throw new SdkError((err as Error)?.name === 'TimeoutError' ? 'sdk.http.timeout' : 'sdk.http.failed');
     }
     // Read at most 1 MB (an image saved as a file: the file limit).
-    const max = saveAsFile && res.ok ? FILE_LIMITS.maxBytes : HTTP_MAX_BYTES;
+    // An image inside JSON is base64 (a third bigger) next to the other fields.
+    const max = saveAsFile && res.ok ? (fileFrom ? Math.ceil(FILE_LIMITS.maxBytes * 1.4) + HTTP_MAX_BYTES : FILE_LIMITS.maxBytes) : HTTP_MAX_BYTES;
     const reader = res.body?.getReader();
     const chunks: Uint8Array[] = [];
     let size = 0;
@@ -618,6 +677,22 @@ export class PluginManager {
     const outHeaders: Record<string, string> = {};
     for (const [k, v] of res.headers) if (!/^(set-cookie|www-authenticate)$/.test(k) && Object.keys(outHeaders).length < 50) outHeaders[k] = mask(v, hide);
     // The answer is an image: into the plugin files (type checked like an upload).
+    if (saveAsFile && res.ok && fileFrom) {
+      let doc: unknown;
+      try {
+        doc = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+      } catch {
+        throw new SdkError('sdk.http.no_file');
+      }
+      const raw = getAt(doc, fileFrom);
+      if (typeof raw !== 'string' || !raw) throw new SdkError('sdk.http.no_file');
+      setAt(doc, fileFrom, null);
+      const data = Buffer.from(raw.replace(/^data:[^,]*,/, ''), 'base64');
+      const rest = JSON.parse(mask(JSON.stringify(doc), hide)) as unknown;
+      // The rest of the answer (e.g. "info" with the seed) stays small.
+      const json = JSON.stringify(rest).length > HTTP_MAX_BYTES ? null : rest;
+      return { status: res.status, headers: outHeaders, file: needFiles().put(data, '', true), json };
+    }
     if (saveAsFile && res.ok) return { status: res.status, headers: outHeaders, file: needFiles().put(Buffer.concat(chunks), '', true) };
     const text = mask(Buffer.concat(chunks).toString('utf8'), hide);
     let json: unknown = null;

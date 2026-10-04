@@ -617,6 +617,8 @@ test('http.secret with plugin files: multipart upload of a stored image, image a
       '.text': await r(() => ctx.http.secret({ url: 'https://api.example.com/text.txt', auth, saveAs: 'file' })),
       '.unknown': await r(() => ctx.http.secret({ url: 'https://api.example.com/upload', method: 'POST', auth, file: { name: '0000000000000000.png' } })),
       '.both': await r(() => ctx.http.secret({ url: 'https://api.example.com/upload', method: 'POST', auth, file: { name: src.name }, json: {} })),
+      '.sd': await r(() => ctx.http.secret({ url: 'https://api.example.com/sdapi/v1/img2img', method: 'POST', auth: { secret: 'GEN_KEY', format: 'basic' }, json: { prompt: 'cat', init_images: [] }, jsonFile: { name: src.name, path: 'init_images.0' }, saveAs: 'file', fileFrom: 'images.0', timeoutMs: 120000 })),
+      '.sdbad': await r(() => ctx.http.secret({ url: 'https://api.example.com/sdapi/v1/img2img', method: 'POST', json: {}, jsonFile: { name: src.name, path: '../x' } })),
     } };
   } } };`;
   install(db, pluginsDir, id, { 'bothub-plugin.json': JSON.stringify(manifest), 'index.js': code });
@@ -629,8 +631,10 @@ test('http.secret with plugin files: multipart upload of a stored image, image a
   deps.outbound = { resolve: async () => ['93.184.216.34'] };
   let form: FormData | null = null;
   let keyHeader = '';
+  let sdBody: { init_images?: string[]; prompt?: string } = {};
+  let sdAuth = '';
   deps.fetch = (async (url: URL, init: RequestInit) => {
-    keyHeader = String((init.headers as Record<string, string>)['x-api-key'] ?? '');
+    keyHeader = String((init.headers as Record<string, string>)['x-api-key'] ?? keyHeader);
     const path = new URL(url).pathname;
     if (path === '/upload') {
       form = init.body as FormData;
@@ -638,6 +642,11 @@ test('http.secret with plugin files: multipart upload of a stored image, image a
     }
     if (path === '/out.png') return new Response(Buffer.from(png, 'base64'), { status: 200, headers: { 'content-type': 'image/png' } });
     if (path === '/text.txt') return new Response('not an image', { status: 200 });
+    if (path === '/sdapi/v1/img2img') {
+      sdBody = JSON.parse(String(init.body));
+      sdAuth = String((init.headers as Record<string, string>).Authorization ?? '');
+      return new Response(JSON.stringify({ images: [`data:image/png;base64,${png}`], info: '{"seed": 42}' }), { status: 200, headers: { 'content-type': 'application/json' } });
+    }
     return new Response('{"error":"gone"}', { status: 404, headers: { 'content-type': 'application/json' } });
   }) as unknown as typeof fetch;
   try {
@@ -657,6 +666,13 @@ test('http.secret with plugin files: multipart upload of a stored image, image a
     assert.equal(results['.text'], 'sdk.files.bad_type');
     assert.equal(results['.unknown'], 'sdk.files.unknown');
     assert.equal(results['.both'], 'sdk.http.bad_file');
+    // JSON image APIs (Stable Diffusion): file into the body, image out of the answer, HTTP Basic.
+    assert.deepEqual(sdBody, { prompt: 'cat', init_images: [png] });
+    assert.equal(sdAuth, `Basic ${Buffer.from('gen-key-123456').toString('base64')}`);
+    const sd = JSON.parse(results['.sd']!);
+    assert.match(sd.file.name, /^[0-9a-f]{16}\.png$/);
+    assert.deepEqual(sd.json, { images: [null], info: '{"seed": 42}' });
+    assert.equal(results['.sdbad'], 'sdk.http.bad_path');
   } finally {
     manager.stopAll();
   }

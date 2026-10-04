@@ -77,7 +77,8 @@ export interface SecretRequest {
   json?: Json;
   headers?: Record<string, string>;
   /** The key: secret name, where it goes (default header Authorization, "Bearer <key>"). */
-  auth?: { secret: string; header?: string; format?: 'bearer' | 'plain' | 'query'; param?: string };
+  /** format 'basic': the secret is "user:password" (HTTP Basic). */
+  auth?: { secret: string; header?: string; format?: 'bearer' | 'plain' | 'query' | 'basic'; param?: string };
   /**
    * "storage.files": send one image of the plugin files as
    * multipart/form-data (field name, default "file"), with text `fields`.
@@ -85,19 +86,23 @@ export interface SecretRequest {
    */
   file?: { name: string; field?: string };
   fields?: Record<string, string>;
-  /** How long to wait for the answer: 1000-60000 ms (default 10000), e.g. for AI APIs. */
+  /** "storage.files": a plugin file as base64 into `json` at path (e.g. "init_images.0"), for JSON image APIs. */
+  jsonFile?: { name: string; path: string };
+  /** How long to wait for the answer: 1000-300000 ms (default 10000), e.g. for AI APIs and image generation. */
   timeoutMs?: number;
   /**
    * "storage.files": 'file' stores a successful answer (an image: PNG, GIF,
-   * WEBP or JPEG, max. 2 MB) in the plugin files; the answer is then
+   * WEBP or JPEG, max. 8 MB) in the plugin files; the answer is then
    * { status, headers, file } (see SecretFileAnswer). Error answers come as text.
    */
   saveAs?: 'file';
+  /** With saveAs 'file': the image is base64 in the JSON answer at this path (e.g. "images.0"); the rest of the JSON comes as `json`. */
+  fileFrom?: string;
 }
 
 export interface HttpAnswer { status: number; headers: Record<string, string>; json: Json; text: string; base64?: string }
 /** ctx.http.secret with saveAs 'file' and a 2xx answer. */
-export interface SecretFileAnswer { status: number; headers: Record<string, string>; file: StoredFile }
+export interface SecretFileAnswer { status: number; headers: Record<string, string>; file: StoredFile; /** With fileFrom: the JSON answer without the image. */ json?: Json }
 /** voiceChannelId: the voice channel the member is in now, null when none. */
 export interface MemberInfo { id: Id; name: string; displayName: string; bot: boolean; avatar: string; joinedAt: string | null; roles: Id[]; voiceChannelId: Id | null }
 export interface RoleInfo { id: Id; name: string; color: string; position: number; managed: boolean; mentionable: boolean; hoist: boolean; members: number }
