@@ -39,7 +39,7 @@ final class CommandStore
     public function list(int $botId, string $kind): array
     {
         $stmt = $this->pdo->prepare(
-            "SELECT id, kind, name, description, enabled, builtin, hidden, plugin_id, preset_name, group_id, event_type, updated_at FROM commands
+            "SELECT id, kind, name, description, enabled, builtin, hidden, plugin_id, preset_name, group_id, event_type, updated_at, EXISTS (SELECT 1 FROM json_each(graph, '$.nodes') n WHERE json_extract(n.value, '$.type') = 'trigger.slash' AND json_extract(n.value, '$.config.hide_replies') = 1) AS private FROM commands
              WHERE bot_id = ? AND kind = ? AND builtin = 0 AND deleted_at IS NULL ORDER BY id",
         );
         $stmt->execute([$botId, $kind]);
@@ -79,7 +79,7 @@ final class CommandStore
         return $this->get($botId, $kind, $id);
     }
 
-    /** {enabled?, groupId?} */
+    /** {enabled?, groupId?, private?} — private: replies only the user sees (hide_replies of the slash trigger). */
     public function patch(int $botId, string $kind, int $id, array $in): array
     {
         Connection::write($this->pdo, function (PDO $pdo) use ($botId, $kind, $id, $in): void {
@@ -89,6 +89,22 @@ final class CommandStore
                     throw new ApiError(422, 'error.validation', ['field' => 'enabled']);
                 }
                 $pdo->prepare('UPDATE commands SET enabled = ?, updated_at = ' . self::NOW . ' WHERE id = ?')->execute([$in['enabled'] ? 1 : 0, $id]);
+            }
+            if (array_key_exists('private', $in)) {
+                if (!is_bool($in['private'])) {
+                    throw new ApiError(422, 'error.validation', ['field' => 'private']);
+                }
+                // Only the trigger changes: a module or plugin copy stays unsaved (it follows updates).
+                $graph = json_decode((string) $this->row($botId, $kind, $id)['graph'], false, 512, JSON_THROW_ON_ERROR);
+                foreach ($graph->nodes ?? [] as $node) {
+                    if (($node->type ?? '') === 'trigger.slash') {
+                        $node->config = (object) ($node->config ?? []);
+                        $node->config->hide_replies = $in['private'];
+                    }
+                }
+                $json = json_encode($graph, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                $pdo->prepare('UPDATE commands SET graph = ?, updated_at = ' . self::NOW . ' WHERE id = ?')->execute([$json, $id]);
+                $this->addVersion($id, count($graph->nodes ?? []), $json);
             }
             if (array_key_exists('groupId', $in)) {
                 $group = $in['groupId'];
@@ -354,8 +370,8 @@ final class CommandStore
     private function row(int $botId, string $kind, int $id): array
     {
         $stmt = $this->pdo->prepare(
-            'SELECT id, kind, name, description, enabled, builtin, hidden, plugin_id, preset_name, group_id, event_type, updated_at, graph FROM commands
-             WHERE id = ? AND bot_id = ? AND kind = ? AND builtin = 0 AND deleted_at IS NULL',
+            "SELECT id, kind, name, description, enabled, builtin, hidden, plugin_id, preset_name, group_id, event_type, updated_at, graph, EXISTS (SELECT 1 FROM json_each(graph, '$.nodes') n WHERE json_extract(n.value, '$.type') = 'trigger.slash' AND json_extract(n.value, '$.config.hide_replies') = 1) AS private FROM commands
+             WHERE id = ? AND bot_id = ? AND kind = ? AND builtin = 0 AND deleted_at IS NULL",
         );
         $stmt->execute([$id, $botId, $kind]);
         return $stmt->fetch() ?: throw ApiError::notFound('error.command.unknown');
@@ -584,6 +600,7 @@ final class CommandStore
             // Module or plugin copy: it stays in its system group.
             'copy' => $r['preset_name'] !== null || $r['plugin_id'] !== null,
             'pluginId' => $r['plugin_id'], // plugin copy: listed on the plugin's page
+            'private' => (int) ($r['private'] ?? 0) === 1, // replies only the user sees (slash trigger hide_replies)
             'groupId' => $r['group_id'] === null ? null : (int) $r['group_id'],
             'updatedAt' => $r['updated_at'],
         ];

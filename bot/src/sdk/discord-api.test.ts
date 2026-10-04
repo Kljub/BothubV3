@@ -212,3 +212,13 @@ test('https lookup answers in both forms Node uses (single and { all: true })', 
   });
   assert.doesNotMatch(err.message, /Invalid IP address/);
 });
+
+test('interaction.reply: a command set to "only me" answers ephemeral', async () => {
+  const reg = new InteractionRegistry();
+  const sent: unknown[] = [];
+  const fake = { replied: false, deferred: false, reply: async (p: unknown) => void sent.push(p) } as never;
+  const api = discordApi(1, 'plugin_a', [], { client: () => undefined, render: (m) => m as Record<string, unknown>, economy: { balance: () => 0, change: () => 0, pay: () => false, leaderboard: () => [], bank: () => 0, bankTake: () => false } }, reg);
+  await api['interaction.reply']!({ args: [reg.hold(1, 'plugin_a', fake, false, true), 'hi'] });
+  await api['interaction.reply']!({ args: [reg.hold(1, 'plugin_a', fake, false), 'hi'] });
+  assert.deepEqual(sent.map((p) => (p as { flags: number }).flags), [64, 0]);
+});

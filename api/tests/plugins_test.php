@@ -30,7 +30,7 @@ $pdo = Connection::open($tmp . '/bothub.sqlite');
 (new Migrator($pdo, __DIR__ . '/../migrations'))->migrate();
 $plugins = new PluginStore($pdo, $tmp);
 $bots = new BotStore($pdo, new SecretBox(random_bytes(32)), $plugins);
-$router = new InternalRouter($bots, static fn () => throw new \RuntimeException('no jobs'), actor: 'admin', plugins: $plugins);
+$router = new InternalRouter($bots, static fn () => throw new \RuntimeException('no jobs'), commands: new BotHub\Internal\CommandStore($pdo), actor: 'admin', plugins: $plugins);
 
 function call(string $method, string $path, ?array $body = null, array $query = []): array
 {
@@ -285,7 +285,16 @@ $v3 = pluginFiles('1.2.0', ['bye']);
 install(zipOf($v3));
 check('copy of a dropped preset switched off', (int) $pdo->query("SELECT enabled FROM commands WHERE plugin_id = 'plugin_greeter' AND preset_name = 'hello' AND bot_id = {$bot1}")->fetchColumn() === 0);
 $pdo->exec("UPDATE commands SET enabled = 1 WHERE plugin_id = 'plugin_greeter' AND preset_name = 'hello' AND bot_id = {$bot1}");
-install(zipOf(pluginFiles('1.3.0', ['hello', 'bye'])));
+// Visibility: "only the user" stays an unsaved copy and survives updates.
+$hello2 = (int) $pdo->query("SELECT id FROM commands WHERE plugin_id = 'plugin_greeter' AND preset_name = 'hello' AND bot_id = {$bot2}")->fetchColumn();
+$r = call('PATCH', "/internal/bots/{$bot2}/commands/{$hello2}", ['private' => true]);
+check('private set, copy stays unsaved', $r[0] === 200 && $r[1]['private'] === true && $r[1]['hidden'] === true);
+$v4 = pluginFiles('1.3.0', ['hello', 'bye']);
+$v4['commands/hello.json'] = json_encode(['name' => 'hello', 'description' => 'Newer', 'graph' => graph('hello', 'plugin.plugin_greeter.wave')]);
+install(zipOf($v4));
+$listed = array_values(array_filter(call('GET', "/internal/bots/{$bot2}/commands")[1]['items'], fn ($c) => $c['id'] === $hello2))[0] ?? [];
+check('update keeps private and brings the new graph', ($listed['private'] ?? null) === true
+    && str_contains((string) $pdo->query("SELECT graph FROM commands WHERE id = {$hello2}")->fetchColumn(), 'plugin_greeter.wave'));
 
 // ---------- per bot ----------
 $r = call('GET', "/internal/bots/{$bot1}/plugins");

@@ -184,12 +184,12 @@ func TestPluginCommandRow(t *testing.T) {
 		t.Fatal(err)
 	}
 	plugin := "plugin_anisearch"
-	row := pluginCommandView{BotID: 3, Plugin: plugin, CustomCommand: api.CustomCommand{ID: 77, Name: "launchtoday", Enabled: true, PluginID: &plugin}}
+	row := pluginCommandView{BotID: 3, Plugin: plugin, CustomCommand: api.CustomCommand{ID: 77, Name: "launchtoday", Enabled: true, Private: true, PluginID: &plugin}}
 	var out strings.Builder
 	if err := tpl.sets["module_item"].ExecuteTemplate(&out, "plugin_command_row_fragment", Page{Data: row}); err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"/launchtoday", `href="/bots/builder/77"`, `hx-put="/bot/3/plugins/plugin_anisearch/commands/77"`, `value="true" checked`} {
+	for _, want := range []string{"/launchtoday", `href="/bots/builder/77"`, `hx-put="/bot/3/plugins/plugin_anisearch/commands/77"`, `value="true" checked`, `name="private"`, `<option value="true" selected>`} {
 		if !strings.Contains(out.String(), want) {
 			t.Errorf("missing %q", want)
 		}

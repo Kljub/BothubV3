@@ -456,7 +456,7 @@ export class PluginManager {
     // The command/click of the run: the plugin may answer it (ctx.interaction.*) when allowed.
     const interaction = (run.data as { interaction?: RepliableInteraction } | undefined)?.interaction;
     const handle = interaction && (p.permissions.has('discord.interactions.reply' as Permission) || p.permissions.has('discord.modals' as Permission))
-      ? this.interactions.hold(p.botId, p.manifest.id, interaction, false)
+      ? this.interactions.hold(p.botId, p.manifest.id, interaction, false, (run.data as { hideReplies?: boolean } | undefined)?.hideReplies === true)
       : undefined;
     stats(this.db).add(p.botId, vars['server.id'], 'plugin_uses');
     stats(this.db).add(p.botId, vars['server.id'], `plugin:${p.manifest.id}`);

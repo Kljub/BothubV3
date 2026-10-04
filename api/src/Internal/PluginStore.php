@@ -588,6 +588,11 @@ final class PluginStore
                     continue;
                 }
                 if ((int) $existing['hidden'] === 1) {
+                    // The visibility chosen on the plugin page (hide_replies) stays.
+                    $graph = self::keepVisibility((string) $existing['graph'], $graph);
+                    if (json_decode((string) $existing['graph'], true) == json_decode($graph, true)) {
+                        continue;
+                    }
                     $pdo->prepare("UPDATE commands SET graph = ?, description = ?, plugin_version = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?")
                         ->execute([$graph, mb_substr($c['description'], 0, 100), $m['version'], (int) $existing['id']]);
                     $pdo->prepare('INSERT INTO command_versions (command_id, nodes, graph) VALUES (?, ?, ?)')->execute([(int) $existing['id'], $c['nodes'], $graph]);
@@ -625,6 +630,28 @@ final class PluginStore
         $pdo->prepare("UPDATE commands SET enabled = 0 WHERE bot_id = ? AND plugin_id = ? AND deleted_at IS NULL AND enabled = 1 AND preset_name NOT IN ({$marks})")
             ->execute([$botId, $m['id'], ...array_map('strval', array_keys($commands))]);
         return $out;
+    }
+
+    /** The new graph with hide_replies of the old copy's slash trigger, when it set one. */
+    private static function keepVisibility(string $old, string $new): string
+    {
+        $hide = null;
+        foreach (json_decode($old, true)['nodes'] ?? [] as $n) {
+            if (($n['type'] ?? '') === 'trigger.slash' && is_bool($n['config']['hide_replies'] ?? null)) {
+                $hide = $n['config']['hide_replies'];
+            }
+        }
+        if ($hide === null) {
+            return $new;
+        }
+        $graph = json_decode($new, false, 512, JSON_THROW_ON_ERROR);
+        foreach ($graph->nodes ?? [] as $n) {
+            if (($n->type ?? '') === 'trigger.slash') {
+                $n->config = (object) ($n->config ?? []);
+                $n->config->hide_replies = $hide;
+            }
+        }
+        return json_encode($graph, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
     /** Copies of an installed plugin for one bot (idempotent). */

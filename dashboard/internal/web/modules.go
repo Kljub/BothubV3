@@ -392,8 +392,8 @@ func (s *Server) pluginCommands(r *http.Request, botID int64, plugin string) ([]
 	return out, nil
 }
 
-// handlePluginCommand switches one of the plugin's commands on or off and
-// answers its row.
+// handlePluginCommand switches one of the plugin's commands on or off, or
+// sets who sees its replies (field "private"), and answers its row.
 func (s *Server) handlePluginCommand(w http.ResponseWriter, r *http.Request, p Page) {
 	id, ok := s.botID(w, r, p)
 	if !ok {
@@ -414,7 +414,13 @@ func (s *Server) handlePluginCommand(w http.ResponseWriter, r *http.Request, p P
 		s.fail(w, r, p, &api.Error{Status: http.StatusNotFound, Key: "error.not_found"})
 		return
 	}
-	c, err := s.api.SetCustomCommandEnabled(r.Context(), session(r), api.KindCommand, id, cid, r.PostFormValue("enabled") == "true")
+	var c api.CustomCommand
+	_ = r.ParseForm()
+	if v, set := r.PostForm["private"]; set && len(v) > 0 {
+		c, err = s.api.SetCustomCommandPrivate(r.Context(), session(r), api.KindCommand, id, cid, v[0] == "true")
+	} else {
+		c, err = s.api.SetCustomCommandEnabled(r.Context(), session(r), api.KindCommand, id, cid, r.PostFormValue("enabled") == "true")
+	}
 	if err != nil {
 		s.fail(w, r, p, err)
 		return

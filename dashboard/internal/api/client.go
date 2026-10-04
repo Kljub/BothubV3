@@ -547,6 +547,14 @@ func (c *Client) SetCustomCommandEnabled(ctx context.Context, s Session, kind Ki
 	return out, err
 }
 
+// SetCustomCommandPrivate sets whether only the user sees the command's
+// replies; a module or plugin copy stays unsaved.
+func (c *Client) SetCustomCommandPrivate(ctx context.Context, s Session, kind Kind, botID, id int64, private bool) (CustomCommand, error) {
+	var out CustomCommand
+	_, err := c.do(ctx, s, http.MethodPatch, kind.path(botID, fmt.Sprintf("/%d", id)), map[string]bool{"private": private}, &out)
+	return out, err
+}
+
 func (c *Client) DeleteCustomCommand(ctx context.Context, s Session, kind Kind, botID, id int64) error {
 	_, err := c.do(ctx, s, http.MethodDelete, kind.path(botID, fmt.Sprintf("/%d", id)), nil, nil)
 	return err

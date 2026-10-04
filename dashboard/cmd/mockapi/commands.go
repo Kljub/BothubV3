@@ -20,6 +20,7 @@ type customCommand struct {
 	Description string          `json:"description"`
 	Enabled     bool            `json:"enabled"`
 	Builtin     bool            `json:"builtin"`
+	Private     bool            `json:"private"` // slash trigger hide_replies
 	GroupID     *int64          `json:"groupId"`
 	Kind        string          `json:"kind,omitempty"`      // "" = command, "event" = custom event
 	EventType   string          `json:"eventType,omitempty"` // custom events: key from shared/events.json
@@ -191,6 +192,7 @@ func (s *store) createCommand(w http.ResponseWriter, r *http.Request, b *bot) {
 func (s *store) patchCommand(w http.ResponseWriter, r *http.Request, b *bot) {
 	var in struct {
 		Enabled *bool           `json:"enabled"`
+		Private *bool           `json:"private"`
 		GroupID json.RawMessage `json:"groupId"`
 	}
 	if !readJSON(w, r, &in) {
@@ -209,6 +211,9 @@ func (s *store) patchCommand(w http.ResponseWriter, r *http.Request, b *bot) {
 			return
 		}
 		c.Enabled, c.UpdatedAt = *in.Enabled, time.Now().UTC()
+	}
+	if in.Private != nil {
+		c.Private, c.UpdatedAt = *in.Private, time.Now().UTC()
 	}
 	if len(in.GroupID) > 0 && !s.setCommandGroup(b, c, in.GroupID) {
 		apiError(w, 422, "error.group.unknown")

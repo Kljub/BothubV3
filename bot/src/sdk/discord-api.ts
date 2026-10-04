@@ -145,6 +145,8 @@ interface Held {
   interaction: RepliableInteraction;
   expires: number;
   timer?: NodeJS.Timeout;
+  /** The command's replies are only for the user (slash trigger "hide_replies"). */
+  hide?: boolean;
 }
 
 /** Interactions the plugins may answer, by opaque handle (bound to bot + plugin). */
@@ -152,10 +154,10 @@ export class InteractionRegistry {
   private readonly held = new Map<string, Held>();
 
   /** Registers an interaction; when the plugin stays silent the bot acknowledges it after AUTO_DEFER_MS. */
-  hold(botId: number, pluginId: string, interaction: RepliableInteraction, autoDefer: boolean): string {
+  hold(botId: number, pluginId: string, interaction: RepliableInteraction, autoDefer: boolean, hide = false): string {
     this.sweep();
     const handle = randomBytes(12).toString('hex');
-    const h: Held = { botId, pluginId, interaction, expires: Date.now() + HANDLE_TTL_MS };
+    const h: Held = { botId, pluginId, interaction, expires: Date.now() + HANDLE_TTL_MS, ...(hide ? { hide } : {}) };
     if (autoDefer) {
       h.timer = setTimeout(() => {
         const i = h.interaction;
@@ -167,6 +169,11 @@ export class InteractionRegistry {
     }
     this.held.set(handle, h);
     return handle;
+  }
+
+  /** true when the command of this handle answers only its user. */
+  hides(handle: unknown): boolean {
+    return typeof handle === 'string' && this.held.get(handle)?.hide === true;
   }
 
   get(botId: number, pluginId: string, handle: unknown): RepliableInteraction {
@@ -599,7 +606,8 @@ export function discordApi(
     return p;
   };
   const held = (handle: unknown): RepliableInteraction => interactions.get(botId, pluginId, handle);
-  const ephemeralFlag = (opts: unknown): number => (opts && typeof opts === 'object' && (opts as { ephemeral?: unknown }).ephemeral === true ? 64 : 0);
+  const ephemeralFlag = (opts: unknown, handle?: unknown): number =>
+    (opts && typeof opts === 'object' && (opts as { ephemeral?: unknown }).ephemeral === true) || interactions.hides(handle) ? 64 : 0;
   const PERMS: Record<string, bigint> = Object.fromEntries(Object.entries(PermissionFlagsBits).map(([k, v]) => [k.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase(), v]));
   const perms = (list: unknown): bigint => {
     if (list === undefined) return 0n;
@@ -922,7 +930,7 @@ export function discordApi(
     // --- interactions (handles from blocks, clicks, selects, modals) ---
     'interaction.reply': async (q) => {
       const i = held(a(q)[0]);
-      const p = { ...payload(a(q)[1]), flags: ephemeralFlag(a(q)[2]), ...withFile(a(q)[2]) };
+      const p = { ...payload(a(q)[1]), flags: ephemeralFlag(a(q)[2], a(q)[0]), ...withFile(a(q)[2]) };
       if (i.replied || i.deferred) await i.followUp(p as never);
       else await i.reply(p as never);
     },
@@ -933,12 +941,12 @@ export function discordApi(
     },
     'interaction.deferReply': async (q) => {
       const i = held(a(q)[0]);
-      if (!i.replied && !i.deferred) await i.deferReply({ flags: ephemeralFlag(a(q)[1]) });
+      if (!i.replied && !i.deferred) await i.deferReply({ flags: ephemeralFlag(a(q)[1], a(q)[0]) });
     },
     'interaction.followUp': async (q) => {
       const i = held(a(q)[0]);
       if (!i.replied && !i.deferred) throw new SdkError('sdk.interaction.not_replied');
-      await i.followUp({ ...payload(a(q)[1]), flags: ephemeralFlag(a(q)[2]), ...withFile(a(q)[2]) } as never);
+      await i.followUp({ ...payload(a(q)[1]), flags: ephemeralFlag(a(q)[2], a(q)[0]), ...withFile(a(q)[2]) } as never);
     },
     /** Updates the message of the clicked button/select (component interactions). */
     'interaction.update': async (q) => {

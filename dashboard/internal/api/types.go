@@ -321,6 +321,7 @@ type CustomCommand struct {
 	Preset      *string         `json:"preset"`   // module copy: delete resets it to this preset
 	Copy        bool            `json:"copy"`     // module or plugin copy: stays in its system group
 	PluginID    *string         `json:"pluginId"` // plugin copy: listed on the plugin's page
+	Private     bool            `json:"private"`  // replies only the user sees (slash trigger hide_replies)
 	GroupID     *int64          `json:"groupId"`
 	EventType   string          `json:"eventType,omitempty"` // custom events only
 	UpdatedAt   time.Time       `json:"updatedAt"`
