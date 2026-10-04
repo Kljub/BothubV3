@@ -438,8 +438,8 @@ func (s *Server) moduleAbout(locale, key string) []aboutStep {
 	var out []aboutStep
 	for n := 1; n <= 10; n++ {
 		k := fmt.Sprintf("module.%s.about.%d", key, n)
-		title := s.i18n.T(locale, k)
-		if title == k {
+		title, ok := s.i18n.Lookup(locale, k)
+		if !ok {
 			break
 		}
 		out = append(out, aboutStep{Title: title, Text: s.i18n.T(locale, k+"_hint")})

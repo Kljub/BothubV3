@@ -44,12 +44,11 @@ func (s *Server) sdkTexts(p api.SdkPolicy, locale string) (label, hint, module s
 			module = s.i18n.T(locale, "module."+p.Module+".name")
 		}
 	}
-	label, hint = s.i18n.T(locale, "sdk.perm."+p.Permission), s.i18n.T(locale, "sdk.perm."+p.Permission+"_hint")
-	if label == "sdk.perm."+p.Permission && p.Module != "" && p.Module != "all" {
-		label = s.i18n.T(locale, "sdk.perm.module_read", "module", module)
-		hint = s.i18n.T(locale, "sdk.perm.module_read_hint", "module", module)
+	// Per-module read permissions share one generic text.
+	if _, ok := s.i18n.Lookup(locale, "sdk.perm."+p.Permission); !ok && p.Module != "" && p.Module != "all" {
+		return s.i18n.T(locale, "sdk.perm.module_read", "module", module), s.i18n.T(locale, "sdk.perm.module_read_hint", "module", module), module
 	}
-	return label, hint, module
+	return s.i18n.T(locale, "sdk.perm."+p.Permission), s.i18n.T(locale, "sdk.perm."+p.Permission+"_hint"), module
 }
 
 // sdkGroups sorts groups by their translated name and the permissions
