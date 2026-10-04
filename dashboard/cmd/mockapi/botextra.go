@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"encoding/base64"
 	"io"
+	"log"
 	"net/http"
 	"time"
 )
@@ -46,6 +48,8 @@ type profileData struct {
 	avatar, banner  *string
 	pronouns, bio   string
 	avatarRL, banRL rateWindow
+	synced          bool      // avatar, banner and bio were read from Discord
+	syncTried       time.Time // last automatic attempt (retried after a minute)
 }
 
 type activity struct {
@@ -103,10 +107,44 @@ func (s *store) profileJSON(id int64) map[string]any {
 	}
 }
 
+// getProfile reads the profile once from Discord on first use: the mock
+// keeps it in memory only, so after a restart avatar and banner would stay
+// empty until the user clicks "from Discord".
 func (s *store) getProfile(w http.ResponseWriter, r *http.Request, b *bot) {
+	s.mu.Lock()
+	p := s.profileOf(b.ID)
+	load := !p.synced && time.Since(p.syncTried) > time.Minute
+	if load {
+		p.syncTried = time.Now()
+	}
+	s.mu.Unlock()
+	if load {
+		if err := s.loadProfile(r.Context(), b); err != nil {
+			log.Printf("profile of bot %d: %v", b.ID, err)
+		}
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	writeJSON(w, 200, s.profileJSON(b.ID))
+}
+
+// loadProfile reads avatar, banner and "About me" from Discord.
+func (s *store) loadProfile(ctx context.Context, b *bot) error {
+	token := s.botToken(b)
+	user, err := s.discord.me(ctx, token)
+	if err != nil {
+		return err
+	}
+	app, err := s.discord.application(ctx, token)
+	if err != nil {
+		return err
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	p := s.profileOf(b.ID)
+	avatar := avatarURL(user)
+	p.avatar, p.banner, p.bio, b.AvatarURL, p.synced = &avatar, bannerURL(user), app.Description, &avatar, true
+	return nil
 }
 
 func (s *store) patchProfile(w http.ResponseWriter, r *http.Request, b *bot) {
@@ -190,28 +228,20 @@ func (s *store) uploadProfile(w http.ResponseWriter, r *http.Request, b *bot) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	avatar := avatarURL(user)
-	p.avatar, p.banner, b.AvatarURL = &avatar, bannerURL(user), &avatar
+	p.avatar, p.banner, b.AvatarURL, p.synced = &avatar, bannerURL(user), &avatar, true
 	writeJSON(w, 200, s.profileJSON(b.ID))
 }
 
 // syncProfile reads avatar, banner and "About me" from Discord.
 func (s *store) syncProfile(w http.ResponseWriter, r *http.Request, b *bot) {
-	token := s.botToken(b)
-	user, err := s.discord.me(r.Context(), token)
-	if err == nil {
-		var app discordApplication
-		if app, err = s.discord.application(r.Context(), token); err == nil {
-			s.mu.Lock()
-			defer s.mu.Unlock()
-			p := s.profileOf(b.ID)
-			avatar := avatarURL(user)
-			p.avatar, p.banner, p.bio, b.AvatarURL = &avatar, bannerURL(user), app.Description, &avatar
-			writeJSON(w, 200, s.profileJSON(b.ID))
-			return
-		}
+	if err := s.loadProfile(r.Context(), b); err != nil {
+		de := asDiscordError(err)
+		apiError(w, de.Status, de.Key)
+		return
 	}
-	de := asDiscordError(err)
-	apiError(w, de.Status, de.Key)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	writeJSON(w, 200, s.profileJSON(b.ID))
 }
 
 func (s *store) getPresence(w http.ResponseWriter, r *http.Request, b *bot) {

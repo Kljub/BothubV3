@@ -15,6 +15,11 @@ input, select {
 input::placeholder { color: var(--muted); }
 input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 input[type="checkbox"] { padding: 0; width: 16px; height: 16px; accent-color: var(--accent); }
+/* Color fields: the swatch fills the field (the text padding above would shrink it to a few pixels). */
+input[type="color"] { width: 64px; height: 42px; padding: 4px; cursor: pointer; }
+input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+input[type="color"]::-webkit-color-swatch { border: none; border-radius: 4px; }
+input[type="color"]::-moz-color-swatch { border: none; border-radius: 4px; }
 .hint { display: block; margin-top: 8px; font-size: 12px; color: var(--muted); font-weight: 400; text-transform: none; letter-spacing: 0; }
 .hint-top { margin: 0 0 12px; }
 .hint-right { text-align: right; }
@@ -29,8 +34,12 @@ textarea { font: inherit; color: var(--text); padding: 10px 12px; background: va
 .preview { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); }
 .preview .hint { margin: 0; font-size: 11px; }
 .rows { display: flex; flex-direction: column; gap: 8px; }
-.row-entry { display: flex; gap: 8px; }
-.row-entry input { flex: 1; }
+.row-entry { display: flex; align-items: stretch; gap: 8px; }
+/* Inputs without a set width fill the row; input-small / -medium / -wide keep theirs. */
+.row-entry input:not(.input-small):not(.input-medium):not(.input-wide) { flex: 1; min-width: 0; }
+.row-entry .input-small, .row-entry .input-medium, .row-entry .input-wide, .row-entry select { flex: none; }
+/* The remove button is as tall as the fields of its row and square. */
+.row-entry > .icon-btn { flex: none; width: 42px; height: auto; align-self: stretch; } /* 42px = input height (13px text, 10px padding, border) */
 .input-name { font-size: 16px; font-weight: 700; width: 240px; }
 
 /* Read-only value with a copy button (URLs, keys): <div class="copy-field"><code>…</code><button class="btn btn-sm" data-copy="…"> */
@@ -45,3 +54,4 @@ textarea { font: inherit; color: var(--text); padding: 10px 12px; background: va
 /* Two columns that stack on small screens (form left, preview right). */
 .split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
 @media (max-width: 900px) { .split { grid-template-columns: 1fr; } }
+input.mono, textarea.mono, select.mono { font-size: 13px; }

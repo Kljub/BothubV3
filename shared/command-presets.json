@@ -2518,8 +2518,7 @@
       "position": {
        "x": 120,
        "y": 240
-      },
-      "note": "Copied from the Moderation module. Add the blocks for what it does."
+      }
      },
      {
       "id": "error",
@@ -2529,12 +2528,88 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
+       "x": 120,
+       "y": 760
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.automod_list",
+      "typeVersion": 1,
+      "config": {
+       "variable": "rules"
+      },
+      "position": {
+       "x": 440,
        "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "**AutoMod rules ({rules.count})**\n{rules}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
       }
      }
     ],
-    "edges": []
+    "edges": [
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
    }
   },
   {
@@ -2871,8 +2946,7 @@
       "position": {
        "x": 120,
        "y": 240
-      },
-      "note": "Copied from the Moderation module. Add the blocks for what it does."
+      }
      },
      {
       "id": "error",
@@ -2882,8 +2956,8 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
-       "y": 240
+       "x": 120,
+       "y": 760
       }
      },
      {
@@ -2901,6 +2975,258 @@
        "x": 120,
        "y": 110
       }
+     },
+     {
+      "id": "option_name",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "name",
+       "variable": "name",
+       "description": "Name for create / rename",
+       "required": false
+      },
+      "position": {
+       "x": 410,
+       "y": 110
+      }
+     },
+     {
+      "id": "option_channel",
+      "type": "option.channel",
+      "typeVersion": 1,
+      "config": {
+       "name": "channel",
+       "variable": "channel",
+       "description": "Channel to delete / rename (empty: this one)",
+       "required": false
+      },
+      "position": {
+       "x": 700,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "condition.comparison",
+      "typeVersion": 1,
+      "config": {
+       "source": "option",
+       "subject": "option_channel",
+       "multi": "first"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "condition.state",
+      "typeVersion": 1,
+      "config": {
+       "operator": "eq",
+       "value": ""
+      },
+      "position": {
+       "x": 440,
+       "y": 370
+      }
+     },
+     {
+      "id": "step3",
+      "type": "action.set_variable",
+      "typeVersion": 1,
+      "config": {
+       "var_name": "target",
+       "value": "{channel.id}",
+       "scope": "run"
+      },
+      "position": {
+       "x": 440,
+       "y": 500
+      }
+     },
+     {
+      "id": "step4",
+      "type": "condition.else",
+      "typeVersion": 1,
+      "config": {},
+      "position": {
+       "x": 760,
+       "y": 370
+      }
+     },
+     {
+      "id": "step5",
+      "type": "action.set_variable",
+      "typeVersion": 1,
+      "config": {
+       "var_name": "target",
+       "value": "{option_channel}",
+       "scope": "run"
+      },
+      "position": {
+       "x": 760,
+       "y": 500
+      }
+     },
+     {
+      "id": "step6",
+      "type": "condition.comparison",
+      "typeVersion": 1,
+      "config": {
+       "source": "option",
+       "subject": "option_action",
+       "multi": "first"
+      },
+      "position": {
+       "x": 1080,
+       "y": 240
+      }
+     },
+     {
+      "id": "step7",
+      "type": "condition.state",
+      "typeVersion": 1,
+      "config": {
+       "operator": "eq",
+       "value": "create"
+      },
+      "position": {
+       "x": 1080,
+       "y": 370
+      }
+     },
+     {
+      "id": "step8",
+      "type": "action.create_channel",
+      "typeVersion": 1,
+      "config": {
+       "name": "{option_name}",
+       "channel_type": "text",
+       "variable": "created"
+      },
+      "position": {
+       "x": 1080,
+       "y": 500
+      }
+     },
+     {
+      "id": "step9",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "✅ Created {created}."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 1080,
+       "y": 630
+      }
+     },
+     {
+      "id": "step10",
+      "type": "condition.state",
+      "typeVersion": 1,
+      "config": {
+       "operator": "eq",
+       "value": "delete"
+      },
+      "position": {
+       "x": 1400,
+       "y": 370
+      }
+     },
+     {
+      "id": "step11",
+      "type": "action.delete_channel",
+      "typeVersion": 1,
+      "config": {
+       "channel": "{target}"
+      },
+      "position": {
+       "x": 1400,
+       "y": 500
+      }
+     },
+     {
+      "id": "step12",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "✅ Channel deleted."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 1400,
+       "y": 630
+      }
+     },
+     {
+      "id": "step13",
+      "type": "condition.state",
+      "typeVersion": 1,
+      "config": {
+       "operator": "eq",
+       "value": "rename"
+      },
+      "position": {
+       "x": 1720,
+       "y": 370
+      }
+     },
+     {
+      "id": "step14",
+      "type": "action.edit_channel",
+      "typeVersion": 1,
+      "config": {
+       "channel": "{target}",
+       "name": "{option_name}"
+      },
+      "position": {
+       "x": 1720,
+       "y": 500
+      }
+     },
+     {
+      "id": "step15",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "✅ Renamed <#{target}> to **{option_name}**."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 1720,
+       "y": 630
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
+      }
      }
     ],
     "edges": [
@@ -2912,6 +3238,196 @@
       "to": {
        "node": "trigger",
        "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "option_name",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "option_channel",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "branches"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step2",
+       "port": "next"
+      },
+      "to": {
+       "node": "step3",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "branches"
+      },
+      "to": {
+       "node": "step4",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step4",
+       "port": "next"
+      },
+      "to": {
+       "node": "step5",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step6",
+       "port": "branches"
+      },
+      "to": {
+       "node": "step7",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step7",
+       "port": "next"
+      },
+      "to": {
+       "node": "step8",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step8",
+       "port": "next"
+      },
+      "to": {
+       "node": "step9",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step6",
+       "port": "branches"
+      },
+      "to": {
+       "node": "step10",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step10",
+       "port": "next"
+      },
+      "to": {
+       "node": "step11",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step11",
+       "port": "next"
+      },
+      "to": {
+       "node": "step12",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step6",
+       "port": "branches"
+      },
+      "to": {
+       "node": "step13",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step13",
+       "port": "next"
+      },
+      "to": {
+       "node": "step14",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step14",
+       "port": "next"
+      },
+      "to": {
+       "node": "step15",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step3",
+       "port": "next"
+      },
+      "to": {
+       "node": "step6",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step5",
+       "port": "next"
+      },
+      "to": {
+       "node": "step6",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
       }
      }
     ]
@@ -3125,8 +3641,7 @@
       "position": {
        "x": 120,
        "y": 240
-      },
-      "note": "Copied from the Moderation module. Add the blocks for what it does."
+      }
      },
      {
       "id": "error",
@@ -3136,8 +3651,8 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
-       "y": 240
+       "x": 120,
+       "y": 760
       }
      },
      {
@@ -3154,6 +3669,52 @@
        "x": 120,
        "y": 110
       }
+     },
+     {
+      "id": "step1",
+      "type": "action.member_info",
+      "typeVersion": 1,
+      "config": {
+       "user": "{option_user}",
+       "variable": "member"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "**{member}**\n{member.avatar}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
+      }
      }
     ],
     "edges": [
@@ -3165,6 +3726,36 @@
       "to": {
        "node": "trigger",
        "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
       }
      }
     ]
@@ -3305,8 +3896,7 @@
       "position": {
        "x": 120,
        "y": 240
-      },
-      "note": "Copied from the Moderation module. Add the blocks for what it does."
+      }
      },
      {
       "id": "error",
@@ -3316,8 +3906,8 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
-       "y": 240
+       "x": 120,
+       "y": 760
       }
      },
      {
@@ -3334,6 +3924,52 @@
        "x": 120,
        "y": 110
       }
+     },
+     {
+      "id": "step1",
+      "type": "action.member_info",
+      "typeVersion": 1,
+      "config": {
+       "user": "{option_user}",
+       "variable": "member"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "**{member}** ({member.name})\nID: {member.id}\nAccount created: {member.created}\nJoined: {member.joined}\nRoles ({member.role_count}): {member.roles}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
+      }
      }
     ],
     "edges": [
@@ -3345,6 +3981,36 @@
       "to": {
        "node": "trigger",
        "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
       }
      }
     ]
@@ -5498,8 +6164,7 @@
       "position": {
        "x": 120,
        "y": 240
-      },
-      "note": "Copied from the Servermanagement module. Add the blocks for what it does."
+      }
      },
      {
       "id": "error",
@@ -5509,12 +6174,66 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
+       "x": 120,
+       "y": 760
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "🏓 Pong! {bot.ping} ms"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
        "y": 240
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
       }
      }
     ],
-    "edges": []
+    "edges": [
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
    }
   },
   {
@@ -5537,8 +6256,7 @@
       "position": {
        "x": 120,
        "y": 240
-      },
-      "note": "Copied from the Servermanagement module. Add the blocks for what it does."
+      }
      },
      {
       "id": "error",
@@ -5548,12 +6266,66 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
+       "x": 120,
+       "y": 760
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "🧠 Memory: {bot.memory} MB"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
        "y": 240
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
       }
      }
     ],
-    "edges": []
+    "edges": [
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
    }
   },
   {
@@ -5576,8 +6348,7 @@
       "position": {
        "x": 120,
        "y": 240
-      },
-      "note": "Copied from the Servermanagement module. Add the blocks for what it does."
+      }
      },
      {
       "id": "error",
@@ -5587,12 +6358,66 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
+       "x": 120,
+       "y": 760
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "⏱️ Online for {bot.uptime}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
        "y": 240
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
       }
      }
     ],
-    "edges": []
+    "edges": [
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
    }
   },
   {
@@ -5615,8 +6440,7 @@
       "position": {
        "x": 120,
        "y": 240
-      },
-      "note": "Copied from the Servermanagement module. Add the blocks for what it does."
+      }
      },
      {
       "id": "error",
@@ -5626,12 +6450,66 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
+       "x": 120,
+       "y": 760
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "**{server.name}**\nMembers: {server.members}\nChannels: {server.channels}\nRoles: {server.roles}\nBoosts: {server.boosts} (level {server.boost_tier})\nOwner: <@{server.owner_id}>\nCreated: {server.created}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
        "y": 240
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
       }
      }
     ],
-    "edges": []
+    "edges": [
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
    }
   },
   {
@@ -5649,13 +6527,25 @@
       "typeVersion": 1,
       "config": {
        "command_name": "say",
-       "description": "Makes the bot send a message"
+       "description": "Makes the bot send a message",
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "everyone"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [
+         "manage_messages"
+        ],
+        "banned_channels": [],
+        "hide_without_permission": true
+       }
       },
       "position": {
        "x": 120,
        "y": 240
-      },
-      "note": "Copied from the Servermanagement module. Add the blocks for what it does."
+      }
      },
      {
       "id": "error",
@@ -5665,8 +6555,8 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
-       "y": 240
+       "x": 120,
+       "y": 760
       }
      },
      {
@@ -5683,6 +6573,57 @@
        "x": 120,
        "y": 110
       }
+     },
+     {
+      "id": "step1",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "{option_message}"
+       },
+       "target": "command_channel",
+       "mentions": "none"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "✅ Sent."
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
+      }
      }
     ],
     "edges": [
@@ -5694,6 +6635,36 @@
       "to": {
        "node": "trigger",
        "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
       }
      }
     ]
@@ -5714,25 +6685,14 @@
       "typeVersion": 1,
       "config": {
        "command_name": "poll-create",
-       "description": "Create a poll with up to 10 answers"
+       "description": "Create a poll with up to 10 answers",
+       "hide_replies": true
       },
       "position": {
        "x": 120,
        "y": 240
       },
-      "note": "Copied from the Polls module. Add the blocks for what it does."
-     },
-     {
-      "id": "error",
-      "type": "utility.error_handler",
-      "typeVersion": 1,
-      "config": {
-       "variable": "error"
-      },
-      "position": {
-       "x": 740,
-       "y": 240
-      }
+      "note": "Copied from the Polls module."
      },
      {
       "id": "option_question",
@@ -5763,6 +6723,82 @@
        "x": 410,
        "y": 110
       }
+     },
+     {
+      "id": "option_duration",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "duration",
+       "description": "How long, e.g. 1h, 3d (default 1 day)",
+       "required": false,
+       "variable": "duration"
+      },
+      "position": {
+       "x": 700,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.poll_create",
+      "typeVersion": 1,
+      "config": {
+       "channel": "{channel.id}",
+       "question": "{option_question}",
+       "answers": "{option_answers}",
+       "duration": "{option_duration}",
+       "multiple": false,
+       "variable": "poll"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Poll created: {poll.url} (ID {poll.id})"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
      }
     ],
     "edges": [
@@ -5785,6 +6821,46 @@
        "node": "trigger",
        "port": "options"
       }
+     },
+     {
+      "from": {
+       "node": "option_duration",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
      }
     ]
    }
@@ -5804,13 +6880,58 @@
       "typeVersion": 1,
       "config": {
        "command_name": "poll-find",
-       "description": "Show the results of a poll"
+       "description": "Show the results of a poll",
+       "hide_replies": true
       },
       "position": {
        "x": 120,
        "y": 240
       },
-      "note": "Copied from the Polls module. Add the blocks for what it does."
+      "note": "Copied from the Polls module."
+     },
+     {
+      "id": "option_id",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "id",
+       "description": "Poll ID or message link",
+       "required": true,
+       "variable": "id"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.poll_results",
+      "typeVersion": 1,
+      "config": {
+       "poll": "{option_id}",
+       "variable": "result"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "**{result.question}** ({result.total} votes)\n{result}\n{result.url}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
      },
      {
       "id": "error",
@@ -5820,35 +6941,66 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
-       "y": 240
+       "x": 120,
+       "y": 520
       }
      },
      {
-      "id": "option_poll",
-      "type": "option.text",
+      "id": "error_reply",
+      "type": "action.send_message",
       "typeVersion": 1,
       "config": {
-       "name": "poll",
-       "description": "Poll ID",
-       "required": true,
-       "variable": "poll"
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
       },
       "position": {
-       "x": 120,
-       "y": 110
+       "x": 440,
+       "y": 520
       }
      }
     ],
     "edges": [
      {
       "from": {
-       "node": "option_poll",
+       "node": "option_id",
        "port": "option"
       },
       "to": {
        "node": "trigger",
        "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
       }
      }
     ]
@@ -5869,13 +7021,42 @@
       "typeVersion": 1,
       "config": {
        "command_name": "poll-list",
-       "description": "List all polls in the server"
+       "description": "List all polls in the server",
+       "hide_replies": true
       },
       "position": {
        "x": 120,
        "y": 240
       },
-      "note": "Copied from the Polls module. Add the blocks for what it does."
+      "note": "Copied from the Polls module."
+     },
+     {
+      "id": "step1",
+      "type": "action.poll_list",
+      "typeVersion": 1,
+      "config": {
+       "variable": "polls"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "**Polls ({polls.count})**\n{polls}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
      },
      {
       "id": "error",
@@ -5885,12 +7066,59 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
-       "y": 240
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
       }
      }
     ],
-    "edges": []
+    "edges": [
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
    }
   },
   {
@@ -5908,13 +7136,57 @@
       "typeVersion": 1,
       "config": {
        "command_name": "poll-delete",
-       "description": "Delete a poll"
+       "description": "Delete a poll",
+       "hide_replies": true
       },
       "position": {
        "x": 120,
        "y": 240
       },
-      "note": "Copied from the Polls module. Add the blocks for what it does."
+      "note": "Copied from the Polls module."
+     },
+     {
+      "id": "option_id",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "id",
+       "description": "Poll ID or message link",
+       "required": true,
+       "variable": "id"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.poll_delete",
+      "typeVersion": 1,
+      "config": {
+       "poll": "{option_id}"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Poll deleted."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
      },
      {
       "id": "error",
@@ -5924,35 +7196,66 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
-       "y": 240
+       "x": 120,
+       "y": 520
       }
      },
      {
-      "id": "option_poll",
-      "type": "option.text",
+      "id": "error_reply",
+      "type": "action.send_message",
       "typeVersion": 1,
       "config": {
-       "name": "poll",
-       "description": "Poll ID",
-       "required": true,
-       "variable": "poll"
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
       },
       "position": {
-       "x": 120,
-       "y": 110
+       "x": 440,
+       "y": 520
       }
      }
     ],
     "edges": [
      {
       "from": {
-       "node": "option_poll",
+       "node": "option_id",
        "port": "option"
       },
       "to": {
        "node": "trigger",
        "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
       }
      }
     ]
@@ -5978,8 +7281,7 @@
       "position": {
        "x": 120,
        "y": 240
-      },
-      "note": "Copied from the Leveling module. Add the blocks for what it does."
+      }
      },
      {
       "id": "error",
@@ -5989,8 +7291,8 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
-       "y": 240
+       "x": 120,
+       "y": 760
       }
      },
      {
@@ -6007,6 +7309,117 @@
        "x": 120,
        "y": 110
       }
+     },
+     {
+      "id": "step1",
+      "type": "condition.comparison",
+      "typeVersion": 1,
+      "config": {
+       "source": "option",
+       "subject": "option_user",
+       "multi": "first"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "condition.state",
+      "typeVersion": 1,
+      "config": {
+       "operator": "eq",
+       "value": ""
+      },
+      "position": {
+       "x": 440,
+       "y": 370
+      }
+     },
+     {
+      "id": "step3",
+      "type": "action.set_variable",
+      "typeVersion": 1,
+      "config": {
+       "var_name": "target",
+       "value": "{user.id}",
+       "scope": "run"
+      },
+      "position": {
+       "x": 440,
+       "y": 500
+      }
+     },
+     {
+      "id": "step4",
+      "type": "condition.else",
+      "typeVersion": 1,
+      "config": {},
+      "position": {
+       "x": 760,
+       "y": 370
+      }
+     },
+     {
+      "id": "step5",
+      "type": "action.set_variable",
+      "typeVersion": 1,
+      "config": {
+       "var_name": "target",
+       "value": "{option_user}",
+       "scope": "run"
+      },
+      "position": {
+       "x": 760,
+       "y": 500
+      }
+     },
+     {
+      "id": "step6",
+      "type": "action.leveling_get_rank",
+      "typeVersion": 1,
+      "config": {
+       "user": "{target}",
+       "variable": "rank"
+      },
+      "position": {
+       "x": 1080,
+       "y": 240
+      }
+     },
+     {
+      "id": "step7",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "<@{target}> · Level **{rank.level}** · {rank.xp} XP · Rank #{rank.rank}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 1400,
+       "y": 240
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
+      }
      }
     ],
     "edges": [
@@ -6018,6 +7431,96 @@
       "to": {
        "node": "trigger",
        "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "branches"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step2",
+       "port": "next"
+      },
+      "to": {
+       "node": "step3",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "branches"
+      },
+      "to": {
+       "node": "step4",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step4",
+       "port": "next"
+      },
+      "to": {
+       "node": "step5",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step3",
+       "port": "next"
+      },
+      "to": {
+       "node": "step6",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step5",
+       "port": "next"
+      },
+      "to": {
+       "node": "step6",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step6",
+       "port": "next"
+      },
+      "to": {
+       "node": "step7",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
       }
      }
     ]
@@ -6043,8 +7546,7 @@
       "position": {
        "x": 120,
        "y": 240
-      },
-      "note": "Copied from the Leveling module. Add the blocks for what it does."
+      }
      },
      {
       "id": "error",
@@ -6054,12 +7556,89 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
+       "x": 120,
+       "y": 760
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.leveling_leaderboard",
+      "typeVersion": 1,
+      "config": {
+       "limit": 10,
+       "variable": "top"
+      },
+      "position": {
+       "x": 440,
        "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "**Level leaderboard**\n{top}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
       }
      }
     ],
-    "edges": []
+    "edges": [
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
    }
   },
   {
@@ -6077,13 +7656,25 @@
       "typeVersion": 1,
       "config": {
        "command_name": "level edit-xp",
-       "description": "Edit someone's experience or level (Admin)"
+       "description": "Edit someone's experience or level (Admin)",
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "everyone"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [
+         "manage_guild"
+        ],
+        "banned_channels": [],
+        "hide_without_permission": true
+       }
       },
       "position": {
        "x": 120,
        "y": 240
-      },
-      "note": "Copied from the Leveling module. Add the blocks for what it does."
+      }
      },
      {
       "id": "error",
@@ -6093,8 +7684,8 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
-       "y": 240
+       "x": 120,
+       "y": 760
       }
      },
      {
@@ -6126,6 +7717,53 @@
        "x": 410,
        "y": 110
       }
+     },
+     {
+      "id": "step1",
+      "type": "action.leveling_edit_xp",
+      "typeVersion": 1,
+      "config": {
+       "user": "{option_user}",
+       "xp_mode": "set",
+       "amount": "{option_xp}"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "✅ XP of <@{option_user}> set to {option_xp}."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
+      }
      }
     ],
     "edges": [
@@ -6148,6 +7786,36 @@
        "node": "trigger",
        "port": "options"
       }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
      }
     ]
    }
@@ -6167,13 +7835,25 @@
       "typeVersion": 1,
       "config": {
        "command_name": "level reset-leaderboard",
-       "description": "Reset this server's leveling leaderboard (Admin)"
+       "description": "Reset this server's leveling leaderboard (Admin)",
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "everyone"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [
+         "manage_guild"
+        ],
+        "banned_channels": [],
+        "hide_without_permission": true
+       }
       },
       "position": {
        "x": 120,
        "y": 240
-      },
-      "note": "Copied from the Leveling module. Add the blocks for what it does."
+      }
      },
      {
       "id": "error",
@@ -6183,12 +7863,86 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
+       "x": 120,
+       "y": 760
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.leveling_reset",
+      "typeVersion": 1,
+      "config": {},
+      "position": {
+       "x": 440,
        "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "✅ Leaderboard reset."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
       }
      }
     ],
-    "edges": []
+    "edges": [
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
    }
   },
   {
@@ -6211,8 +7965,7 @@
       "position": {
        "x": 120,
        "y": 240
-      },
-      "note": "Copied from the Invite Tracker module. Add the blocks for what it does."
+      }
      },
      {
       "id": "error",
@@ -6222,8 +7975,8 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
-       "y": 240
+       "x": 120,
+       "y": 760
       }
      },
      {
@@ -6240,6 +7993,117 @@
        "x": 120,
        "y": 110
       }
+     },
+     {
+      "id": "step1",
+      "type": "condition.comparison",
+      "typeVersion": 1,
+      "config": {
+       "source": "option",
+       "subject": "option_user",
+       "multi": "first"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "condition.state",
+      "typeVersion": 1,
+      "config": {
+       "operator": "eq",
+       "value": ""
+      },
+      "position": {
+       "x": 440,
+       "y": 370
+      }
+     },
+     {
+      "id": "step3",
+      "type": "action.set_variable",
+      "typeVersion": 1,
+      "config": {
+       "var_name": "target",
+       "value": "{user.id}",
+       "scope": "run"
+      },
+      "position": {
+       "x": 440,
+       "y": 500
+      }
+     },
+     {
+      "id": "step4",
+      "type": "condition.else",
+      "typeVersion": 1,
+      "config": {},
+      "position": {
+       "x": 760,
+       "y": 370
+      }
+     },
+     {
+      "id": "step5",
+      "type": "action.set_variable",
+      "typeVersion": 1,
+      "config": {
+       "var_name": "target",
+       "value": "{option_user}",
+       "scope": "run"
+      },
+      "position": {
+       "x": 760,
+       "y": 500
+      }
+     },
+     {
+      "id": "step6",
+      "type": "action.invites_get",
+      "typeVersion": 1,
+      "config": {
+       "user": "{target}",
+       "variable": "inv"
+      },
+      "position": {
+       "x": 1080,
+       "y": 240
+      }
+     },
+     {
+      "id": "step7",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "<@{target}> has **{inv.total}** invites ({inv.left} left)."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 1400,
+       "y": 240
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
+      }
      }
     ],
     "edges": [
@@ -6251,6 +8115,96 @@
       "to": {
        "node": "trigger",
        "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "branches"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step2",
+       "port": "next"
+      },
+      "to": {
+       "node": "step3",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "branches"
+      },
+      "to": {
+       "node": "step4",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step4",
+       "port": "next"
+      },
+      "to": {
+       "node": "step5",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step3",
+       "port": "next"
+      },
+      "to": {
+       "node": "step6",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step5",
+       "port": "next"
+      },
+      "to": {
+       "node": "step6",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step6",
+       "port": "next"
+      },
+      "to": {
+       "node": "step7",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
       }
      }
     ]
@@ -6271,13 +8225,25 @@
       "typeVersion": 1,
       "config": {
        "command_name": "invite-reset",
-       "description": "Resets invite stats (requires: Manage Server)."
+       "description": "Resets invite stats (requires: Manage Server).",
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "everyone"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [
+         "manage_guild"
+        ],
+        "banned_channels": [],
+        "hide_without_permission": true
+       }
       },
       "position": {
        "x": 120,
        "y": 240
-      },
-      "note": "Copied from the Invite Tracker module. Add the blocks for what it does."
+      }
      },
      {
       "id": "error",
@@ -6287,8 +8253,8 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
-       "y": 240
+       "x": 120,
+       "y": 760
       }
      },
      {
@@ -6305,6 +8271,116 @@
        "x": 120,
        "y": 110
       }
+     },
+     {
+      "id": "step1",
+      "type": "condition.comparison",
+      "typeVersion": 1,
+      "config": {
+       "source": "option",
+       "subject": "option_user",
+       "multi": "first"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "condition.state",
+      "typeVersion": 1,
+      "config": {
+       "operator": "eq",
+       "value": ""
+      },
+      "position": {
+       "x": 440,
+       "y": 370
+      }
+     },
+     {
+      "id": "step3",
+      "type": "action.set_variable",
+      "typeVersion": 1,
+      "config": {
+       "var_name": "target",
+       "value": "{user.id}",
+       "scope": "run"
+      },
+      "position": {
+       "x": 440,
+       "y": 500
+      }
+     },
+     {
+      "id": "step4",
+      "type": "condition.else",
+      "typeVersion": 1,
+      "config": {},
+      "position": {
+       "x": 760,
+       "y": 370
+      }
+     },
+     {
+      "id": "step5",
+      "type": "action.set_variable",
+      "typeVersion": 1,
+      "config": {
+       "var_name": "target",
+       "value": "{option_user}",
+       "scope": "run"
+      },
+      "position": {
+       "x": 760,
+       "y": 500
+      }
+     },
+     {
+      "id": "step6",
+      "type": "action.invites_reset",
+      "typeVersion": 1,
+      "config": {
+       "user": "{target}"
+      },
+      "position": {
+       "x": 1080,
+       "y": 240
+      }
+     },
+     {
+      "id": "step7",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "✅ Invites of <@{target}> reset."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 1400,
+       "y": 240
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
+      }
      }
     ],
     "edges": [
@@ -6316,6 +8392,96 @@
       "to": {
        "node": "trigger",
        "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "branches"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step2",
+       "port": "next"
+      },
+      "to": {
+       "node": "step3",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "branches"
+      },
+      "to": {
+       "node": "step4",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step4",
+       "port": "next"
+      },
+      "to": {
+       "node": "step5",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step3",
+       "port": "next"
+      },
+      "to": {
+       "node": "step6",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step5",
+       "port": "next"
+      },
+      "to": {
+       "node": "step6",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step6",
+       "port": "next"
+      },
+      "to": {
+       "node": "step7",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
       }
      }
     ]
@@ -6341,8 +8507,7 @@
       "position": {
        "x": 120,
        "y": 240
-      },
-      "note": "Copied from the Invite Tracker module. Add the blocks for what it does."
+      }
      },
      {
       "id": "error",
@@ -6352,8 +8517,8 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
-       "y": 240
+       "x": 120,
+       "y": 760
       }
      },
      {
@@ -6370,6 +8535,52 @@
        "x": 120,
        "y": 110
       }
+     },
+     {
+      "id": "step1",
+      "type": "action.invites_leaderboard",
+      "typeVersion": 1,
+      "config": {
+       "limit": "{option_limit}",
+       "variable": "top"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "**Invite leaderboard**\n{top}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
+      }
      }
     ],
     "edges": [
@@ -6381,6 +8592,36 @@
       "to": {
        "node": "trigger",
        "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
       }
      }
     ]
@@ -6406,8 +8647,7 @@
       "position": {
        "x": 120,
        "y": 240
-      },
-      "note": "Copied from the Birthday module. Add the blocks for what it does."
+      }
      },
      {
       "id": "error",
@@ -6417,8 +8657,8 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
-       "y": 240
+       "x": 120,
+       "y": 760
       }
      },
      {
@@ -6435,6 +8675,53 @@
        "x": 120,
        "y": 110
       }
+     },
+     {
+      "id": "step1",
+      "type": "action.birthday_set",
+      "typeVersion": 1,
+      "config": {
+       "user": "{user.id}",
+       "date": "{option_date}"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "🎂 Birthday saved: {option_date}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
+      }
      }
     ],
     "edges": [
@@ -6446,6 +8733,36 @@
       "to": {
        "node": "trigger",
        "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
       }
      }
     ]
@@ -6471,8 +8788,7 @@
       "position": {
        "x": 120,
        "y": 240
-      },
-      "note": "Copied from the Birthday module. Add the blocks for what it does."
+      }
      },
      {
       "id": "error",
@@ -6482,12 +8798,89 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
+       "x": 120,
+       "y": 760
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.birthday_remove",
+      "typeVersion": 1,
+      "config": {
+       "user": "{user.id}"
+      },
+      "position": {
+       "x": 440,
        "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "✅ Birthday removed."
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
       }
      }
     ],
-    "edges": []
+    "edges": [
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
    }
   },
   {
@@ -6510,8 +8903,7 @@
       "position": {
        "x": 120,
        "y": 240
-      },
-      "note": "Copied from the Birthday module. Add the blocks for what it does."
+      }
      },
      {
       "id": "error",
@@ -6521,12 +8913,89 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
+       "x": 120,
+       "y": 760
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.birthday_list",
+      "typeVersion": 1,
+      "config": {
+       "limit": 10,
+       "variable": "list"
+      },
+      "position": {
+       "x": 440,
        "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "**Upcoming birthdays**\n{list}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
       }
      }
     ],
-    "edges": []
+    "edges": [
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
    }
   },
   {
@@ -6549,8 +9018,7 @@
       "position": {
        "x": 120,
        "y": 240
-      },
-      "note": "Copied from the Suggestions module. Add the blocks for what it does."
+      }
      },
      {
       "id": "error",
@@ -6560,8 +9028,8 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
-       "y": 240
+       "x": 120,
+       "y": 760
       }
      },
      {
@@ -6578,6 +9046,53 @@
        "x": 120,
        "y": 110
       }
+     },
+     {
+      "id": "step1",
+      "type": "action.suggestion_create",
+      "typeVersion": 1,
+      "config": {
+       "content": "{option_suggestion}",
+       "variable": "sug"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "✅ Suggestion #{sug} posted: {sug.url}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
+      }
      }
     ],
     "edges": [
@@ -6589,6 +9104,36 @@
       "to": {
        "node": "trigger",
        "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
       }
      }
     ]
@@ -6614,8 +9159,7 @@
       "position": {
        "x": 120,
        "y": 240
-      },
-      "note": "Copied from the Suggestions module. Add the blocks for what it does."
+      }
      },
      {
       "id": "error",
@@ -6625,12 +9169,89 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
+       "x": 120,
+       "y": 760
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.suggestion_list",
+      "typeVersion": 1,
+      "config": {
+       "suggestion_status": "pending",
+       "variable": "list"
+      },
+      "position": {
+       "x": 440,
        "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "**Open suggestions**\n{list}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
       }
      }
     ],
-    "edges": []
+    "edges": [
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
    }
   },
   {
@@ -6648,13 +9269,25 @@
       "typeVersion": 1,
       "config": {
        "command_name": "suggest-approve",
-       "description": "Approve a suggestion (moderator)"
+       "description": "Approve a suggestion (moderator)",
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "everyone"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [
+         "manage_guild"
+        ],
+        "banned_channels": [],
+        "hide_without_permission": true
+       }
       },
       "position": {
        "x": 120,
        "y": 240
-      },
-      "note": "Copied from the Suggestions module. Add the blocks for what it does."
+      }
      },
      {
       "id": "error",
@@ -6664,8 +9297,8 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
-       "y": 240
+       "x": 120,
+       "y": 760
       }
      },
      {
@@ -6697,6 +9330,53 @@
        "x": 410,
        "y": 110
       }
+     },
+     {
+      "id": "step1",
+      "type": "action.suggestion_decide",
+      "typeVersion": 1,
+      "config": {
+       "suggestion": "{option_id}",
+       "decision": "approve",
+       "reason": "{option_reason}"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "✅ Suggestion #{option_id} approved."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
+      }
      }
     ],
     "edges": [
@@ -6718,6 +9398,36 @@
       "to": {
        "node": "trigger",
        "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
       }
      }
     ]
@@ -6738,13 +9448,25 @@
       "typeVersion": 1,
       "config": {
        "command_name": "suggest-reject",
-       "description": "Reject a suggestion (moderator)"
+       "description": "Reject a suggestion (moderator)",
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "everyone"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [
+         "manage_guild"
+        ],
+        "banned_channels": [],
+        "hide_without_permission": true
+       }
       },
       "position": {
        "x": 120,
        "y": 240
-      },
-      "note": "Copied from the Suggestions module. Add the blocks for what it does."
+      }
      },
      {
       "id": "error",
@@ -6754,8 +9476,8 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
-       "y": 240
+       "x": 120,
+       "y": 760
       }
      },
      {
@@ -6787,6 +9509,53 @@
        "x": 410,
        "y": 110
       }
+     },
+     {
+      "id": "step1",
+      "type": "action.suggestion_decide",
+      "typeVersion": 1,
+      "config": {
+       "suggestion": "{option_id}",
+       "decision": "reject",
+       "reason": "{option_reason}"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "✅ Suggestion #{option_id} rejected."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
+      }
      }
     ],
     "edges": [
@@ -6809,6 +9578,36 @@
        "node": "trigger",
        "port": "options"
       }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
      }
     ]
    }
@@ -6828,25 +9627,14 @@
       "typeVersion": 1,
       "config": {
        "command_name": "giveaway-create",
-       "description": "Starts a new giveaway"
+       "description": "Starts a new giveaway",
+       "hide_replies": true
       },
       "position": {
        "x": 120,
        "y": 240
       },
-      "note": "Copied from the Giveaways module. Add the blocks for what it does."
-     },
-     {
-      "id": "error",
-      "type": "utility.error_handler",
-      "typeVersion": 1,
-      "config": {
-       "variable": "error"
-      },
-      "position": {
-       "x": 740,
-       "y": 240
-      }
+      "note": "Copied from the Giveaways module."
      },
      {
       "id": "option_prize",
@@ -6922,6 +9710,67 @@
        "x": 1280,
        "y": 110
       }
+     },
+     {
+      "id": "step1",
+      "type": "action.giveaway_create",
+      "typeVersion": 1,
+      "config": {
+       "channel": "{option_channel}",
+       "prize": "{option_prize}",
+       "winners": "{option_winners}",
+       "duration": "{option_duration}",
+       "role": "{option_role}",
+       "variable": "giveaway"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Giveaway started: {giveaway.url} (ID {giveaway.id})"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
      }
     ],
     "edges": [
@@ -6974,6 +9823,36 @@
        "node": "trigger",
        "port": "options"
       }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
      }
     ]
    }
@@ -6993,13 +9872,58 @@
       "typeVersion": 1,
       "config": {
        "command_name": "giveaway-end",
-       "description": "Ends a running giveaway early"
+       "description": "Ends a running giveaway early",
+       "hide_replies": true
       },
       "position": {
        "x": 120,
        "y": 240
       },
-      "note": "Copied from the Giveaways module. Add the blocks for what it does."
+      "note": "Copied from the Giveaways module."
+     },
+     {
+      "id": "option_giveaway",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "giveaway",
+       "description": "Giveaway ID (from /giveaway-list) or message link",
+       "required": true,
+       "variable": "giveaway"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.giveaway_end",
+      "typeVersion": 1,
+      "config": {
+       "giveaway": "{option_giveaway}",
+       "variable": "ended"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Giveaway ended."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
      },
      {
       "id": "error",
@@ -7009,23 +9933,24 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
-       "y": 240
+       "x": 120,
+       "y": 520
       }
      },
      {
-      "id": "option_giveaway",
-      "type": "option.text",
+      "id": "error_reply",
+      "type": "action.send_message",
       "typeVersion": 1,
       "config": {
-       "name": "giveaway",
-       "description": "Giveaway ID",
-       "required": true,
-       "variable": "giveaway"
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
       },
       "position": {
-       "x": 120,
-       "y": 110
+       "x": 440,
+       "y": 520
       }
      }
     ],
@@ -7038,6 +9963,36 @@
       "to": {
        "node": "trigger",
        "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
       }
      }
     ]
@@ -7058,13 +10013,59 @@
       "typeVersion": 1,
       "config": {
        "command_name": "giveaway-reroll",
-       "description": "Draws new winners for a finished giveaway"
+       "description": "Draws new winners for a finished giveaway",
+       "hide_replies": true
       },
       "position": {
        "x": 120,
        "y": 240
       },
-      "note": "Copied from the Giveaways module. Add the blocks for what it does."
+      "note": "Copied from the Giveaways module."
+     },
+     {
+      "id": "option_giveaway",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "giveaway",
+       "description": "Giveaway ID (from /giveaway-list) or message link",
+       "required": true,
+       "variable": "giveaway"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.giveaway_reroll",
+      "typeVersion": 1,
+      "config": {
+       "giveaway": "{option_giveaway}",
+       "winners": 1,
+       "variable": "rerolled"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "New winner: {rerolled}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
      },
      {
       "id": "error",
@@ -7074,23 +10075,24 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
-       "y": 240
+       "x": 120,
+       "y": 520
       }
      },
      {
-      "id": "option_giveaway",
-      "type": "option.text",
+      "id": "error_reply",
+      "type": "action.send_message",
       "typeVersion": 1,
       "config": {
-       "name": "giveaway",
-       "description": "Giveaway ID",
-       "required": true,
-       "variable": "giveaway"
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
       },
       "position": {
-       "x": 120,
-       "y": 110
+       "x": 440,
+       "y": 520
       }
      }
     ],
@@ -7103,6 +10105,36 @@
       "to": {
        "node": "trigger",
        "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
       }
      }
     ]
@@ -7123,13 +10155,42 @@
       "typeVersion": 1,
       "config": {
        "command_name": "giveaway-list",
-       "description": "Shows all active giveaways in the server"
+       "description": "Shows all active giveaways in the server",
+       "hide_replies": true
       },
       "position": {
        "x": 120,
        "y": 240
       },
-      "note": "Copied from the Giveaways module. Add the blocks for what it does."
+      "note": "Copied from the Giveaways module."
+     },
+     {
+      "id": "step1",
+      "type": "action.giveaway_list",
+      "typeVersion": 1,
+      "config": {
+       "variable": "giveaways"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "**Giveaways ({giveaways.count})**\n{giveaways}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
      },
      {
       "id": "error",
@@ -7139,12 +10200,59 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
-       "y": 240
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
       }
      }
     ],
-    "edges": []
+    "edges": [
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
    }
   },
   {
@@ -7162,13 +10270,57 @@
       "typeVersion": 1,
       "config": {
        "command_name": "giveaway-delete",
-       "description": "Deletes a giveaway without drawing a winner"
+       "description": "Deletes a giveaway without drawing a winner",
+       "hide_replies": true
       },
       "position": {
        "x": 120,
        "y": 240
       },
-      "note": "Copied from the Giveaways module. Add the blocks for what it does."
+      "note": "Copied from the Giveaways module."
+     },
+     {
+      "id": "option_giveaway",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "giveaway",
+       "description": "Giveaway ID (from /giveaway-list) or message link",
+       "required": true,
+       "variable": "giveaway"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.giveaway_delete",
+      "typeVersion": 1,
+      "config": {
+       "giveaway": "{option_giveaway}"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Giveaway deleted."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
      },
      {
       "id": "error",
@@ -7178,23 +10330,24 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
-       "y": 240
+       "x": 120,
+       "y": 520
       }
      },
      {
-      "id": "option_giveaway",
-      "type": "option.text",
+      "id": "error_reply",
+      "type": "action.send_message",
       "typeVersion": 1,
       "config": {
-       "name": "giveaway",
-       "description": "Giveaway ID",
-       "required": true,
-       "variable": "giveaway"
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
       },
       "position": {
-       "x": 120,
-       "y": 110
+       "x": 440,
+       "y": 520
       }
      }
     ],
@@ -7207,6 +10360,36 @@
       "to": {
        "node": "trigger",
        "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
       }
      }
     ]
@@ -7232,8 +10415,7 @@
       "position": {
        "x": 120,
        "y": 240
-      },
-      "note": "Copied from the Economy module. Add the blocks for what it does."
+      }
      },
      {
       "id": "error",
@@ -7243,8 +10425,8 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
-       "y": 240
+       "x": 120,
+       "y": 760
       }
      },
      {
@@ -7261,6 +10443,117 @@
        "x": 120,
        "y": 110
       }
+     },
+     {
+      "id": "step1",
+      "type": "condition.comparison",
+      "typeVersion": 1,
+      "config": {
+       "source": "option",
+       "subject": "option_user",
+       "multi": "first"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "condition.state",
+      "typeVersion": 1,
+      "config": {
+       "operator": "eq",
+       "value": ""
+      },
+      "position": {
+       "x": 440,
+       "y": 370
+      }
+     },
+     {
+      "id": "step3",
+      "type": "action.set_variable",
+      "typeVersion": 1,
+      "config": {
+       "var_name": "target",
+       "value": "{user.id}",
+       "scope": "run"
+      },
+      "position": {
+       "x": 440,
+       "y": 500
+      }
+     },
+     {
+      "id": "step4",
+      "type": "condition.else",
+      "typeVersion": 1,
+      "config": {},
+      "position": {
+       "x": 760,
+       "y": 370
+      }
+     },
+     {
+      "id": "step5",
+      "type": "action.set_variable",
+      "typeVersion": 1,
+      "config": {
+       "var_name": "target",
+       "value": "{option_user}",
+       "scope": "run"
+      },
+      "position": {
+       "x": 760,
+       "y": 500
+      }
+     },
+     {
+      "id": "step6",
+      "type": "action.economy_get",
+      "typeVersion": 1,
+      "config": {
+       "user": "{target}",
+       "variable": "bal"
+      },
+      "position": {
+       "x": 1080,
+       "y": 240
+      }
+     },
+     {
+      "id": "step7",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "💰 <@{target}> has **{bal}** coins."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 1400,
+       "y": 240
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
+      }
      }
     ],
     "edges": [
@@ -7272,6 +10565,96 @@
       "to": {
        "node": "trigger",
        "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "branches"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step2",
+       "port": "next"
+      },
+      "to": {
+       "node": "step3",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "branches"
+      },
+      "to": {
+       "node": "step4",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step4",
+       "port": "next"
+      },
+      "to": {
+       "node": "step5",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step3",
+       "port": "next"
+      },
+      "to": {
+       "node": "step6",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step5",
+       "port": "next"
+      },
+      "to": {
+       "node": "step6",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step6",
+       "port": "next"
+      },
+      "to": {
+       "node": "step7",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
       }
      }
     ]
@@ -7297,8 +10680,7 @@
       "position": {
        "x": 120,
        "y": 240
-      },
-      "note": "Copied from the Economy module. Add the blocks for what it does."
+      }
      },
      {
       "id": "error",
@@ -7308,8 +10690,8 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
-       "y": 240
+       "x": 120,
+       "y": 760
       }
      },
      {
@@ -7341,6 +10723,53 @@
        "x": 410,
        "y": 110
       }
+     },
+     {
+      "id": "step1",
+      "type": "action.economy_pay",
+      "typeVersion": 1,
+      "config": {
+       "from_user": "{user.id}",
+       "to_user": "{option_user}",
+       "amount": "{option_amount}"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "✅ Sent {option_amount} coins to <@{option_user}>."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
+      }
      }
     ],
     "edges": [
@@ -7362,6 +10791,36 @@
       "to": {
        "node": "trigger",
        "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
       }
      }
     ]
@@ -7387,8 +10846,7 @@
       "position": {
        "x": 120,
        "y": 240
-      },
-      "note": "Copied from the Economy module. Add the blocks for what it does."
+      }
      },
      {
       "id": "error",
@@ -7398,12 +10856,89 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
+       "x": 120,
+       "y": 760
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.economy_leaderboard",
+      "typeVersion": 1,
+      "config": {
+       "limit": 10,
+       "variable": "top"
+      },
+      "position": {
+       "x": 440,
        "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "**Richest members**\n{top}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
       }
      }
     ],
-    "edges": []
+    "edges": [
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
    }
   },
   {
@@ -7421,13 +10956,25 @@
       "typeVersion": 1,
       "config": {
        "command_name": "economy-add",
-       "description": "[Admin] Credit balance"
+       "description": "[Admin] Credit balance",
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "everyone"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [
+         "manage_guild"
+        ],
+        "banned_channels": [],
+        "hide_without_permission": true
+       }
       },
       "position": {
        "x": 120,
        "y": 240
-      },
-      "note": "Copied from the Economy module. Add the blocks for what it does."
+      }
      },
      {
       "id": "error",
@@ -7437,8 +10984,8 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
-       "y": 240
+       "x": 120,
+       "y": 760
       }
      },
      {
@@ -7470,6 +11017,52 @@
        "x": 410,
        "y": 110
       }
+     },
+     {
+      "id": "step1",
+      "type": "action.economy_add",
+      "typeVersion": 1,
+      "config": {
+       "user": "{option_user}",
+       "amount": "{option_amount}"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "✅ Added {option_amount} coins to <@{option_user}>."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
+      }
      }
     ],
     "edges": [
@@ -7491,6 +11084,36 @@
       "to": {
        "node": "trigger",
        "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
       }
      }
     ]
@@ -7511,13 +11134,25 @@
       "typeVersion": 1,
       "config": {
        "command_name": "economy-remove",
-       "description": "[Admin] Deduct balance"
+       "description": "[Admin] Deduct balance",
+       "permissions": {
+        "allowed_roles": [
+         {
+          "id": "everyone"
+         }
+        ],
+        "banned_roles": [],
+        "required_permissions": [
+         "manage_guild"
+        ],
+        "banned_channels": [],
+        "hide_without_permission": true
+       }
       },
       "position": {
        "x": 120,
        "y": 240
-      },
-      "note": "Copied from the Economy module. Add the blocks for what it does."
+      }
      },
      {
       "id": "error",
@@ -7527,8 +11162,8 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
-       "y": 240
+       "x": 120,
+       "y": 760
       }
      },
      {
@@ -7560,6 +11195,52 @@
        "x": 410,
        "y": 110
       }
+     },
+     {
+      "id": "step1",
+      "type": "action.economy_remove",
+      "typeVersion": 1,
+      "config": {
+       "user": "{option_user}",
+       "amount": "{option_amount}"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "✅ Removed {option_amount} coins from <@{option_user}>."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
+      }
      }
     ],
     "edges": [
@@ -7582,6 +11263,36 @@
        "node": "trigger",
        "port": "options"
       }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
      }
     ]
    }
@@ -7601,25 +11312,14 @@
       "typeVersion": 1,
       "config": {
        "command_name": "ticket setup",
-       "description": "Send a ticket panel to a channel"
+       "description": "Send a ticket panel to a channel",
+       "hide_replies": true
       },
       "position": {
        "x": 120,
        "y": 240
       },
-      "note": "Copied from the Ticket System module. Add the blocks for what it does."
-     },
-     {
-      "id": "error",
-      "type": "utility.error_handler",
-      "typeVersion": 1,
-      "config": {
-       "variable": "error"
-      },
-      "position": {
-       "x": 740,
-       "y": 240
-      }
+      "note": "Copied from the Ticket module."
      },
      {
       "id": "option_channel",
@@ -7635,6 +11335,64 @@
        "x": 120,
        "y": 110
       }
+     },
+     {
+      "id": "step1",
+      "type": "action.ticket_panel",
+      "typeVersion": 1,
+      "config": {
+       "panel": "",
+       "channel": "{option_channel}",
+       "variable": "panel"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Ticket panel sent: {panel.url}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
      }
     ],
     "edges": [
@@ -7646,6 +11404,36 @@
       "to": {
        "node": "trigger",
        "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
       }
      }
     ]
@@ -7666,13 +11454,44 @@
       "typeVersion": 1,
       "config": {
        "command_name": "ticket create",
-       "description": "Create a ticket manually"
+       "description": "Create a ticket manually",
+       "hide_replies": true
       },
       "position": {
        "x": 120,
        "y": 240
       },
-      "note": "Copied from the Ticket System module. Add the blocks for what it does."
+      "note": "Copied from the Ticket module."
+     },
+     {
+      "id": "step1",
+      "type": "action.ticket_create",
+      "typeVersion": 1,
+      "config": {
+       "panel": "",
+       "user": "{user.id}",
+       "variable": "ticket"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Your ticket: {ticket.mention}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
      },
      {
       "id": "error",
@@ -7682,12 +11501,59 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
-       "y": 240
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
       }
      }
     ],
-    "edges": []
+    "edges": [
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
    }
   },
   {
@@ -7705,25 +11571,14 @@
       "typeVersion": 1,
       "config": {
        "command_name": "ticket close",
-       "description": "Close the current ticket"
+       "description": "Close the current ticket",
+       "hide_replies": true
       },
       "position": {
        "x": 120,
        "y": 240
       },
-      "note": "Copied from the Ticket System module. Add the blocks for what it does."
-     },
-     {
-      "id": "error",
-      "type": "utility.error_handler",
-      "typeVersion": 1,
-      "config": {
-       "variable": "error"
-      },
-      "position": {
-       "x": 740,
-       "y": 240
-      }
+      "note": "Copied from the Ticket module."
      },
      {
       "id": "option_reason",
@@ -7739,6 +11594,63 @@
        "x": 120,
        "y": 110
       }
+     },
+     {
+      "id": "step1",
+      "type": "action.ticket_close",
+      "typeVersion": 1,
+      "config": {
+       "channel": "{channel.id}",
+       "reason": "{option_reason}"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Ticket closed."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
      }
     ],
     "edges": [
@@ -7750,6 +11662,36 @@
       "to": {
        "node": "trigger",
        "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
       }
      }
     ]
@@ -7770,13 +11712,42 @@
       "typeVersion": 1,
       "config": {
        "command_name": "ticket reopen",
-       "description": "Reopen a closed ticket"
+       "description": "Reopen a closed ticket",
+       "hide_replies": true
       },
       "position": {
        "x": 120,
        "y": 240
       },
-      "note": "Copied from the Ticket System module. Add the blocks for what it does."
+      "note": "Copied from the Ticket module."
+     },
+     {
+      "id": "step1",
+      "type": "action.ticket_reopen",
+      "typeVersion": 1,
+      "config": {
+       "channel": "{channel.id}"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Ticket reopened."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
      },
      {
       "id": "error",
@@ -7786,12 +11757,59 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
-       "y": 240
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
       }
      }
     ],
-    "edges": []
+    "edges": [
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
    }
   },
   {
@@ -7809,13 +11827,43 @@
       "typeVersion": 1,
       "config": {
        "command_name": "ticket delete",
-       "description": "Delete the current ticket channel"
+       "description": "Delete the current ticket channel",
+       "hide_replies": true
       },
       "position": {
        "x": 120,
        "y": 240
       },
-      "note": "Copied from the Ticket System module. Add the blocks for what it does."
+      "note": "Copied from the Ticket module."
+     },
+     {
+      "id": "step1",
+      "type": "action.ticket_delete",
+      "typeVersion": 1,
+      "config": {
+       "channel": "{channel.id}",
+       "reason": ""
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "The ticket is logged and deleted in 5 seconds."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
      },
      {
       "id": "error",
@@ -7825,12 +11873,59 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
-       "y": 240
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
       }
      }
     ],
-    "edges": []
+    "edges": [
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
    }
   },
   {
@@ -7848,25 +11943,14 @@
       "typeVersion": 1,
       "config": {
        "command_name": "ticket add",
-       "description": "Add a user to the ticket"
+       "description": "Add a user to the ticket",
+       "hide_replies": true
       },
       "position": {
        "x": 120,
        "y": 240
       },
-      "note": "Copied from the Ticket System module. Add the blocks for what it does."
-     },
-     {
-      "id": "error",
-      "type": "utility.error_handler",
-      "typeVersion": 1,
-      "config": {
-       "variable": "error"
-      },
-      "position": {
-       "x": 740,
-       "y": 240
-      }
+      "note": "Copied from the Ticket module."
      },
      {
       "id": "option_user",
@@ -7882,6 +11966,63 @@
        "x": 120,
        "y": 110
       }
+     },
+     {
+      "id": "step1",
+      "type": "action.ticket_add_member",
+      "typeVersion": 1,
+      "config": {
+       "channel": "{channel.id}",
+       "user": "{option_user}"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Added <@{option_user}> to the ticket."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
      }
     ],
     "edges": [
@@ -7893,6 +12034,36 @@
       "to": {
        "node": "trigger",
        "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
       }
      }
     ]
@@ -7913,25 +12084,14 @@
       "typeVersion": 1,
       "config": {
        "command_name": "ticket remove",
-       "description": "Remove a user from the ticket"
+       "description": "Remove a user from the ticket",
+       "hide_replies": true
       },
       "position": {
        "x": 120,
        "y": 240
       },
-      "note": "Copied from the Ticket System module. Add the blocks for what it does."
-     },
-     {
-      "id": "error",
-      "type": "utility.error_handler",
-      "typeVersion": 1,
-      "config": {
-       "variable": "error"
-      },
-      "position": {
-       "x": 740,
-       "y": 240
-      }
+      "note": "Copied from the Ticket module."
      },
      {
       "id": "option_user",
@@ -7947,6 +12107,63 @@
        "x": 120,
        "y": 110
       }
+     },
+     {
+      "id": "step1",
+      "type": "action.ticket_remove_member",
+      "typeVersion": 1,
+      "config": {
+       "channel": "{channel.id}",
+       "user": "{option_user}"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Removed <@{option_user}> from the ticket."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
      }
     ],
     "edges": [
@@ -7958,6 +12175,36 @@
       "to": {
        "node": "trigger",
        "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
       }
      }
     ]
@@ -7978,13 +12225,30 @@
       "typeVersion": 1,
       "config": {
        "command_name": "ticket automation",
-       "description": "Show automation settings info"
+       "description": "Show automation settings info",
+       "hide_replies": true
       },
       "position": {
        "x": 120,
        "y": 240
       },
-      "note": "Copied from the Ticket System module. Add the blocks for what it does."
+      "note": "Copied from the Ticket module."
+     },
+     {
+      "id": "step1",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Ticket automation (panels, support roles, category, welcome message, log channel, transcripts) is set on the dashboard: Modules → Ticket."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
      },
      {
       "id": "error",
@@ -7994,12 +12258,49 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
-       "y": 240
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
       }
      }
     ],
-    "edges": []
+    "edges": [
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
    }
   },
   {
@@ -8017,13 +12318,42 @@
       "typeVersion": 1,
       "config": {
        "command_name": "ticket update-counts",
-       "description": "Sync ticket counts for this server"
+       "description": "Sync ticket counts for this server",
+       "hide_replies": true
       },
       "position": {
        "x": 120,
        "y": 240
       },
-      "note": "Copied from the Ticket System module. Add the blocks for what it does."
+      "note": "Copied from the Ticket module."
+     },
+     {
+      "id": "step1",
+      "type": "action.ticket_stats",
+      "typeVersion": 1,
+      "config": {
+       "variable": "tickets"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Tickets on this server: {tickets}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
      },
      {
       "id": "error",
@@ -8033,12 +12363,59 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
-       "y": 240
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
       }
      }
     ],
-    "edges": []
+    "edges": [
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
    }
   },
   {
@@ -8056,25 +12433,14 @@
       "typeVersion": 1,
       "config": {
        "command_name": "modmail close",
-       "description": "Close the current modmail thread"
+       "description": "Close the current modmail thread",
+       "hide_replies": true
       },
       "position": {
        "x": 120,
        "y": 240
       },
-      "note": "Copied from the Modmail module. Add the blocks for what it does."
-     },
-     {
-      "id": "error",
-      "type": "utility.error_handler",
-      "typeVersion": 1,
-      "config": {
-       "variable": "error"
-      },
-      "position": {
-       "x": 740,
-       "y": 240
-      }
+      "note": "Copied from the Modmail module."
      },
      {
       "id": "option_reason",
@@ -8090,6 +12456,62 @@
        "x": 120,
        "y": 110
       }
+     },
+     {
+      "id": "step1",
+      "type": "action.modmail_close",
+      "typeVersion": 1,
+      "config": {
+       "reason": "{option_reason}"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Modmail closed."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
      }
     ],
     "edges": [
@@ -8101,6 +12523,36 @@
       "to": {
        "node": "trigger",
        "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
       }
      }
     ]
@@ -8121,25 +12573,14 @@
       "typeVersion": 1,
       "config": {
        "command_name": "modmail reply",
-       "description": "Send a reply to the user from the thread"
+       "description": "Send a reply to the user from the thread",
+       "hide_replies": true
       },
       "position": {
        "x": 120,
        "y": 240
       },
-      "note": "Copied from the Modmail module. Add the blocks for what it does."
-     },
-     {
-      "id": "error",
-      "type": "utility.error_handler",
-      "typeVersion": 1,
-      "config": {
-       "variable": "error"
-      },
-      "position": {
-       "x": 740,
-       "y": 240
-      }
+      "note": "Copied from the Modmail module."
      },
      {
       "id": "option_message",
@@ -8155,6 +12596,62 @@
        "x": 120,
        "y": 110
       }
+     },
+     {
+      "id": "step1",
+      "type": "action.modmail_reply",
+      "typeVersion": 1,
+      "config": {
+       "message": "{option_message}"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Sent to the member."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
      }
     ],
     "edges": [
@@ -8166,6 +12663,36 @@
       "to": {
        "node": "trigger",
        "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
       }
      }
     ]
@@ -8186,25 +12713,14 @@
       "typeVersion": 1,
       "config": {
        "command_name": "modmail block",
-       "description": "Block a user from creating new modmails"
+       "description": "Block a user from creating new modmails",
+       "hide_replies": true
       },
       "position": {
        "x": 120,
        "y": 240
       },
-      "note": "Copied from the Modmail module. Add the blocks for what it does."
-     },
-     {
-      "id": "error",
-      "type": "utility.error_handler",
-      "typeVersion": 1,
-      "config": {
-       "variable": "error"
-      },
-      "position": {
-       "x": 740,
-       "y": 240
-      }
+      "note": "Copied from the Modmail module."
      },
      {
       "id": "option_user",
@@ -8220,6 +12736,62 @@
        "x": 120,
        "y": 110
       }
+     },
+     {
+      "id": "step1",
+      "type": "action.modmail_block",
+      "typeVersion": 1,
+      "config": {
+       "user": "{option_user}"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "<@{option_user}> can no longer write modmails."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
      }
     ],
     "edges": [
@@ -8231,6 +12803,36 @@
       "to": {
        "node": "trigger",
        "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
       }
      }
     ]
@@ -8251,25 +12853,14 @@
       "typeVersion": 1,
       "config": {
        "command_name": "modmail unblock",
-       "description": "Unblock a previously blocked user"
+       "description": "Unblock a previously blocked user",
+       "hide_replies": true
       },
       "position": {
        "x": 120,
        "y": 240
       },
-      "note": "Copied from the Modmail module. Add the blocks for what it does."
-     },
-     {
-      "id": "error",
-      "type": "utility.error_handler",
-      "typeVersion": 1,
-      "config": {
-       "variable": "error"
-      },
-      "position": {
-       "x": 740,
-       "y": 240
-      }
+      "note": "Copied from the Modmail module."
      },
      {
       "id": "option_user",
@@ -8285,6 +12876,62 @@
        "x": 120,
        "y": 110
       }
+     },
+     {
+      "id": "step1",
+      "type": "action.modmail_unblock",
+      "typeVersion": 1,
+      "config": {
+       "user": "{option_user}"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "<@{option_user}> can write modmails again."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 780,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
      }
     ],
     "edges": [
@@ -8296,6 +12943,36 @@
       "to": {
        "node": "trigger",
        "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
       }
      }
     ]
@@ -8322,7 +12999,21 @@
        "x": 120,
        "y": 240
       },
-      "note": "Copied from the Free Games module. Add the blocks for what it does."
+      "note": "Copied from the Free Games module."
+     },
+     {
+      "id": "step1",
+      "type": "action.free_games",
+      "typeVersion": 1,
+      "config": {
+       "platforms": "settings",
+       "embeds": true,
+       "variable": "games"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
      },
      {
       "id": "error",
@@ -8332,12 +13023,49 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
-       "y": 240
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "Failed: {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
       }
      }
     ],
-    "edges": []
+    "edges": [
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
    }
   },
   {
@@ -8361,19 +13089,7 @@
        "x": 120,
        "y": 240
       },
-      "note": "Copied from the Music module. Add the blocks for what it does."
-     },
-     {
-      "id": "error",
-      "type": "utility.error_handler",
-      "typeVersion": 1,
-      "config": {
-       "variable": "error"
-      },
-      "position": {
-       "x": 740,
-       "y": 240
-      }
+      "note": "Copied from the Music module."
      },
      {
       "id": "option_query",
@@ -8389,6 +13105,87 @@
        "x": 120,
        "y": 110
       }
+     },
+     {
+      "id": "step1",
+      "type": "action.music_player",
+      "typeVersion": 1,
+      "config": {
+       "channel": "{user.voice.channel.id}",
+       "text_channel": "{channel.id}"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.music_add",
+      "typeVersion": 1,
+      "config": {
+       "query": "{option_query}",
+       "queue_position": "end",
+       "variable": "added"
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
+     },
+     {
+      "id": "step3",
+      "type": "action.music_play",
+      "typeVersion": 1,
+      "config": {},
+      "position": {
+       "x": 1080,
+       "y": 240
+      }
+     },
+     {
+      "id": "step4",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "🎶 Added **{added.title}** (position {added.position})."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 1400,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
      }
     ],
     "edges": [
@@ -8400,6 +13197,56 @@
       "to": {
        "node": "trigger",
        "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step2",
+       "port": "next"
+      },
+      "to": {
+       "node": "step3",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step3",
+       "port": "next"
+      },
+      "to": {
+       "node": "step4",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
       }
      }
     ]
@@ -8426,7 +13273,35 @@
        "x": 120,
        "y": 240
       },
-      "note": "Copied from the Music module. Add the blocks for what it does."
+      "note": "Copied from the Music module."
+     },
+     {
+      "id": "step1",
+      "type": "action.music_skip",
+      "typeVersion": 1,
+      "config": {
+       "to_position": 0
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "⏭ Skipped."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
      },
      {
       "id": "error",
@@ -8436,12 +13311,59 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
-       "y": 240
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
       }
      }
     ],
-    "edges": []
+    "edges": [
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
    }
   },
   {
@@ -8465,7 +13387,33 @@
        "x": 120,
        "y": 240
       },
-      "note": "Copied from the Music module. Add the blocks for what it does."
+      "note": "Copied from the Music module."
+     },
+     {
+      "id": "step1",
+      "type": "action.music_stop",
+      "typeVersion": 1,
+      "config": {},
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "⏹ Stopped and cleared the queue."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
      },
      {
       "id": "error",
@@ -8475,12 +13423,59 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
-       "y": 240
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
       }
      }
     ],
-    "edges": []
+    "edges": [
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
    }
   },
   {
@@ -8504,7 +13499,35 @@
        "x": 120,
        "y": 240
       },
-      "note": "Copied from the Music module. Add the blocks for what it does."
+      "note": "Copied from the Music module."
+     },
+     {
+      "id": "step1",
+      "type": "action.music_queue",
+      "typeVersion": 1,
+      "config": {
+       "variable": "queue"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "**Queue ({queue.count} tracks, {queue.duration})**\n{queue}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
      },
      {
       "id": "error",
@@ -8514,12 +13537,59 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
-       "y": 240
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
       }
      }
     ],
-    "edges": []
+    "edges": [
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
    }
   },
   {
@@ -8543,7 +13613,35 @@
        "x": 120,
        "y": 240
       },
-      "note": "Copied from the Music module. Add the blocks for what it does."
+      "note": "Copied from the Music module."
+     },
+     {
+      "id": "step1",
+      "type": "action.music_now",
+      "typeVersion": 1,
+      "config": {
+       "variable": "now"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "{now}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
      },
      {
       "id": "error",
@@ -8553,12 +13651,59 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
-       "y": 240
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
       }
      }
     ],
-    "edges": []
+    "edges": [
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
    }
   },
   {
@@ -8582,7 +13727,33 @@
        "x": 120,
        "y": 240
       },
-      "note": "Copied from the Music module. Add the blocks for what it does."
+      "note": "Copied from the Music module."
+     },
+     {
+      "id": "step1",
+      "type": "action.music_pause",
+      "typeVersion": 1,
+      "config": {},
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "⏸ Paused."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
      },
      {
       "id": "error",
@@ -8592,12 +13763,59 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
-       "y": 240
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
       }
      }
     ],
-    "edges": []
+    "edges": [
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
    }
   },
   {
@@ -8621,7 +13839,33 @@
        "x": 120,
        "y": 240
       },
-      "note": "Copied from the Music module. Add the blocks for what it does."
+      "note": "Copied from the Music module."
+     },
+     {
+      "id": "step1",
+      "type": "action.music_resume",
+      "typeVersion": 1,
+      "config": {},
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "▶ Resumed."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
      },
      {
       "id": "error",
@@ -8631,12 +13875,59 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
-       "y": 240
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
       }
      }
     ],
-    "edges": []
+    "edges": [
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
    }
   },
   {
@@ -8660,19 +13951,7 @@
        "x": 120,
        "y": 240
       },
-      "note": "Copied from the Music module. Add the blocks for what it does."
-     },
-     {
-      "id": "error",
-      "type": "utility.error_handler",
-      "typeVersion": 1,
-      "config": {
-       "variable": "error"
-      },
-      "position": {
-       "x": 740,
-       "y": 240
-      }
+      "note": "Copied from the Music module."
      },
      {
       "id": "option_level",
@@ -8688,6 +13967,62 @@
        "x": 120,
        "y": 110
       }
+     },
+     {
+      "id": "step1",
+      "type": "action.music_volume",
+      "typeVersion": 1,
+      "config": {
+       "volume": "{option_level}"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "🔊 Volume: {option_level} %"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
      }
     ],
     "edges": [
@@ -8699,6 +14034,36 @@
       "to": {
        "node": "trigger",
        "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
       }
      }
     ]
@@ -8725,7 +14090,33 @@
        "x": 120,
        "y": 240
       },
-      "note": "Copied from the Music module. Add the blocks for what it does."
+      "note": "Copied from the Music module."
+     },
+     {
+      "id": "step1",
+      "type": "action.music_shuffle",
+      "typeVersion": 1,
+      "config": {},
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "🔀 Shuffled the queue."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
      },
      {
       "id": "error",
@@ -8735,12 +14126,59 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
-       "y": 240
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
       }
      }
     ],
-    "edges": []
+    "edges": [
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
    }
   },
   {
@@ -8764,19 +14202,7 @@
        "x": 120,
        "y": 240
       },
-      "note": "Copied from the Music module. Add the blocks for what it does."
-     },
-     {
-      "id": "error",
-      "type": "utility.error_handler",
-      "typeVersion": 1,
-      "config": {
-       "variable": "error"
-      },
-      "position": {
-       "x": 740,
-       "y": 240
-      }
+      "note": "Copied from the Music module."
      },
      {
       "id": "option_mode",
@@ -8793,6 +14219,62 @@
        "x": 120,
        "y": 110
       }
+     },
+     {
+      "id": "step1",
+      "type": "action.music_loop",
+      "typeVersion": 1,
+      "config": {
+       "loop_mode": "{option_mode}"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "🔁 Loop: {option_mode}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
+      }
      }
     ],
     "edges": [
@@ -8804,6 +14286,36 @@
       "to": {
        "node": "trigger",
        "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
       }
      }
     ]
@@ -8830,7 +14342,36 @@
        "x": 120,
        "y": 240
       },
-      "note": "Copied from the Music module. Add the blocks for what it does."
+      "note": "Copied from the Music module."
+     },
+     {
+      "id": "step1",
+      "type": "action.music_lyrics",
+      "typeVersion": 1,
+      "config": {
+       "query": "",
+       "variable": "lyrics"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "**{lyrics.title}** – {lyrics.artist}\n{lyrics}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
      },
      {
       "id": "error",
@@ -8840,12 +14381,59 @@
        "variable": "error"
       },
       "position": {
-       "x": 740,
-       "y": 240
+       "x": 120,
+       "y": 520
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 440,
+       "y": 520
       }
      }
     ],
-    "edges": []
+    "edges": [
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
    }
   }
  ]

@@ -28,7 +28,8 @@ const member = (roles: string[], perms: bigint[] = [], guild = '1') =>
 
 test('config: defaults, stored values, bad values fall back', () => {
   const c = parseConfig({});
-  assert.equal(c.defaultPermissions, true);
+  assert.deepEqual(c.moderators.required_permissions, ['manage_messages']);
+  assert.deepEqual(c.admins.required_permissions, ['administrator']);
   assert.equal(c.dmMode, 'embed');
   const s = parseConfig({
     dmMode: 'text',
@@ -52,7 +53,7 @@ test('dm template variables', () => {
   assert.equal(renderTemplate('{action} #{case} by {moderator}: {reason} {unknown}', { action: 'Ban', case: '4', moderator: '<@1>', reason: 'spam' }), 'Ban #4 by <@1>: spam {unknown}');
 });
 
-test('pseudo roles: moderator and admin roles, default permissions', () => {
+test('pseudo roles: older configs are read into the blocks', () => {
   const r = repo();
   r.db.prepare("INSERT INTO bot_modules (bot_id, module_key, config) VALUES (1, 'moderation', ?)").run(
     JSON.stringify({ defaultPermissions: false, moderatorRoles: [{ id: '10', guild: '1' }], adminRoles: [{ id: '20', guild: '1' }] }),
@@ -75,6 +76,30 @@ test('pseudo roles: moderator and admin roles, default permissions', () => {
   r.db.prepare("UPDATE bot_modules SET config = '{}'").run();
   mod.reload(new Set());
   assert.equal(mod.hasPseudoRole(MODERATOR_ROLE, member([], [PermissionFlagsBits.ManageMessages])), true, 'default: Manage Messages is a moderator');
+});
+
+test('pseudo roles: blocks with banned roles and channels', () => {
+  const r = repo();
+  const cfg = {
+    moderators: { allowed_roles: [{ id: '10', guild: '1' }], banned_roles: [{ id: '30', guild: '1' }], required_permissions: ['kick_members'], banned_channels: [{ id: '99', guild: '1' }] },
+    admins: { allowed_roles: [{ id: '20', guild: '1' }], banned_roles: [], required_permissions: [], banned_channels: [] },
+  };
+  r.db.prepare("INSERT INTO bot_modules (bot_id, module_key, config) VALUES (1, 'moderation', ?)").run(JSON.stringify(cfg));
+  const mod = new Moderation(1, r, () => null);
+  mod.reload(new Set());
+  assert.equal(mod.hasPseudoRole(MODERATOR_ROLE, member(['10']), '5'), true);
+  assert.equal(mod.hasPseudoRole(MODERATOR_ROLE, member([], [PermissionFlagsBits.KickMembers]), '5'), true, 'all required permissions');
+  assert.equal(mod.hasPseudoRole(MODERATOR_ROLE, member([], [PermissionFlagsBits.ManageMessages]), '5'), false, 'not a required permission');
+  assert.equal(mod.hasPseudoRole(MODERATOR_ROLE, member(['10', '30']), '5'), false, 'banned role');
+  assert.equal(mod.hasPseudoRole(MODERATOR_ROLE, member(['10']), '99'), false, 'banned channel');
+  assert.equal(mod.hasPseudoRole(MODERATOR_ROLE, member(['20']), '99'), true, 'admins are moderators in every channel');
+  assert.equal(mod.hasPseudoRole(ADMIN_ROLE, member([]), '5'), false, 'empty permissions: roles only');
+  assert.equal(mod.hasPseudoRole(ADMIN_ROLE, member([], [PermissionFlagsBits.Administrator]), '5'), true, 'Discord Administrator always counts');
+
+  const p: Permissions = { allowed_roles: [{ id: MODERATOR_ROLE }], banned_roles: [], required_permissions: [], banned_channels: [], hide_without_permission: false };
+  const pseudo: PseudoRoles = (id, m, ch) => mod.hasPseudoRole(id, m, ch);
+  assert.equal(denied(p, member(['10']), '5', pseudo), null);
+  assert.equal(denied(p, member(['10']), '99', pseudo), 'role', 'the channel goes through to the block');
 });
 
 test('cases: numbers per server, remove, clear, count', () => {
@@ -137,4 +162,26 @@ test('automatic punishment rule: exact count, highest wins', () => {
   assert.equal(mod.ruleFor('warnings', 3)?.action, 'kick');
   assert.equal(mod.ruleFor('warnings', 4), undefined);
   assert.equal(mod.ruleFor('timeouts', 2)?.action, 'ban');
+});
+
+test('music: yt-dlp lines, queue order, ffmpeg arguments, lyrics titles', async () => {
+  const { trackOf, nextIndex, ffmpegArgs, clock, errorText } = await import('./music.js');
+  const { cleanTitle } = await import('./lyrics.js');
+  const t = trackOf(JSON.stringify({ id: 'abc', title: 'Song', duration: 185.4, uploader: 'Band', ie_key: 'Youtube', url: 'abc' }), '1');
+  assert.deepEqual(t, { title: 'Song', url: 'https://www.youtube.com/watch?v=abc', duration: 185, author: 'Band', requester: '1' });
+  assert.equal(trackOf('not json', null), null);
+  assert.equal(nextIndex(0, 3, 'off'), 1);
+  assert.equal(nextIndex(2, 3, 'off'), -1, 'end of the queue');
+  assert.equal(nextIndex(2, 3, 'queue'), 0, 'loop queue');
+  assert.equal(nextIndex(1, 3, 'track'), 1, 'loop track');
+  assert.equal(nextIndex(1, 3, 'track', true), 2, 'skip leaves a looped track');
+  const args = ffmpegArgs('https://x/a', 30, ['bassboost', 'nope']).join(' ');
+  assert.match(args, /-ss 30 -i https:\/\/x\/a -af bass=g=10 -vn -f s16le -ar 48000 -ac 2/);
+  assert.doesNotMatch(ffmpegArgs('u', 0, []).join(' '), /-ss|-af/);
+  assert.equal(clock(185), '3:05');
+  assert.equal(clock(3723), '1:02:03');
+  assert.equal(clock(0), 'live');
+  assert.match(errorText('ERROR: [youtube] abc: Sign in to confirm you’re not a bot'), /bot check/);
+  assert.equal(errorText('ERROR: [generic] Unsupported URL: https://x'), 'Unsupported URL: https://x');
+  assert.equal(cleanTitle('Rick Astley - Never Gonna Give You Up (Official Music Video) [4K Remaster]'), 'Rick Astley - Never Gonna Give You Up');
 });

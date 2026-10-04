@@ -28,6 +28,9 @@ func (s *store) viaPHP(local botHandler) botHandler {
 		}
 		// No built-in-name check here: module commands exist only as their
 		// copies in the database (the presets), so nothing can clash.
+		// The actor header is set only by adminViaPHP from the session; a
+		// browser must not be able to put another name into the server log.
+		r.Header.Del("X-BotHub-Actor")
 		s.forward(w, r, body)
 	}
 }
@@ -41,6 +44,32 @@ func internalPath(r *http.Request) string {
 	return p
 }
 
+// adminViaPHP forwards an admin route 1:1 to /internal/admin/… when the
+// PHP API is on; the signed-in user goes along as X-BotHub-Actor for the
+// server log. Without the PHP API the in-memory handler answers.
+func (s *store) adminViaPHP(local authed) authed {
+	return func(w http.ResponseWriter, r *http.Request, sid string) {
+		if s.php == nil {
+			local(w, r, sid)
+			return
+		}
+		limit := int64(1 << 20)
+		if strings.HasSuffix(r.URL.Path, "/plugins/install") {
+			limit = 8 << 20 // base64 of a plugin zip (max 5 MB)
+		}
+		body, err := io.ReadAll(io.LimitReader(r.Body, limit))
+		if err != nil {
+			apiError(w, 400, "error.request.invalid")
+			return
+		}
+		s.mu.Lock()
+		actor := truncate(s.user, 64)
+		s.mu.Unlock()
+		r.Header.Set("X-BotHub-Actor", actor)
+		s.forward(w, r, body)
+	}
+}
+
 // forward sends the request to the API and copies status and JSON back.
 func (s *store) forward(w http.ResponseWriter, r *http.Request, body []byte) {
 	req, err := http.NewRequestWithContext(r.Context(), r.Method, s.php.base+internalPath(r), bytes.NewReader(body))
@@ -49,6 +78,9 @@ func (s *store) forward(w http.ResponseWriter, r *http.Request, body []byte) {
 		return
 	}
 	req.Header.Set("X-BotHub-Internal", s.php.key)
+	if actor := r.Header.Get("X-BotHub-Actor"); actor != "" {
+		req.Header.Set("X-BotHub-Actor", actor)
+	}
 	if ct := r.Header.Get("Content-Type"); ct != "" {
 		req.Header.Set("Content-Type", ct)
 	}
@@ -104,6 +136,11 @@ func (s *store) hookToPHP(w http.ResponseWriter, r *http.Request) {
 
 // phpRequired answers routes that exist only in the PHP API when it is off.
 func phpRequired(w http.ResponseWriter, _ *http.Request, _ *bot) {
+	apiError(w, 503, "error.api.unreachable")
+}
+
+// adminPHPRequired is phpRequired for admin routes.
+func adminPHPRequired(w http.ResponseWriter, _ *http.Request, _ string) {
 	apiError(w, 503, "error.api.unreachable")
 }
 

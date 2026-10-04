@@ -1,0 +1,84 @@
+/* bh-permissions: role, channel and permission pickers and the permissions
+   block (static/js/permissions.js). Used by the node editor and the module
+   and plugin settings pages. */
+
+/* Permissions widget (slash trigger) and its picker popover. */
+.bicon { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.bperm { display: flex; flex-direction: column; gap: 10px; }
+.bperm-head h3 { margin: 0; font-size: 16px; }
+.bperm-sub { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--text-2); }
+.bperm-badge { padding: 3px 10px; font-size: 11px; font-weight: 600; white-space: nowrap; border-radius: 999px; color: var(--yellow); background: color-mix(in srgb, var(--yellow) 14%, transparent); }
+.bperm-badge.is-open { color: var(--green); background: color-mix(in srgb, var(--green) 14%, transparent); }
+.bperm-card { position: relative; display: flex; flex-direction: column; gap: 10px; padding: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+.bperm-card-head { display: flex; align-items: flex-start; gap: 10px; }
+.bperm-icon { width: 18px; height: 18px; margin-top: 1px; color: var(--muted); }
+.bperm-card-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.bperm-card-text strong { font-size: 13px; }
+.bperm-card-text span { font-size: 11px; color: var(--muted); line-height: 1.4; }
+.bperm-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px; background: var(--bg); border: 1px solid transparent; border-radius: 6px; }
+.bperm-card.is-active .bperm-row { border-color: var(--red); }
+.bperm-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 5px 8px; font-size: 12px; background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: 6px; }
+.bperm-chip-icon { width: 14px; height: 14px; color: var(--muted); }
+.bperm-chip-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bperm-chip-x { padding: 0 0 0 4px; font: inherit; font-size: 14px; line-height: 1; color: var(--muted); background: none; border: 0; cursor: pointer; }
+.bperm-chip-x:hover { color: var(--text); }
+.bperm-add { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; font: inherit; font-size: 12px; font-weight: 600; color: var(--red); background: color-mix(in srgb, var(--red) 14%, transparent); border: 0; border-radius: 6px; cursor: pointer; }
+.bperm-add:hover { background: color-mix(in srgb, var(--red) 24%, transparent); }
+.bperm-add-plus { font-size: 14px; line-height: 1; }
+.bperm-empty { font-size: 11px; color: var(--muted); }
+.bperm-toggle { flex-direction: row; align-items: center; cursor: pointer; }
+.bperm-toggle .bperm-card-text { flex: 1; }
+.bpick { position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 20; display: flex; flex-direction: column; max-height: 440px;
+  background: var(--sidebar); border: 1px solid var(--border-strong); border-radius: 10px; box-shadow: 0 14px 34px rgb(0 0 0 / 0.5); }
+.bpick-head { display: flex; align-items: center; gap: 10px; padding: 12px; }
+.bpick-badge { display: grid; place-items: center; flex: none; width: 34px; height: 34px; color: var(--red); background: color-mix(in srgb, var(--red) 16%, transparent); border-radius: 8px; }
+.bpick-badge .bicon { width: 18px; height: 18px; }
+.bpick-title { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.bpick-title > strong { font-size: 14px; }
+.bpick-subline { font-size: 11px; color: var(--muted); }
+.bpick-subline strong { color: var(--text-2); }
+.bpick-link { padding: 0; font: inherit; color: var(--red); background: none; border: 0; cursor: pointer; }
+.bpick-link:hover { text-decoration: underline; }
+.bpick-search { display: flex; align-items: center; gap: 8px; margin: 0 12px 8px; padding: 0 10px; color: var(--muted); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; }
+.bpick-search:focus-within { border-color: var(--red); }
+.bpick-search input { flex: 1; min-width: 0; padding: 9px 0; font: inherit; font-size: 13px; color: var(--text); background: none; border: 0; outline: none; }
+.bpick-list { flex: 1; min-height: 0; overflow-y: auto; padding: 0 6px 6px; }
+.bpick-label { padding: 10px 6px 6px; font-size: 11px; color: var(--muted); }
+.bpick-status { margin: 0; padding: 14px 8px; font-size: 12px; color: var(--muted); }
+.bpick-row { display: flex; align-items: center; gap: 10px; padding: 7px 6px; border-radius: 6px; cursor: pointer; }
+.bpick-row:hover { background: var(--surface); }
+.bpick-row-special { margin-top: 4px; background: color-mix(in srgb, var(--red) 8%, transparent); }
+.bpick-row-special.is-checked { background: color-mix(in srgb, var(--red) 14%, transparent); }
+.bpick-row-child { padding-left: 14px; }
+.bpick-row .bpick-check { flex: none; width: 16px; height: 16px; margin: 0; accent-color: var(--red); cursor: pointer; }
+.bpick-row-icon { color: var(--muted); }
+.bpick-row-text { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.bpick-row-text strong { font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bpick-row-text span { font-size: 11px; color: var(--muted); }
+.bpick-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.bpick-dot { flex: none; width: 10px; height: 10px; background: var(--muted); border-radius: 50%; }
+.bpick-guild { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 6px; font: inherit; color: var(--text); text-align: left; background: none; border: 0; border-radius: 6px; cursor: pointer; }
+.bpick-guild:hover { background: var(--surface); }
+.bpick-guild .avatar { width: 32px; height: 32px; }
+.bpick-guild strong { flex: 1; font-size: 13px; font-weight: 500; }
+.bpick-chevron { color: var(--muted); }
+.bpick-foot { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--border); }
+.bpick-count { flex: 1; font-size: 12px; color: var(--text-2); white-space: nowrap; }
+.bpick-id { flex: 2; min-width: 0; padding: 6px 8px; font-size: 12px; }
+/* Inside a settings form: the lists of the block and single role/channel fields. */
+.bperm-lists { display: flex; flex-direction: column; gap: 10px; }
+.bperm-field .bperm-card { padding: 0; background: none; border: 0; }
+.bperm-field .bperm-row { background: var(--bg); border: 1px solid var(--border-strong); }
+.bperm-field .bpick { top: calc(100% + 4px); }
+.btn.bpick-done { color: #fff; background: var(--red); border-color: var(--red); }
+.btn.bpick-done:hover { filter: brightness(1.1); }
+/* The <select> under a picker stays the form value, but is not shown. */
+.pick-native { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.modset-perm .bperm { margin-top: 6px; }
+.field .bperm, .field .bpick { text-transform: none; letter-spacing: normal; font-weight: 400; }
+.field .bperm strong, .field .bpick strong { font-weight: 600; }
+/* In a settings form (.form label is a column): the picker's own labels stay rows. */
+.bperm label.bpick-row, .bperm label.bperm-toggle { flex-direction: row; align-items: center; gap: 10px; margin: 0; font-size: inherit; text-transform: none; letter-spacing: normal; }
+.bperm label.bpick-search { flex-direction: row; align-items: center; gap: 8px; margin: 0 12px 8px; font-size: inherit; text-transform: none; letter-spacing: normal; }
+.bperm .bpick-search input { width: auto; padding: 9px 0; background: none; border: 0; outline: none; }
+.bperm .bpick-row input.bpick-check { width: 16px; height: 16px; padding: 0; }

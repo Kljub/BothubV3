@@ -63,6 +63,8 @@ export interface RunResult {
   ok: boolean;
   steps: Step[];
   errorKey?: string;
+  /** The failing block's own message (e.g. a plugin's error text), for the log. */
+  errorMessage?: string;
 }
 
 const PLACEHOLDER = /\{([A-Za-z0-9_][A-Za-z0-9_.:-]{0,99})\}/g;
@@ -212,7 +214,9 @@ export class Run {
 
   private finish(err: GraphError | undefined): RunResult {
     const e = err ?? this.failure;
-    return e ? { ok: false, steps: this.steps, errorKey: e.key } : { ok: true, steps: this.steps };
+    if (!e) return { ok: true, steps: this.steps };
+    const message = typeof e.params.message === 'string' && e.params.message !== e.key ? e.params.message : undefined;
+    return message ? { ok: false, steps: this.steps, errorKey: e.key, errorMessage: message } : { ok: false, steps: this.steps, errorKey: e.key };
   }
 
   private record(node: GraphNode, status: Step['status'], errorKey?: string): void {
@@ -302,7 +306,10 @@ export class Run {
    * has to stop (failure inside the error handling).
    */
   private async fail(node: GraphNode, err: unknown): Promise<GraphNode | undefined | null> {
-    const ge = err instanceof GraphError ? err : new GraphError('error.run.block_failed', { message: err instanceof Error ? err.message : String(err) });
+    // SDK errors carry the plugin's own text in params.message (sdk.plugin.failed): keep it.
+    const detail = (err as { params?: { message?: unknown } })?.params?.message;
+    const ge = err instanceof GraphError ? err
+      : new GraphError('error.run.block_failed', { message: typeof detail === 'string' && detail ? detail : err instanceof Error ? err.message : String(err) });
     this.record(node, 'error', ge.key);
     const message = typeof ge.params.message === 'string' ? ge.params.message : ge.key;
     if (node.paths) {

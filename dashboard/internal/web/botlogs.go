@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"slices"
+	"strings"
 
 	"github.com/Kljub/BothubV3/dashboard/internal/api"
 )
@@ -64,7 +65,12 @@ func (s *Server) botLogs(r *http.Request, p Page, botID int64) (logsView, error)
 	if err != nil {
 		return logsView{}, err
 	}
-	return logsView{BotID: botID, Level: level, Levels: api.LogLevels, Rows: s.logRows(entries, p.Locale)}, nil
+	// A bot's own log: every row is from that bot, no source column.
+	rows := s.logRows(entries, p.Locale)
+	for i := range rows {
+		rows[i].Source = ""
+	}
+	return logsView{BotID: botID, Level: level, Levels: api.LogLevels, Rows: rows}, nil
 }
 
 // logRows turns API entries into console rows (bot and server logs).
@@ -81,6 +87,19 @@ func (s *Server) logRows(entries []api.LogEntry, locale string) []logRow {
 		}
 		if e.Code != nil {
 			row.Code = *e.Code
+			// An empty key: the code names the text (log.code.<code>, shared/log-codes.json).
+			if e.Key == "" {
+				row.Text = s.i18n.T(locale, "log.code."+*e.Code, flatten(e.Params)...)
+			}
+		}
+		// Sources the process list has no text for (bot, plugin:<id>) are shown as they are.
+		if k := "resources.process." + row.Source; row.Source != "" && s.i18n.T(locale, k) == k {
+			switch {
+			case row.Source == "bot":
+				row.Source = "botcore"
+			case strings.HasPrefix(row.Source, "plugin:"):
+				row.Source = "plugin_manager"
+			}
 		}
 		// Secret changes (token) come without values; show only the message then.
 		if e.Change != nil && (e.Change.Old != nil || e.Change.New != nil) {

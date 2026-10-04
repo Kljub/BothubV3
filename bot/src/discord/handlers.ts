@@ -3,6 +3,7 @@
 // to the error handler, so a graph never silently does half of its work.
 
 import {
+  type GuildTextBasedChannel,
   MessageFlags,
   type Client,
   type Guild,
@@ -18,6 +19,12 @@ import { parseDuration, snowflake, snowflakes } from '../graph/util.js';
 import type { CaseAction, ModCase, Repo } from '../core/repo.js';
 import { buildMessage, hasBody } from './message.js';
 import { actionName, type CaseHandle, type Moderation } from './moderation.js';
+import { ModuleContext } from '../modules/context.js';
+import { clock, findTracks, musicOf, MusicError, type LoopMode } from './music.js';
+import { lyricsOf } from './lyrics.js';
+import { createTicket, finishTicket, modmailBlock, modmailClose, modmailReply, reopenTicket, ticketCounts, ticketMember, ticketPanelIndex, ticketPanelPayload, type TicketConfig } from '../modules/support.js';
+import { freeGames, freeGamesText, gameEmbed, platformsOf, type FreeGamesConfig } from '../modules/freegames.js';
+import { deleteGiveaway, endGiveaway, giveawayPayload, listGiveaways, loadGiveaway, saveGiveaway, type Giveaway } from '../modules/giveaway.js';
 
 /** What a run knows about where it runs (run.data). */
 export interface DiscordData {
@@ -31,6 +38,8 @@ export interface DiscordData {
   /** Message that started the run (message events). */
   message?: Message;
   hideReplies?: boolean;
+  /** A "thinking …" reply being sent for a slow command (instance.ts). */
+  deferring?: Promise<unknown>;
   /** custom_id for a button or menu block of this run. */
   customId(component: GraphNode): string;
   /** Messages sent by this run, by block variable ({Var1}). */
@@ -135,7 +144,11 @@ async function sendMessage(node: GraphNode, run: Run): Promise<void> {
       if (!i) throw new GraphError('error.run.no_interaction');
       const ephemeral = run.bool(node, 'ephemeral') || d.hideReplies;
       if (ephemeral) payload.flags = (payload.flags ?? 0) | MessageFlags.Ephemeral;
+      await d.deferring;
       sent = await discord(run, async () => {
+        // The first answer after "thinking …" replaces it.
+        // Ephemeral was decided by the defer; an edit cannot change it.
+        if (i.deferred && !i.replied) return i.editReply({ ...payload, flags: Number(payload.flags ?? 0) & ~Number(MessageFlags.Ephemeral) } as never) as Promise<Message>;
         if (i.replied || i.deferred) return i.followUp({ ...payload, fetchReply: true } as never) as Promise<Message>;
         const res = await i.reply({ ...payload, withResponse: true } as never);
         return (res as unknown as { resource?: { message?: Message } }).resource?.message as Message;
@@ -185,13 +198,288 @@ async function sendMessage(node: GraphNode, run: Run): Promise<void> {
   }
 }
 
+// ---------- polls (Discord's own polls; known polls in module_state) ----------
+
+interface KnownPoll { channel: string; question: string; expiresAt: string | null; url: string }
+
+/** Remembers a poll so List Polls and the poll ID options find it again. */
+function rememberPoll(repo: Repo, botId: number, msg: Message): void {
+  if (!msg.guildId || !msg.poll) return;
+  const value: KnownPoll = { channel: msg.channelId, question: msg.poll.question.text ?? '', expiresAt: msg.poll.expiresAt?.toISOString() ?? null, url: msg.url };
+  repo.db
+    .prepare(
+      `INSERT INTO module_state (bot_id, module, guild_id, key, value, updated_at) VALUES (?, 'polls', ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+       ON CONFLICT (bot_id, module, guild_id, key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+    )
+    .run(botId, msg.guildId, `poll:${msg.id}`, JSON.stringify(value));
+}
+
+function forgetPoll(repo: Repo, botId: number, guildId: string, id: string): void {
+  repo.db.prepare("DELETE FROM module_state WHERE bot_id = ? AND module = 'polls' AND guild_id = ? AND key = ?").run(botId, guildId, `poll:${id}`);
+}
+
+/** Known polls of a server, newest first; polls ended over 7 days ago are dropped. */
+function knownPolls(repo: Repo, botId: number, guildId: string): (KnownPoll & { id: string })[] {
+  const rows = repo.db.prepare("SELECT key, value FROM module_state WHERE bot_id = ? AND module = 'polls' AND guild_id = ? ORDER BY updated_at DESC").all(botId, guildId) as { key: string; value: string }[];
+  const out: (KnownPoll & { id: string })[] = [];
+  for (const r of rows) {
+    const id = String(r.key).slice(5);
+    let p: KnownPoll;
+    try {
+      p = JSON.parse(String(r.value)) as KnownPoll;
+    } catch {
+      continue;
+    }
+    if (p.expiresAt && Date.now() - Date.parse(p.expiresAt) > 7 * 86_400_000) {
+      forgetPoll(repo, botId, guildId, id);
+      continue;
+    }
+    out.push({ ...p, id });
+  }
+  return out;
+}
+
+/** Splits the answers: one per line or separated by |. */
+export function pollAnswers(text: string): string[] {
+  return text.split(/\r?\n|\|/).map((a) => a.trim()).filter(Boolean);
+}
+
+/** Poll length in hours (Discord: 1 hour to 32 days); empty = 24 hours. */
+export function pollHours(duration: string): number {
+  if (!duration.trim()) return 24;
+  return Math.max(1, Math.min(768, Math.ceil(parseDuration(duration) / 3_600_000)));
+}
+
+/** "**Yes** — 3 votes (75 %)" lines, total and the leading answer ('' without votes or on a tie). */
+export function pollSummary(answers: { text: string; votes: number }[]): { text: string; total: number; winner: string } {
+  const total = answers.reduce((n, a) => n + a.votes, 0);
+  const top = Math.max(0, ...answers.map((a) => a.votes));
+  const leaders = answers.filter((a) => a.votes === top);
+  const lines = answers.map((a) => `**${a.text}** — ${a.votes} ${a.votes === 1 ? 'vote' : 'votes'}${total ? ` (${Math.round((a.votes / total) * 100)} %)` : ''}`);
+  return { text: lines.join('\n'), total, winner: top > 0 && leaders.length === 1 ? leaders[0]!.text : '' };
+}
+
+/** Answers the command (after "thinking …" too), else posts in the run's channel. */
+async function answer(run: Run, payload: { content?: string; embeds?: unknown[] }): Promise<void> {
+  const d = data(run);
+  const i = d.interaction;
+  if (!i) {
+    if (!d.channel) throw new GraphError('error.run.no_channel');
+    const ch = d.channel;
+    await discord(run, (): Promise<unknown> => ch.send(payload as never));
+    return;
+  }
+  await d.deferring;
+  await discord(run, async () => {
+    if (i.deferred && !i.replied) return i.editReply(payload as never);
+    if (i.replied) return i.followUp({ ...payload, flags: d.hideReplies ? MessageFlags.Ephemeral : undefined } as never);
+    return i.reply({ ...payload, flags: d.hideReplies ? MessageFlags.Ephemeral : undefined } as never);
+  });
+}
+
 /** Who did it: the member who ran the command, else the bot. */
 function moderatorOf(run: Run): string | null {
   const d = data(run);
   return d.interaction ? (d.user?.id ?? null) : (d.client.user?.id ?? null);
 }
 
+// ---------- music (discord/music.ts) ----------
+
+/** Music problems and voice errors become run errors with a readable text. */
+async function music<T>(run: Run, fn: () => Promise<T> | T): Promise<T> {
+  try {
+    return await fn();
+  } catch (err) {
+    if (err instanceof MusicError) throw new GraphError('error.run.music', { message: err.message });
+    const key = (err as { key?: string }).key;
+    if (key === 'sdk.voice.busy') throw new GraphError('error.run.music', { message: 'Something else plays in this server right now.' });
+    if (key === 'sdk.voice.join_failed' || key === 'sdk.voice.bad_channel') throw new GraphError('error.run.music', { message: 'I could not join that voice channel (missing permissions or not a voice channel).' });
+    throw err;
+  }
+}
+
+function musicHandlers(): [string, Handler][] {
+  const player = async (run: Run, node: GraphNode) => {
+    const guild = await guildOf(run, node);
+    return { guild, m: musicOf(data(run).client).get(guild.id) };
+  };
+  const simple = (type: string, fn: (m: ReturnType<ReturnType<typeof musicOf>['get']>, run: Run, node: GraphNode) => Promise<unknown> | unknown): [string, Handler] => [
+    type,
+    async (node, run) => {
+      const { m } = await player(run, node);
+      await music(run, () => fn(m, run, node));
+    },
+  ];
+  return [
+    [
+      'action.music_player',
+      async (node, run) => {
+        const guild = await guildOf(run, node);
+        const channel = run.str(node, 'channel').trim();
+        if (!channel) throw new GraphError('error.run.music', { message: 'Join a voice channel first.' });
+        const text = run.str(node, 'text_channel').trim();
+        run.countDiscordCall();
+        await music(run, () => musicOf(data(run).client).join(guild.id, snowflake(channel, 'channel'), text ? snowflake(text, 'text_channel') : null));
+      },
+    ],
+    [
+      'action.music_add',
+      async (node, run) => {
+        const { m } = await player(run, node);
+        run.countDiscordCall();
+        const tracks = await music(run, () => findTracks(run.str(node, 'query'), 1, data(run).user?.id ?? null));
+        const isLink = /^https?:\/\//i.test(run.str(node, 'query').trim());
+        const list = isLink ? tracks : tracks.slice(0, 1);
+        const pos = await music(run, () => m.add(list, run.str(node, 'queue_position') === 'next' ? 'next' : 'end'));
+        run.setResult(node, '', list.length === 1 ? list[0]!.title : `${list.length} tracks`);
+        run.setResult(node, '.title', list.length === 1 ? list[0]!.title : `${list.length} tracks`);
+        run.setResult(node, '.position', pos);
+      },
+    ],
+    [
+      'action.music_search',
+      async (node, run) => {
+        run.countDiscordCall();
+        const tracks = await music(run, () => findTracks(run.str(node, 'query'), Math.max(1, Math.min(50, Math.trunc(run.num(node, 'limit') || 10))), data(run).user?.id ?? null));
+        run.setResult(node, '.count', tracks.length);
+        run.setResult(node, '.list', tracks.map((t, i) => `${i + 1}. [${t.title}](${t.url}) (${clock(t.duration)})`).join('\n'));
+        run.setResult(node, '[0].title', tracks[0]?.title ?? '');
+        run.setResult(node, '[0].url', tracks[0]?.url ?? '');
+      },
+    ],
+    simple('action.music_play', (m) => m.play()),
+    simple('action.music_pause', (m) => m.pause()),
+    simple('action.music_resume', (m) => m.resume()),
+    simple('action.music_skip', (m, run, node) => m.skip(Math.max(0, Math.trunc(run.num(node, 'to_position') || 0)))),
+    simple('action.music_previous', (m) => m.previous()),
+    simple('action.music_replay', (m) => m.replay()),
+    simple('action.music_stop', (m) => m.stop()),
+    simple('action.music_shuffle', (m) => m.shuffle()),
+    simple('action.music_disconnect', (m) => m.disconnect()),
+    simple('action.music_volume', (m, run, node) => m.setVolume(run.num(node, 'volume'))),
+    simple('action.music_loop', (m, run, node) => {
+      const raw = run.str(node, 'loop_mode').toLowerCase();
+      const mode = raw === 'song' ? 'track' : raw;
+      m.loop = (['off', 'track', 'queue'].includes(mode) ? mode : 'off') as LoopMode;
+    }),
+    simple('action.music_remove', (m, run, node) => m.remove(Math.trunc(run.num(node, 'from_position') || 1), Math.max(1, Math.min(100, Math.trunc(run.num(node, 'remove_count') || 1))))),
+    simple('action.music_seek', (m, run, node) => m.seek(run.str(node, 'seek_mode') === 'relative' ? 'relative' : 'absolute', Math.trunc(run.num(node, 'seek_seconds')))),
+    simple('action.music_filter', (m, run, node) => m.setFilter(run.str(node, 'filter') || 'bassboost')),
+    simple('action.music_clear_filters', (m) => m.setFilter(null)),
+    simple('action.music_autoleave', (m, run, node) => {
+      m.autoleave = run.raw(node, 'autoleave') === undefined ? true : run.bool(node, 'autoleave');
+      m.autoleaveDelay = Math.max(0, Math.min(3600, Math.trunc(run.num(node, 'autoleave_delay') || 0)));
+    }),
+    [
+      'action.music_queue',
+      async (node, run) => {
+        const { m } = await player(run, node);
+        const lines = m.queue.slice(0, 20).map((t, i) => `${i === m.index ? '▶' : `${i + 1}.`} [${t.title}](${t.url}) (${clock(t.duration)})`);
+        if (m.queue.length > 20) lines.push(`… and ${m.queue.length - 20} more`);
+        run.setResult(node, '', lines.join('\n') || 'The queue is empty.');
+        run.setResult(node, '.count', m.queue.length);
+        run.setResult(node, '.duration', clock(m.queue.reduce((n, t) => n + t.duration, 0)));
+      },
+    ],
+    [
+      'action.music_now',
+      async (node, run) => {
+        const { m } = await player(run, node);
+        const t = m.playing ? m.current : null;
+        const bar = (pos: number, len: number) => {
+          if (!len) return '🔴 live';
+          const at = Math.round((Math.min(pos, len) / len) * 15);
+          return `${'▬'.repeat(at)}🔘${'▬'.repeat(15 - at)} ${clock(pos)} / ${clock(len)}`;
+        };
+        run.setResult(node, '', t ? `**[${t.title}](${t.url})**${m.paused ? ' (paused)' : ''}\n${bar(m.position, t.duration)}` : 'Nothing is playing.');
+        run.setResult(node, '.title', t?.title ?? '');
+        run.setResult(node, '.url', t?.url ?? '');
+        run.setResult(node, '.author', t?.author ?? '');
+        run.setResult(node, '.position', t ? clock(m.position) : '');
+        run.setResult(node, '.duration', t ? clock(t.duration) : '');
+        run.setResult(node, '.loop', m.loop);
+        run.setResult(node, '.volume', m.volume);
+      },
+    ],
+    [
+      'action.music_lyrics',
+      async (node, run) => {
+        let query = run.str(node, 'query').trim();
+        if (!query) {
+          const guild = data(run).guild;
+          const t = guild ? musicOf(data(run).client).get(guild.id).current : null;
+          if (!t) throw new GraphError('error.run.music', { message: 'Nothing is playing; give a song name.' });
+          query = t.title;
+        }
+        run.countDiscordCall();
+        const found = await lyricsOf(query).catch(() => null);
+        if (!found) throw new GraphError('error.run.music', { message: `No lyrics found for "${query.slice(0, 100)}".` });
+        run.setResult(node, '', found.lyrics);
+        run.setResult(node, '.title', found.title);
+        run.setResult(node, '.artist', found.artist);
+      },
+    ],
+  ];
+}
+
 export function discordHandlers(repo: Repo, mod?: Moderation): Map<string, Handler> {
+  /** Module helpers report problems as text: a run error with that text. */
+  const check = (problem: string | null): void => {
+    if (problem) throw new GraphError('error.run.module_failed', { message: problem });
+  };
+  /** A text channel of a server (ticket channels, modmail threads). */
+  const guildChannel = async (run: Run, node: GraphNode, key = 'channel'): Promise<GuildTextBasedChannel> => {
+    const value = run.str(node, key);
+    const ch = value ? await channelOf(run, value, key) : data(run).channel;
+    if (!ch || !('guild' in ch) || !ch.isTextBased()) throw new GraphError('error.run.needs_server');
+    return ch as GuildTextBasedChannel;
+  };
+  const moduleCtx = (run: Run) => new ModuleContext(data(run).botId, repo);
+
+  /** A giveaway: its message ID (any channel of the server) or a message link / block variable. */
+  const giveawayOf = async (run: Run, node: GraphNode): Promise<{ guild: string; id: string; g: Giveaway }> => {
+    const d = data(run);
+    const value = run.str(node, 'giveaway').trim();
+    let guild = d.guild?.id ?? '';
+    let id = value;
+    const known = d.messages.get(String(run.raw(node, 'giveaway') ?? '').trim());
+    const link = /channels\/(\d{17,20})\/\d{17,20}\/(\d{17,20})/.exec(value);
+    if (known) {
+      guild = known.guildId ?? guild;
+      id = known.id;
+    } else if (link) {
+      guild = link[1]!;
+      id = link[2]!;
+    } else {
+      id = snowflake(value, 'giveaway');
+    }
+    const g = guild ? loadGiveaway(repo, d.botId, guild, id) : null;
+    if (!g) throw new GraphError('error.run.giveaway_not_found', { value, message: 'There is no giveaway with this ID on this server.' });
+    return { guild, id, g };
+  };
+
+  /** A poll message: a known poll's ID (any channel of the server), else any message reference. */
+  const pollMessage = async (run: Run, node: GraphNode, key: string): Promise<Message> => {
+    const d = data(run);
+    const value = run.str(node, key).trim();
+    const known = d.guild && /^\d{17,20}$/.test(value) ? knownPolls(repo, d.botId, d.guild.id).find((p) => p.id === value) : undefined;
+    let msg: Message;
+    if (known) {
+      const channel = await channelOf(run, known.channel, key);
+      if (!('messages' in channel)) throw new GraphError('error.run.message_not_found', { value });
+      run.countDiscordCall();
+      const found = await channel.messages.fetch(value).catch(() => null);
+      if (!found) {
+        forgetPoll(repo, d.botId, d.guild!.id, value);
+        throw new GraphError('error.run.message_not_found', { value });
+      }
+      msg = found;
+    } else {
+      msg = await messageOf(run, node, key);
+    }
+    if (!msg.poll) throw new GraphError('error.run.not_a_poll', { value, message: 'That message is not a poll.' });
+    return msg;
+  };
   const guildId = (run: Run) => data(run).guild?.id ?? run.vars.get('server.id') ?? '';
   const NO_CASE: CaseHandle = { number: null, finish: async () => undefined, fail: () => undefined };
 
@@ -387,6 +675,88 @@ export function discordHandlers(repo: Repo, mod?: Moderation): Map<string, Handl
       },
     ],
     [
+      'action.create_channel',
+      async (node, run) => {
+        const guild = await guildOf(run, node);
+        const name = run.str(node, 'name').trim().slice(0, 100);
+        if (!name) throw new GraphError('error.run.missing_value', { field: 'name' });
+        const kind = String(run.raw(node, 'channel_type') ?? 'text');
+        const type = { text: 0, voice: 2, category: 4, announcement: 5, stage: 13, forum: 15 }[kind] ?? 0;
+        const opts: Record<string, unknown> = { name, type, reason: reason(run, node) };
+        const parent = run.str(node, 'parent').trim();
+        if (parent && type !== 4) opts.parent = snowflake(parent, 'parent');
+        const topic = run.str(node, 'topic');
+        if (topic && (type === 0 || type === 5 || type === 15)) opts.topic = topic.slice(0, 1024);
+        if (type === 0 && node.config.nsfw !== undefined) opts.nsfw = run.bool(node, 'nsfw');
+        const slow = Number(run.raw(node, 'slowmode') ?? 0);
+        if (type === 0 && slow > 0) opts.rateLimitPerUser = Math.min(21_600, Math.trunc(slow));
+        const everyone = guild.roles.everyone.id;
+        const access = String(run.raw(node, 'access') ?? 'default');
+        if (access === 'private') {
+          opts.permissionOverwrites = [
+            { id: everyone, deny: ['ViewChannel'] },
+            { id: snowflake(run.str(node, 'user'), 'user'), allow: ['ViewChannel', 'SendMessages'] },
+          ];
+        } else if (access === 'staff') {
+          opts.permissionOverwrites = [
+            { id: everyone, deny: ['ViewChannel'] },
+            { id: snowflake(run.str(node, 'staff_role'), 'staff_role'), allow: ['ViewChannel', 'SendMessages'] },
+          ];
+        } else if (access === 'read_only') {
+          opts.permissionOverwrites = [{ id: everyone, deny: ['SendMessages'] }];
+        } else if (access === 'hidden') {
+          opts.permissionOverwrites = [{ id: everyone, deny: ['ViewChannel'] }];
+        }
+        const ch = await discord(run, () => guild.channels.create(opts as never));
+        run.setResult(node, '', `<#${ch.id}>`);
+        run.setResult(node, '.id', ch.id);
+        run.setResult(node, '.name', ch.name);
+      },
+    ],
+    [
+      'action.delete_channel',
+      async (node, run) => {
+        const value = run.str(node, 'channel');
+        run.countDiscordCall();
+        const ch = await data(run).client.channels.fetch(snowflake(value, 'channel')).catch(() => null);
+        if (!ch || ch.isDMBased() || !('delete' in ch)) throw new GraphError('error.run.channel_not_found', { value });
+        await discord(run, () => (ch as { delete(reason?: string): Promise<unknown> }).delete(reason(run, node)));
+      },
+    ],
+    [
+      'action.member_info',
+      async (node, run) => {
+        const guild = await guildOf(run, node);
+        const id = snowflake(run.str(node, 'user') || (run.vars.get('user.id') ?? ''), 'user');
+        run.countDiscordCall();
+        const member = await guild.members.fetch(id).catch(() => null);
+        const user = member?.user ?? (await data(run).client.users.fetch(id).catch(() => null));
+        if (!user) throw new GraphError('error.run.member_not_found', { value: id });
+        const ts = (ms: number | null | undefined) => (ms ? `<t:${Math.floor(ms / 1000)}:D>` : '');
+        run.setResult(node, '', member?.displayName ?? user.globalName ?? user.username);
+        run.setResult(node, '.id', user.id);
+        run.setResult(node, '.name', user.username);
+        run.setResult(node, '.mention', `<@${user.id}>`);
+        run.setResult(node, '.avatar', member?.displayAvatarURL({ size: 1024 }) ?? user.displayAvatarURL({ size: 1024 }));
+        run.setResult(node, '.created', ts(user.createdTimestamp));
+        run.setResult(node, '.joined', ts(member?.joinedTimestamp));
+        const roles = member ? [...member.roles.cache.values()].filter((r) => r.id !== guild.id).sort((a, b) => b.position - a.position) : [];
+        run.setResult(node, '.roles', roles.map((r) => `<@&${r.id}>`).join(' ') || '—');
+        run.setResult(node, '.role_count', roles.length);
+        run.setResult(node, '.bot', user.bot ? 'yes' : 'no');
+      },
+    ],
+    [
+      'action.automod_list',
+      async (node, run) => {
+        const guild = await guildOf(run, node);
+        const rules = await discord(run, () => guild.autoModerationRules.fetch());
+        const list = [...rules.values()];
+        run.setResult(node, '', list.map((r, i) => `${i + 1}. ${r.enabled ? '✅' : '⏸'} **${r.name}**`).join('\n') || '—');
+        run.setResult(node, '.count', list.length);
+      },
+    ],
+    [
       'action.list_bans',
       async (node, run) => {
         const guild = await guildOf(run, node);
@@ -394,6 +764,283 @@ export function discordHandlers(repo: Repo, mod?: Moderation): Map<string, Handl
         const list = [...bans.values()];
         run.setResult(node, '', list.map((b, i) => `${i + 1}. ${b.user.username} (${b.user.id})${b.reason ? ` – ${b.reason}` : ''}`).join('\n'));
         run.setResult(node, '.count', list.length);
+      },
+    ],
+    ...musicHandlers(),
+    [
+      'action.ticket_panel',
+      async (node, run) => {
+        const d = data(run);
+        const channel = await guildChannel(run, node);
+        const cfg = repo.moduleConfig(d.botId, 'ticket') as Partial<TicketConfig>;
+        const index = ticketPanelIndex(cfg, run.str(node, 'panel'));
+        if (index < 0) throw new GraphError('error.run.module_failed', { message: 'There is no such ticket panel. Set up the panels in the Ticket module first.' });
+        const sent: Message = await discord(run, (): Promise<Message> => channel.send(ticketPanelPayload(cfg.panels![index]!, index, channel.guild)));
+        const variable = typeof node.config.variable === 'string' ? node.config.variable : '';
+        if (variable) d.messages.set(variable, sent);
+        run.setResult(node, '.id', sent.id);
+        run.setResult(node, '.url', sent.url);
+      },
+    ],
+    [
+      'action.ticket_create',
+      async (node, run) => {
+        const ctx = moduleCtx(run);
+        const member = await memberOf(run, node);
+        const cfg = ctx.config<TicketConfig>('ticket');
+        const index = ticketPanelIndex(cfg, run.str(node, 'panel'));
+        if (index < 0) throw new GraphError('error.run.module_failed', { message: 'There is no such ticket panel. Set up the panels in the Ticket module first.' });
+        run.countDiscordCall();
+        const res = await createTicket(ctx, member.guild, member, cfg, index);
+        if ('error' in res) throw new GraphError('error.run.module_failed', { message: res.error });
+        run.setResult(node, '', res.channelId);
+        run.setResult(node, '.mention', `<#${res.channelId}>`);
+      },
+    ],
+    [
+      'action.ticket_close',
+      async (node, run) => {
+        run.countDiscordCall();
+        check(await finishTicket(moduleCtx(run), await guildChannel(run, node), moderatorOf(run) ?? '', run.str(node, 'reason').slice(0, 500), 'close'));
+      },
+    ],
+    [
+      'action.ticket_delete',
+      async (node, run) => {
+        run.countDiscordCall();
+        check(await finishTicket(moduleCtx(run), await guildChannel(run, node), moderatorOf(run) ?? '', run.str(node, 'reason').slice(0, 500), 'delete'));
+      },
+    ],
+    [
+      'action.ticket_reopen',
+      async (node, run) => {
+        run.countDiscordCall();
+        check(await reopenTicket(moduleCtx(run), await guildChannel(run, node)));
+      },
+    ],
+    [
+      'action.ticket_add_member',
+      async (node, run) => {
+        run.countDiscordCall();
+        check(await ticketMember(moduleCtx(run), await guildChannel(run, node), snowflake(run.str(node, 'user'), 'user'), true));
+      },
+    ],
+    [
+      'action.ticket_remove_member',
+      async (node, run) => {
+        run.countDiscordCall();
+        check(await ticketMember(moduleCtx(run), await guildChannel(run, node), snowflake(run.str(node, 'user'), 'user'), false));
+      },
+    ],
+    [
+      'action.ticket_stats',
+      async (node, run) => {
+        const guild = await guildOf(run, node);
+        const c = ticketCounts(moduleCtx(run), guild.id);
+        run.setResult(node, '', `Open: ${c.open} · Closed: ${c.closed} · All: ${c.total}`);
+        run.setResult(node, '.open', c.open);
+        run.setResult(node, '.closed', c.closed);
+        run.setResult(node, '.total', c.total);
+      },
+    ],
+    [
+      'action.modmail_close',
+      async (node, run) => {
+        run.countDiscordCall();
+        check(await modmailClose(moduleCtx(run), await guildChannel(run, node, '_'), moderatorOf(run) ?? '', run.str(node, 'reason').slice(0, 500)));
+      },
+    ],
+    [
+      'action.modmail_reply',
+      async (node, run) => {
+        const text = run.str(node, 'message').trim();
+        if (!text) throw new GraphError('error.run.empty_message');
+        run.countDiscordCall();
+        check(await modmailReply(moduleCtx(run), await guildChannel(run, node, '_'), data(run).member, text.slice(0, 4000)));
+      },
+    ],
+    [
+      'action.modmail_block',
+      async (node, run) => {
+        const guild = await guildOf(run, node);
+        modmailBlock(moduleCtx(run), guild.id, snowflake(run.str(node, 'user'), 'user'), moderatorOf(run), true);
+      },
+    ],
+    [
+      'action.modmail_unblock',
+      async (node, run) => {
+        const guild = await guildOf(run, node);
+        modmailBlock(moduleCtx(run), guild.id, snowflake(run.str(node, 'user'), 'user'), moderatorOf(run), false);
+      },
+    ],
+    [
+      'action.free_games',
+      async (node, run) => {
+        run.countDiscordCall();
+        const choice = run.str(node, 'platforms') || 'settings';
+        const platforms =
+          choice === 'settings' ? platformsOf(repo.moduleConfig(data(run).botId, 'free-games') as Partial<FreeGamesConfig>) : { epic: choice !== 'steam', steam: choice !== 'epic' };
+        let games;
+        try {
+          games = await freeGames(platforms);
+        } catch (err) {
+          throw new GraphError('error.run.module_failed', { message: `The free games could not be loaded: ${(err as Error).message}` });
+        }
+        run.setResult(node, '', freeGamesText(games) || 'No free games right now.');
+        run.setResult(node, '.count', games.length);
+        if (run.raw(node, 'embeds') === undefined || run.bool(node, 'embeds')) {
+          const embeds = games.slice(0, 10).map(gameEmbed);
+          await answer(run, embeds.length ? { content: `🎮 **Free games right now (${games.length})**`, embeds } : { content: 'No free games right now.' });
+        }
+      },
+    ],
+    [
+      'action.giveaway_create',
+      async (node, run) => {
+        const d = data(run);
+        const value = run.str(node, 'channel');
+        const channel = value ? await channelOf(run, value, 'channel') : d.channel;
+        if (!channel || !('guildId' in channel) || !channel.guildId) throw new GraphError('error.run.needs_server');
+        const prize = run.str(node, 'prize').trim().slice(0, 200);
+        if (!prize) throw new GraphError('error.run.giveaway_prize', { message: 'The giveaway needs a prize.' });
+        const ms = parseDuration(run.str(node, 'duration') || '1d');
+        if (ms < 60_000 || ms > 60 * 86_400_000) throw new GraphError('error.run.giveaway_duration', { message: 'A giveaway lasts 1 minute to 60 days (e.g. 30m, 2h, 7d).' });
+        const winners = Math.max(1, Math.min(50, Math.trunc(run.num(node, 'winners') || 1)));
+        const roleValue = run.str(node, 'role').trim();
+        const g: Giveaway = {
+          channel: channel.id, prize, winners, endsAt: new Date(Date.now() + ms).toISOString(), ended: false, winnerIds: [], entrants: [],
+          role: roleValue ? snowflake(roleValue, 'role') : null, host: d.user?.id ?? null, url: '',
+        };
+        const sent: Message = await discord(run, (): Promise<Message> => channel.send(giveawayPayload(g)));
+        g.url = sent.url;
+        saveGiveaway(repo, d.botId, channel.guildId, sent.id, g);
+        repo.addJob(d.botId, 'undo', new Date(g.endsAt), { op: 'giveaway_end', guild: channel.guildId, user: d.client.user?.id ?? '-', message: sent.id }, `giveaway:${sent.id}`);
+        const variable = typeof node.config.variable === 'string' ? node.config.variable : '';
+        if (variable) d.messages.set(variable, sent);
+        run.setResult(node, '', sent.id);
+        run.setResult(node, '.id', sent.id);
+        run.setResult(node, '.url', sent.url);
+      },
+    ],
+    [
+      'action.giveaway_end',
+      async (node, run) => {
+        const d = data(run);
+        const { guild, id } = await giveawayOf(run, node);
+        repo.cancelJobs(d.botId, `giveaway:${id}`);
+        run.countDiscordCall();
+        const winners = (await endGiveaway(repo, d.botId, d.client, guild, id)) ?? [];
+        run.setResult(node, '', winners.map((w) => `<@${w}>`).join(', '));
+      },
+    ],
+    [
+      'action.giveaway_reroll',
+      async (node, run) => {
+        const d = data(run);
+        const { guild, id, g } = await giveawayOf(run, node);
+        if (!g.ended) throw new GraphError('error.run.giveaway_running', { message: 'The giveaway is still running; end it first.' });
+        run.countDiscordCall();
+        const winners = (await endGiveaway(repo, d.botId, d.client, guild, id, Math.max(1, Math.min(50, Math.trunc(run.num(node, 'winners') || 1))))) ?? [];
+        run.setResult(node, '', winners.map((w) => `<@${w}>`).join(', '));
+      },
+    ],
+    [
+      'action.giveaway_delete',
+      async (node, run) => {
+        const d = data(run);
+        const { guild, id, g } = await giveawayOf(run, node);
+        repo.cancelJobs(d.botId, `giveaway:${id}`);
+        run.countDiscordCall();
+        const ch = await d.client.channels.fetch(g.channel).catch(() => null);
+        if (ch && ch.isTextBased() && 'messages' in ch) await ch.messages.delete(id).catch(() => undefined);
+        deleteGiveaway(repo, d.botId, guild, id);
+      },
+    ],
+    [
+      'action.giveaway_list',
+      async (node, run) => {
+        const guild = await guildOf(run, node);
+        const list = listGiveaways(repo, data(run).botId, guild.id);
+        const line = (g: Giveaway & { id: string }, i: number) => {
+          const end = Math.floor(Date.parse(g.endsAt) / 1000);
+          const state = g.ended ? `ended · ${g.winnerIds.length ? g.winnerIds.map((w) => `<@${w}>`).join(', ') : 'no winner'}` : `ends <t:${end}:R> · ${g.entrants.length} entries`;
+          return `${i + 1}. [${g.prize}](${g.url}) · ${state} · ID ${g.id}`;
+        };
+        run.setResult(node, '', list.slice(0, 25).map(line).join('\n') || '—');
+        run.setResult(node, '.count', list.length);
+      },
+    ],
+    [
+      'action.poll_create',
+      async (node, run) => {
+        const d = data(run);
+        const value = run.str(node, 'channel');
+        const channel = value ? await channelOf(run, value, 'channel') : d.channel;
+        if (!channel) throw new GraphError('error.run.no_channel');
+        const question = run.str(node, 'question').trim().slice(0, 300);
+        const answers = pollAnswers(run.str(node, 'answers'));
+        if (!question) throw new GraphError('error.run.poll_question', { message: 'The poll needs a question.' });
+        if (answers.length < 2 || answers.length > 10 || answers.some((a) => a.length > 55)) throw new GraphError('error.run.poll_answers', { count: answers.length, message: 'A poll needs 2 to 10 answers of up to 55 characters (one per line or separated by |).' });
+        const sent: Message = await discord(run, (): Promise<Message> =>
+          channel.send({ poll: { question: { text: question }, answers: answers.map((text) => ({ text })), duration: pollHours(run.str(node, 'duration')), allowMultiselect: run.bool(node, 'multiple') } }),
+        );
+        rememberPoll(repo, d.botId, sent);
+        const variable = typeof node.config.variable === 'string' ? node.config.variable : '';
+        if (variable) d.messages.set(variable, sent);
+        run.setResult(node, '', sent.id);
+        run.setResult(node, '.id', sent.id);
+        run.setResult(node, '.url', sent.url);
+      },
+    ],
+    [
+      'action.poll_register',
+      async (node, run) => {
+        const d = data(run);
+        const msg = await pollMessage(run, node, 'message');
+        rememberPoll(repo, d.botId, msg);
+        const variable = typeof node.config.variable === 'string' ? node.config.variable : '';
+        if (variable) d.messages.set(variable, msg);
+        run.setResult(node, '.id', msg.id);
+      },
+    ],
+    [
+      'action.poll_results',
+      async (node, run) => {
+        const msg = await pollMessage(run, node, 'poll');
+        const poll = msg.poll!;
+        const answers = [...poll.answers.values()].map((a) => ({ text: a.text ?? '', votes: a.voteCount }));
+        const sum = pollSummary(answers);
+        const ended = poll.resultsFinalized || (poll.expiresAt !== null && poll.expiresAt.getTime() <= Date.now());
+        if (msg.guildId) rememberPoll(repo, data(run).botId, msg);
+        run.setResult(node, '', sum.text);
+        run.setResult(node, '.question', poll.question.text ?? '');
+        run.setResult(node, '.total', sum.total);
+        run.setResult(node, '.winner', sum.winner);
+        run.setResult(node, '.ended', ended);
+        run.setResult(node, '.url', msg.url);
+      },
+    ],
+    [
+      'action.poll_list',
+      async (node, run) => {
+        const guild = await guildOf(run, node);
+        const list = knownPolls(repo, data(run).botId, guild.id);
+        const now = Date.now();
+        const line = (p: KnownPoll & { id: string }, i: number) => {
+          const end = p.expiresAt ? Date.parse(p.expiresAt) : NaN;
+          const when = Number.isNaN(end) ? '' : end > now ? ` · ends <t:${Math.floor(end / 1000)}:R>` : ' · ended';
+          return `${i + 1}. [${p.question || p.id}](${p.url})${when} · ID ${p.id}`;
+        };
+        run.setResult(node, '', list.slice(0, 25).map(line).join('\n') || '—');
+        run.setResult(node, '.count', list.length);
+      },
+    ],
+    [
+      'action.poll_delete',
+      async (node, run) => {
+        const msg = await pollMessage(run, node, 'poll');
+        await discord(run, () => msg.delete());
+        if (msg.guildId) forgetPoll(repo, data(run).botId, msg.guildId, msg.id);
       },
     ],
     [
@@ -535,10 +1182,10 @@ export function discordHandlers(repo: Repo, mod?: Moderation): Map<string, Handl
       },
     ],
     // --- economy (default currency) ---
-    ['action.economy_get', (node, run) => run.setResult(node, '', repo.balance(data(run).botId, guildId(run), snowflake(run.str(node, 'user'), 'user')))],
-    ['action.economy_add', (node, run) => void repo.changeBalance(data(run).botId, guildId(run), snowflake(run.str(node, 'user'), 'user'), run.num(node, 'amount'), 'add')],
-    ['action.economy_remove', (node, run) => void repo.changeBalance(data(run).botId, guildId(run), snowflake(run.str(node, 'user'), 'user'), -run.num(node, 'amount'), 'add')],
-    ['action.economy_set', (node, run) => void repo.changeBalance(data(run).botId, guildId(run), snowflake(run.str(node, 'user'), 'user'), run.num(node, 'amount'), 'set')],
+    ['action.economy_get', (node, run) => run.setResult(node, '', repo.balance(data(run).botId, guildId(run), snowflake(run.str(node, 'user') || (run.vars.get('user.id') ?? ''), 'user')))],
+    ['action.economy_add', (node, run) => void repo.changeBalance(data(run).botId, guildId(run), snowflake(run.str(node, 'user') || (run.vars.get('user.id') ?? ''), 'user'), run.num(node, 'amount'), 'add')],
+    ['action.economy_remove', (node, run) => void repo.changeBalance(data(run).botId, guildId(run), snowflake(run.str(node, 'user') || (run.vars.get('user.id') ?? ''), 'user'), -run.num(node, 'amount'), 'add')],
+    ['action.economy_set', (node, run) => void repo.changeBalance(data(run).botId, guildId(run), snowflake(run.str(node, 'user') || (run.vars.get('user.id') ?? ''), 'user'), run.num(node, 'amount'), 'set')],
     [
       'action.economy_pay',
       (node, run) => {

@@ -240,7 +240,7 @@ final class DataStore
     }
 
     /** @return array{name: string, description: string, type: string, owner: string, perServer: bool, defaultValue: string, group: string} */
-    private static function input(array $in): array
+    public static function input(array $in): array
     {
         $name = trim((string) ($in['name'] ?? ''));
         $type = $in['type'] ?? null;

@@ -1,0 +1,68 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.free_games",
+  "version": 1,
+  "category": "action",
+  "group": "free_games",
+  "order": 1500,
+  "color": "purple",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_free_games.label",
+  "descriptionKey": "builder.node.action_free_games.description",
+  "module": "free-games",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": "",
+      "labelKey": "builder.result.free_games.0"
+    },
+    {
+      "suffix": ".count",
+      "labelKey": "builder.result.free_games.1"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "platforms": {
+        "type": "string",
+        "enum": [
+          "settings",
+          "all",
+          "epic",
+          "steam"
+        ],
+        "default": "settings",
+        "x-labelKey": "builder.cfg.free_games_platforms",
+        "x-enumKey": "builder.enum.platforms"
+      },
+      "embeds": {
+        "type": "boolean",
+        "default": true,
+        "x-labelKey": "builder.cfg.free_games_embeds",
+        "x-hintKey": "builder.cfg.free_games_embeds_hint"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  }
+}

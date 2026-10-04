@@ -178,6 +178,22 @@ type InstalledPlugin struct {
 	Enabled            bool     `json:"enabled"`
 	Beta               bool     `json:"beta"`
 	GrantedPermissions []string `json:"grantedPermissions"`
+	// InstanceEnabled: the admin's switch for every bot; BlockedBy: SDK
+	// permissions that are off (the plugin does not run while one is listed).
+	InstanceEnabled bool     `json:"instanceEnabled"`
+	BlockedBy       []string `json:"blockedBy"`
+	// Manifest is the plugin's bothub-plugin.json (settings schema, blocks …).
+	Manifest json.RawMessage `json:"manifest,omitempty"`
+	// Lang holds the plugin's texts per locale, keys "plugin.<id>.*".
+	Lang map[string]map[string]string `json:"lang,omitempty"`
+	// Webhooks: inbound URLs of the plugin for this bot (bothub.json services.webhooks).
+	Webhooks []PluginWebhook `json:"webhooks,omitempty"`
+}
+
+// PluginWebhook is one inbound webhook; Path is relative to the dashboard (/api/hooks/plugin/…).
+type PluginWebhook struct {
+	Name string `json:"name"`
+	Path string `json:"path"`
 }
 
 // ServerSettings are instance-wide settings (admin only). Port changes apply
@@ -301,6 +317,10 @@ type CustomCommand struct {
 	Description string          `json:"description"`
 	Enabled     bool            `json:"enabled"`
 	Builtin     bool            `json:"builtin"`
+	Hidden      bool            `json:"hidden"`   // module/plugin copy the user has not edited yet
+	Preset      *string         `json:"preset"`   // module copy: delete resets it to this preset
+	Copy        bool            `json:"copy"`     // module or plugin copy: stays in its system group
+	PluginID    *string         `json:"pluginId"` // plugin copy: listed on the plugin's page
 	GroupID     *int64          `json:"groupId"`
 	EventType   string          `json:"eventType,omitempty"` // custom events only
 	UpdatedAt   time.Time       `json:"updatedAt"`
@@ -314,6 +334,20 @@ type CommandGroup struct {
 	Description string `json:"description"`
 	Position    int    `json:"position"`
 	Commands    int    `json:"commands"`
+	// System: module or plugin group. Not listed in the group dialog or the
+	// move menu; the API refuses to change or delete it.
+	System bool `json:"system"`
+}
+
+// UserGroups drops the system groups (module and plugin copies).
+func UserGroups(groups []CommandGroup) []CommandGroup {
+	out := make([]CommandGroup, 0, len(groups))
+	for _, g := range groups {
+		if !g.System {
+			out = append(out, g)
+		}
+	}
+	return out
 }
 
 // DeletedCommand is a custom command deleted in the last 30 days.
@@ -429,19 +463,27 @@ type AutoPunishment struct {
 }
 
 // ModerationConfig is the settings page of the moderation module.
+// PermissionsBlock is the shared permissions block (allowed and banned roles,
+// required Discord permissions, banned channels) of commands and modules.
+type PermissionsBlock struct {
+	AllowedRoles        []GuildRef `json:"allowed_roles"`
+	BannedRoles         []GuildRef `json:"banned_roles"`
+	RequiredPermissions []string   `json:"required_permissions"`
+	BannedChannels      []GuildRef `json:"banned_channels"`
+}
+
 type ModerationConfig struct {
-	DefaultPermissions bool             `json:"defaultPermissions"`
-	ModeratorRoles     []GuildRef       `json:"moderatorRoles"`
-	AdminRoles         []GuildRef       `json:"adminRoles"`
-	LogEnabled         bool             `json:"logEnabled"`
-	LogChannels        []GuildRef       `json:"logChannels"`
-	PunishmentColor    string           `json:"punishmentColor"`
-	LogColor           string           `json:"logColor"`
-	DMEnabled          bool             `json:"dmEnabled"`
-	DMMode             string           `json:"dmMode"`
-	DMMessage          string           `json:"dmMessage"`
-	BanDeleteMessages  string           `json:"banDeleteMessages"`
-	AutoPunishments    []AutoPunishment `json:"autoPunishments"`
+	Moderators        PermissionsBlock `json:"moderators"`
+	Admins            PermissionsBlock `json:"admins"`
+	LogEnabled        bool             `json:"logEnabled"`
+	LogChannels       []GuildRef       `json:"logChannels"`
+	PunishmentColor   string           `json:"punishmentColor"`
+	LogColor          string           `json:"logColor"`
+	DMEnabled         bool             `json:"dmEnabled"`
+	DMMode            string           `json:"dmMode"`
+	DMMessage         string           `json:"dmMessage"`
+	BanDeleteMessages string           `json:"banDeleteMessages"`
+	AutoPunishments   []AutoPunishment `json:"autoPunishments"`
 }
 
 type TimedSettings struct {
@@ -484,4 +526,70 @@ type WebhookUpdate struct {
 	Name       *string `json:"name,omitempty"`
 	RequireKey *bool   `json:"requireKey,omitempty"`
 	Enabled    *bool   `json:"enabled,omitempty"`
+}
+
+// AdminPlugin is a plugin installed on the instance (Admin → Plugin Manager).
+// MarketPlugin is one plugin folder of the market repo (Template left out).
+// Published is the version listed in index.json (installable), nil when the
+// plugin has no release yet; Installed is the version on this instance.
+type MarketPlugin struct {
+	ID          string   `json:"id"`
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	Developer   string   `json:"developer"`
+	Version     string   `json:"version"`
+	Permissions []string `json:"permissions"`
+	Published   *string  `json:"published"`
+	Installed   *string  `json:"installed"`
+	// App Store: emoji, category (module group key), license and the
+	// endpoints the plugin asks for. Layers and Size come from the release
+	// in index.json (nil/0 without a release).
+	Icon     string        `json:"icon"`
+	Category string        `json:"category"`
+	License  string        `json:"license"`
+	Secrets  []string      `json:"secrets"`
+	Layers   *MarketLayers `json:"layers"`
+	Size     int64         `json:"size"`
+}
+
+// MarketLayers counts the parts of a released plugin.
+type MarketLayers struct {
+	Commands  int `json:"commands"`
+	Events    int `json:"events"`
+	Services  int `json:"services"`
+	Nodes     int `json:"nodes"`
+	Dashboard int `json:"dashboard"`
+}
+
+type AdminPlugin struct {
+	ID          string                       `json:"id"`
+	Version     string                       `json:"version"`
+	SHA256      string                       `json:"sha256"`
+	Enabled     bool                         `json:"enabled"`
+	InstalledAt time.Time                    `json:"installedAt"`
+	Manifest    json.RawMessage              `json:"manifest"`
+	Lang        map[string]map[string]string `json:"lang"`
+	// BlockedBy: declared SDK permissions the SDK policies switch off; the
+	// bot does not start the plugin while one is listed.
+	BlockedBy []string `json:"blockedBy"`
+	// SecretShares: every name of manifest.secrets, whether a secret with
+	// that name exists and whether it is shared with the plugin.
+	SecretShares map[string]SecretShare `json:"secretShares"`
+}
+
+type SecretShare struct {
+	Exists bool `json:"exists"`
+	// Set: it has a value (false: an empty placeholder).
+	Set    bool `json:"set"`
+	Shared bool `json:"shared"`
+}
+
+// PluginInstall is the API's answer to an install: the command copies it
+// created per bot and the ones whose plugin version changed.
+type PluginInstall struct {
+	ID       string `json:"id"`
+	Version  string `json:"version"`
+	Commands struct {
+		Created int `json:"created"`
+	} `json:"commands"`
 }

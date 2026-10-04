@@ -25,6 +25,12 @@
       "labelKey": "builder.port.next"
     }
   ],
+  "results": [
+    {
+      "suffix": "",
+      "labelKey": "builder.result.giveaway_reroll.0"
+    }
+  ],
   "config": {
     "type": "object",
     "additionalProperties": false,

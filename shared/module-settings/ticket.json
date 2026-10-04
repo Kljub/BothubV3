@@ -89,7 +89,8 @@
       "key": "logChannel",
       "type": "channel",
       "channelTypes": [
-        "text"
+        "text",
+        "announcement"
       ]
     },
     {

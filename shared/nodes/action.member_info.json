@@ -1,0 +1,96 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.member_info",
+  "version": 1,
+  "category": "action",
+  "group": "server",
+  "order": 1140,
+  "color": "orange",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_member_info.label",
+  "descriptionKey": "builder.node.action_member_info.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": "",
+      "labelKey": "builder.result.member_info.0"
+    },
+    {
+      "suffix": ".id",
+      "labelKey": "builder.result.member_info.1"
+    },
+    {
+      "suffix": ".name",
+      "labelKey": "builder.result.member_info.2"
+    },
+    {
+      "suffix": ".mention",
+      "labelKey": "builder.result.member_info.3"
+    },
+    {
+      "suffix": ".avatar",
+      "labelKey": "builder.result.member_info.4"
+    },
+    {
+      "suffix": ".created",
+      "labelKey": "builder.result.member_info.5"
+    },
+    {
+      "suffix": ".joined",
+      "labelKey": "builder.result.member_info.6"
+    },
+    {
+      "suffix": ".roles",
+      "labelKey": "builder.result.member_info.7"
+    },
+    {
+      "suffix": ".role_count",
+      "labelKey": "builder.result.member_info.8"
+    },
+    {
+      "suffix": ".bot",
+      "labelKey": "builder.result.member_info.9"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "user": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.user",
+        "x-hintKey": "builder.cfg.member_info_user_hint",
+        "x-ref": "member"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      },
+      "guild": {
+        "type": "string",
+        "maxLength": 40,
+        "x-advanced": true,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.guild",
+        "x-hintKey": "builder.cfg.guild_hint"
+      }
+    }
+  }
+}

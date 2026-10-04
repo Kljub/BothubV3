@@ -54,8 +54,9 @@ export function onCountingMessage(ctx: ModuleContext, msg: Message): void {
     ctx.setState('counting', msg.guildId, stateKey, res.state);
     const vars = { ...baseVars(msg.guild, msg.member), count: String(res.state.count), 'count.next': String(res.expected) };
     if (res.kind === 'ok') {
-      const canHook = msg.guild.members.me?.permissionsIn(msg.channel).has(PermissionFlagsBits.ManageWebhooks) ?? false;
-      if (cfg.mode === 'webhook' && !canHook) warn(ctx, 'WAR-2008', { module: 'counting', problem: 'webhook mode needs the Manage Webhooks permission' });
+      // Webhook mode deletes the message and reposts it: both permissions are needed.
+      const canHook = msg.guild.members.me?.permissionsIn(msg.channel).has([PermissionFlagsBits.ManageWebhooks, PermissionFlagsBits.ManageMessages]) ?? false;
+      if (cfg.mode === 'webhook' && !canHook) warn(ctx, 'WAR-2008', { module: 'counting', problem: 'webhook mode needs Manage Webhooks and Manage Messages; counting falls back to normal mode' });
       if (cfg.mode === 'webhook' && canHook && msg.channel.type === 0) {
         const channel = msg.channel as TextChannel;
         const hooks = await channel.fetchWebhooks().catch(() => null);
@@ -95,10 +96,14 @@ const starQueue = new Map<string, Promise<unknown>>();
 export function onStarReaction(ctx: ModuleContext, reaction: MessageReaction | PartialMessageReaction, _user: User | PartialUser): void {
   if (!ctx.enabled('starboard')) return;
   const key = `${ctx.botId}:${reaction.message.id}`;
-  const run = (starQueue.get(key) ?? Promise.resolve()).then(() => updateStar(ctx, reaction));
-  starQueue.set(key, run.catch((err) => log.debug('starboard failed', { err: String(err) })));
-  void run.finally(() => {
-    if (starQueue.get(key) === run) starQueue.delete(key);
+  // The queue holds the caught tail, so a failure is logged once and the
+  // entry is removed when this update was the last one of the message.
+  const tail = (starQueue.get(key) ?? Promise.resolve())
+    .then(() => updateStar(ctx, reaction))
+    .catch((err) => log.debug('starboard failed', { err: String(err) }));
+  starQueue.set(key, tail);
+  void tail.then(() => {
+    if (starQueue.get(key) === tail) starQueue.delete(key);
   });
 }
 
@@ -117,7 +122,8 @@ async function updateStar(ctx: ModuleContext, partial: MessageReaction | Partial
   // Count people only: no bots (this one reacts to its own posts), and the
   // author only with "count the author's own reaction".
   const users = await reaction.users.fetch().catch(() => null);
-  let stars = users ? users.filter((u) => !u.bot && (cfg.selfStar || u.id !== msg.author.id)).size : (reaction.count ?? 0);
+  if (!users) return; // without the user list bot reactions cannot be told apart: try again on the next reaction
+  const stars = users.filter((u) => !u.bot && (cfg.selfStar || u.id !== msg.author.id)).size;
   const board = msg.guild.channels.cache.get(boardId);
   if (!board?.isSendable()) return;
   const stateKey = `msg:${msg.id}`;

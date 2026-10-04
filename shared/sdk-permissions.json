@@ -1,44 +1,2127 @@
 {
-  "$comment": "SDK v1 capability catalog (user spec 2026-09-30, sdk/API.md). 'core' calls need no permission (plugin info, lifecycle, logger, config, utils, locale, resources, rate limits). Every other call needs its permission switched on in the SDK policies (admin > SDK Policies, table sdk_policies; default: risk low = on, otherwise off) and declared in the plugin manifest. Plugins never get a database handle, the bot token, environment variables or direct network access; every call goes through the SDK manager in the bot. 'implemented' lists the calls the manager answers today; the others answer sdk.call.not_available. Texts: dashboard lang keys sdk.perm.<key> and sdk.perm.<key>_hint.",
+  "$comment": "SDK v1 capability catalog (user spec 2026-09-30, sdk/API.md). 'core' calls need no permission (plugin info, lifecycle, logger, config, utils, locale, resources, rate limits). Every other call needs its permission switched on in the SDK policies (admin > SDK Policies, table sdk_policies; default: risk low = on, otherwise off) and declared in the plugin manifest. Plugins never get a database handle, the bot token, environment variables or direct network access; every call goes through the SDK manager in the bot. 'implemented' lists the calls the manager answers today; the others answer sdk.call.not_available. Texts: dashboard lang keys sdk.perm.<key> and sdk.perm.<key>_hint. Every permission has a main \"group\" (the SDK policies page shows the groups alphabetically, each one opens to its permissions). \"replaced\" maps old coarse keys to the finer ones: a manifest that names an old key is read as if it named the new keys. Discord events: a plugin needs the discord.events.* permission whose \"events\" list holds the event. Module permissions: modules.<module>.<area>; \"scope\": \"module\" entries (modules.<key>.read) share the module.* calls of modules.read, which allows every module, while modules.<key>.read allows that one module only.",
   "sdkVersion": 1,
   "core": {
     "calls": [
-      "plugin.getInfo", "plugin.getId", "plugin.getVersion", "plugin.getConfig", "plugin.isEnabled", "plugin.getPath", "plugin.getManifest",
-      "logger.debug", "logger.info", "logger.warn", "logger.error", "logger.success",
-      "config.get", "config.set", "config.has", "config.delete", "config.getAll",
-      "utils.uuid", "utils.random", "utils.hash", "utils.formatDate", "utils.formatDuration", "utils.formatNumber", "utils.validate",
-      "locale.get", "locale.translate", "locale.has", "locale.getAvailable",
-      "rateLimit.check", "rateLimit.consume", "rateLimit.reset",
-      "resources.readFile", "resources.exists", "resources.getPath"
+      "plugin.getInfo",
+      "plugin.getId",
+      "plugin.getVersion",
+      "plugin.getConfig",
+      "plugin.isEnabled",
+      "plugin.getPath",
+      "plugin.getManifest",
+      "logger.debug",
+      "logger.info",
+      "logger.warn",
+      "logger.error",
+      "logger.success",
+      "config.get",
+      "config.set",
+      "config.has",
+      "config.delete",
+      "config.getAll",
+      "config.checkAccess",
+      "utils.uuid",
+      "utils.random",
+      "utils.hash",
+      "utils.formatDate",
+      "utils.formatDuration",
+      "utils.formatNumber",
+      "utils.validate",
+      "locale.get",
+      "locale.translate",
+      "locale.has",
+      "locale.getAvailable",
+      "rateLimit.check",
+      "rateLimit.consume",
+      "rateLimit.reset",
+      "resources.readFile",
+      "resources.exists",
+      "resources.getPath"
     ],
-    "implemented": ["logger.debug", "logger.info", "logger.warn", "logger.error", "logger.success"]
+    "implemented": [
+      "config.checkAccess",
+      "config.delete",
+      "config.set",
+      "logger.debug",
+      "logger.error",
+      "logger.info",
+      "logger.success",
+      "logger.warn"
+    ]
   },
   "permissions": [
-    { "key": "storage", "risk": "low", "calls": ["storage.get", "storage.set", "storage.has", "storage.delete", "storage.increment", "storage.decrement", "storage.clear", "storage.transaction"], "implemented": ["storage.get", "storage.set", "storage.has", "storage.delete", "storage.increment", "storage.decrement", "storage.clear"] },
-    { "key": "storage.collections", "risk": "low", "calls": ["collection.create", "collection.find", "collection.findOne", "collection.count", "collection.insert", "collection.update", "collection.upsert", "collection.delete"], "implemented": [] },
-    { "key": "cache", "risk": "low", "calls": ["cache.get", "cache.set", "cache.has", "cache.delete", "cache.clear", "cache.increment", "cache.decrement"], "implemented": [] },
-    { "key": "scheduler", "risk": "low", "calls": ["scheduler.timeout", "scheduler.interval", "scheduler.cron", "scheduler.every", "scheduler.cancel", "scheduler.list"], "implemented": [] },
-    { "key": "events.plugin", "risk": "low", "calls": ["events.on", "events.once", "events.off", "events.emit", "events.list"], "implemented": [] },
-    { "key": "discord.guilds.read", "risk": "low", "calls": ["guild.get", "guild.list", "guild.getChannels", "guild.getRoles", "guild.getEmojis"], "implemented": ["guild.get", "guild.list"] },
-    { "key": "discord.channels.read", "risk": "low", "calls": ["channel.get", "channel.list"], "implemented": [] },
-    { "key": "discord.roles.read", "risk": "low", "calls": ["role.get", "role.list"], "implemented": [] },
-    { "key": "permissions.check", "risk": "low", "calls": ["permissions.check", "permissions.checkUser", "permissions.checkMember", "permissions.checkRole", "permissions.checkChannel", "permissions.require"], "implemented": [] },
-    { "key": "discord.members.read", "risk": "medium", "calls": ["guild.getMembers", "member.get", "member.list"], "implemented": [] },
-    { "key": "discord.messages.read", "risk": "medium", "calls": ["message.get"], "implemented": [] },
-    { "key": "discord.messages.send", "risk": "medium", "calls": ["message.send"], "implemented": ["message.send"] },
-    { "key": "discord.messages.manage", "risk": "medium", "calls": ["message.edit", "message.delete", "message.pin", "message.unpin", "message.react"], "implemented": [] },
-    { "key": "discord.interactions", "risk": "medium", "calls": ["interaction.reply", "interaction.editReply", "interaction.deferReply", "interaction.followUp", "interaction.showModal", "interaction.respond"], "implemented": [] },
-    { "key": "discord.events", "risk": "medium", "calls": ["events.discord"], "events": ["messageCreate", "messageUpdate", "messageDelete", "interactionCreate", "guildCreate", "guildDelete", "guildMemberAdd", "guildMemberRemove", "guildMemberUpdate", "channelCreate", "channelDelete", "channelUpdate", "roleCreate", "roleDelete", "roleUpdate", "voiceStateUpdate", "reactionAdd", "reactionRemove"], "implemented": [] },
-    { "key": "bothub.events", "risk": "low", "calls": ["events.bothub"], "events": ["bot.ready", "bot.start", "bot.stop", "bot.restart", "bot.shutdown", "plugin.load", "plugin.enable", "plugin.disable", "plugin.unload"], "implemented": [] },
-    { "key": "commands.manage", "risk": "medium", "calls": ["commands.register", "commands.unregister", "commands.get", "commands.list", "commands.isEnabled", "commands.getPermissions", "commands.setPermissions"], "implemented": [] },
-    { "key": "plugins.interop", "risk": "medium", "calls": ["plugins.get", "plugins.list", "plugins.isInstalled", "plugins.isEnabled", "plugins.getAPI", "plugins.emit"], "implemented": [] },
-    { "key": "dashboard.ui", "risk": "medium", "calls": ["dashboard.registerPage", "dashboard.registerSettings", "dashboard.registerComponent", "dashboard.registerMenuItem", "dashboard.getRoute"], "implemented": [] },
-    { "key": "discord.members.manage", "risk": "high", "calls": ["member.addRole", "member.removeRole", "member.timeout", "member.kick", "member.ban", "member.unban", "member.setNickname"], "implemented": [] },
-    { "key": "discord.channels.manage", "risk": "high", "calls": ["channel.create", "channel.edit", "channel.delete", "channel.setPermissions"], "implemented": [] },
-    { "key": "discord.roles.manage", "risk": "high", "calls": ["role.create", "role.edit", "role.delete", "role.addToMember", "role.removeFromMember"], "implemented": [] },
-    { "key": "http.outbound", "risk": "high", "calls": ["http.get", "http.post", "http.put", "http.patch", "http.delete"], "implemented": [] },
-    { "key": "secrets.read", "risk": "high", "calls": ["secrets.get", "secrets.has"], "implemented": [] }
+    {
+      "key": "discord.members.read",
+      "group": "members",
+      "risk": "medium",
+      "calls": [
+        "guild.getMembers",
+        "member.get",
+        "member.list"
+      ],
+      "implemented": [
+        "guild.getMembers",
+        "member.get",
+        "member.list"
+      ]
+    },
+    {
+      "key": "discord.members.presence",
+      "group": "members",
+      "risk": "medium",
+      "calls": [
+        "member.getPresence"
+      ],
+      "implemented": []
+    },
+    {
+      "key": "discord.members.nicknames",
+      "group": "members",
+      "risk": "medium",
+      "calls": [
+        "member.setNickname"
+      ],
+      "implemented": [
+        "member.setNickname"
+      ]
+    },
+    {
+      "key": "discord.members.timeout",
+      "group": "members",
+      "risk": "high",
+      "calls": [
+        "member.timeout"
+      ],
+      "implemented": [
+        "member.timeout"
+      ]
+    },
+    {
+      "key": "discord.members.kick",
+      "group": "members",
+      "risk": "high",
+      "calls": [
+        "member.kick"
+      ],
+      "implemented": [
+        "member.kick"
+      ]
+    },
+    {
+      "key": "discord.members.ban",
+      "group": "members",
+      "risk": "high",
+      "calls": [
+        "member.ban",
+        "member.unban"
+      ],
+      "implemented": [
+        "member.ban",
+        "member.unban"
+      ]
+    },
+    {
+      "key": "discord.messages.read",
+      "group": "messages",
+      "risk": "medium",
+      "calls": [
+        "message.get"
+      ],
+      "implemented": [
+        "message.get"
+      ]
+    },
+    {
+      "key": "discord.messages.attachments",
+      "group": "messages",
+      "risk": "medium",
+      "calls": [
+        "message.getAttachments"
+      ],
+      "implemented": []
+    },
+    {
+      "key": "discord.messages.send",
+      "group": "messages",
+      "risk": "medium",
+      "calls": [
+        "message.send",
+        "message.dm"
+      ],
+      "implemented": [
+        "message.send",
+        "message.dm"
+      ]
+    },
+    {
+      "key": "discord.messages.files",
+      "group": "messages",
+      "risk": "medium",
+      "calls": [
+        "message.sendFile"
+      ],
+      "implemented": [
+        "message.sendFile"
+      ],
+      "$comment": "Posts an image of the plugin files (storage.files) as an attachment: message.sendFile(channelId, fileName, message?). In the message, image \"attachment\" shows it inside the embed."
+    },
+    {
+      "key": "discord.messages.react",
+      "group": "messages",
+      "risk": "low",
+      "calls": [
+        "message.react"
+      ],
+      "implemented": [
+        "message.react"
+      ]
+    },
+    {
+      "key": "discord.messages.pin",
+      "group": "messages",
+      "risk": "medium",
+      "calls": [
+        "message.pin",
+        "message.unpin"
+      ],
+      "implemented": [
+        "message.pin",
+        "message.unpin"
+      ]
+    },
+    {
+      "key": "discord.messages.edit",
+      "group": "messages",
+      "risk": "medium",
+      "calls": [
+        "message.edit",
+        "message.delete"
+      ],
+      "implemented": [
+        "message.edit",
+        "message.delete"
+      ]
+    },
+    {
+      "key": "discord.guilds.read",
+      "group": "server",
+      "risk": "low",
+      "calls": [
+        "guild.get",
+        "guild.list",
+        "guild.getChannels",
+        "guild.getRoles",
+        "guild.getEmojis"
+      ],
+      "implemented": [
+        "guild.get",
+        "guild.list",
+        "guild.getChannels",
+        "guild.getRoles",
+        "guild.getEmojis"
+      ]
+    },
+    {
+      "key": "discord.channels.read",
+      "group": "server",
+      "risk": "low",
+      "calls": [
+        "channel.get",
+        "channel.list"
+      ],
+      "implemented": [
+        "channel.get",
+        "channel.list"
+      ]
+    },
+    {
+      "key": "discord.server.read",
+      "group": "server",
+      "risk": "low",
+      "calls": [
+        "guild.getSettings"
+      ],
+      "implemented": []
+    },
+    {
+      "key": "discord.channels.write",
+      "group": "server",
+      "risk": "high",
+      "calls": [
+        "channel.create",
+        "channel.edit",
+        "channel.delete"
+      ],
+      "implemented": [
+        "channel.create",
+        "channel.edit",
+        "channel.delete"
+      ]
+    },
+    {
+      "key": "discord.channels.permissions",
+      "group": "server",
+      "risk": "high",
+      "calls": [
+        "channel.setPermissions"
+      ],
+      "implemented": [
+        "channel.setPermissions"
+      ]
+    },
+    {
+      "key": "discord.server.manage",
+      "group": "server",
+      "risk": "high",
+      "calls": [
+        "guild.edit"
+      ],
+      "implemented": []
+    },
+    {
+      "key": "discord.invites.manage",
+      "group": "server",
+      "risk": "medium",
+      "calls": [
+        "invite.list",
+        "invite.create",
+        "invite.delete"
+      ],
+      "implemented": []
+    },
+    {
+      "key": "discord.roles.read",
+      "group": "roles",
+      "risk": "low",
+      "calls": [
+        "role.get",
+        "role.list"
+      ],
+      "implemented": [
+        "role.get",
+        "role.list"
+      ]
+    },
+    {
+      "key": "discord.roles.assign",
+      "group": "roles",
+      "risk": "high",
+      "calls": [
+        "role.addToMember",
+        "role.removeFromMember",
+        "member.addRole",
+        "member.removeRole"
+      ],
+      "implemented": [
+        "role.addToMember",
+        "role.removeFromMember",
+        "member.addRole",
+        "member.removeRole"
+      ]
+    },
+    {
+      "key": "discord.roles.write",
+      "group": "roles",
+      "risk": "high",
+      "calls": [
+        "role.create",
+        "role.edit",
+        "role.delete"
+      ],
+      "implemented": [
+        "role.create",
+        "role.edit",
+        "role.delete"
+      ]
+    },
+    {
+      "key": "discord.emojis.read",
+      "group": "emojis",
+      "risk": "low",
+      "calls": [
+        "emoji.list",
+        "emoji.get"
+      ],
+      "implemented": [
+        "emoji.list",
+        "emoji.get"
+      ]
+    },
+    {
+      "key": "discord.emojis.manage",
+      "group": "emojis",
+      "risk": "high",
+      "calls": [
+        "emoji.create",
+        "emoji.delete"
+      ],
+      "implemented": [
+        "emoji.create",
+        "emoji.delete"
+      ]
+    },
+    {
+      "key": "discord.voice.connect",
+      "group": "voice",
+      "risk": "medium",
+      "calls": [
+        "voice.join",
+        "voice.leave",
+        "voice.state"
+      ],
+      "implemented": [
+        "voice.join",
+        "voice.leave",
+        "voice.state"
+      ]
+    },
+    {
+      "key": "discord.voice.speak",
+      "group": "voice",
+      "risk": "medium",
+      "calls": [
+        "voice.play",
+        "voice.stop"
+      ],
+      "implemented": [
+        "voice.play",
+        "voice.stop"
+      ]
+    },
+    {
+      "key": "discord.voice.mute",
+      "group": "voice",
+      "risk": "high",
+      "calls": [
+        "member.voiceMute",
+        "member.voiceDeafen"
+      ],
+      "implemented": [
+        "member.voiceMute",
+        "member.voiceDeafen"
+      ]
+    },
+    {
+      "key": "discord.voice.move",
+      "group": "voice",
+      "risk": "high",
+      "calls": [
+        "member.voiceMove",
+        "member.voiceDisconnect"
+      ],
+      "implemented": [
+        "member.voiceMove",
+        "member.voiceDisconnect"
+      ]
+    },
+    {
+      "key": "webhooks.inbound",
+      "group": "webhooks",
+      "risk": "medium",
+      "calls": [],
+      "implemented": []
+    },
+    {
+      "key": "discord.webhooks.read",
+      "group": "webhooks",
+      "risk": "medium",
+      "calls": [
+        "webhook.list",
+        "webhook.get"
+      ],
+      "implemented": []
+    },
+    {
+      "key": "discord.webhooks.create",
+      "group": "webhooks",
+      "risk": "high",
+      "calls": [
+        "webhook.create"
+      ],
+      "implemented": []
+    },
+    {
+      "key": "discord.webhooks.send",
+      "group": "webhooks",
+      "risk": "medium",
+      "calls": [
+        "webhook.send"
+      ],
+      "implemented": []
+    },
+    {
+      "key": "discord.webhooks.manage",
+      "group": "webhooks",
+      "risk": "high",
+      "calls": [
+        "webhook.edit",
+        "webhook.delete"
+      ],
+      "implemented": []
+    },
+    {
+      "key": "modules.economy.balance.read",
+      "group": "modules",
+      "risk": "low",
+      "calls": [
+        "economy.get",
+        "economy.leaderboard"
+      ],
+      "implemented": [
+        "economy.get",
+        "economy.leaderboard"
+      ],
+      "module": "economy"
+    },
+    {
+      "key": "modules.economy.balance.write",
+      "group": "modules",
+      "risk": "high",
+      "calls": [
+        "economy.add",
+        "economy.remove",
+        "economy.transfer"
+      ],
+      "implemented": [
+        "economy.add",
+        "economy.remove",
+        "economy.transfer"
+      ],
+      "module": "economy"
+    },
+    {
+      "key": "modules.economy.transactions",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "economy.history"
+      ],
+      "implemented": [],
+      "module": "economy"
+    },
+    {
+      "key": "modules.economy.settings",
+      "group": "modules",
+      "risk": "high",
+      "calls": [
+        "economy.getSettings",
+        "economy.setSettings"
+      ],
+      "implemented": [],
+      "module": "economy"
+    },
+    {
+      "key": "dashboard.read",
+      "group": "dashboard",
+      "risk": "medium",
+      "calls": [
+        "dashboard.getData"
+      ],
+      "implemented": []
+    },
+    {
+      "key": "dashboard.settings",
+      "group": "dashboard",
+      "risk": "medium",
+      "calls": [
+        "dashboard.registerSettings"
+      ],
+      "implemented": []
+    },
+    {
+      "key": "dashboard.pages",
+      "group": "dashboard",
+      "risk": "medium",
+      "calls": [
+        "dashboard.registerPage",
+        "dashboard.registerComponent",
+        "dashboard.registerMenuItem",
+        "dashboard.getRoute"
+      ],
+      "implemented": []
+    },
+    {
+      "key": "discord.events.messages",
+      "group": "events",
+      "risk": "medium",
+      "calls": [
+        "events.discord"
+      ],
+      "implemented": [
+        "events.discord"
+      ],
+      "events": [
+        "messageCreate",
+        "messageUpdate",
+        "messageDelete",
+        "reactionAdd",
+        "reactionRemove"
+      ]
+    },
+    {
+      "key": "discord.events.members",
+      "group": "events",
+      "risk": "medium",
+      "calls": [
+        "events.discord"
+      ],
+      "implemented": [
+        "events.discord"
+      ],
+      "events": [
+        "guildMemberAdd",
+        "guildMemberRemove",
+        "guildMemberUpdate"
+      ]
+    },
+    {
+      "key": "discord.events.server",
+      "group": "events",
+      "risk": "medium",
+      "calls": [
+        "events.discord"
+      ],
+      "implemented": [
+        "events.discord"
+      ],
+      "events": [
+        "guildCreate",
+        "guildDelete",
+        "channelCreate",
+        "channelDelete",
+        "channelUpdate",
+        "roleCreate",
+        "roleDelete",
+        "roleUpdate"
+      ]
+    },
+    {
+      "key": "discord.events.voice",
+      "group": "events",
+      "risk": "medium",
+      "calls": [
+        "events.discord"
+      ],
+      "implemented": [
+        "events.discord"
+      ],
+      "events": [
+        "voiceStateUpdate"
+      ]
+    },
+    {
+      "key": "discord.events.interactions",
+      "group": "events",
+      "risk": "medium",
+      "calls": [
+        "events.discord"
+      ],
+      "implemented": [
+        "events.discord"
+      ],
+      "events": [
+        "interactionCreate"
+      ]
+    },
+    {
+      "key": "bothub.events",
+      "group": "events",
+      "risk": "low",
+      "calls": [
+        "events.bothub"
+      ],
+      "implemented": [],
+      "events": [
+        "bot.ready",
+        "bot.start",
+        "bot.stop",
+        "bot.restart",
+        "bot.shutdown",
+        "plugin.load",
+        "plugin.enable",
+        "plugin.disable",
+        "plugin.unload"
+      ]
+    },
+    {
+      "key": "events.plugin",
+      "group": "events",
+      "risk": "low",
+      "calls": [
+        "events.on",
+        "events.once",
+        "events.off",
+        "events.emit",
+        "events.list"
+      ],
+      "implemented": []
+    },
+    {
+      "key": "discord.interactions.reply",
+      "group": "events",
+      "risk": "medium",
+      "calls": [
+        "interaction.reply",
+        "interaction.editReply",
+        "interaction.deferReply",
+        "interaction.followUp",
+        "interaction.respond",
+        "interaction.update"
+      ],
+      "implemented": [
+        "interaction.reply",
+        "interaction.editReply",
+        "interaction.deferReply",
+        "interaction.followUp",
+        "interaction.update"
+      ]
+    },
+    {
+      "key": "discord.modals",
+      "group": "events",
+      "risk": "medium",
+      "calls": [
+        "interaction.showModal"
+      ],
+      "implemented": [
+        "interaction.showModal"
+      ]
+    },
+    {
+      "key": "files.read",
+      "group": "files",
+      "risk": "medium",
+      "calls": [
+        "files.read",
+        "files.list"
+      ],
+      "implemented": []
+    },
+    {
+      "key": "files.write",
+      "group": "files",
+      "risk": "medium",
+      "calls": [
+        "files.write"
+      ],
+      "implemented": []
+    },
+    {
+      "key": "media.upload",
+      "group": "files",
+      "risk": "medium",
+      "calls": [
+        "media.upload"
+      ],
+      "implemented": []
+    },
+    {
+      "key": "files.delete",
+      "group": "files",
+      "risk": "medium",
+      "calls": [
+        "files.delete"
+      ],
+      "implemented": []
+    },
+    {
+      "key": "config.global",
+      "group": "config",
+      "risk": "high",
+      "calls": [
+        "globalConfig.get",
+        "globalConfig.set"
+      ],
+      "implemented": []
+    },
+    {
+      "key": "scheduler",
+      "group": "jobs",
+      "risk": "low",
+      "calls": [
+        "services.tasks",
+        "scheduler.timeout",
+        "scheduler.interval",
+        "scheduler.cron",
+        "scheduler.every",
+        "scheduler.cancel",
+        "scheduler.list"
+      ],
+      "implemented": [
+        "services.tasks"
+      ],
+      "$comment": "services.tasks in bothub.json ({name, every} min. 1m, or {name, cron} in UTC) + definePlugin({tasks}); scheduler.* calls stay planned."
+    },
+    {
+      "key": "resources.usage",
+      "group": "jobs",
+      "risk": "low",
+      "calls": [
+        "resources.usage"
+      ],
+      "implemented": []
+    },
+    {
+      "key": "storage",
+      "group": "storage",
+      "risk": "low",
+      "calls": [
+        "storage.get",
+        "storage.set",
+        "storage.has",
+        "storage.delete",
+        "storage.increment",
+        "storage.decrement",
+        "storage.clear",
+        "storage.transaction"
+      ],
+      "implemented": [
+        "storage.get",
+        "storage.set",
+        "storage.has",
+        "storage.delete",
+        "storage.increment",
+        "storage.decrement",
+        "storage.clear"
+      ]
+    },
+    {
+      "key": "storage.global",
+      "group": "storage",
+      "risk": "medium",
+      "calls": [
+        "globalStorage.get",
+        "globalStorage.set",
+        "globalStorage.has",
+        "globalStorage.delete",
+        "globalStorage.increment",
+        "globalStorage.decrement",
+        "globalStorage.clear"
+      ],
+      "implemented": [
+        "globalStorage.get",
+        "globalStorage.set",
+        "globalStorage.has",
+        "globalStorage.delete",
+        "globalStorage.increment",
+        "globalStorage.decrement",
+        "globalStorage.clear"
+      ]
+    },
+    {
+      "key": "storage.collections",
+      "group": "storage",
+      "risk": "low",
+      "calls": [
+        "collection.create",
+        "collection.find",
+        "collection.findOne",
+        "collection.count",
+        "collection.insert",
+        "collection.update",
+        "collection.upsert",
+        "collection.delete"
+      ],
+      "implemented": []
+    },
+    {
+      "key": "storage.files",
+      "group": "storage",
+      "risk": "low",
+      "calls": [
+        "files.list",
+        "files.put",
+        "files.get",
+        "files.delete",
+        "files.fromDiscord"
+      ],
+      "implemented": [
+        "files.list",
+        "files.put",
+        "files.get",
+        "files.delete",
+        "files.fromDiscord"
+      ],
+      "$comment": "Images per bot (PNG, GIF, WEBP, JPEG; max. 2 MB each, 100 files, 25 MB). Uploaded in the dashboard for \"image\" settings fields, or stored by the plugin: base64 (files.put) or a Discord attachment link (files.fromDiscord, cdn.discordapp.com / media.discordapp.net only). Name = content hash + extension."
+    },
+    {
+      "key": "cache",
+      "group": "storage",
+      "risk": "low",
+      "calls": [
+        "cache.get",
+        "cache.set",
+        "cache.has",
+        "cache.delete",
+        "cache.clear",
+        "cache.increment",
+        "cache.decrement"
+      ],
+      "implemented": []
+    },
+    {
+      "key": "modules.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig",
+        "module.list"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig",
+        "module.list"
+      ],
+      "module": "all"
+    },
+    {
+      "key": "modules.command-builder.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "command-builder",
+      "scope": "module"
+    },
+    {
+      "key": "modules.custom-events.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "custom-events",
+      "scope": "module"
+    },
+    {
+      "key": "modules.timed-events.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "timed-events",
+      "scope": "module"
+    },
+    {
+      "key": "modules.data-storage.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "data-storage",
+      "scope": "module"
+    },
+    {
+      "key": "modules.webhooks.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "webhooks",
+      "scope": "module"
+    },
+    {
+      "key": "modules.message-builder.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "message-builder",
+      "scope": "module"
+    },
+    {
+      "key": "modules.card-designer.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "card-designer",
+      "scope": "module"
+    },
+    {
+      "key": "modules.transcripts.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "transcripts",
+      "scope": "module"
+    },
+    {
+      "key": "modules.automod.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "automod",
+      "scope": "module"
+    },
+    {
+      "key": "modules.moderation.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "moderation",
+      "scope": "module"
+    },
+    {
+      "key": "modules.polls-filter.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "polls-filter",
+      "scope": "module"
+    },
+    {
+      "key": "modules.server-management.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "server-management",
+      "scope": "module"
+    },
+    {
+      "key": "modules.verification.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "verification",
+      "scope": "module"
+    },
+    {
+      "key": "modules.sticky-roles.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "sticky-roles",
+      "scope": "module"
+    },
+    {
+      "key": "modules.honeypot.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "honeypot",
+      "scope": "module"
+    },
+    {
+      "key": "modules.dm-commands.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "dm-commands",
+      "scope": "module"
+    },
+    {
+      "key": "modules.reaction-roles.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "reaction-roles",
+      "scope": "module"
+    },
+    {
+      "key": "modules.polls.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "polls",
+      "scope": "module"
+    },
+    {
+      "key": "modules.timed-messages.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "timed-messages",
+      "scope": "module"
+    },
+    {
+      "key": "modules.auto-responder.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "auto-responder",
+      "scope": "module"
+    },
+    {
+      "key": "modules.autoreact.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "autoreact",
+      "scope": "module"
+    },
+    {
+      "key": "modules.welcommer.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "welcommer",
+      "scope": "module"
+    },
+    {
+      "key": "modules.leavemer.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "leavemer",
+      "scope": "module"
+    },
+    {
+      "key": "modules.sticky-messages.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "sticky-messages",
+      "scope": "module"
+    },
+    {
+      "key": "modules.media-channels.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "media-channels",
+      "scope": "module"
+    },
+    {
+      "key": "modules.global-chat.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "global-chat",
+      "scope": "module"
+    },
+    {
+      "key": "modules.message-logger.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "message-logger",
+      "scope": "module"
+    },
+    {
+      "key": "modules.starboard.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "starboard",
+      "scope": "module"
+    },
+    {
+      "key": "modules.temp-voice.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "temp-voice",
+      "scope": "module"
+    },
+    {
+      "key": "modules.leveling.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "leveling",
+      "scope": "module"
+    },
+    {
+      "key": "modules.achievements.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "achievements",
+      "scope": "module"
+    },
+    {
+      "key": "modules.invite-tracker.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "invite-tracker",
+      "scope": "module"
+    },
+    {
+      "key": "modules.counting.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "counting",
+      "scope": "module"
+    },
+    {
+      "key": "modules.birthday.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "birthday",
+      "scope": "module"
+    },
+    {
+      "key": "modules.suggestions.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "suggestions",
+      "scope": "module"
+    },
+    {
+      "key": "modules.qotd.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "qotd",
+      "scope": "module"
+    },
+    {
+      "key": "modules.giveaway.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "giveaway",
+      "scope": "module"
+    },
+    {
+      "key": "modules.economy.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "economy",
+      "scope": "module"
+    },
+    {
+      "key": "modules.ticket.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "ticket",
+      "scope": "module"
+    },
+    {
+      "key": "modules.modmail.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "modmail",
+      "scope": "module"
+    },
+    {
+      "key": "modules.forum-tagger.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "forum-tagger",
+      "scope": "module"
+    },
+    {
+      "key": "modules.github-notifs.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "github-notifs",
+      "scope": "module"
+    },
+    {
+      "key": "modules.twitch-notifs.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "twitch-notifs",
+      "scope": "module"
+    },
+    {
+      "key": "modules.youtube-notifs.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "youtube-notifs",
+      "scope": "module"
+    },
+    {
+      "key": "modules.reddit-notifs.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "reddit-notifs",
+      "scope": "module"
+    },
+    {
+      "key": "modules.kick-notifs.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "kick-notifs",
+      "scope": "module"
+    },
+    {
+      "key": "modules.twitter-linkfix.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "twitter-linkfix",
+      "scope": "module"
+    },
+    {
+      "key": "modules.free-games.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "free-games",
+      "scope": "module"
+    },
+    {
+      "key": "modules.music.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "music",
+      "scope": "module"
+    },
+    {
+      "key": "modules.statistic-channels.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "statistic-channels",
+      "scope": "module"
+    },
+    {
+      "key": "plugins.interop",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "plugins.get",
+        "plugins.list",
+        "plugins.isInstalled",
+        "plugins.isEnabled",
+        "plugins.getAPI",
+        "plugins.emit"
+      ],
+      "implemented": []
+    },
+    {
+      "key": "commands.manage",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "commands.register",
+        "commands.unregister",
+        "commands.get",
+        "commands.list",
+        "commands.isEnabled",
+        "commands.getPermissions",
+        "commands.setPermissions"
+      ],
+      "implemented": []
+    },
+    {
+      "key": "permissions.check",
+      "group": "modules",
+      "risk": "low",
+      "calls": [
+        "permissions.check",
+        "permissions.checkUser",
+        "permissions.checkMember",
+        "permissions.checkRole",
+        "permissions.checkChannel",
+        "permissions.require"
+      ],
+      "implemented": []
+    },
+    {
+      "key": "modules.moderation.cases",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "moderation.warn",
+        "moderation.record",
+        "moderation.history",
+        "moderation.getCase",
+        "moderation.note",
+        "moderation.notes"
+      ],
+      "implemented": [
+        "moderation.warn",
+        "moderation.record",
+        "moderation.history",
+        "moderation.getCase",
+        "moderation.note",
+        "moderation.notes"
+      ],
+      "module": "moderation"
+    },
+    {
+      "key": "discord.audit.read",
+      "group": "moderation",
+      "risk": "medium",
+      "calls": [
+        "audit.list"
+      ],
+      "implemented": [
+        "audit.list"
+      ]
+    },
+    {
+      "key": "http.outbound",
+      "group": "network",
+      "risk": "high",
+      "calls": [
+        "http.get",
+        "http.post",
+        "http.put",
+        "http.patch",
+        "http.delete"
+      ],
+      "implemented": [
+        "http.get",
+        "http.post",
+        "http.put",
+        "http.patch",
+        "http.delete"
+      ]
+    },
+    {
+      "key": "secrets.use",
+      "group": "network",
+      "risk": "medium",
+      "calls": [
+        "http.secret"
+      ],
+      "implemented": [
+        "http.secret"
+      ],
+      "$comment": "HTTP requests with admin secrets the plugin never sees: the address from a secret (any address the admin set) or an https URL of services.hosts (public only), a key from a secret into a header or URL parameter. Only names of services.secrets the admin shared; values masked in the answer. Response max. 1 MB, timeout 10 s."
+    },
+    {
+      "key": "secrets.read",
+      "group": "network",
+      "risk": "high",
+      "calls": [
+        "secrets.get",
+        "secrets.has"
+      ],
+      "implemented": [
+        "secrets.get",
+        "secrets.has"
+      ],
+      "$comment": "Only secrets listed in the manifest 'services.secrets' AND shared by the admin (secret_plugin_shares); other names answer null, there is no list call. Values are masked in the plugin's log lines."
+    }
   ],
+  "replaced": {
+    "discord.members.manage": [
+      "discord.members.nicknames",
+      "discord.roles.assign",
+      "discord.members.timeout",
+      "discord.members.kick",
+      "discord.members.ban"
+    ],
+    "discord.messages.manage": [
+      "discord.messages.edit",
+      "discord.messages.pin",
+      "discord.messages.react"
+    ],
+    "discord.channels.manage": [
+      "discord.channels.write",
+      "discord.channels.permissions"
+    ],
+    "discord.roles.manage": [
+      "discord.roles.write",
+      "discord.roles.assign"
+    ],
+    "discord.voice": [
+      "discord.voice.connect",
+      "discord.voice.speak"
+    ],
+    "discord.voice.moderate": [
+      "discord.voice.mute",
+      "discord.voice.move"
+    ],
+    "economy": [
+      "modules.economy.balance.read",
+      "modules.economy.balance.write"
+    ],
+    "discord.interactions": [
+      "discord.interactions.reply",
+      "discord.modals"
+    ],
+    "dashboard.ui": [
+      "dashboard.read",
+      "dashboard.settings",
+      "dashboard.pages"
+    ],
+    "discord.events": [
+      "discord.events.messages",
+      "discord.events.members",
+      "discord.events.server",
+      "discord.events.voice",
+      "discord.events.interactions"
+    ],
+    "economy.read": [
+      "modules.economy.balance.read"
+    ],
+    "economy.write": [
+      "modules.economy.balance.write"
+    ],
+    "economy.transactions": [
+      "modules.economy.transactions"
+    ],
+    "economy.settings": [
+      "modules.economy.settings"
+    ],
+    "moderation.cases": [
+      "modules.moderation.cases"
+    ],
+    "http.endpoints": [
+      "secrets.use"
+    ]
+  },
   "limits": {
     "memoryMb": 64,
     "callsPerSecond": 50,
@@ -48,6 +2131,8 @@
     "storageKeys": 1000,
     "storageValueBytes": 16384,
     "storageTotalBytes": 1048576,
+    "globalStorageKeys": 10000,
+    "globalStorageTotalBytes": 10485760,
     "restartsPer10Min": 3
   }
 }

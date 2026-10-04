@@ -29,6 +29,8 @@ export interface SdkLimits {
 export type CallHandler = (params: Record<string, unknown>) => Promise<unknown> | unknown;
 
 
+const MAX_PENDING = 50;
+
 export const HOST_FILE = join(dirname(fileURLToPath(import.meta.url)), 'host', 'host.js');
 
 type Pending = { ok: (v: unknown) => void; fail: (e: Error) => void; timer: NodeJS.Timeout };
@@ -41,6 +43,11 @@ export class PluginProcess {
   private windowCalls = 0;
   private restarts: number[] = [];
   private stopped = false;
+  /** Permissions the plugin may use (manifest ∩ SDK policy). */
+  get permissions(): ReadonlySet<Permission> {
+    return this.granted;
+  }
+
   /** Blocks the plugin exported after init. */
   blocks: string[] = [];
   /** Why the plugin was switched off (too many crashes), or undefined. */
@@ -49,10 +56,10 @@ export class PluginProcess {
   constructor(
     readonly botId: number,
     readonly manifest: Manifest,
-    private readonly pluginDir: string,
+    readonly pluginDir: string,
     /** Manifest ∩ granted ∩ SDK policy. */
     private readonly granted: ReadonlySet<Permission>,
-    private readonly config: Record<string, unknown>,
+    private config: Record<string, unknown>,
     private readonly handlers: Record<string, CallHandler>,
     private readonly limits: SdkLimits,
     private readonly onLog: (level: 'info' | 'warning' | 'error', key: string, params: Record<string, unknown>) => void,
@@ -60,7 +67,7 @@ export class PluginProcess {
 
   /** Starts the child, loads the plugin and runs its start(). */
   async start(): Promise<void> {
-    this.stopped = false;
+    if (this.stopped) throw new SdkError('sdk.plugin.stopped');
     const child = fork(HOST_FILE, [], {
       cwd: this.pluginDir,
       env: {},
@@ -80,7 +87,7 @@ export class PluginProcess {
     const tail = (buf: Buffer) => this.onLog('info', 'sdk.plugin.output', { plugin: this.manifest.id, text: buf.toString('utf8').slice(0, 500) });
     child.stdout?.on('data', tail);
     child.stderr?.on('data', tail);
-    child.on('message', (m) => this.onMessage(m));
+    child.on('message', (m) => this.onMessage(child, m));
     child.on('exit', (code) => this.onExit(child, code));
     await new Promise<void>((ok, fail) => {
       const timer = setTimeout(() => fail(new SdkError('sdk.plugin.no_hello')), this.limits.callTimeoutMs);
@@ -93,14 +100,42 @@ export class PluginProcess {
         fail(new SdkError('sdk.plugin.exited'));
       });
     });
-    const blocks = await this.invoke('init', { pluginDir: this.pluginDir, main: this.manifest.main, botId: this.botId, config: this.config }, this.limits.callTimeoutMs);
+    const m = this.manifest;
+    const manifest = { id: m.id, name: m.name, version: m.version, permissions: m.permissions };
+    const blocks = await this.invoke('init', { pluginDir: this.pluginDir, main: m.main, botId: this.botId, config: this.config, manifest }, this.limits.callTimeoutMs);
     this.blocks = Array.isArray(blocks) ? blocks.filter((b): b is string => typeof b === 'string') : [];
     await this.invoke('start', {}, this.limits.blockTimeoutMs);
   }
 
+  /** A Discord event the plugin listed in "events" (payload: plain JSON). */
+  runEvent(name: string, payload: Record<string, unknown>): Promise<unknown> {
+    return this.invoke('event', { name, payload }, this.limits.blockTimeoutMs);
+  }
+
+  /** A click, select or modal of the plugin's components ("components"/"modals" handlers). */
+  runInteraction(kind: 'component' | 'modal', key: string, event: Record<string, unknown>): Promise<unknown> {
+    return this.invoke(kind, { key, event }, this.limits.blockTimeoutMs);
+  }
+
+  /** An inbound webhook of "services.webhooks" (payload: the JSON the caller sent). */
+  runWebhook(name: string, payload: Record<string, unknown>): Promise<unknown> {
+    return this.invoke('webhook', { name, payload }, this.limits.blockTimeoutMs);
+  }
+
+  /** A task of "services.tasks". */
+  runTask(name: string): Promise<unknown> {
+    return this.invoke('task', { name }, this.limits.blockTimeoutMs);
+  }
+
   /** Runs a block of the plugin; the answer is checked by the caller. */
-  runBlock(name: string, config: Record<string, unknown>, vars: Record<string, string>): Promise<unknown> {
-    return this.invoke('block', { name, config, vars }, this.limits.blockTimeoutMs);
+  runBlock(name: string, config: Record<string, unknown>, vars: Record<string, string>, interaction?: string): Promise<unknown> {
+    return this.invoke('block', { name, config, vars, interaction }, this.limits.blockTimeoutMs);
+  }
+
+  /** New settings (dashboard save, config.set): ctx.config answers with them at once, also after a restart. */
+  setConfig(config: Record<string, unknown>): void {
+    this.config = config;
+    if (this.child?.connected) void this.invoke('config', { config }, this.limits.callTimeoutMs).catch(() => undefined);
   }
 
   /** Calls onDisable and onUnload (1 s at most), then ends the process. */
@@ -116,6 +151,8 @@ export class PluginProcess {
   private invoke(method: string, params: Record<string, unknown>, timeoutMs: number): Promise<unknown> {
     const child = this.child;
     if (!child?.connected) return Promise.reject(new SdkError(this.disabledReason ? 'sdk.plugin.disabled' : 'sdk.plugin.not_running'));
+    // Backpressure: a plugin that cannot keep up (e.g. many messages) drops work instead of piling it up.
+    if (this.pending.size >= MAX_PENDING) return Promise.reject(new SdkError('sdk.plugin.busy'));
     const id = ++this.seq;
     return new Promise((ok, fail) => {
       const timer = setTimeout(() => {
@@ -129,12 +166,12 @@ export class PluginProcess {
     });
   }
 
-  private onMessage(raw: unknown): void {
+  private onMessage(child: ChildProcess, raw: unknown): void {
     if (!raw || typeof raw !== 'object') return;
     const msg = raw as Record<string, unknown>;
     if (JSON.stringify(msg).length > this.limits.messageBytes) {
       this.onLog('warning', 'sdk.plugin.message_too_big', { plugin: this.manifest.id });
-      this.child?.kill('SIGKILL');
+      child.kill('SIGKILL');
       return;
     }
     if (msg.type === 'result' && typeof msg.id === 'number') {
@@ -150,11 +187,12 @@ export class PluginProcess {
       this.onLog('error', 'sdk.plugin.crashed', { plugin: this.manifest.id, message: String(msg.error ?? '').slice(0, 500) });
       return;
     }
-    if (msg.type === 'call' && typeof msg.id === 'number') void this.onCall(msg.id, msg.method, msg.params);
+    if (msg.type === 'call' && typeof msg.id === 'number') void this.onCall(child, msg.id, msg.method, msg.params);
   }
 
-  private async onCall(id: number, method: unknown, params: unknown): Promise<void> {
-    const reply = (body: Record<string, unknown>) => this.child?.connected && this.child.send({ id, type: 'reply', ...body });
+  // Replies go to the child that asked, also while it shuts down (onDisable, onUnload).
+  private async onCall(child: ChildProcess, id: number, method: unknown, params: unknown): Promise<void> {
+    const reply = (body: Record<string, unknown>) => child.connected && child.send({ id, type: 'reply', ...body });
     try {
       // Rate limit per second.
       const now = Date.now();
@@ -168,12 +206,17 @@ export class PluginProcess {
       const perm = typeof method === 'string' ? cat.callPermission.get(method) : undefined;
       if (typeof method !== 'string' || !perm) throw new SdkError('sdk.call.unknown');
       if (!cat.implemented.has(method) || !this.handlers[method]) throw new SdkError('sdk.call.not_available');
-      if (perm !== 'core' && !this.granted.has(perm)) throw new SdkError('sdk.call.denied', { permission: perm });
+      // module.*: modules.read (every module) or one modules.<key>.read; the handler checks the module.
+      const moduleCall = perm === 'modules.read' && [...this.granted].some((g) => /^modules\.[a-z0-9-]+\.read$/.test(g));
+      if (perm !== 'core' && !this.granted.has(perm) && !moduleCall) throw new SdkError('sdk.call.denied', { permission: perm });
       const p = params && typeof params === 'object' && !Array.isArray(params) ? (params as Record<string, unknown>) : {};
       const result = await this.handlers[method]!(p);
       reply({ result: result ?? null });
     } catch (err) {
-      const key = err instanceof SdkError ? err.key : (err as Error)?.message?.startsWith('error.') ? (err as Error).message : 'sdk.call.failed';
+      // Keys of SdkError, VoiceError, GraphError …; anything else stays generic (no internals to the plugin).
+      const own = (err as { key?: unknown })?.key;
+      const msg = (err as Error)?.message;
+      const key = typeof own === 'string' && /^(sdk|error)\.[a-z0-9_.]{1,80}$/.test(own) ? own : typeof msg === 'string' && /^error\.[a-z0-9_.]{1,80}$/.test(msg) ? msg : 'sdk.call.failed';
       if (key === 'sdk.call.denied') this.onLog('warning', key, { plugin: this.manifest.id, method: String(method), permission: catalog().callPermission.get(String(method)) });
       reply({ error: key });
     }
@@ -198,6 +241,10 @@ export class PluginProcess {
     }
     this.restarts.push(now);
     this.onLog('warning', 'sdk.plugin.restart', { plugin: this.manifest.id, code });
-    setTimeout(() => void this.start().catch((err) => this.onLog('error', 'sdk.plugin.start_failed', { plugin: this.manifest.id, message: String(err) })), 1000 * this.restarts.length).unref();
+    setTimeout(() => {
+      // stop() may have come in the meantime: then no new process.
+      if (this.stopped) return;
+      void this.start().catch((err) => this.onLog('error', 'sdk.plugin.start_failed', { plugin: this.manifest.id, message: String(err) }));
+    }, 1000 * this.restarts.length).unref();
   }
 }

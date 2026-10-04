@@ -1,0 +1,7 @@
+{
+  "title": "Slash command",
+  "description": "A slash command as a builder graph (commands/hello.json) that uses the node \"hello\". Every bot gets it as a disabled copy in Custom Commands; the owner switches it on and can edit it.",
+  "needs": ["nodes"],
+  "permissions": [],
+  "commands": ["commands/hello.json"]
+}

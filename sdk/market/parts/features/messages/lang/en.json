@@ -1,0 +1,5 @@
+{
+  "plugin.__ID__.node.announce.label": "Announce",
+  "plugin.__ID__.node.announce.description": "Sends an embed to a channel.",
+  "plugin.__ID__.node.announce.result_id": "Message ID"
+}

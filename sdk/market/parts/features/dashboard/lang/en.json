@@ -1,0 +1,17 @@
+{
+  "plugin.__ID__.setting.greeting": "Greeting",
+  "plugin.__ID__.setting.greeting_hint": "{user} becomes the member's name.",
+  "plugin.__ID__.setting.style": "Style",
+  "plugin.__ID__.setting.style.short": "Short",
+  "plugin.__ID__.setting.style.friendly": "Friendly",
+  "plugin.__ID__.setting.color": "Embed color",
+  "plugin.__ID__.setting.log_channel": "Log channel",
+  "plugin.__ID__.setting.staff_roles": "Staff roles",
+  "plugin.__ID__.setting.replies": "Automatic replies",
+  "plugin.__ID__.setting.replies_hint": "The node \"Find reply\" answers with the first entry whose trigger is in the text.",
+  "plugin.__ID__.setting.replies.trigger": "Trigger word",
+  "plugin.__ID__.setting.replies.answer": "Answer",
+  "plugin.__ID__.node.reply_for.label": "Find reply",
+  "plugin.__ID__.node.reply_for.description": "Looks up the automatic reply for a text (settings page).",
+  "plugin.__ID__.node.reply_for.result": "Reply"
+}

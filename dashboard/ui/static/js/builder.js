@@ -18,6 +18,8 @@
   const defs = Object.fromEntries(defsList.map((d) => [d.type, d]));
   const TEXT = island('builder-texts') || {};
   const meta = island('builder-meta') || {};
+  // Open role/channel/permission popover of the permissions block (permissions.js), kept across re-renders.
+  const pickerKeep = { state: null };
   const t = (key, params = {}) => String(TEXT[key] ?? key).replace(/\{(\w+)\}/g, (m, n) => (n in params ? params[n] : m));
   // Custom events reuse the editor: no options, no modal forms, event wording.
   const isEvent = meta.kind === 'event';
@@ -709,7 +711,7 @@
   function renderInspector() {
     const node = selected?.kind === 'node' ? nodeById(selected.id) : null;
     inspector.hidden = !node;
-    if (inspectorNode !== node?.id) picker = null;
+    if (inspectorNode !== node?.id) pickerKeep.state = null;
     inspectorNode = node?.id;
     if (!node) return;
     const def = defs[node.type] || {};
@@ -1921,7 +1923,6 @@
 
   const ICONS = window.BotHubIcons || {};
   const CHANNEL_ICON = { category: 'folder', text: 'hash', voice: 'volume', stage: 'volume', announcement: 'megaphone', forum: 'forum' };
-  const SNOWFLAKE = /^[0-9]{17,20}$/;
 
   function icon(name, cls = 'bicon') {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -1946,353 +1947,18 @@
   const guildsUrl = () => meta.guildsUrl;
   const guildPart = (gid, part) => `${meta.guildsUrl}/${encodeURIComponent(gid)}/${part}`;
 
-  let picker = null; // { list, step: 'guilds'|'items', guild, search, idMode }
-
   // Pseudo roles resolved by the bot from the moderation module settings.
   const PSEUDO_ROLES = { 'moderation:moderator': 'builder.pick.moderators', 'moderation:admin': 'builder.pick.mod_admins' };
 
+  // The permissions block lives in permissions.js (also used by the module settings pages).
   function permissionsWidget(node, key, schema) {
-    const perms = () => {
-      if (!node.config[key]) node.config[key] = structuredClone(schema.default);
-      const p = node.config[key];
-      for (const k of ['allowed_roles', 'banned_roles', 'required_permissions', 'banned_channels']) p[k] = p[k] || [];
-      return p;
-    };
-    const changed = () => { scheduleCommit(); refresh(); };
-
-    const root = el('section', 'bperm');
-    const head = el('div', 'bperm-head');
-    head.append(el('h3', '', t('builder.cfg.permissions')));
-    const sub = el('div', 'bperm-sub');
-    const badge = el('span', 'bperm-badge');
-    sub.append(el('span', '', t('builder.perm.who')), badge);
-    root.append(head, sub);
-
-    const LISTS = [
-      { list: 'allowed_roles', icon: 'users', kind: 'role', add: 'builder.perm.add' },
-      { list: 'banned_roles', icon: 'userX', kind: 'role', add: 'builder.perm.add_role' },
-      { list: 'required_permissions', icon: 'key', kind: 'permission', add: 'builder.perm.add_permission' },
-      { list: 'banned_channels', icon: 'hash', kind: 'channel', add: 'builder.perm.add_channel' },
-    ];
-    const rows = {};
-    for (const spec of LISTS) {
-      const card = el('div', 'bperm-card');
-      card.dataset.list = spec.list;
-      const ch = el('div', 'bperm-card-head');
-      ch.append(icon(spec.icon, 'bicon bperm-icon'));
-      const txt = el('div', 'bperm-card-text');
-      txt.append(el('strong', '', t(`builder.perm.${spec.list}`)), el('span', '', t(`builder.perm.${spec.list}_hint`)));
-      ch.append(txt);
-      const row = el('div', 'bperm-row');
-      card.append(ch, row);
-      rows[spec.list] = { row, spec, card };
-      root.append(card);
-    }
-
-    // Hide switch
-    const hide = el('label', 'bperm-card bperm-toggle');
-    hide.append(icon('eyeOff', 'bicon bperm-icon'));
-    const ht = el('span', 'bperm-card-text');
-    ht.append(el('strong', '', t('builder.perm.hide')), el('span', '', t('builder.perm.hide_hint')));
-    const toggle = el('input', 'toggle');
-    toggle.type = 'checkbox';
-    toggle.checked = Boolean(perms().hide_without_permission);
-    toggle.addEventListener('change', () => { perms().hide_without_permission = toggle.checked; scheduleCommit(); });
-    hide.append(ht, toggle);
-    root.append(hide);
-
-    function chip(label, iconName, color, onRemove) {
-      const c = el('span', 'bperm-chip');
-      if (color !== undefined) {
-        const dot = el('span', 'bpick-dot');
-        if (color) dot.style.background = color;
-        c.append(dot);
-      } else if (iconName) c.append(icon(iconName, 'bicon bperm-chip-icon'));
-      c.append(el('span', 'bperm-chip-label', label));
-      const x = el('button', 'bperm-chip-x', '×');
-      x.type = 'button';
-      x.setAttribute('aria-label', t('builder.perm.remove', { name: label }));
-      x.addEventListener('click', onRemove);
-      c.append(x);
-      return c;
-    }
-
-    function refresh() {
-      const p = perms();
-      const open = p.allowed_roles.some((r) => r.id === 'everyone') && !p.banned_roles.length && !p.required_permissions.length && !p.banned_channels.length;
-      badge.textContent = t(open ? 'builder.perm.open' : 'builder.perm.restricted');
-      badge.classList.toggle('is-open', open);
-      for (const { row, spec, card } of Object.values(rows)) {
-        row.replaceChildren();
-        const items = p[spec.list];
-        for (const item of items) {
-          const remove = () => {
-            p[spec.list] = p[spec.list].filter((x) => x !== item);
-            changed();
-            if (picker?.list === spec.list) renderPicker();
-          };
-          if (spec.kind === 'permission') row.append(chip(t(`builder.permission.${item}`), 'key', undefined, remove));
-          else if (spec.kind === 'role' && PSEUDO_ROLES[item.id]) row.append(chip(t(PSEUDO_ROLES[item.id]), 'shield', undefined, remove));
-          else if (spec.kind === 'role') row.append(chip(item.id === 'everyone' ? '@everyone' : `@${item.name || item.id}`, 'users', item.id === 'everyone' ? undefined : (item.color || ''), remove));
-          else row.append(chip(item.name || item.id, CHANNEL_ICON[item.type] || 'hash', undefined, remove));
-        }
-        const add = el('button', 'bperm-add');
-        add.type = 'button';
-        add.append(el('span', 'bperm-add-plus', '+'), document.createTextNode(t(spec.add)));
-        add.setAttribute('aria-expanded', String(picker?.list === spec.list));
-        add.addEventListener('click', () => {
-          if (picker?.list === spec.list) closePicker();
-          else openPicker(spec.list);
-        });
-        row.append(add);
-        if (!items.length) row.append(el('span', 'bperm-empty', t(`builder.perm.${spec.list}_empty`)));
-        card.classList.toggle('is-active', picker?.list === spec.list);
-      }
-    }
-
-    // ---- picker popover ----
-
-    function closePicker() {
-      picker = null;
-      root.querySelectorAll('.bpick').forEach((x) => x.remove());
-      refresh();
-    }
-
-    function openPicker(list) {
-      const spec = rows[list].spec;
-      picker = { list, step: spec.kind === 'permission' ? 'items' : 'guilds', guild: null, search: '', idMode: false };
-      refresh();
-      renderPicker();
-    }
-
-    function renderPicker() {
-      root.querySelectorAll('.bpick').forEach((x) => x.remove());
-      if (!picker) return;
-      const { spec, card } = rows[picker.list];
-      const p = perms();
-      const box = el('div', 'bpick');
-      box.addEventListener('keydown', (ev) => {
-        if (ev.key === 'Escape') { ev.stopPropagation(); closePicker(); }
-      });
-
-      // head
-      const h = el('div', 'bpick-head');
-      const badgeIcon = el('span', 'bpick-badge');
-      badgeIcon.append(icon(spec.icon));
-      const ht = el('div', 'bpick-title');
-      ht.append(el('strong', '', t(`builder.perm.${picker.list}`)));
-      const subline = el('span', 'bpick-subline');
-      if (spec.kind === 'permission') subline.textContent = t('builder.perm.required_permissions_pick');
-      else if (picker.step === 'guilds') subline.textContent = t('builder.pick.choose_server');
-      else {
-        subline.append(document.createTextNode(`${t('builder.pick.in')} `), el('strong', '', picker.guild.name), document.createTextNode(' '));
-        const change = el('button', 'bpick-link', t('builder.pick.change_server'));
-        change.type = 'button';
-        change.addEventListener('click', () => { picker.step = 'guilds'; picker.guild = null; picker.search = ''; renderPicker(); });
-        subline.append(change);
-      }
-      ht.append(subline);
-      const close = el('button', 'icon-btn icon-btn-plain', '×');
-      close.type = 'button';
-      close.setAttribute('aria-label', t('builder.close'));
-      close.addEventListener('click', closePicker);
-      h.append(badgeIcon, ht, close);
-      box.append(h);
-
-      // search
-      const sw = el('label', 'bpick-search');
-      sw.append(icon('search'));
-      const search = el('input');
-      search.type = 'search';
-      search.value = picker.search;
-      search.placeholder = t(spec.kind === 'permission' ? 'builder.pick.search_permissions'
-        : picker.step === 'guilds' ? 'builder.pick.search_servers'
-          : spec.kind === 'role' ? 'builder.pick.search_roles' : 'builder.pick.search_channels');
-      sw.append(search);
-      box.append(sw);
-
-      const listEl = el('div', 'bpick-list');
-      box.append(listEl);
-
-      // footer
-      const foot = el('div', 'bpick-foot');
-      const count = el('span', 'bpick-count');
-      const updateCount = () => {
-        const n = p[picker.list].length;
-        count.textContent = n ? t('builder.pick.selected', { count: n }) : t('builder.pick.none');
-      };
-      updateCount();
-      foot.append(count);
-      if (picker.idMode) {
-        const idInput = el('input', 'mono bpick-id');
-        idInput.placeholder = t(spec.kind === 'role' ? 'builder.pick.role_id' : 'builder.pick.channel_id');
-        idInput.inputMode = 'numeric';
-        const ok = el('button', 'btn btn-sm bpick-done', t('builder.perm.add'));
-        ok.type = 'button';
-        const submit = () => {
-          const id = idInput.value.trim();
-          if (!SNOWFLAKE.test(id)) { idInput.setCustomValidity(t('builder.pick.id_invalid')); idInput.reportValidity(); return; }
-          if (!p[picker.list].some((x) => x.id === id)) p[picker.list].push({ id, guild: picker.guild?.id || '', name: id });
-          picker.idMode = false;
-          changed();
-          renderPicker();
-        };
-        idInput.addEventListener('input', () => idInput.setCustomValidity(''));
-        idInput.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); submit(); } });
-        ok.addEventListener('click', submit);
-        const cancel = el('button', 'btn btn-sm', '×');
-        cancel.type = 'button';
-        cancel.setAttribute('aria-label', t('action.cancel'));
-        cancel.addEventListener('click', () => { picker.idMode = false; renderPicker(); });
-        foot.append(idInput, ok, cancel);
-        setTimeout(() => idInput.focus(), 0);
-      } else {
-        if (spec.kind !== 'permission') {
-          const byId = el('button', 'btn btn-sm', t('builder.pick.add_id'));
-          byId.type = 'button';
-          byId.addEventListener('click', () => { picker.idMode = true; renderPicker(); });
-          foot.append(byId);
-        }
-        if (p[picker.list].length) {
-          const clear = el('button', 'btn btn-sm', t('builder.pick.clear'));
-          clear.type = 'button';
-          clear.addEventListener('click', () => { p[picker.list] = []; changed(); renderPicker(); });
-          foot.append(clear);
-        }
-        const done = el('button', 'btn btn-sm bpick-done', t('builder.pick.done'));
-        done.type = 'button';
-        done.addEventListener('click', closePicker);
-        foot.append(done);
-      }
-      box.append(foot);
-      card.append(box);
-      requestAnimationFrame(() => box.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
-
-      const fill = () => {
-        picker.search = search.value.trim().toLowerCase();
-        fillList(listEl, spec, p, updateCount);
-      };
-      search.addEventListener('input', fill);
-      fill();
-      if (!picker.idMode) setTimeout(() => search.focus({ preventScroll: true }), 0);
-    }
-
-    function checkRow(label, checked, onToggle, opts = {}) {
-      const row = el('label', 'bpick-row');
-      const cb = el('input', 'bpick-check');
-      cb.type = 'checkbox';
-      cb.checked = checked;
-      cb.addEventListener('change', () => { onToggle(cb.checked); row.classList.toggle('is-checked', cb.checked); });
-      row.classList.toggle('is-checked', checked);
-      row.append(cb);
-      if (opts.dot !== undefined) {
-        const dot = el('span', 'bpick-dot');
-        if (opts.dot) dot.style.background = opts.dot;
-        row.append(dot);
-      } else if (opts.icon) row.append(icon(opts.icon, 'bicon bpick-row-icon'));
-      const text = el('span', 'bpick-row-text');
-      text.append(el('strong', '', label));
-      if (opts.hint) text.append(el('span', '', opts.hint));
-      row.append(text);
-      if (opts.tag) row.append(el('span', 'bpick-tag', opts.tag));
-      if (opts.special) row.classList.add('bpick-row-special');
-      return row;
-    }
-
-    function status(listEl, key) {
-      listEl.replaceChildren(el('p', 'bpick-status', t(key)));
-    }
-
-    async function fillList(listEl, spec, p, updateCount) {
-      const q = picker.search;
-      const match = (s) => !q || String(s).toLowerCase().includes(q);
-      const token = (listEl.dataset.token = String(Math.random()));
-
-      if (spec.kind === 'permission') {
-        listEl.replaceChildren();
-        for (const group of schema['x-permissionGroups'] || []) {
-          const items = group.permissions.filter((k) => match(t(`builder.permission.${k}`)) || match(t(`builder.permission.${k}_hint`)));
-          if (!items.length) continue;
-          listEl.append(el('div', 'bpick-label', t(`builder.permgroup.${group.group}`)));
-          for (const k of items) {
-            listEl.append(checkRow(t(`builder.permission.${k}`), p.required_permissions.includes(k), (on) => {
-              p.required_permissions = on ? [...new Set([...p.required_permissions, k])] : p.required_permissions.filter((x) => x !== k);
-              changed();
-              updateCount();
-            }, { hint: t(`builder.permission.${k}_hint`) }));
-          }
-        }
-        if (!listEl.childElementCount) status(listEl, 'builder.pick.empty');
-        return;
-      }
-
-      if (picker.step === 'guilds') {
-        status(listEl, 'builder.pick.loading');
-        let guilds;
-        try { guilds = await load(guildsUrl()); } catch { if (listEl.dataset.token === token) status(listEl, 'builder.pick.load_failed'); return; }
-        if (listEl.dataset.token !== token) return;
-        listEl.replaceChildren(el('div', 'bpick-label', t('builder.pick.servers')));
-        for (const g of guilds.filter((g) => match(g.name))) {
-          const b = el('button', 'bpick-guild');
-          b.type = 'button';
-          if (g.iconUrl) {
-            const img = el('img', 'avatar');
-            img.src = g.iconUrl;
-            img.alt = '';
-            b.append(img);
-          } else b.append(el('span', 'avatar avatar-fallback', (g.name || '?').slice(0, 1).toUpperCase()));
-          b.append(el('strong', '', g.name), icon('chevron', 'bicon bpick-chevron'));
-          b.addEventListener('click', () => { picker.step = 'items'; picker.guild = g; picker.search = ''; renderPicker(); });
-          listEl.append(b);
-        }
-        if (listEl.childElementCount === 1) listEl.append(el('p', 'bpick-status', t('builder.pick.empty')));
-        return;
-      }
-
-      const g = picker.guild;
-      status(listEl, 'builder.pick.loading');
-      let items;
-      try { items = await load(guildPart(g.id, spec.kind === 'role' ? 'roles' : 'channels')); } catch { if (listEl.dataset.token === token) status(listEl, 'builder.pick.load_failed'); return; }
-      if (listEl.dataset.token !== token) return;
-      listEl.replaceChildren();
-      const list = picker.list;
-      const has = (id) => p[list].some((x) => x.id === id);
-      const toggle = (entry) => (on) => {
-        p[list] = on ? [...p[list].filter((x) => x.id !== entry.id), entry] : p[list].filter((x) => x.id !== entry.id);
-        changed();
-        updateCount();
-      };
-
-      if (spec.kind === 'role') {
-        if (list === 'allowed_roles' && match('@everyone')) {
-          listEl.append(checkRow('@everyone', has('everyone'), toggle({ id: 'everyone' }), { icon: 'users', hint: t('builder.pick.everyone_hint'), special: true }));
-        }
-        // Roles of the moderation module settings, on every server.
-        for (const [id, label] of Object.entries(PSEUDO_ROLES)) {
-          if (match(t(label))) listEl.append(checkRow(t(label), has(id), toggle({ id }), { icon: 'shield', hint: t(`${label}_hint`), special: true }));
-        }
-        listEl.append(el('div', 'bpick-label', t('builder.pick.roles_in', { server: g.name })));
-        for (const r of items.filter((r) => match(r.name))) {
-          listEl.append(checkRow(r.name, has(r.id), toggle({ id: r.id, guild: g.id, name: r.name, color: r.color || null }), { dot: r.color || '' }));
-        }
-      } else {
-        listEl.append(el('div', 'bpick-label', t('builder.pick.channels_in', { server: g.name })));
-        // Display order: channels without a category, then each category with its channels.
-        const top = items.filter((c) => !c.parentId && c.type !== 'category');
-        const ordered = [...top];
-        for (const cat of items.filter((c) => c.type === 'category')) ordered.push(cat, ...items.filter((c) => c.parentId === cat.id));
-        for (const c of ordered.filter((c) => match(c.name))) {
-          const row = checkRow(c.name, has(c.id), toggle({ id: c.id, guild: g.id, name: c.name, type: c.type }), { icon: CHANNEL_ICON[c.type] || 'hash', tag: t(`builder.chan.${c.type}`) });
-          if (c.parentId) row.classList.add('bpick-row-child');
-          listEl.append(row);
-        }
-      }
-      if (listEl.childElementCount <= 1) listEl.append(el('p', 'bpick-status', t('builder.pick.empty')));
-    }
-
-    refresh();
-    if (picker) renderPicker();
-    return root;
+    if (!node.config[key]) node.config[key] = structuredClone(schema.default);
+    return window.BotHubPermissions.block({
+      value: node.config[key], t, hide: true, keep: pickerKeep,
+      permissionGroups: schema['x-permissionGroups'], pseudoRoles: PSEUDO_ROLES,
+      source: { guilds: () => load(guildsUrl()), items: (gid, part) => load(guildPart(gid, part)) },
+      onChange: () => scheduleCommit(),
+    });
   }
 
   let commitTimer = null;

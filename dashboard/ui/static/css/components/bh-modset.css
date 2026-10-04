@@ -22,3 +22,10 @@
 .modset-item > summary::-webkit-details-marker { display: none; }
 .modset-item[open] > summary { margin-bottom: 12px; }
 .modset-new > summary { color: var(--accent); }
+
+/* Image fields (plugins): preview, upload and remove in one row. */
+.modset-image-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+.modset-image-preview { width: 72px; height: 72px; object-fit: contain; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--border); }
+.modset-image-preview[hidden] { display: none; }
+.modset-image .error-text { color: var(--red); }
+.modset-thumb { width: 28px; height: 28px; object-fit: contain; border-radius: 6px; background: var(--surface-2); flex: none; }

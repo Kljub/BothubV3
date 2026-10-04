@@ -62,6 +62,51 @@
         "x-mono": true,
         "x-placeholder": "https://api.example.com/items"
       },
+      "url_secret": {
+        "type": "string",
+        "maxLength": 40,
+        "pattern": "^([A-Z][A-Z0-9_]{1,39})?$",
+        "x-labelKey": "builder.cfg.url_secret",
+        "x-hintKey": "builder.cfg.url_secret_hint",
+        "x-mono": true,
+        "x-placeholder": "OPENAI_URL"
+      },
+      "auth_secret": {
+        "type": "string",
+        "maxLength": 40,
+        "pattern": "^([A-Z][A-Z0-9_]{1,39})?$",
+        "x-labelKey": "builder.cfg.auth_secret",
+        "x-hintKey": "builder.cfg.auth_secret_hint",
+        "x-mono": true,
+        "x-placeholder": "OPENAI_KEY"
+      },
+      "auth_format": {
+        "type": "string",
+        "enum": [
+          "bearer",
+          "plain",
+          "query"
+        ],
+        "default": "bearer",
+        "x-labelKey": "builder.cfg.auth_format",
+        "x-enumKey": "builder.enum.auth_format"
+      },
+      "auth_header": {
+        "type": "string",
+        "maxLength": 64,
+        "pattern": "^([A-Za-z0-9-]{1,64})?$",
+        "x-labelKey": "builder.cfg.auth_header",
+        "x-placeholder": "Authorization",
+        "x-mono": true
+      },
+      "auth_param": {
+        "type": "string",
+        "maxLength": 64,
+        "pattern": "^([A-Za-z0-9_.-]{1,64})?$",
+        "x-labelKey": "builder.cfg.auth_param",
+        "x-placeholder": "key",
+        "x-mono": true
+      },
       "headers": {
         "type": "string",
         "maxLength": 2000,

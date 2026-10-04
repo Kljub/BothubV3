@@ -1,0 +1,7 @@
+{
+  "plugin.__ID__.node.api_get.label": "API abfragen",
+  "plugin.__ID__.node.api_get.description": "Holt Daten von der API (Adresse und Key: Secrets __URL_SECRET__ und __KEY_SECRET__, vom Admin eingerichtet).",
+  "plugin.__ID__.node.api_get.result": "Wert",
+  "plugin.__ID__.node.api_get.result_status": "HTTP-Status",
+  "plugin.__ID__.node.api_get.result_missing": "Secrets ohne Wert"
+}

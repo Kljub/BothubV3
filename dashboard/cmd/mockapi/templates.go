@@ -42,10 +42,6 @@ func (s *store) createTemplate(w http.ResponseWriter, r *http.Request, b *bot) {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if len(s.templates[b.ID]) >= 100 {
-		apiError(w, 422, "error.template.limit")
-		return
-	}
 	s.tplSeq++
 	t := &msgTemplate{ID: s.tplSeq, Name: in.Name, Message: in.Message, CreatedAt: time.Now().UTC()}
 	s.templates[b.ID] = append(s.templates[b.ID], t)

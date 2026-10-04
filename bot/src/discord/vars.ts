@@ -14,6 +14,9 @@ export function userVars(user: User | PartialUser | null | undefined, member?: G
     [`${prefix}.name`]: user.username ?? name,
     [`${prefix}.mention`]: `<@${user.id}>`,
     [`${prefix}.avatar`]: member?.displayAvatarURL() ?? user.displayAvatarURL?.() ?? '',
+    // Voice channel the member is in now (empty when none): for sound plugins and blocks.
+    [`${prefix}.voice.channel.id`]: member?.voice?.channelId ?? '',
+    [`${prefix}.voice.channel`]: member?.voice?.channel ? `<#${member.voice.channel.id}>` : '',
   };
 }
 
@@ -24,6 +27,14 @@ export function guildVars(guild: Guild | null | undefined): Vars {
     'server.id': guild.id,
     'server.members': String(guild.memberCount),
     'server.owner_id': guild.ownerId,
+    'server.name': guild.name,
+    // Optional chaining: module tests pass plain objects as guilds.
+    'server.icon': guild.iconURL?.() ?? '',
+    'server.created': guild.createdTimestamp ? `<t:${Math.floor(guild.createdTimestamp / 1000)}:D>` : '',
+    'server.channels': String(guild.channels?.cache.size ?? 0),
+    'server.roles': String(guild.roles?.cache.size ?? 0),
+    'server.boosts': String(guild.premiumSubscriptionCount ?? 0),
+    'server.boost_tier': String(guild.premiumTier),
     members: String(guild.memberCount),
   };
 }

@@ -27,7 +27,8 @@
 .card-badges { position: absolute; top: 10px; left: 10px; display: flex; gap: 4px; }
 .module-card-body { display: flex; flex-direction: column; gap: 6px; padding: 14px 14px 16px; flex: 1; }
 .module-card-body h3 { font-size: 14px; }
-.module-card-body p { font-size: 12px; flex: 1; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+/* Two lines for every card (module and plugin), so all cards have one height; the full text is the tooltip. */
+.module-card-body p { font-size: 12px; flex: 1; min-height: 2lh; max-height: 2lh; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 /* Edit: full-width hit area; grey button only on hover (reference design). */
 .module-card-edit { display: flex; justify-content: center; margin-top: 12px; padding: 10px 12px; font-size: 13px; font-weight: 700; color: var(--group, var(--accent)); background: transparent; border-radius: 8px; transition: background-color 0.2s ease, color 0.2s ease; }
 .module-card-edit:hover, .module-card-edit:focus-visible { color: var(--text); background: var(--surface-2); }

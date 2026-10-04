@@ -1,4 +1,4 @@
-{{define "title"}}{{if eq .Data.Kind "modules"}}{{t (printf "module.%s.name" .Data.Module.Key)}}{{else if eq .Data.Kind "command"}}/{{.Data.Command.Name}}{{else}}{{.Data.Plugin.Name}}{{end}}{{end}}
+{{define "title"}}{{if eq .Data.Kind "modules"}}{{t (printf "module.%s.name" .Data.Module.Key)}}{{else if eq .Data.Kind "command"}}/{{.Data.Command.Name}}{{else}}{{template "plugin_name" .Data.Plugin}}{{end}}{{end}}
 
 {{define "content"}}
 {{$d := .Data}}
@@ -31,14 +31,26 @@
   {{with $d.Settings}}
   <div id="modset-error"></div>
   <div id="modset-body">{{template "module_settings" .}}</div>
-  <script src="/static/js/modsettings.js?v={{$.AssetVersion}}" defer></script>
   {{end}}
+  {{with $d.About}}
+  <section class="box">
+    <header class="box-head"><h2>{{t "msgb.how.title"}}</h2></header>
+    <div class="box-body">
+      <ol class="list">
+        {{range .}}<li><strong>{{.Title}}</strong> <span class="muted">{{.Text}}</span></li>{{end}}
+      </ol>
+    </div>
+  </section>
+  {{end}}
+  {{/* A module with an article and no commands shows only the article. */}}
+  {{if or $d.Commands (not $d.About)}}
   <section class="box">
     <header class="box-head"><h2>{{t "module_page.commands" "module" (t (printf "module.%s.name" $d.Module.Key)) "count" (len $d.Commands)}}</h2></header>
     <div class="box-body">
       {{range $d.Commands}}{{template "command_row" .}}{{else}}<p class="muted">{{t "module_page.no_commands"}}</p>{{end}}
     </div>
   </section>
+  {{end}}
   {{end}}
 </div>
 {{else if eq $d.Kind "command"}}
@@ -52,15 +64,59 @@
 <a class="back-link muted" href="/bots/plugins">{{t "plugins.back"}}</a>
 <section class="box">
   <header class="box-head item-head">
-    <span class="module-card-icon" aria-hidden="true">{{$d.Plugin.Icon}}</span>
+    <span class="module-card-icon" aria-hidden="true">{{or $d.Plugin.Icon "🧩"}}</span>
     <span>
-      <h2>{{$d.Plugin.Name}} <span class="badge-plugin">{{t "plugins.badge"}}</span>{{if $d.Plugin.Beta}}<span class="beta">{{t "modules.beta"}}</span>{{end}}</h2>
-      <span class="muted">{{$d.Plugin.Description}} · {{t "plugins.version" "version" $d.Plugin.Version}}</span>
+      <h2>{{template "plugin_name" $d.Plugin}} <span class="badge-plugin">{{t "plugins.badge"}}</span>{{if $d.Plugin.BlockedBy}} <span class="badge-disabled" title="{{t "plugins.blocked_hint" "permissions" (join $d.Plugin.BlockedBy ", ")}}">{{t "plugins.badge_disabled"}}</span>{{end}}{{if $d.Plugin.Beta}}<span class="beta">{{t "modules.beta"}}</span>{{end}}</h2>
+      <span class="muted">{{template "plugin_description" $d.Plugin}} · {{t "plugins.version" "version" $d.Plugin.Version}}</span>
     </span>
   </header>
-  <div class="box-body"><p class="muted">{{t "plugins.content_placeholder"}}</p></div>
+  {{if not $d.Settings}}<div class="box-body"><p class="muted">{{t "plugins.no_settings"}}</p></div>{{end}}
+</section>
+{{with $d.PluginCommands}}
+<section class="box">
+  <header class="box-head"><h3>{{t "plugins.commands.title"}}</h3><span class="box-meta">{{len .}}</span></header>
+  <div class="box-body">
+    <p class="muted">{{t "plugins.commands.hint"}}</p>
+  </div>
+  {{range .}}{{template "plugin_command_row" .}}{{end}}
 </section>
 {{end}}
+{{with $d.Webhooks}}
+<section class="box">
+  <header class="box-head"><h3>{{t "plugins.webhooks.title"}}</h3></header>
+  <div class="box-body">
+    <p class="muted">{{t "plugins.webhooks.hint"}}</p>
+    {{range .}}
+    <div class="field"><span>{{.Name}}</span>
+      <div class="copy-field copy-field-secret"><code>{{.URL}}</code><button type="button" class="btn btn-sm" data-copy="{{.URL}}" data-copy-done="{{t "module_page.webhooks.copied"}}">{{t "module_page.webhooks.copy"}}</button></div>
+    </div>
+    {{end}}
+  </div>
+</section>
+{{end}}
+{{with $d.Settings}}
+<div id="modset-error"></div>
+<div id="modset-body">{{template "module_settings" .}}</div>
+{{end}}
+{{end}}
+{{end}}
+
+{{define "plugin_command_row_fragment"}}{{template "plugin_command_row" .Data}}{{end}}
+
+{{/* One command a plugin added (its copy in Custom Commands): toggle and builder. */}}
+{{define "plugin_command_row"}}
+<div class="command-row" id="plugin-cmd-{{.ID}}">
+  <div class="command-text">
+    <div class="command-line"><code class="command-usage">/{{.Name}}</code></div>
+    <p class="command-desc">{{with .Description}}{{.}}{{else}}{{t "cmdhub.no_description"}}{{end}}</p>
+  </div>
+  <div class="command-actions">
+    <a class="icon-btn" href="/bots/builder/{{.ID}}" hx-boost="false" title="{{t "plugins.commands.edit"}}" aria-label="{{t "plugins.commands.edit"}}">{{template "icon_gear"}}</a>
+    <form hx-put="/bot/{{.BotID}}/plugins/{{.Plugin}}/commands/{{.ID}}" hx-trigger="change" hx-target="#plugin-cmd-{{.ID}}" hx-swap="outerHTML">
+      <input type="checkbox" class="toggle" name="enabled" value="true" {{if .Enabled}}checked{{end}} aria-label="{{t "command.toggle" "name" .Name}}">
+    </form>
+  </div>
+</div>
 {{end}}
 
 {{define "module_header_fragment"}}{{template "module_header" .Data}}{{end}}
@@ -195,15 +251,15 @@
     </div>
     <div class="cmdhub-actions">
       <button type="button" class="btn btn-sm btn-danger-soft" hx-delete="/bot/{{$v.BotID}}/{{$v.Hub.Base}}/{{$c.ID}}" hx-target="#cmd-list" hx-swap="outerHTML" hx-include="#cmd-toolbar"
-        hx-confirm="{{t ($v.Hub.Text "delete_confirm") "name" $c.Name}}">{{template "icon_trash"}} {{t "cmdhub.delete"}}</button>
+        {{if $c.Preset}}hx-confirm="{{t "cmdhub.reset_confirm" "name" $c.Name}}">{{template "icon_trash"}} {{t "cmdhub.reset"}}{{else}}hx-confirm="{{t ($v.Hub.Text "delete_confirm") "name" $c.Name}}">{{template "icon_trash"}} {{t "cmdhub.delete"}}{{end}}</button>
       <button type="button" class="btn btn-sm" data-share-url="/api/v1/bots/{{$v.BotID}}/{{$v.Hub.Kind}}/{{$c.ID}}" data-share-done="{{t "cmdhub.share_copied"}}">{{template "icon_copy"}} <span>{{t "cmdhub.share"}}</span></button>
       <form class="cmdhub-toggle" hx-put="/bot/{{$v.BotID}}/{{$v.Hub.Base}}/{{$c.ID}}" hx-trigger="change" hx-target="#cmd-list" hx-swap="outerHTML" hx-include="#cmd-toolbar">
         <input type="checkbox" class="toggle" name="enabled" value="true" {{if $c.Enabled}}checked{{end}} aria-label="{{t "command.toggle" "name" $c.Name}}">
       </form>
-      <select name="group" aria-label="{{t ($v.Hub.Text "group_of") "name" $c.Name}}" hx-put="/bot/{{$v.BotID}}/{{$v.Hub.Base}}/{{$c.ID}}/group" hx-trigger="change" hx-target="#cmd-list" hx-swap="outerHTML" hx-include="#cmd-toolbar">
+      {{if not $c.Copy}}<select name="group" aria-label="{{t ($v.Hub.Text "group_of") "name" $c.Name}}" hx-put="/bot/{{$v.BotID}}/{{$v.Hub.Base}}/{{$c.ID}}/group" hx-trigger="change" hx-target="#cmd-list" hx-swap="outerHTML" hx-include="#cmd-toolbar">
         <option value="0">{{t "cmdhub.no_group"}}</option>
         {{range $v.AllGroups}}<option value="{{.ID}}" {{if and $c.GroupID (eq .ID (deref $c.GroupID))}}selected{{end}}>{{.Name}}</option>{{end}}
-      </select>
+      </select>{{end}}
       <button type="button" class="icon-btn cmdhub-expand" data-expand aria-expanded="false" aria-label="{{t ($v.Hub.Text "expand") "name" $c.Name}}">{{template "icon_chevron"}}</button>
     </div>
   </div>
@@ -506,3 +562,7 @@
   -H "Content-Type: application/json" \
 {{if $key}}  -H "Authorization: YOUR_API_KEY" \
 {{end}}  -d '{"variables":{"message":"Hello from a webhook"}}'{{end}}
+
+{{/* Plugin name and description: the plugin's own texts, else the manifest. */}}
+{{define "plugin_name"}}{{$k := printf "plugin.%s.name" .ID}}{{$v := t $k}}{{if ne $v $k}}{{$v}}{{else}}{{.Name}}{{end}}{{end}}
+{{define "plugin_description"}}{{$k := printf "plugin.%s.description" .ID}}{{$v := t $k}}{{if ne $v $k}}{{$v}}{{else}}{{.Description}}{{end}}{{end}}

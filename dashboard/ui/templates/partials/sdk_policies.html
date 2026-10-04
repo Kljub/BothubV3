@@ -1,0 +1,62 @@
+{{/* Admin > SDK Policies: allow / default / deny per SDK permission, global
+   for every bot and plugin. Search field on top; main groups sorted by name
+   (members, messages, …); a group opens to its permissions (inside
+   "Modules" per BotHub module), a permission row opens to show its
+   functions. Layout like Settings > Security. Data: sdkPoliciesView. */}}
+{{define "sdk_policies_page"}}
+<p class="hint">{{t "sdk.policies.hint"}}</p>
+<div class="form sdk-search">
+  <input type="search" id="sdk-search" name="q" value="{{.Query}}" maxlength="60" placeholder="{{t "sdk.policies.search"}}" aria-label="{{t "sdk.policies.search"}}"
+    hx-get="/admin/sdk-policies" hx-trigger="input changed delay:250ms, search" hx-target="#sdk-policies" hx-swap="outerHTML">
+</div>
+{{template "sdk_policies" .}}
+{{end}}
+
+{{define "sdk_policies_fragment"}}{{template "sdk_policies" .Data}}{{end}}
+
+{{define "sdk_policies"}}
+<div id="sdk-policies">
+  <div id="sdk-policies-error"></div>
+  {{if .Query}}<p class="hint">{{t "sdk.policies.matches" "count" .Hits}}</p>{{end}}
+  {{if not .Groups}}<p class="muted">{{t "sdk.policies.no_match"}}</p>{{end}}
+  <div class="settings-card">
+    {{range .Groups}}{{$g := .}}
+    <details class="settings-row settings-expand sdk-group"{{if .Open}} open{{end}}>
+      <summary>
+        <span class="settings-row-text">
+          <strong>{{.Label}}</strong>
+          <span class="hint">{{t "sdk.policies.group_count" "on" .On "total" (len .Items)}}</span>
+        </span>
+        <span class="settings-action"><span class="pill-count">{{len .Items}}</span> ›</span>
+      </summary>
+      <div class="settings-expand-body sdk-group-body">
+        {{range .Items}}{{$p := .}}
+        {{with .ModuleLabel}}<h4 class="sdk-module">{{.}}</h4>{{end}}
+        <details class="settings-row settings-expand" data-setting>
+          <summary>
+            <span class="settings-row-text">
+              <strong>{{.Label}} <code class="mono muted">{{.Permission}}</code>
+                <span class="badge-soft{{if eq .Risk "high"}} badge-soft-stopped{{else if eq .Risk "medium"}} badge-soft-error{{end}}">{{t (printf "sdk.risk_group.%s" .Risk)}}</span></strong>
+              <span class="hint">{{.Hint}}</span>
+              <span class="hint">{{if .Enabled}}{{t "sdk.policies.now_on"}}{{else}}{{t "sdk.policies.now_off"}}{{end}}{{if eq .Mode "default"}} · {{t "sdk.policies.by_risk"}}{{end}} ·
+                {{if eq .Implemented 0}}{{t "sdk.policies.planned" "count" (len .Calls)}}{{else}}{{t "sdk.policies.available" "done" .Implemented "count" (len .Calls)}}{{end}}</span>
+            </span>
+            <span class="segmented" role="group" aria-label="{{.Label}}">
+              {{range list "allow" "default" "deny"}}
+              <button type="button" class="segment" hx-put="/admin/sdk-policies/{{$p.Permission}}" hx-vals='{"mode": "{{.}}", "group": "{{$g.Key}}"}' hx-include="#sdk-search" hx-target="#sdk-policies" hx-swap="outerHTML"
+                aria-pressed="{{if eq . $p.Mode}}true{{else}}false{{end}}">{{t (printf "sdk.mode.%s" .)}}</button>
+              {{end}}
+            </span>
+          </summary>
+          <div class="settings-expand-body">
+            <span class="field-label">{{t "sdk.policies.functions"}}</span>
+            <p class="mono muted">{{range $i, $c := .Calls}}{{if $i}}, {{end}}{{$c}}(){{end}}</p>
+          </div>
+        </details>
+        {{end}}
+      </div>
+    </details>
+    {{end}}
+  </div>
+</div>
+{{end}}

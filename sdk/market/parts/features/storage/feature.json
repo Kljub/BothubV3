@@ -1,0 +1,7 @@
+{
+  "title": "Storage service",
+  "description": "Key-value storage per bot and plugin (services/storage.js: JSON helpers) and a node that counts per server and member. Survives restarts; max 1000 keys, 16 KB per value, 1 MB in total.",
+  "needs": [],
+  "permissions": ["storage"],
+  "nodes": ["count"]
+}

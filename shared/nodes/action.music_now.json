@@ -1,0 +1,82 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.music_now",
+  "version": 1,
+  "category": "action",
+  "group": "music",
+  "order": 312,
+  "color": "teal",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_music_now.label",
+  "descriptionKey": "builder.node.action_music_now.description",
+  "module": "music",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": "",
+      "labelKey": "builder.result.music_now.0"
+    },
+    {
+      "suffix": ".title",
+      "labelKey": "builder.result.music_now.1"
+    },
+    {
+      "suffix": ".url",
+      "labelKey": "builder.result.music_now.2"
+    },
+    {
+      "suffix": ".author",
+      "labelKey": "builder.result.music_now.3"
+    },
+    {
+      "suffix": ".position",
+      "labelKey": "builder.result.music_now.4"
+    },
+    {
+      "suffix": ".duration",
+      "labelKey": "builder.result.music_now.5"
+    },
+    {
+      "suffix": ".loop",
+      "labelKey": "builder.result.music_now.6"
+    },
+    {
+      "suffix": ".volume",
+      "labelKey": "builder.result.music_now.7"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      },
+      "guild": {
+        "type": "string",
+        "maxLength": 40,
+        "x-advanced": true,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.guild",
+        "x-hintKey": "builder.cfg.guild_hint"
+      }
+    }
+  }
+}

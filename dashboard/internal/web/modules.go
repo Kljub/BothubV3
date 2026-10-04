@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/Kljub/BothubV3/dashboard/internal/api"
 )
@@ -162,6 +164,9 @@ func (s *Server) pluginViews(r *http.Request, botID int64) ([]pluginView, error)
 	}
 	out := make([]pluginView, len(plugins))
 	for i, pl := range plugins {
+		if pl.Lang != nil {
+			s.i18n.SetPlugin(pl.ID, pl.Lang)
+		}
 		out[i] = pluginView{BotID: botID, InstalledPlugin: pl}
 	}
 	return out, nil
@@ -212,6 +217,7 @@ func (s *Server) handleModuleItem(kind string) authHandler {
 			}
 			data["Module"], data["Category"], data["Commands"] = info, category, cmds
 			data["Header"] = moduleHeaderView{BotID: bot.ID, Category: category, ModuleInfo: info, Enabled: enabled}
+			data["About"] = s.moduleAbout(p.Locale, info.Key)
 			if info.Key == "webhooks" {
 				hooks, err := s.webhooksData(r, p, bot.ID)
 				if err != nil {
@@ -285,6 +291,26 @@ func (s *Server) handleModuleItem(kind string) authHandler {
 				return
 			}
 			data["Plugin"] = *found
+			// Full URLs of the plugin's webhooks: the dashboard proxies /api/* to the API.
+			var hooks []map[string]string
+			for _, h := range found.Webhooks {
+				hooks = append(hooks, map[string]string{"Name": h.Name, "URL": baseURL(r) + h.Path})
+			}
+			data["Webhooks"] = hooks
+			pcmds, err := s.pluginCommands(r, bot.ID, key)
+			if err != nil {
+				s.fail(w, r, p, err)
+				return
+			}
+			data["PluginCommands"] = pcmds
+			settings, err := s.pluginSettingsData(r, bot.ID, found.InstalledPlugin)
+			if err != nil {
+				s.fail(w, r, p, err)
+				return
+			}
+			if settings != nil {
+				data["Settings"] = *settings
+			}
 		}
 		s.render(w, http.StatusOK, "module_item", "layout", withData(p, data))
 	}
@@ -312,4 +338,77 @@ func (s *Server) selectedBotOrHome(w http.ResponseWriter, r *http.Request, p Pag
 		return api.Bot{}, false
 	}
 	return bot, true
+}
+
+// pluginCommandView is one slash command a plugin added to the bot (its copy
+// in Custom Commands), for the plugin page: toggle and builder link.
+type pluginCommandView struct {
+	BotID  int64
+	Plugin string
+	api.CustomCommand
+}
+
+// pluginCommands lists the bot's copies of the plugin's commands by name.
+func (s *Server) pluginCommands(r *http.Request, botID int64, plugin string) ([]pluginCommandView, error) {
+	all, err := s.api.CustomCommands(r.Context(), session(r), api.KindCommand, botID)
+	if err != nil {
+		return nil, err
+	}
+	var out []pluginCommandView
+	for _, c := range all {
+		if c.PluginID != nil && *c.PluginID == plugin {
+			out = append(out, pluginCommandView{BotID: botID, Plugin: plugin, CustomCommand: c})
+		}
+	}
+	slices.SortFunc(out, func(a, b pluginCommandView) int { return strings.Compare(a.Name, b.Name) })
+	return out, nil
+}
+
+// handlePluginCommand switches one of the plugin's commands on or off and
+// answers its row.
+func (s *Server) handlePluginCommand(w http.ResponseWriter, r *http.Request, p Page) {
+	id, ok := s.botID(w, r, p)
+	if !ok {
+		return
+	}
+	cid, err := strconv.ParseInt(r.PathValue("cid"), 10, 64)
+	if err != nil {
+		s.fail(w, r, p, &api.Error{Status: http.StatusNotFound, Key: "error.not_found"})
+		return
+	}
+	plugin := r.PathValue("plugin")
+	cur, err := s.api.CustomCommand(r.Context(), session(r), api.KindCommand, id, cid)
+	if err != nil {
+		s.fail(w, r, p, err)
+		return
+	}
+	if cur.PluginID == nil || *cur.PluginID != plugin {
+		s.fail(w, r, p, &api.Error{Status: http.StatusNotFound, Key: "error.not_found"})
+		return
+	}
+	c, err := s.api.SetCustomCommandEnabled(r.Context(), session(r), api.KindCommand, id, cid, r.PostFormValue("enabled") == "true")
+	if err != nil {
+		s.fail(w, r, p, err)
+		return
+	}
+	s.render(w, http.StatusOK, "module_item", "plugin_command_row_fragment", withData(p, pluginCommandView{BotID: id, Plugin: plugin, CustomCommand: c}))
+}
+
+// aboutStep is one row of a module's "How it works" article.
+type aboutStep struct{ Title, Text string }
+
+// moduleAbout is the short "How it works" article of a module: the texts
+// module.<key>.about.<n> and module.<key>.about.<n>_hint (n = 1, 2, …) as far
+// as they exist. Modules without such texts get none.
+func (s *Server) moduleAbout(locale, key string) []aboutStep {
+	var out []aboutStep
+	for n := 1; n <= 10; n++ {
+		k := fmt.Sprintf("module.%s.about.%d", key, n)
+		title := s.i18n.T(locale, k)
+		if title == k {
+			break
+		}
+		out = append(out, aboutStep{Title: title, Text: s.i18n.T(locale, k+"_hint")})
+	}
+	return out
 }

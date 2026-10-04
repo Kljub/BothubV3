@@ -8,6 +8,8 @@ import { waitForSchema } from './core/db.js';
 import { log } from './core/log.js';
 import { BotManager } from './core/manager.js';
 import { loadPolicy, PluginManager } from './sdk/manager.js';
+import { useCatalog } from './sdk/catalog.js';
+import { secretValue } from './core/secrets-global.js';
 import { Repo } from './core/repo.js';
 import { loadSecretKey } from './core/secrets.js';
 import { StreamConsumer, STREAM_EVENTS, STREAM_JOBS } from './core/streams.js';
@@ -48,14 +50,23 @@ async function main(): Promise<void> {
   const repo = new Repo(db);
 
   // SDK manager: plugins run sandboxed and reach Discord and the database only through it.
+  useCatalog(join(config.sharedDir, 'sdk-permissions.json'));
   const sdk = readShared<{ permissions: { key: string; risk: string }[]; limits: ConstructorParameters<typeof PluginManager>[1]['limits'] }>(config, 'sdk-permissions.json');
-  const plugins = new PluginManager(db, { pluginsDir: join(config.dataDir, 'plugins'), limits: sdk.limits, policy: () => loadPolicy(db, sdk.permissions) }, {
-    sendMessage: (botId, channelId, message) => manager!.instance(botId)?.pluginSend(channelId, message) ?? Promise.reject(new Error('error.bot.not_running')),
+  const plugins = new PluginManager(db, { pluginsDir: join(config.dataDir, 'plugins'), limits: sdk.limits, modules: readShared<{ modules: { key: string }[] }>(config, 'modules.json').modules.map((m) => m.key), policy: () => loadPolicy(db, sdk.permissions) }, {
+    sendMessage: (botId, channelId, message, files) => manager!.instance(botId)?.pluginSend(channelId, message, files) ?? Promise.reject(new Error('error.bot.not_running')),
     guildInfo: async (botId, guildId) => {
       const bot = manager!.instance(botId);
       if (!bot) throw new Error('error.bot.not_running');
       return bot.pluginGuildInfo(guildId);
     },
+    guildList: async (botId) => {
+      const bot = manager!.instance(botId);
+      if (!bot) throw new Error('error.bot.not_running');
+      return bot.pluginGuildList();
+    },
+    secret: (key) => secretValue(repo, () => loadSecretKey(config.dataDir), key),
+    voice: (botId) => manager!.instance(botId)?.voice,
+    discord: (botId) => manager!.instance(botId)?.pluginApi(),
     log: (botId, level, plugin, text) => {
       if (level === 'info') repo.logUpdate(botId, 'log.update.plugin', { plugin, text });
       else repo.logCode(botId, level === 'error' ? 'ERR-1009' : 'WAR-2009', { plugin, reason: text });
@@ -63,7 +74,8 @@ async function main(): Promise<void> {
   });
 
   // The key is read when a bot starts: the API may create it after us.
-  manager = new BotManager(repo, { repo, defs, limits, plugins }, () => loadSecretKey(config.dataDir));
+  const secretKey = () => loadSecretKey(config.dataDir);
+  manager = new BotManager(repo, { repo, defs, limits, plugins, secretKey }, secretKey);
   await manager.startAll();
 
   streams = new StreamConsumer(config.redisUrl, config.consumerName);

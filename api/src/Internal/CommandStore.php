@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace BotHub\Internal;
 
+use BotHub\BotCore\CommandPresets;
 use BotHub\BotCore\Outbox;
 use BotHub\Database\Connection;
 use PDO;
@@ -38,7 +39,7 @@ final class CommandStore
     public function list(int $botId, string $kind): array
     {
         $stmt = $this->pdo->prepare(
-            "SELECT id, kind, name, description, enabled, builtin, group_id, event_type, updated_at FROM commands
+            "SELECT id, kind, name, description, enabled, builtin, hidden, plugin_id, preset_name, group_id, event_type, updated_at FROM commands
              WHERE bot_id = ? AND kind = ? AND builtin = 0 AND deleted_at IS NULL ORDER BY id",
         );
         $stmt->execute([$botId, $kind]);
@@ -94,6 +95,12 @@ final class CommandStore
                 if ($group !== null && (!is_int($group) || !$this->groupExists($botId, $group))) {
                     throw new ApiError(422, 'error.group.unknown');
                 }
+                // Module and plugin copies stay in their system group; no
+                // command is moved into one by hand.
+                $current = $this->row($botId, $kind, $id);
+                if ($current['preset_name'] !== null || $current['plugin_id'] !== null || ($group !== null && $this->isSystemGroup($group))) {
+                    throw new ApiError(422, 'error.group.system');
+                }
                 $pdo->prepare('UPDATE commands SET group_id = ? WHERE id = ?')->execute([$group, $id]);
             }
             Outbox::add($pdo, 'command.saved', ['botId' => $botId, 'commandId' => $id]);
@@ -131,7 +138,8 @@ final class CommandStore
             if ($kind === 'command') {
                 $this->assertNameFree($botId, $name, $id);
             }
-            $pdo->prepare('UPDATE commands SET name = ?, description = ?, enabled = ?, event_type = ?, graph = ?, updated_at = ' . self::NOW . ' WHERE id = ?')
+            // Saving makes a hidden module or plugin copy a visible custom command.
+            $pdo->prepare('UPDATE commands SET name = ?, description = ?, enabled = ?, event_type = ?, graph = ?, hidden = 0, updated_at = ' . self::NOW . ' WHERE id = ?')
                 ->execute([$name, $description, $enabled ? 1 : 0, $eventType, $json, $id]);
             $this->addVersion($id, $nodes, $json);
             Outbox::add($pdo, 'command.saved', ['botId' => $botId, 'commandId' => $id]);
@@ -139,11 +147,24 @@ final class CommandStore
         return $this->get($botId, $kind, $id);
     }
 
-    /** Soft delete: kept 30 days under "Recently deleted". */
+    /**
+     * Soft delete: kept 30 days under "Recently deleted". A module command
+     * copy is not deleted: it goes back to its preset default (name,
+     * description, graph) and is hidden again; enabled stays as it is.
+     */
     public function delete(int $botId, string $kind, int $id): void
     {
         Connection::write($this->pdo, function (PDO $pdo) use ($botId, $kind, $id): void {
-            $this->row($botId, $kind, $id);
+            $row = $this->row($botId, $kind, $id);
+            $preset = $row['preset_name'] !== null && $row['plugin_id'] === null ? CommandPresets::find($row['preset_name']) : null;
+            if ($preset !== null) {
+                $graph = json_encode($preset->graph, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                $pdo->prepare('UPDATE commands SET name = ?, description = ?, graph = ?, hidden = 1, updated_at = ' . self::NOW . ' WHERE id = ?')
+                    ->execute([$preset->name, mb_substr($preset->description ?? '', 0, 100), $graph, $id]);
+                $this->addVersion($id, count($preset->graph->nodes ?? []), $graph);
+                Outbox::add($pdo, 'command.saved', ['botId' => $botId, 'commandId' => $id]);
+                return;
+            }
             $pdo->prepare('UPDATE commands SET deleted_at = ' . self::NOW . ' WHERE id = ?')->execute([$id]);
             Outbox::add($pdo, 'command.deleted', ['botId' => $botId, 'commandId' => $id]);
         });
@@ -202,7 +223,7 @@ final class CommandStore
         Connection::write($this->pdo, function (PDO $pdo) use ($botId, $kind, $id, $versionId): void {
             $this->row($botId, $kind, $id);
             $v = $this->versionRow($id, $versionId);
-            $pdo->prepare('UPDATE commands SET graph = ?, updated_at = ' . self::NOW . ' WHERE id = ?')->execute([$v['graph'], $id]);
+            $pdo->prepare('UPDATE commands SET graph = ?, hidden = 0, updated_at = ' . self::NOW . ' WHERE id = ?')->execute([$v['graph'], $id]);
             $this->addVersion($id, (int) $v['nodes'], $v['graph']);
             Outbox::add($pdo, 'command.saved', ['botId' => $botId, 'commandId' => $id]);
         });
@@ -214,8 +235,8 @@ final class CommandStore
     public function groups(int $botId): array
     {
         $stmt = $this->pdo->prepare(
-            'SELECT g.id, g.name, g.description, g.position,
-                (SELECT COUNT(*) FROM commands c WHERE c.group_id = g.id AND c.builtin = 0 AND c.deleted_at IS NULL) AS commands
+            'SELECT g.id, g.name, g.description, g.position, g.system,
+                (SELECT COUNT(*) FROM commands c WHERE c.group_id = g.id AND c.builtin = 0 AND c.hidden = 0 AND c.deleted_at IS NULL) AS commands
              FROM command_groups g WHERE g.bot_id = ? ORDER BY g.position, g.id',
         );
         $stmt->execute([$botId]);
@@ -226,7 +247,8 @@ final class CommandStore
     {
         [$name, $description, $position] = self::validGroup($in);
         $id = Connection::write($this->pdo, function (PDO $pdo) use ($botId, $name, $description, $position): int {
-            $stmt = $pdo->prepare('SELECT COUNT(*) FROM command_groups WHERE bot_id = ?');
+            // System groups (module and plugin copies) do not count.
+            $stmt = $pdo->prepare('SELECT COUNT(*) FROM command_groups WHERE bot_id = ? AND system = 0');
             $stmt->execute([$botId]);
             if ((int) $stmt->fetchColumn() >= self::MAX_GROUPS) {
                 throw new ApiError(422, 'error.group.limit');
@@ -241,6 +263,7 @@ final class CommandStore
     {
         [$name, $description, $position] = self::validGroup($in);
         Connection::write($this->pdo, function (PDO $pdo) use ($botId, $groupId, $name, $description, $position): void {
+            $this->refuseSystemGroup($botId, $groupId);
             $stmt = $pdo->prepare('UPDATE command_groups SET name = ?, description = ?, position = ? WHERE id = ? AND bot_id = ?');
             $stmt->execute([$name, $description, $position, $groupId, $botId]);
             if ($stmt->rowCount() === 0) {
@@ -254,6 +277,7 @@ final class CommandStore
     public function deleteGroup(int $botId, int $groupId): void
     {
         Connection::write($this->pdo, function (PDO $pdo) use ($botId, $groupId): void {
+            $this->refuseSystemGroup($botId, $groupId);
             $stmt = $pdo->prepare('DELETE FROM command_groups WHERE id = ? AND bot_id = ?');
             $stmt->execute([$groupId, $botId]);
             if ($stmt->rowCount() === 0) {
@@ -330,7 +354,7 @@ final class CommandStore
     private function row(int $botId, string $kind, int $id): array
     {
         $stmt = $this->pdo->prepare(
-            'SELECT id, kind, name, description, enabled, builtin, group_id, event_type, updated_at, graph FROM commands
+            'SELECT id, kind, name, description, enabled, builtin, hidden, plugin_id, preset_name, group_id, event_type, updated_at, graph FROM commands
              WHERE id = ? AND bot_id = ? AND kind = ? AND builtin = 0 AND deleted_at IS NULL',
         );
         $stmt->execute([$id, $botId, $kind]);
@@ -368,6 +392,21 @@ final class CommandStore
         return $stmt->fetchColumn() !== false;
     }
 
+    private function isSystemGroup(int $groupId): bool
+    {
+        $stmt = $this->pdo->prepare('SELECT system FROM command_groups WHERE id = ?');
+        $stmt->execute([$groupId]);
+        return (int) $stmt->fetchColumn() === 1;
+    }
+
+    /** Module and plugin groups belong to BotHub: no rename, no delete. */
+    private function refuseSystemGroup(int $botId, int $groupId): void
+    {
+        if ($this->groupExists($botId, $groupId) && $this->isSystemGroup($groupId)) {
+            throw new ApiError(403, 'error.group.system');
+        }
+    }
+
     private function group(int $botId, int $groupId): array
     {
         foreach ($this->groups($botId) as $g) {
@@ -386,14 +425,14 @@ final class CommandStore
         });
     }
 
-    private static function validCommand(string $name, string $description): void
+    public static function validCommand(string $name, string $description): void
     {
         if (!preg_match(self::COMMAND_NAME, $name) || strlen($description) > 100) {
             throw new ApiError(422, 'error.command.name');
         }
     }
 
-    private static function validEvent(string $name, string $eventType): void
+    public static function validEvent(string $name, string $eventType): void
     {
         $len = mb_strlen($name);
         if ($len === 0 || $len > 100) {
@@ -404,8 +443,13 @@ final class CommandStore
         }
     }
 
-    /** Structure check; returns the node count. */
-    private static function validGraph(mixed $g): int
+    /**
+     * Structure check; returns the node count. $pluginTypes: for plugin
+     * commands, the only plugin.* block types allowed (the plugin's own).
+     *
+     * @param list<string>|null $pluginTypes
+     */
+    public static function validGraph(mixed $g, ?array $pluginTypes = null): int
     {
         if (!is_array($g) || ($g['schemaVersion'] ?? null) !== 1 || !is_array($g['nodes'] ?? null) || !is_array($g['edges'] ?? null)
             || count($g['nodes']) === 0 || count($g['nodes']) > 500 || count($g['edges']) > 2000) {
@@ -414,6 +458,7 @@ final class CommandStore
         // Node IDs unique, node types known, edges between existing nodes.
         $known = self::nodeTypes();
         $ids = [];
+        $typeOf = [];
         foreach ($g['nodes'] as $node) {
             if (!is_array($node) || !is_string($node['id'] ?? null) || $node['id'] === '' || !is_string($node['type'] ?? null)) {
                 throw new ApiError(422, 'error.graph.invalid');
@@ -421,10 +466,12 @@ final class CommandStore
             if (isset($ids[$node['id']])) {
                 throw new ApiError(422, 'error.graph.duplicate_node', ['node' => $node['id']]);
             }
-            if ($known !== [] && !isset($known[$node['type']]) && !str_starts_with($node['type'], 'plugin.')) {
+            $pluginOk = $pluginTypes === null ? str_starts_with($node['type'], 'plugin.') : in_array($node['type'], $pluginTypes, true);
+            if ($known !== [] && !isset($known[$node['type']]) && !$pluginOk) {
                 throw new ApiError(422, 'error.graph.unknown_type', ['type' => $node['type']]);
             }
             $ids[$node['id']] = true;
+            $typeOf[$node['id']] = $node['type'];
         }
         foreach ($g['edges'] as $e) {
             $from = $e['from'] ?? null;
@@ -433,27 +480,38 @@ final class CommandStore
                 || !isset($ids[$from['node'] ?? '']) || !isset($ids[$to['node'] ?? ''])) {
                 throw new ApiError(422, 'error.graph.bad_edge');
             }
+            // Ports must exist on the block types (success/error: blocks with paths).
+            $outs = $known[$typeOf[$from['node']]]['outputs'] ?? null;
+            $ins = $known[$typeOf[$to['node']]]['inputs'] ?? null;
+            if (($outs !== null && !in_array($from['port'], [...$outs, 'success', 'error'], true))
+                || ($ins !== null && !in_array($to['port'], $ins, true))) {
+                throw new ApiError(422, 'error.graph.bad_port', ['port' => $from['port'] . ' → ' . $to['port']]);
+            }
         }
         return count($g['nodes']);
     }
 
-    /** @var array<string, true>|null node types from shared/nodes */
+    /** @var array<string, array{inputs: list<string>, outputs: list<string>}>|null node types from shared/nodes */
     private static ?array $nodeTypes = null;
 
-    /** @return array<string, true> */
+    /** @return array<string, array{inputs: list<string>, outputs: list<string>}> */
     private static function nodeTypes(): array
     {
         if (self::$nodeTypes === null) {
             self::$nodeTypes = [];
             foreach (glob(self::shared('nodes') . '/*.json') ?: [] as $file) {
-                self::$nodeTypes[basename($file, '.json')] = true;
+                $def = json_decode((string) file_get_contents($file), true);
+                self::$nodeTypes[basename($file, '.json')] = [
+                    'inputs' => array_column($def['inputs'] ?? [], 'name'),
+                    'outputs' => array_column($def['outputs'] ?? [], 'name'),
+                ];
             }
         }
         return self::$nodeTypes;
     }
 
     /** @return array{string, string, int} */
-    private static function validGroup(array $in): array
+    public static function validGroup(array $in): array
     {
         $name = trim((string) ($in['name'] ?? ''));
         $description = trim((string) ($in['description'] ?? ''));
@@ -479,7 +537,7 @@ final class CommandStore
         return self::$eventTypes;
     }
 
-    private static function moduleKnown(string $key): bool
+    public static function moduleKnown(string $key): bool
     {
         $doc = json_decode((string) file_get_contents(self::shared('modules.json')), true, 512, JSON_THROW_ON_ERROR);
         foreach ($doc['modules'] as $module) {
@@ -520,6 +578,12 @@ final class CommandStore
             'description' => $r['description'],
             'enabled' => $r['enabled'] === 1,
             'builtin' => $r['builtin'] === 1,
+            'hidden' => $r['hidden'] === 1, // module/plugin copy not edited yet: not listed under Custom Commands
+            // Module copy: deleting resets it to this preset instead.
+            'preset' => $r['plugin_id'] === null ? $r['preset_name'] : null,
+            // Module or plugin copy: it stays in its system group.
+            'copy' => $r['preset_name'] !== null || $r['plugin_id'] !== null,
+            'pluginId' => $r['plugin_id'], // plugin copy: listed on the plugin's page
             'groupId' => $r['group_id'] === null ? null : (int) $r['group_id'],
             'updatedAt' => $r['updated_at'],
         ];
@@ -535,6 +599,6 @@ final class CommandStore
 
     private static function groupJson(array $r): array
     {
-        return ['id' => (int) $r['id'], 'name' => $r['name'], 'description' => $r['description'], 'position' => (int) $r['position'], 'commands' => (int) $r['commands']];
+        return ['id' => (int) $r['id'], 'name' => $r['name'], 'description' => $r['description'], 'position' => (int) $r['position'], 'commands' => (int) $r['commands'], 'system' => (int) $r['system'] === 1];
     }
 }

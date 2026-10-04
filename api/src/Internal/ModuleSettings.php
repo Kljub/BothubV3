@@ -55,6 +55,9 @@ final class ModuleSettings
             $key = $f['key'];
             try {
                 $out[$key] = self::value($f, array_key_exists($key, $in) ? $in[$key] : null, $path . $key, !array_key_exists($key, $in), $lenient);
+                if (!$lenient && !empty($f['required']) && ($out[$key] === null || $out[$key] === '' || $out[$key] === [])) {
+                    self::fail($path . $key);
+                }
             } catch (ApiError $e) {
                 if (!$lenient) {
                     throw $e;
@@ -102,6 +105,12 @@ final class ModuleSettings
                     return (string) ($default ?? '');
                 }
                 return is_string($v) && preg_match('/^#[0-9a-fA-F]{6}$/', $v) ? strtolower($v) : self::fail($path);
+            case 'image':
+                // A file of plugin_files (uploaded in the dashboard); empty = no image.
+                if ($missing || $v === null || $v === '') {
+                    return '';
+                }
+                return is_string($v) && preg_match(PluginFileStore::NAME, $v) ? $v : self::fail($path);
             case 'channel':
             case 'role':
                 return $missing || $v === null ? null : self::ref($v, $path);
@@ -139,6 +148,16 @@ final class ModuleSettings
                     $list[] = trim($w);
                 }
                 return array_values(array_unique($list));
+            case 'permissions':
+                // group: a group of members (e.g. who is exempt), never "everyone"; no value is nobody.
+                $group = ($f['group'] ?? false) === true;
+                $block = self::permissions($missing || $v === null ? ($default ?? ($group ? [] : ['allowed_roles' => [['id' => 'everyone']]])) : $v, $path);
+                if ($group) {
+                    foreach ($block['allowed_roles'] as $r) {
+                        $r['id'] === 'everyone' && self::fail("{$path}.allowed_roles");
+                    }
+                }
+                return $block;
             case 'message':
                 return self::message($missing || $v === null ? ($default ?? []) : $v, $path);
             case 'list':
@@ -158,6 +177,13 @@ final class ModuleSettings
                         self::fail("{$path}.{$i}");
                     }
                     $clean = self::fields($f['item'], $item, "{$path}.{$i}.", $lenient);
+                    // Stable ID of the entry: kept when valid, else a new one (not on read).
+                    $id = $item['_id'] ?? null;
+                    if (is_string($id) && preg_match('/^[a-z0-9]{8,16}$/', $id)) {
+                        $clean['_id'] = $id;
+                    } elseif (!$lenient) {
+                        $clean['_id'] = bin2hex(random_bytes(6));
+                    }
                     // unique: no two entries with the same values in these fields
                     if (!empty($f['unique'])) {
                         $sig = json_encode(array_map(static fn ($k) => $clean[$k] ?? null, $f['unique']));
@@ -178,6 +204,65 @@ final class ModuleSettings
     }
 
     /** @return array{id: string, guild: string} */
+    /**
+     * The permissions block (same lists as the slash trigger's permissions):
+     * allowed_roles (with "everyone"), banned_roles, required_permissions
+     * (Discord permission names of trigger.slash), banned_channels.
+     */
+    public static function permissions(mixed $v, string $path): array
+    {
+        if (!is_array($v) || array_is_list($v) && $v !== []) {
+            self::fail($path);
+        }
+        $out = ['allowed_roles' => [], 'banned_roles' => [], 'required_permissions' => [], 'banned_channels' => []];
+        foreach (array_keys($v) as $k) {
+            array_key_exists($k, $out) || $k === 'hide_without_permission' || self::fail($path);
+        }
+        foreach (['allowed_roles', 'banned_roles', 'banned_channels'] as $list) {
+            $items = $v[$list] ?? [];
+            if (!is_array($items) || !array_is_list($items) || count($items) > self::LIST_MAX) {
+                self::fail("{$path}.{$list}");
+            }
+            $seen = [];
+            foreach ($items as $item) {
+                if ($list === 'allowed_roles' && is_array($item) && ($item['id'] ?? null) === 'everyone') {
+                    $ref = ['id' => 'everyone'];
+                } else {
+                    $ref = self::ref($item, "{$path}.{$list}");
+                }
+                $seen[($ref['guild'] ?? '') . ':' . $ref['id']] = $ref;
+            }
+            $out[$list] = array_values($seen);
+        }
+        $perms = $v['required_permissions'] ?? [];
+        if (!is_array($perms) || !array_is_list($perms) || count($perms) > 60) {
+            self::fail("{$path}.required_permissions");
+        }
+        $known = self::discordPermissions();
+        foreach ($perms as $perm) {
+            is_string($perm) && in_array($perm, $known, true) || self::fail("{$path}.required_permissions");
+        }
+        $out['required_permissions'] = array_values(array_unique($perms));
+        return $out;
+    }
+
+    /** @return list<string> Discord permission names of the slash trigger's permissions block. */
+    private static function discordPermissions(): array
+    {
+        static $names = null;
+        if ($names === null) {
+            $file = (getenv('SHARED_DIR') ?: __DIR__ . '/../../../shared') . '/nodes/trigger.slash.json';
+            $def = json_decode((string) @file_get_contents($file), true);
+            $names = [];
+            foreach ($def['config']['properties']['permissions']['x-permissionGroups'] ?? [] as $g) {
+                foreach ($g['permissions'] ?? [] as $n) {
+                    $names[] = $n;
+                }
+            }
+        }
+        return $names;
+    }
+
     private static function ref(mixed $v, string $path): array
     {
         if (!is_array($v) || !is_string($v['id'] ?? null) || !is_string($v['guild'] ?? null)

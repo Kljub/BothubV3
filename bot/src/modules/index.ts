@@ -5,13 +5,14 @@
 import { Events, type Client } from 'discord.js';
 import { log } from '../core/log.js';
 import { cacheInvites, inviteChanged, inviteJoin, inviteLeave, levelingLeave, levelingMessage, levelingVoice, levelingVoiceInit, prepareReactionRoles, reactionRoles, suggestionMessage, suggestionVote } from './community.js';
-import { automodHit, syncAutomod } from './automod.js';
+import { automodHit, automodMedia, syncAutomod } from './automod.js';
 import type { ModuleContext } from './context.js';
 import { onCountingMessage, onStarReaction } from './games.js';
 import { onBan, onMemberAdd, onMemberRemove } from './members.js';
 import { ensureStickies, onMessage } from './messages.js';
 import { globalChat, tempVoice } from './social.js';
 import { ensurePanels, modmailMessage, onModuleInteraction } from './support.js';
+import { ensureHoneypots, honeypotMessage } from './honeypot.js';
 import { ModuleTimers } from './timers.js';
 
 export { ModuleContext } from './context.js';
@@ -32,6 +33,7 @@ export function bindModules(client: Client, ctx: ModuleContext, timezone: () => 
     for (const g of guilds) guard('invites', cacheInvites(ctx, g));
     guard('reaction-roles', prepareReactionRoles(ctx, guilds));
     guard('panels', ensurePanels(ctx, guilds));
+    guard('honeypot', ensureHoneypots(ctx, guilds));
     for (const g of guilds) guard('automod', syncAutomod(ctx, g));
     guard('stickies', ensureStickies(ctx, guilds));
     levelingVoiceInit(ctx, guilds);
@@ -41,6 +43,7 @@ export function bindModules(client: Client, ctx: ModuleContext, timezone: () => 
     const guilds = [...client.guilds.cache.values()];
     guard('reaction-roles', prepareReactionRoles(ctx, guilds));
     guard('panels', ensurePanels(ctx, guilds));
+    guard('honeypot', ensureHoneypots(ctx, guilds));
     for (const g of guilds) guard('automod', syncAutomod(ctx, g));
     guard('stickies', ensureStickies(ctx, guilds));
   };
@@ -60,8 +63,14 @@ export function bindModules(client: Client, ctx: ModuleContext, timezone: () => 
     guard('suggestions', suggestionMessage(ctx, msg));
     guard('global-chat', globalChat(ctx, msg));
     guard('modmail', modmailMessage(ctx, msg));
+    guard('honeypot', honeypotMessage(ctx, msg));
+    guard('automod-media', automodMedia(ctx, msg));
   });
-  client.on(Events.MessageUpdate, (_old, msg) => {
+  client.on(Events.MessageUpdate, (old, msg) => {
+    // Link previews arrive with an edit: the media filter checks them then.
+    if (msg.embeds.length > (old.partial ? 0 : old.embeds.length) || msg.attachments.size > (old.partial ? 0 : old.attachments.size)) {
+      guard('automod-media', automodMedia(ctx, msg));
+    }
     // Media channels also check edited messages (text added later).
     if (!msg.partial && ctx.enabled('media-channels')) guard('message-edit', onMessage(ctx, msg, true));
   });

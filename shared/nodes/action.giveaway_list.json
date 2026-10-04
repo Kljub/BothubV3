@@ -1,0 +1,50 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.giveaway_list",
+  "version": 1,
+  "category": "action",
+  "group": "giveaways",
+  "order": 1005,
+  "color": "purple",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_giveaway_list.label",
+  "descriptionKey": "builder.node.action_giveaway_list.description",
+  "module": "giveaway",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": "",
+      "labelKey": "builder.result.giveaway_list.0"
+    },
+    {
+      "suffix": ".count",
+      "labelKey": "builder.result.giveaway_list.1"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  }
+}

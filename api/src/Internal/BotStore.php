@@ -20,7 +20,7 @@ final class BotStore
         b.token_enc IS NOT NULL AS token_set, b.autostart, b.created_at, b.started_at,
         (SELECT COUNT(*) FROM bot_guilds g WHERE g.bot_id = b.id AND g.left_at IS NULL) AS guild_count";
 
-    public function __construct(private readonly PDO $pdo, private readonly SecretBox $box)
+    public function __construct(private readonly PDO $pdo, private readonly SecretBox $box, private readonly ?PluginStore $plugins = null)
     {
     }
 
@@ -67,6 +67,7 @@ final class BotStore
             $id = (int) $pdo->lastInsertId();
             $pdo->prepare('INSERT INTO bot_profiles (bot_id) VALUES (?)')->execute([$id]);
             CommandPresets::seed($pdo, $id);
+            $this->plugins?->seedBot($pdo, $id); // command copies of installed plugins
             Outbox::add($pdo, 'bot.created', ['botId' => $id]);
             return $id;
         });

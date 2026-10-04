@@ -19,6 +19,11 @@
   {{template "server_settings" .Server}}
 {{else if eq .Section "email"}}
   {{template "email_settings" .}}
+{{else if eq .Section "api_secrets"}}
+  <div id="secrets-error"></div>
+  <div id="secrets-body">{{template "api_secrets" .Secrets}}</div>
+{{else if eq .Section "sdk_policies"}}
+  {{template "sdk_policies_page" .SdkPolicies}}
 {{else}}
   <p class="muted admin-placeholder">{{t "admin.placeholder"}}</p>
 {{end}}
@@ -360,3 +365,90 @@
   </section>
 </div>
 {{end}}
+
+{{define "api_secrets_fragment"}}{{template "api_secrets" .Data}}{{end}}
+
+{{/* Global secrets (name, value write-only, description). Receives a secretsView. */}}
+{{define "api_secrets"}}
+{{with .Notice}}<div class="alert alert-success">{{t .}}</div>{{end}}
+<p class="muted">{{t "admin.secrets.intro"}}</p>
+
+<h3 class="settings-group">{{t "admin.secrets.title"}} <span class="badge-soft">{{len .Secrets}}</span></h3>
+<div class="settings-card secrets-card">
+  {{range .Secrets}}
+  <details class="settings-row settings-expand secret-row">
+    <summary>
+      <span class="secret-icon" aria-hidden="true">{{if .Address}}🔗{{else}}🔑{{end}}</span>
+      <span class="settings-row-text">
+        <strong class="mono">{{.Key}}</strong>
+        <span class="hint">{{with .Description}}{{.}} · {{end}}{{t "admin.secrets.updated" "date" .Updated}}</span>
+        {{with .UsedBy}}<span class="secret-uses">{{range .}}<span class="badge-soft">{{.}}</span>{{end}}</span>{{end}}
+      </span>
+      <span class="settings-action">{{if not .Set}}<span class="badge-soft secret-null" title="{{t "admin.secrets.unset_hint"}}">[NULL]</span>{{end}}<span class="badge-soft">{{if .Address}}{{t "admin.secrets.kind.address"}}{{else}}{{t "admin.secrets.kind.key"}}{{end}}</span>{{if .Set}}{{t "settings.change"}}{{else}}{{t "admin.secrets.fill"}}{{end}} ›</span>
+    </summary>
+    <form class="form settings-expand-body secret-form" hx-put="/admin/secrets/{{.Key}}" hx-target="#secrets-body" hx-swap="innerHTML">
+      <div class="secret-grid">
+        <label class="field">{{t "admin.secrets.new_value"}}
+          <input type="password" name="value" autocomplete="new-password" maxlength="4096" {{if .Set}}placeholder="{{t "admin.secrets.keep_value"}}"{{else}}placeholder="{{t "admin.secrets.paste_value"}}" required{{end}}>
+        </label>
+        <label class="field">{{t "admin.secrets.description"}}<input name="description" maxlength="200" value="{{.Description}}"></label>
+      </div>
+      <p class="hint">{{t "admin.secrets.value_hint"}}{{with .UsedBy}} {{t "admin.secrets.used_by_hint"}}{{end}}</p>
+      <div class="secret-actions">
+        <button type="button" class="btn btn-sm btn-danger-soft" hx-delete="/admin/secrets/{{.Key}}" hx-target="#secrets-body" hx-swap="innerHTML"
+          hx-confirm="{{t "admin.secrets.delete_confirm" "key" .Key}}">{{t "admin.secrets.delete"}}</button>
+        <button type="submit" class="btn btn-primary btn-sm">{{t "admin.secrets.save"}}</button>
+      </div>
+    </form>
+  </details>
+  {{else}}
+  <div class="settings-row secret-empty"><span class="settings-row-text"><strong>{{t "admin.secrets.empty"}}</strong><span class="hint">{{t "admin.secrets.empty_hint"}}</span></span></div>
+  {{end}}
+  <details class="settings-row settings-expand secret-add">
+    <summary>
+      <span class="secret-icon" aria-hidden="true">＋</span>
+      <span class="settings-row-text"><strong>{{t "admin.secrets.add"}}</strong><span class="hint">{{t "admin.secrets.add_hint"}}</span></span>
+      <span class="settings-action">{{t "settings.add"}} ›</span>
+    </summary>
+    <form class="form settings-expand-body secret-form" hx-post="/admin/secrets" hx-target="#secrets-body" hx-swap="innerHTML">
+      <div class="secret-grid">
+        <label class="field">{{t "admin.secrets.key"}}
+          <input name="key" required pattern="[A-Za-z][A-Za-z0-9_]{1,39}" maxlength="40" class="mono" placeholder="WEATHER_KEY" spellcheck="false">
+        </label>
+        <label class="field">{{t "admin.secrets.value"}}
+          <input type="password" name="value" required autocomplete="new-password" maxlength="4096">
+        </label>
+        <label class="field secret-wide">{{t "admin.secrets.description"}}<input name="description" maxlength="200" placeholder="{{t "admin.secrets.description_placeholder"}}"></label>
+      </div>
+      <p class="hint">{{t "admin.secrets.key_hint"}} {{t "admin.secrets.value_hint"}}</p>
+      <div class="secret-actions"><button type="submit" class="btn btn-primary btn-sm">{{t "admin.secrets.add"}}</button></div>
+    </form>
+  </details>
+</div>
+
+<h3 class="settings-group">{{t "admin.market.title"}}</h3>
+<div class="settings-card secrets-card">
+  <details class="settings-row settings-expand secret-row">
+    <summary>
+      <span class="secret-icon" aria-hidden="true">🛒</span>
+      <span class="settings-row-text"><strong>{{t "admin.market.token"}}</strong><span class="hint">{{with .Market}}{{t "admin.secrets.updated" "date" .Updated}}{{else}}{{t "admin.market.token_hint"}}{{end}}</span></span>
+      <span class="settings-action">{{if .Market}}{{t "settings.change"}}{{else}}{{t "settings.add"}}{{end}} ›</span>
+    </summary>
+    <form class="form settings-expand-body" {{if .Market}}hx-put="/admin/secrets/MARKET_GITHUB_TOKEN"{{else}}hx-post="/admin/secrets"{{end}} hx-target="#secrets-body" hx-swap="innerHTML">
+      {{if not .Market}}<input type="hidden" name="key" value="MARKET_GITHUB_TOKEN">{{end}}
+      <input type="hidden" name="description" value="BotHub Marketplace (GitHub)">
+      <label class="field">{{t "admin.market.token_value"}}
+        <input type="password" name="value" {{if not .Market}}required{{end}} autocomplete="new-password" maxlength="255" class="input-medium mono" spellcheck="false"{{if .Market}} placeholder="{{t "admin.secrets.keep_value"}}"{{end}}>
+        <span class="hint">{{t "admin.market.token_value_hint"}}</span>
+      </label>
+      <div class="modal-actions">
+        <button type="submit" class="btn btn-primary btn-sm">{{t "admin.secrets.save"}}</button>
+        {{if .Market}}<button type="button" class="btn btn-sm btn-danger-soft" hx-delete="/admin/secrets/MARKET_GITHUB_TOKEN" hx-target="#secrets-body" hx-swap="innerHTML"
+          hx-confirm="{{t "admin.market.delete_confirm"}}">{{t "admin.secrets.delete"}}</button>{{end}}
+      </div>
+    </form>
+  </details>
+</div>
+
+{{end}}
+

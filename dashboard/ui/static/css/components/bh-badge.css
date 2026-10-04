@@ -7,6 +7,8 @@
 .badge-soft-error { background: color-mix(in srgb, var(--yellow) 15%, transparent); color: var(--yellow); }
 .pill-count { padding: 1px 7px; border-radius: 6px; font-size: 10px; font-weight: 700; color: var(--group, var(--accent)); background: color-mix(in srgb, var(--group, var(--accent)) 15%, transparent); }
 .beta { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 10px; font-weight: 700; line-height: 1.5; vertical-align: middle; color: #fff; background: var(--red); }
+/* Plugin off because an SDK permission it needs is off (next to badge-plugin). */
+.badge-disabled { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 10px; font-weight: 700; line-height: 1.5; vertical-align: middle; color: #fff; background: var(--red); }
 .badge-plugin { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 10px; font-weight: 700; line-height: 1.5; vertical-align: middle; color: #1a1a1a; background: #a3e635; }
 .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex: none; }
 .status-dot-running { background: var(--green); }

@@ -10,6 +10,7 @@ import { Repo, type CommandRow } from './repo.js';
 import { decrypt, encrypt } from './secrets.js';
 import { buildCommands, denied, permissionBit, settingsOf } from '../discord/commands.js';
 import { discordHandlers } from '../discord/handlers.js';
+import { moduleHandlers } from '../discord/handlers-modules.js';
 import { coreHandlers } from '../graph/handlers-core.js';
 import type { Graph } from '../graph/types.js';
 
@@ -37,15 +38,30 @@ const asRow = (p: { name: string; description: string; graph: Graph }, id: numbe
   id, kind: 'command', name: p.name, description: p.description, builtin: false, moduleKey: null, eventType: null, graph: p.graph,
 });
 
-test('moderation presets only use blocks the bot runs', () => {
-  const handlers = new Map([...coreHandlers({ vars: { get: () => undefined, set: () => undefined, delete: () => undefined }, logError: () => undefined }), ...discordHandlers({} as Repo)]);
+test('module presets only use blocks the bot runs', () => {
+  const handlers = new Map([
+    ...coreHandlers({ vars: { get: () => undefined, set: () => undefined, delete: () => undefined }, logError: () => undefined }),
+    ...discordHandlers({} as Repo),
+    ...moduleHandlers({} as Repo, 1),
+  ]);
   const passive = /^(trigger|option|condition|utility)\./;
   for (const p of presets as { module?: string; name: string; graph: Graph }[]) {
-    if (p.module !== 'moderation') continue;
     for (const n of p.graph.nodes) {
       if (passive.test(n.type) || n.type === 'action.note') continue;
-      assert.ok(handlers.has(n.type), `${p.name}: ${n.type} has no handler`);
+      assert.ok(handlers.has(n.type), `${p.module}/${p.name}: ${n.type} has no handler`);
     }
+  }
+});
+
+// Modules whose command copies are still empty (trigger and options only). Shrinks to [].
+const PRESETS_WITHOUT_LOGIC = new Set(['polls', 'giveaways', 'ticket-system', 'modmail', 'free-games', 'music']);
+
+test('every module command copy has logic in the builder', () => {
+  for (const p of presets as unknown as { module: string; name: string; graph: Graph }[]) {
+    const logic = p.graph.nodes.some((n) => /^(action|condition)\./.test(n.type));
+    if (PRESETS_WITHOUT_LOGIC.has(p.module)) continue;
+    assert.ok(logic, `${p.module}/${p.name} has no blocks after the trigger`);
+    assert.ok(p.graph.edges.some((e) => e.from.node === 'trigger' && e.from.port === 'next'), `${p.module}/${p.name}: trigger is not connected`);
   }
 });
 
@@ -66,6 +82,15 @@ test('waits for the expected schema version', async () => {
   await assert.rejects(waitForSchema(path, expected - 1), /newer than this bot build/);
 });
 
+test('subcommands win over a plain command of the same name, in any order', () => {
+  const slash = (name: string, id: number) => asRow({ name, description: name, graph: { schemaVersion: 1, nodes: [{ id: 't', type: 'trigger.slash', typeVersion: 1, config: { command_name: name, description: name } }], edges: [] } as unknown as Graph }, id);
+  for (const rows of [[slash('emoji-menu', 1), slash('emoji-menu show', 2), slash('emoji-menu add', 3)], [slash('emoji-menu show', 2), slash('emoji-menu', 1), slash('emoji-menu add', 3)]]) {
+    const body = buildCommands(rows);
+    assert.equal(body.length, 1);
+    assert.deepEqual((body[0]!.options as { name: string; type: number }[]).map((o) => [o.name, o.type]), [['show', 1], ['add', 1]]);
+  }
+});
+
 test('every command preset becomes a valid application command', () => {
   const body = buildCommands(presets.map(asRow));
   const names = body.map((c) => c.name as string);
@@ -82,6 +107,9 @@ test('every command preset becomes a valid application command', () => {
   const subs = (ticket.options as { name: string; type: number }[]).map((o) => o.name);
   assert.ok(subs.includes('setup') && subs.includes('close') && subs.includes('update-counts'));
   assert.ok((ticket.options as { type: number }[]).every((o) => o.type === 1));
+  // DM Commands module: every command is offered in DMs too.
+  assert.ok(body.every((c) => JSON.stringify(c.contexts) === '[0]'), 'presets: servers only');
+  assert.ok(buildCommands(presets.map(asRow), undefined, true).every((c) => JSON.stringify(c.contexts) === '[0,1]'), 'module on: DMs too');
   const role = body.find((c) => c.name === 'role')!;
   const action = (role.options as { name: string; choices?: { value: string }[] }[])[0]!;
   assert.deepEqual(action.choices!.map((x) => x.value), ['add', 'remove']);
@@ -171,4 +199,12 @@ test('bot queues: same bot in order, different bots side by side', async () => {
   const afterFail = m.enqueue(3, slow('bot3-next', 1));
   await Promise.allSettled([a1, a2, b1, failing, afterFail]);
   assert.deepEqual(log, ['bot3-next', 'bot2-start', 'bot1-start', 'bot1-reload']);
+});
+
+test('a secret placeholder ([NULL]) has no value', async () => {
+  const { secretValue } = await import('./secrets-global.js');
+  const repo = (blob: Uint8Array | undefined) => ({ db: { prepare: () => ({ get: () => (blob ? { value_enc: blob } : undefined) }) } }) as never;
+  const key = () => { throw new Error('no decrypt for a placeholder'); };
+  assert.equal(secretValue(repo(new Uint8Array()), key, 'PLEX_KEY'), null);
+  assert.equal(secretValue(repo(undefined), key, 'NOPE'), null);
 });

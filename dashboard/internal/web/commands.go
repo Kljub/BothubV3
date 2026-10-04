@@ -135,35 +135,17 @@ func normName(n string) string {
 	return strings.Join(parts, "-")
 }
 
-// presetCommandID finds the custom command copy of a built-in command: same
-// name, in the preset group. Returns 0 when the user deleted or moved it.
+// presetCommandID finds the custom command copy of a built-in command by
+// its preset name. Returns 0 when there is no copy.
 func (s *Server) presetCommandID(r *http.Request, botID int64, c CommandInfo) (int64, error) {
 	if c.PresetGroup == "" {
 		return 0, nil
 	}
-	groups, err := s.api.CommandGroups(r.Context(), session(r), botID)
+	copies, err := s.presetCopies(r, botID)
 	if err != nil {
 		return 0, err
 	}
-	var groupID int64
-	for _, g := range groups {
-		if g.Name == c.PresetGroup {
-			groupID = g.ID
-		}
-	}
-	if groupID == 0 {
-		return 0, nil
-	}
-	cmds, err := s.api.CustomCommands(r.Context(), session(r), api.KindCommand, botID)
-	if err != nil {
-		return 0, err
-	}
-	for _, cmd := range cmds {
-		if cmd.Name == c.PresetName && cmd.GroupID != nil && *cmd.GroupID == groupID {
-			return cmd.ID, nil
-		}
-	}
-	return 0, nil
+	return copies[presetKey(c)].ID, nil
 }
 
 // commandView is the data for the "command_row" template.
@@ -200,28 +182,21 @@ func (s *Server) moduleCommands(r *http.Request, botID int64, module string) ([]
 	return out, nil
 }
 
-func presetKey(c CommandInfo) string { return c.PresetGroup + "/" + c.PresetName }
+// presetKey is the preset a module command's copy records (commands.preset_name).
+func presetKey(c CommandInfo) string { return c.PresetName }
 
-// presetCopies maps group+name of every command in a preset group to it.
+// presetCopies maps every module copy by its preset name. The preset, not
+// the group or the command name, identifies a copy: the user may rename the
+// command in the builder.
 func (s *Server) presetCopies(r *http.Request, botID int64) (map[string]api.CustomCommand, error) {
-	groups, err := s.api.CommandGroups(r.Context(), session(r), botID)
-	if err != nil {
-		return nil, err
-	}
-	names := map[int64]string{}
-	for _, g := range groups {
-		names[g.ID] = g.Name
-	}
 	cmds, err := s.api.CustomCommands(r.Context(), session(r), api.KindCommand, botID)
 	if err != nil {
 		return nil, err
 	}
 	out := map[string]api.CustomCommand{}
 	for _, cmd := range cmds {
-		if cmd.GroupID != nil {
-			if g, ok := names[*cmd.GroupID]; ok {
-				out[g+"/"+cmd.Name] = cmd
-			}
+		if cmd.Preset != nil {
+			out[*cmd.Preset] = cmd
 		}
 	}
 	return out, nil

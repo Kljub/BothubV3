@@ -1,0 +1,57 @@
+{
+  "name": "hello",
+  "description": "Says hello",
+  "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+      {
+        "id": "trigger",
+        "type": "trigger.slash",
+        "typeVersion": 1,
+        "config": { "command_name": "hello", "description": "Says hello" },
+        "position": { "x": 120, "y": 240 }
+      },
+      {
+        "id": "option_name",
+        "type": "option.text",
+        "typeVersion": 1,
+        "config": { "name": "name", "description": "Who should be greeted", "required": false, "variable": "name" },
+        "position": { "x": 120, "y": 110 }
+      },
+      {
+        "id": "hello",
+        "type": "plugin.__ID__.hello",
+        "typeVersion": 1,
+        "config": { "name": "{option_name}", "variable": "greeting" },
+        "position": { "x": 440, "y": 240 }
+      },
+      {
+        "id": "reply",
+        "type": "action.send_message",
+        "typeVersion": 1,
+        "config": { "message": { "mode": "normal", "content": "{greeting}" }, "target": "reply" },
+        "position": { "x": 760, "y": 240 }
+      },
+      {
+        "id": "error",
+        "type": "utility.error_handler",
+        "typeVersion": 1,
+        "config": { "variable": "error" },
+        "position": { "x": 120, "y": 520 }
+      },
+      {
+        "id": "error_reply",
+        "type": "action.send_message",
+        "typeVersion": 1,
+        "config": { "message": { "mode": "normal", "content": "Failed: {error}" }, "target": "reply" },
+        "position": { "x": 440, "y": 520 }
+      }
+    ],
+    "edges": [
+      { "from": { "node": "option_name", "port": "option" }, "to": { "node": "trigger", "port": "options" } },
+      { "from": { "node": "trigger", "port": "next" }, "to": { "node": "hello", "port": "in" } },
+      { "from": { "node": "hello", "port": "next" }, "to": { "node": "reply", "port": "in" } },
+      { "from": { "node": "error", "port": "next" }, "to": { "node": "error_reply", "port": "in" } }
+    ]
+  }
+}

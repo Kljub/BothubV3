@@ -63,12 +63,6 @@
       "icon": "🎨"
     },
     {
-      "key": "node-editor",
-      "category": "utility",
-      "icon": "🧩",
-      "beta": true
-    },
-    {
       "key": "transcripts",
       "category": "utility",
       "icon": "📄"

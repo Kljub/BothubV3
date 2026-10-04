@@ -1,0 +1,8 @@
+{
+  "category": "action",
+  "labelKey": "plugin.__ID__.node.stop_sound.label",
+  "descriptionKey": "plugin.__ID__.node.stop_sound.description",
+  "inputs": [{ "name": "in", "type": "flow", "multiple": true }],
+  "outputs": [{ "name": "next", "type": "flow" }],
+  "config": { "type": "object", "additionalProperties": false, "properties": {} }
+}

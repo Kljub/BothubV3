@@ -1,12 +1,9 @@
 {{/* Message Builder module: saved messages. Data: msgBuilderView. */}}
 {{define "message_builder"}}
 <div data-msgb data-templates-url="/api/v1/bots/{{.BotID}}/message-templates" data-bot-name="{{.BotName}}" data-bot-avatar="{{.BotAvatar}}" data-data-vars-url="/api/v1/bots/{{.BotID}}/data/variables">
-  <script type="application/json" id="msgb-texts">{{.Texts}}</script>
-  <script type="application/json" id="msgb-variables">{{.Variables}}</script>
-  <script src="/static/js/icons.js" defer></script>
-  <script src="/static/js/var-picker.js" defer></script>
-  <script src="/static/js/builder-message.js" defer></script>
-  <script src="/static/js/message-page.js" defer></script>
+  {{/* Attributes, not <script> blocks: hx-boost drops script tags of swapped pages. */}}
+  <div hidden data-msgb-texts="{{printf "%s" .Texts}}" data-msgb-variables="{{printf "%s" .Variables}}"></div>
+  {{/* The editor scripts load in layout.html: hx-boost does not run <script src> of swapped pages. */}}
 
   <section class="box">
     <header class="box-head">
@@ -57,7 +54,7 @@
 </div>
 {{end}}
 
-{{define "message_builder_head"}}<h2>{{t "msgb.saved"}} <span class="box-count">{{len .Items}}</span></h2> <span class="box-meta">{{t "msgb.limit" "count" (len .Items) "max" .Max}}</span>{{end}}
+{{define "message_builder_head"}}<h2>{{t "msgb.saved"}} <span class="box-count">{{len .Items}}</span></h2>{{end}}
 
 {{define "message_builder_list_fragment"}}{{template "message_builder_list" .Data}}
 <span id="msgb-head" hx-swap-oob="true">{{template "message_builder_head" .Data}}</span>

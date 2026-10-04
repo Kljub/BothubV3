@@ -1,0 +1,11 @@
+{
+  "title": "Discord events",
+  "description": "Reacts to Discord events without a builder graph: one file per event in events/ (example: welcome message on guildMemberAdd), the channel and text come from the settings page.",
+  "needs": ["messages"],
+  "permissions": ["discord.events.members", "discord.messages.send"],
+  "events": ["guildMemberAdd"],
+  "settings": [
+    { "key": "welcome_channel", "type": "channel", "channelTypes": ["text", "announcement"] },
+    { "key": "welcome_text", "type": "text", "default": "Welcome {user}, you are member #{count}!", "max": 500, "multiline": true, "hint": true }
+  ]
+}

@@ -24,6 +24,11 @@ final class InternalRouter
         private readonly ?TemplateStore $templates = null,
         private readonly ?DataStore $data = null,
         private readonly ?SdkPolicyStore $sdkPolicies = null,
+        private readonly ?SecretStore $secrets = null,
+        private readonly string $actor = '',
+        private readonly ?PluginStore $plugins = null,
+        private readonly ?BotBackup $backups = null,
+        private readonly ?LogStore $logs = null,
     ) {
     }
 
@@ -42,17 +47,62 @@ final class InternalRouter
     public function handle(string $method, string $path, array $body, mixed $bodyObject = null, array $query = []): array
     {
         try {
+            if ($this->backups !== null && preg_match('#^/internal/bots/(\d+)/(backup|backups|restore)(?:/([a-z0-9:-]{1,60}))?$#', $path, $m)) {
+                $this->bots->find((int) $m[1]) ?? throw ApiError::notFound();
+                return $this->backupRoute($method, (int) $m[1], $m[2], $m[3] ?? '', $body);
+            }
+            // Logs: one bot (GET, DELETE) and the instance log (GET); ?level=…&limit=…
+            if ($this->logs !== null && preg_match('#^/internal/(?:bots/(\d+)|admin)/logs$#', $path, $m)) {
+                $botId = isset($m[1]) && $m[1] !== '' ? (int) $m[1] : null;
+                return match (true) {
+                    $method === 'GET' && $botId !== null => [200, ['items' => $this->logs->forBot($botId, $query['level'] ?? null, $query['limit'] ?? null)]],
+                    $method === 'GET' => [200, ['items' => $this->logs->server($query['level'] ?? null, $query['limit'] ?? null)]],
+                    $method === 'DELETE' && $botId !== null => (function () use ($botId) {
+                        $this->logs->clear($botId);
+                        return [204, null];
+                    })(),
+                    default => throw new ApiError(405, 'error.method_not_allowed'),
+                };
+            }
             if ($this->sdkPolicies !== null && preg_match('#^/internal/admin/sdk-policies(?:/([a-z0-9._]{1,64}))?$#', $path, $m)) {
                 $permission = $m[1] ?? '';
                 return match (true) {
                     $permission === '' && $method === 'GET' => [200, ['items' => $this->sdkPolicies->list()]],
-                    $permission !== '' && $method === 'PUT' => [200, ['items' => $this->sdkPolicies->set($permission, $body['enabled'] ?? null)]],
+                    $permission !== '' && $method === 'PUT' => [200, ['items' => $this->sdkPolicies->set($permission, $body['mode'] ?? null)]],
                     default => throw new ApiError(405, 'error.method_not_allowed'),
                 };
             }
             if ($this->data !== null && preg_match('#^/internal/bots/(\d+)/data/(variables|lookup)(?:/(\d+)(/values)?)?$#', $path, $m)) {
                 $this->bots->find((int) $m[1]) ?? throw ApiError::notFound();
                 return $this->dataRoute($method, (int) $m[1], $m[2], isset($m[3]) && $m[3] !== '' ? (int) $m[3] : null, isset($m[4]), $body, array_map(static fn ($v) => is_string($v) ? $v : '', $query));
+            }
+            if ($this->plugins !== null && preg_match('#^/internal/admin/plugins/([a-z0-9_-]{2,64})/secrets$#', $path, $m)) {
+                return $method === 'PUT'
+                    ? [200, ['secretShares' => $this->plugins->shareSecrets($m[1], $body['shared'] ?? null, $this->actor)]]
+                    : throw new ApiError(405, 'error.method_not_allowed');
+            }
+            if ($this->plugins !== null && preg_match('#^/internal/admin/plugins(?:/([a-z0-9_-]{2,64}))?$#', $path, $m)) {
+                return $this->adminPluginRoute($method, $m[1] ?? null, $body, $query);
+            }
+            if ($this->plugins !== null && preg_match('#^/internal/bots/(\d+)/plugins/([a-z0-9_-]{2,64})/files(?:/([0-9a-f]{16}\.[a-z]{3,4}))?$#', $path, $m)) {
+                $this->bots->find((int) $m[1]) ?? throw ApiError::notFound();
+                $files = $this->plugins->files((int) $m[1], $m[2]);
+                return match (true) {
+                    !isset($m[3]) && $method === 'GET' => [200, ['items' => $files->list((int) $m[1], $m[2])]],
+                    !isset($m[3]) && $method === 'POST' => [201, $files->upload((int) $m[1], $m[2], $body['data'] ?? null)],
+                    isset($m[3]) && $method === 'GET' => (static function (?array $f): array {
+                        $f ?? throw ApiError::notFound();
+                        return [200, ['name' => $f['name'], 'mime' => $f['mime'], 'data' => base64_encode($f['data'])]];
+                    })($files->get((int) $m[1], $m[2], $m[3])),
+                    default => throw new ApiError(405, 'error.method_not_allowed'),
+                };
+            }
+            if ($this->plugins !== null && preg_match('#^/internal/bots/(\d+)/plugins(?:/([a-z0-9_-]{2,64})(/config|/commands)?)?$#', $path, $m)) {
+                $this->bots->find((int) $m[1]) ?? throw ApiError::notFound();
+                return $this->botPluginRoute($method, (int) $m[1], $m[2] ?? null, $m[3] ?? '', $body);
+            }
+            if ($this->secrets !== null && preg_match('#^/internal/admin/secrets(?:/([^/]+))?$#', $path, $m)) {
+                return $this->secretRoute($method, isset($m[1]) ? rawurldecode($m[1]) : null, $body);
             }
             if ($this->webhooks !== null && preg_match('#^/internal/bots/(\d+)/(webhooks|webhook-key)(?:/(\d+)(/test)?)?$#', $path, $m)) {
                 $this->bots->find((int) $m[1]) ?? throw ApiError::notFound();
@@ -131,6 +181,82 @@ final class InternalRouter
         throw ApiError::notFound('error.not_found');
     }
 
+    /** Admin tab "API / Secrets": secrets are write-only, never returned. */
+    private function secretRoute(string $method, ?string $key, array $body): array
+    {
+        $s = $this->secrets;
+        if ($key === null) {
+            return $method === 'GET' ? [200, ['items' => $s->secrets()]] : throw new ApiError(405, 'error.method_not_allowed');
+        }
+        return match ($method) {
+            'PUT' => [200, $s->saveSecret($key, $body, $this->actor)],
+            'DELETE' => (function () use ($s, $key) {
+                $s->deleteSecret($key, $this->actor);
+                return [204, null];
+            })(),
+            default => throw new ApiError(405, 'error.method_not_allowed'),
+        };
+    }
+
+    /**
+     * Plugins (admin): list, install (upload: base64 zip; market: id +
+     * version from the market index), switch on/off for every bot (PATCH
+     * {enabled}), uninstall (?deleteCommands=1 also deletes the Custom
+     * Command copies).
+     */
+    private function adminPluginRoute(string $method, ?string $id, array $body, array $query): array
+    {
+        $p = $this->plugins;
+        if ($id === null) {
+            return $method === 'GET' ? [200, ['items' => $p->list()]] : throw new ApiError(405, 'error.method_not_allowed');
+        }
+        if ($id === 'market') {
+            return $method === 'GET'
+                ? [200, $p->market(in_array($query['refresh'] ?? '0', ['1', 'true'], true), null, ($query['cached'] ?? '0') === '1')]
+                : throw new ApiError(405, 'error.method_not_allowed');
+        }
+        if ($id === 'install') {
+            if ($method !== 'POST') {
+                throw new ApiError(405, 'error.method_not_allowed');
+            }
+            if (($body['source'] ?? 'upload') === 'market') {
+                $pid = $body['id'] ?? null;
+                $version = $body['version'] ?? null;
+                if (!is_string($pid) || !is_string($version)) {
+                    throw new ApiError(422, 'error.plugin.market', ['reason' => 'id and version are required']);
+                }
+                return [201, $p->installMarket($pid, $version, $this->actor)];
+            }
+            $zip = is_string($body['zip'] ?? null) ? base64_decode($body['zip'], true) : false;
+            if ($zip === false || $zip === '') {
+                throw new ApiError(422, 'error.plugin.zip', ['reason' => 'zip must be base64']);
+            }
+            return [201, $p->installUpload($zip, $this->actor)];
+        }
+        if ($method === 'PATCH') {
+            return [200, $p->setInstanceEnabled($id, $body['enabled'] ?? null, $this->actor)];
+        }
+        if ($method !== 'DELETE') {
+            throw new ApiError(405, 'error.method_not_allowed');
+        }
+        $p->uninstall($id, in_array($query['deleteCommands'] ?? '0', ['1', 'true'], true), $this->actor);
+        return [204, null];
+    }
+
+    /** Plugins of one bot: list, switch on/off, settings, command copies. */
+    private function botPluginRoute(string $method, int $botId, ?string $pid, string $rest, array $body): array
+    {
+        $p = $this->plugins;
+        return match (true) {
+            $pid === null && $method === 'GET' => [200, ['items' => $p->listForBot($botId)]],
+            $pid !== null && $rest === '' && $method === 'PATCH' => [200, $p->setEnabled($botId, $pid, $body['enabled'] ?? null)],
+            $rest === '/config' && $method === 'GET' => [200, ['config' => (object) $p->settings($botId, $pid)]],
+            $rest === '/config' && $method === 'PUT' => [200, ['config' => (object) $p->saveSettings($botId, $pid, $body['config'] ?? $body)]],
+            $rest === '/commands' && $method === 'POST' => [200, $p->syncBot($botId, $pid)],
+            default => throw new ApiError(405, 'error.method_not_allowed'),
+        };
+    }
+
     /** Webhooks module: list, create, change, delete, test, API key. */
     private function webhookRoute(string $method, int $botId, string $section, ?int $id, bool $test, array $body): array
     {
@@ -161,6 +287,27 @@ final class InternalRouter
                 return [204, null];
             })(),
             default => $methodNotAllowed(),
+        };
+    }
+
+    /** Bot backups and templates: export, saved entries, restore. */
+    private function backupRoute(string $method, int $botId, string $section, string $id, array $body): array
+    {
+        $b = $this->backups;
+        return match (true) {
+            $section === 'backup' && $id === '' && $method === 'GET' => [200, $b->export($botId)],
+            $section === 'backups' && $id === '' && $method === 'GET' => [200, ['items' => $b->list($botId)]],
+            $section === 'backups' && $id === '' && $method === 'POST' => [201, $b->save($botId, $body)],
+            $section === 'backups' && $id !== '' && $method === 'GET' => [200, $b->data($botId, $id)],
+            $section === 'backups' && $id !== '' && $method === 'DELETE' => (function () use ($b, $botId, $id) {
+                $b->delete($botId, $id);
+                return [204, null];
+            })(),
+            // {id: saved entry or "builtin:<key>"} or {data: uploaded backup, name: file name}
+            $section === 'restore' && $id === '' && $method === 'POST' => [200, is_string($body['id'] ?? null)
+                ? $b->restore($botId, $b->data($botId, $body['id']), (string) ($body['name'] ?? $body['id']))
+                : $b->restore($botId, is_array($body['data'] ?? null) ? $body['data'] : [], mb_substr((string) ($body['name'] ?? 'upload'), 0, 50))],
+            default => throw new ApiError(405, 'error.method_not_allowed'),
         };
     }
 

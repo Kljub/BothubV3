@@ -1,0 +1,27 @@
+{
+  "category": "action",
+  "labelKey": "plugin.__ID__.node.api_get.label",
+  "descriptionKey": "plugin.__ID__.node.api_get.description",
+  "inputs": [{ "name": "in", "type": "flow", "multiple": true }],
+  "outputs": [
+    { "name": "next", "type": "flow" },
+    { "name": "failed", "type": "flow" },
+    { "name": "not_set_up", "type": "flow" }
+  ],
+  "results": [
+    { "suffix": "", "labelKey": "plugin.__ID__.node.api_get.result" },
+    { "suffix": ".status", "labelKey": "plugin.__ID__.node.api_get.result_status" },
+    { "suffix": ".missing", "labelKey": "plugin.__ID__.node.api_get.result_missing" }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["path"],
+    "properties": {
+      "path": { "type": "string", "maxLength": 500, "default": "/" },
+      "query": { "type": "string", "maxLength": 500 },
+      "field": { "type": "string", "maxLength": 200 },
+      "variable": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$" }
+    }
+  }
+}

@@ -6,9 +6,11 @@
   if (window.BotHubMessagePage) return;
   window.BotHubMessagePage = true;
 
+  // Page data: data-msgb-texts / data-msgb-variables (hx-boost drops <script> blocks).
   const island = (id) => {
     try {
-      return JSON.parse(document.getElementById(id)?.textContent || 'null');
+      const attr = `data-${id}`;
+      return JSON.parse(document.querySelector(`[${attr}]`)?.getAttribute(attr) || 'null');
     } catch {
       return null;
     }

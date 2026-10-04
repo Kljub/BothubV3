@@ -35,7 +35,7 @@
         "x-labelKey": "builder.cfg.channel",
         "x-hintKey": "builder.cfg.ref_hint",
         "x-ref": "channel",
-        "default": "{channel.id}"
+        "default": "{user.voice.channel.id}"
       },
       "text_channel": {
         "type": "string",

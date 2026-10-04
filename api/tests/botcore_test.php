@@ -74,6 +74,26 @@ $row = $pdo->query("SELECT c.enabled, g.name AS grp, (SELECT COUNT(*) FROM comma
 check('presets seeded', $count > 0 && (int) $pdo->query("SELECT COUNT(*) FROM commands WHERE bot_id = {$botId}")->fetchColumn() === $count);
 check('preset disabled, in module group, one version', $row !== false && $row['enabled'] === 0 && $row['grp'] === 'Moderation' && $row['versions'] === 1);
 
+// --- refresh: unsaved copies follow the presets, saved ones stay ---
+$stub = '{"schemaVersion":1,"nodes":[{"id":"trigger","type":"trigger.slash","typeVersion":1,"config":{"command_name":"x"},"position":{"x":0,"y":0}}],"edges":[]}';
+$pdo->prepare("UPDATE commands SET graph = ? WHERE bot_id = ? AND name IN ('purge', 'kick')")->execute([$stub, $botId]);
+$pdo->exec("UPDATE commands SET hidden = 0, enabled = 1 WHERE bot_id = {$botId} AND name = 'kick'");
+$outboxBefore = (int) $pdo->query('SELECT COUNT(*) FROM outbox')->fetchColumn();
+$changed = Connection::write($pdo, fn (PDO $p) => CommandPresets::refresh($p));
+$graphOf = fn (string $n) => $pdo->query("SELECT graph FROM commands WHERE bot_id = {$botId} AND name = '{$n}'")->fetchColumn();
+$purge = $pdo->query("SELECT enabled, (SELECT COUNT(*) FROM command_versions v WHERE v.command_id = c.id) AS versions FROM commands c WHERE bot_id = {$botId} AND name = 'purge'")->fetch();
+check('refresh updates only the unsaved copy', $changed === 1 && $graphOf('purge') !== $stub && $graphOf('kick') === $stub);
+check('refresh keeps enabled, adds a version and an event', $purge['enabled'] === 0 && $purge['versions'] === 2 && (int) $pdo->query('SELECT COUNT(*) FROM outbox')->fetchColumn() === $outboxBefore + 1);
+check('refresh is idempotent', Connection::write($pdo, fn (PDO $p) => CommandPresets::refresh($p)) === 0);
+
+// --- regroup: copies that lost their module group get it back ---
+check('seeded module groups are system groups', (int) $pdo->query("SELECT MIN(system) FROM command_groups WHERE bot_id = {$botId}")->fetchColumn() === 1);
+$pdo->exec("DELETE FROM command_groups WHERE bot_id = {$botId} AND name = 'Moderation'");
+$moved = Connection::write($pdo, fn (PDO $p) => CommandPresets::regroup($p));
+$back = $pdo->query("SELECT g.name, g.system FROM commands c JOIN command_groups g ON g.id = c.group_id WHERE c.bot_id = {$botId} AND c.name = 'purge'")->fetch();
+check('regroup recreates the module group as a system group', $moved > 0 && $back['name'] === 'Moderation' && $back['system'] === 1);
+check('regroup is idempotent', Connection::write($pdo, fn (PDO $p) => CommandPresets::regroup($p)) === 0);
+
 if (!getenv('REDIS_URL')) {
     echo "skip redis: REDIS_URL not set\n";
     exit($failed === 0 ? 0 : 1);

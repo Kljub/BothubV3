@@ -1,0 +1,15 @@
+{
+  "title": "External API service",
+  "description": "Calls an external API with ctx.http.secret (services/api.js): address and key are admin secrets (Admin -> API / Secrets), shared with the plugin in the App Store. The bot adds both; the plugin never sees them.",
+  "needs": [],
+  "permissions": [
+    "secrets.use"
+  ],
+  "nodes": [
+    "api_get"
+  ],
+  "secrets": [
+    "__URL_SECRET__",
+    "__KEY_SECRET__"
+  ]
+}

@@ -1,0 +1,307 @@
+{{define "title"}}{{with .Data.Detail}}{{.Item.Name}}{{else}}{{t "store.title"}}{{end}}{{end}}
+
+{{define "content"}}
+{{with .Data.List}}{{template "store_list" .}}{{end}}
+{{with .Data.Detail}}
+<div class="module-page module-group-{{.Item.Category}}">
+  <nav class="module-breadcrumb" aria-label="{{t "store.title"}}">
+    <a href="/store">{{t "store.title"}}</a> › <span>{{t (printf "module.category.%s" .Item.Category)}}</span> › <strong>{{.Item.Name}}</strong>
+  </nav>
+  <div id="store-detail">{{template "store_detail" .}}</div>
+</div>
+{{end}}
+{{end}}
+
+{{/* App Store list: search, category and state filters, card grid.
+     Receives a storeView (internal/web/store.go). */}}
+{{define "store_list"}}
+<p class="muted store-intro">{{t "store.intro"}}</p>
+<form class="form store-toolbar" hx-get="/store" hx-target="#store-grid" hx-swap="outerHTML" hx-push-url="true"
+  hx-trigger="input delay:250ms, search">
+  <div class="store-toolbar-row">
+    <input type="search" name="q" value="{{.Query}}" maxlength="60" class="input-wide" placeholder="{{t "store.search"}}" aria-label="{{t "store.search"}}">
+    <div class="chips" role="radiogroup" aria-label="{{t "store.filter_label"}}">
+      {{range .Filters}}
+      <label class="chip"><input type="radio" name="filter" value="{{.}}" {{if eq . $.Filter}}checked{{end}}>{{t (printf "store.filter.%s" .)}}</label>
+      {{end}}
+    </div>
+    <button type="button" class="btn btn-sm store-refresh" hx-get="/store?live=1&refresh=1" hx-include="closest form" hx-target="#store-grid" hx-swap="outerHTML"
+      hx-disabled-elt="this" hx-push-url="false" title="{{t "store.refresh_hint"}}">{{t "store.refresh"}}</button>
+  </div>
+  <div class="chips" role="radiogroup" aria-label="{{t "store.category_label"}}">
+    <label class="chip"><input type="radio" name="cat" value="" {{if not .Category}}checked{{end}}>{{t "store.category_all"}}</label>
+    {{range .Categories}}
+    <label class="chip"><input type="radio" name="cat" value="{{.}}" {{if eq . $.Category}}checked{{end}}>{{t (printf "module.category.%s" .)}}</label>
+    {{end}}
+  </div>
+</form>
+<details class="box store-upload">
+  <summary class="box-head"><h2>{{t "admin.plugins.upload"}}</h2><span class="box-meta">{{t "admin.plugins.upload_hint"}} ›</span></summary>
+  <div class="box-body">
+    <div id="store-upload-error"></div>
+    <form class="form" hx-post="/store/upload" hx-encoding="multipart/form-data" hx-disabled-elt="find button">
+      <label class="field">{{t "admin.plugins.file"}}
+        <input type="file" name="file" accept=".zip,application/zip" required>
+        <span class="hint">{{t "admin.plugins.file_hint"}}</span>
+      </label>
+      <div><button type="submit" class="btn btn-primary btn-sm">{{t "admin.plugins.install"}}</button></div>
+    </form>
+  </div>
+</details>
+{{template "store_grid" .}}
+{{end}}
+
+{{define "store_grid_fragment"}}{{template "store_grid" .Data}}{{end}}
+
+{{define "store_grid"}}
+<div id="store-grid"{{if .Live}} hx-get="{{.LiveURL}}" hx-trigger="load" hx-swap="outerHTML" hx-push-url="false"{{end}}>
+  {{if .Live}}<p class="hint store-live" role="status"><span class="store-live-dot" aria-hidden="true"></span>{{t "store.live"}}</p>{{end}}
+  {{if .MarketError}}
+  <div class="alert alert-error">{{t "admin.plugins.market_error"}}</div>
+  {{else if not .Total}}
+  <div class="empty-state"><span class="empty-state-icon" aria-hidden="true">🧩</span><strong>{{t "store.empty"}}</strong><span class="muted">{{t "store.empty_hint"}}</span></div>
+  {{else if not .Items}}
+  <div class="empty-state"><span class="empty-state-icon" aria-hidden="true">🔍</span><strong>{{t "store.no_match"}}</strong><span class="muted">{{t "store.no_match_hint"}}</span></div>
+  {{else}}
+  <p class="muted store-count">{{t "store.count" "shown" (len .Items) "total" .Total}}</p>
+  <div class="module-grid">
+    {{range .Items}}
+    <a class="card store-card module-group-{{.Category}}" href="/store/{{.ID}}">
+      <div class="store-card-top">
+        <span class="card-badges">
+          {{if .Update}}<span class="badge-soft badge-soft-error">{{t "store.badge.update"}}</span>
+          {{else if and .Info (or (not .Info.Enabled) .Info.BlockedBy)}}<span class="badge-soft badge-soft-stopped">{{t "store.badge.off"}}</span>
+          {{else if and .Info .Info.Missing}}<span class="badge-soft badge-soft-error">{{t "store.badge.setup"}}</span>
+          {{else if .Installed}}<span class="badge-soft badge-soft-running">{{t "store.badge.installed"}}</span>{{if .Uploaded}} <span class="badge-soft">{{t "store.badge.uploaded"}}</span>{{end}}
+          {{else if not .Published}}<span class="badge-soft">{{t "store.badge.unpublished"}}</span>{{end}}
+        </span>
+        <span class="store-card-icon" aria-hidden="true">{{.Icon}}</span>
+      </div>
+      <div class="store-card-body">
+        <h3>{{.Name}}</h3>
+        <span class="store-card-meta">{{with .Developer}}{{.}} · {{end}}{{t (printf "module.category.%s" .Category)}}{{with or .Published .Installed}} · v{{.}}{{end}}</span>
+        <p class="muted">{{with .Description}}{{.}}{{else}}<span class="mono">{{.ID}}</span>{{end}}</p>
+      </div>
+    </a>
+    {{end}}
+  </div>
+  {{end}}
+</div>
+{{end}}
+
+{{define "store_detail_fragment"}}{{template "store_detail" .Data}}{{end}}
+
+{{/* One market plugin: head with install/update, contents, permissions,
+     endpoints, facts, uninstall. Receives a storeDetail. */}}
+{{define "store_detail"}}
+{{$it := .Item}}
+{{with .Notice}}<div class="alert alert-success">{{.}}</div>{{end}}
+<section class="box">
+  <div class="module-head">
+    <span class="module-head-icon" aria-hidden="true">{{$it.Icon}}</span>
+    <div class="module-head-text">
+      <h2>{{$it.Name}}{{with or $it.Installed $it.Published}} <span class="muted mono">v{{.}}</span>{{end}}</h2>
+      <p class="muted">{{with $it.Developer}}{{.}} · {{end}}{{t (printf "module.category.%s" $it.Category)}}{{with $it.License}} · {{.}}{{end}}</p>
+    </div>
+    <div class="store-actions">
+      {{if and $it.Published (or $it.Update (not $it.Installed))}}
+      <button type="button" class="btn btn-primary" data-open-dialog="store-install-dialog">{{if $it.Update}}{{t "admin.plugins.market_update_to" "version" $it.Published}}{{else}}{{t "admin.plugins.install"}}{{end}}</button>
+      {{end}}
+      {{with $it.Info}}
+      <form class="store-switch" hx-put="/store/{{$it.ID}}/enabled" hx-trigger="change" hx-target="#store-detail" hx-swap="innerHTML">
+        <span class="muted">{{if not .Enabled}}{{t "store.switch.off"}}{{else if .BlockedBy}}{{t "store.switch.blocked"}}{{else}}{{t "store.switch.on"}}{{end}}</span>
+        <input type="checkbox" class="toggle" name="enabled" value="true" {{if .Enabled}}checked{{end}} aria-label="{{t "store.switch.label" "plugin" $it.Name}}">
+      </form>
+      {{end}}
+      {{if $it.Installed}}<span class="badge-soft badge-soft-running"><span class="badge-dot"></span>{{t "admin.plugins.market_installed" "version" $it.Installed}}</span>
+      {{else if not $it.Published}}<span class="badge-soft">{{t "admin.plugins.market_unpublished"}}</span>{{end}}
+      {{if $it.Uploaded}}<span class="badge-soft">{{t "store.badge.uploaded"}}</span>{{end}}
+      {{if and $it.Info $it.Info.Missing}}<span class="badge-soft badge-soft-error">{{t "store.badge.setup"}}</span>{{end}}
+    </div>
+  </div>
+  {{if and $it.Info $it.Info.Missing}}
+  <div class="box-body"><div class="alert alert-warning store-setup">
+    <strong>{{t "store.setup.title"}}</strong>
+    <ul>{{range $it.Info.Missing}}<li>{{if .Provider}}{{t (printf "store.setup.connect.%s" .Provider)}}{{else}}<span class="mono">{{.Key}}</span> · {{t "store.setup.secret"}}{{end}}</li>{{end}}</ul>
+    <a class="btn btn-sm" href="/admin/api_secrets">{{t "store.setup.open_secrets"}} ›</a>
+  </div></div>
+  {{end}}
+  {{with $it.Description}}<div class="box-body"><p>{{.}}</p></div>{{end}}
+</section>
+
+{{with .ConnectError}}<div class="alert alert-error">{{.}}</div>{{end}}
+{{range .Connect}}{{$g := .}}
+{{/* Sign-in helper (services.connect): one click to the provider's sign-in;
+     token and server address are stored as secrets and shared with the plugin.
+     Several slots (PLEX_TOKEN … PLEX_TOKEN_5) = several servers. */}}
+<section class="box store-connect">
+  <div class="box-body">
+    <div class="store-connect-row">
+      <span class="store-connect-logo" aria-hidden="true">{{if eq .Provider "plex"}}▶{{else}}🔑{{end}}</span>
+      <span class="store-connect-text">
+        <strong>{{t (printf "store.connect.%s.title" .Provider)}}</strong>
+        <span class="hint">{{if .Connected}}{{t (printf "store.connect.%s.connected" .Provider) "count" (len .Connected)}}{{else}}{{t (printf "store.connect.%s.hint" .Provider)}}{{end}}</span>
+      </span>
+      {{with .Next}}<button type="button" class="btn {{if not $g.Connected}}btn-primary{{end}}" hx-post="/store/{{$it.ID}}/connect/{{.}}" hx-disabled-elt="this">{{if $g.Connected}}{{t "store.connect.another"}}{{else}}{{t (printf "store.connect.%s.button" $g.Provider)}}{{end}}</button>{{end}}
+    </div>
+    {{with .Connected}}
+    <ul class="store-connect-list">
+      {{range .}}
+      <li>
+        <span class="store-perm is-on">{{template "icon_check"}}</span>
+        <span class="store-connect-text"><strong>{{with .Name}}{{.}}{{else}}{{.Key}}{{end}}</strong><span class="hint mono">{{.Key}}</span></span>
+        <button type="button" class="btn btn-sm" hx-post="/store/{{$it.ID}}/connect/{{.Key}}" hx-disabled-elt="this">{{t "store.connect.again"}}</button>
+        <button type="button" class="btn btn-sm btn-danger-soft" hx-delete="/store/{{$it.ID}}/connect/{{.Key}}" hx-target="#store-detail" hx-swap="innerHTML"
+          hx-confirm="{{t "store.connect.remove_confirm" "name" (or .Name .Key)}}">{{t "store.connect.remove"}}</button>
+      </li>
+      {{end}}
+    </ul>
+    {{end}}
+  </div>
+</section>
+{{end}}
+{{with $it.Info}}{{if .BlockedBy}}
+<div class="alert alert-error store-blocked">
+  <span>{{t "store.blocked_installed" "permissions" (join .BlockedBy ", ")}}</span>
+  <button type="button" class="btn btn-sm btn-primary" hx-post="/store/{{$it.ID}}/grant" hx-target="#store-detail" hx-swap="innerHTML">{{t "store.grant"}}</button>
+</div>
+{{end}}{{end}}
+
+{{if and $it.Published (or $it.Update (not $it.Installed))}}
+{{/* Install consent, like an OAuth screen: every SDK permission with a check
+     (on now) or a cross (off now, switched on by the install). */}}
+<dialog id="store-install-dialog" class="modal store-consent" aria-labelledby="store-install-title">
+  <div class="store-consent-head">
+    <span class="store-consent-icon" aria-hidden="true">{{$it.Icon}}</span>
+    <h2 id="store-install-title">{{$it.Name}} <span class="muted mono">v{{$it.Published}}</span></h2>
+    <p class="muted">{{t "store.consent.wants"}}</p>
+  </div>
+  <div class="store-consent-box">
+    <p>{{t "store.consent.allow" "plugin" $it.Name}}</p>
+    <ul class="store-consent-list">
+      {{range $it.MarketPermissions}}
+      <li class="{{if .Enabled}}is-on{{else}}is-off{{end}}">
+        {{if .Enabled}}{{template "icon_check"}}{{else}}{{template "icon_x"}}{{end}}
+        <span><strong>{{if .Unknown}}<span class="mono">{{.Key}}</span>{{else}}{{t (printf "sdk.perm.%s" .Key)}}{{end}}</strong>
+          <span class="hint">{{if eq .Mode "allow"}}{{t "store.consent.on"}}{{else if .Enabled}}{{t "store.consent.default_on"}}{{else if .Unknown}}{{t "store.perm.unknown"}}{{else}}{{t "store.consent.will_enable"}}{{end}}{{with .Risk}} · {{t (printf "sdk.risk_group.%s" .)}}{{end}}</span></span>
+      </li>
+      {{else}}
+      <li class="is-on">{{template "icon_check"}}<span>{{t "admin.plugins.no_permissions"}}</span></li>
+      {{end}}
+    </ul>
+    {{if .Grant}}<p class="hint">{{t "store.consent.auto" "count" .Grant}}</p>{{end}}
+    {{with $it.Secrets}}
+    <p>{{t "store.consent.secrets"}}</p>
+    <ul class="store-consent-list">
+      {{range .}}<li class="is-off"><span class="store-consent-key" aria-hidden="true">🔑</span><span><strong class="mono">{{.}}</strong><span class="hint">{{t "store.consent.secret_hint"}}</span></span></li>{{end}}
+    </ul>
+    {{end}}
+    {{with $it.Layers}}{{if .Commands}}<p class="hint">{{t "store.commands_hint"}}</p>{{end}}{{end}}
+  </div>
+  <form class="store-consent-actions" hx-post="/store/{{$it.ID}}/install" hx-target="#store-detail" hx-swap="innerHTML">
+    <input type="hidden" name="version" value="{{$it.Published}}">
+    <button type="button" class="btn" data-close-dialog>{{t "store.consent.cancel"}}</button>
+    <button type="submit" class="btn btn-primary" data-close-dialog>{{if $it.Update}}{{t "admin.plugins.market_update_to" "version" $it.Published}}{{else}}{{t "store.consent.install"}}{{end}}</button>
+  </form>
+</dialog>
+{{end}}
+
+{{if $it.Uploaded}}<div class="alert">{{t "store.uploaded_hint"}}</div>
+{{else if not $it.Published}}<div class="alert alert-error">{{t "admin.plugins.market_unpublished_hint"}}</div>{{end}}
+
+{{with $it.Layers}}
+<section class="box">
+  <header class="box-head"><h2>{{t "store.contents"}}</h2></header>
+  <div class="box-body">
+    <div class="chips">
+      {{if .Commands}}<span class="badge-soft">{{t "store.layer.commands" "count" .Commands}}</span>{{end}}
+      {{if .Nodes}}<span class="badge-soft">{{t "store.layer.nodes" "count" .Nodes}}</span>{{end}}
+      {{if .Events}}<span class="badge-soft">{{t "store.layer.events" "count" .Events}}</span>{{end}}
+      {{if .Services}}<span class="badge-soft">{{t "store.layer.services" "count" .Services}}</span>{{end}}
+      {{if .Dashboard}}<span class="badge-soft">{{t "store.layer.dashboard"}}</span>{{end}}
+    </div>
+    {{if .Commands}}<p class="hint">{{t "store.commands_hint"}}</p>{{end}}
+  </div>
+</section>
+{{end}}
+
+<section class="box">
+  <header class="box-head"><h2>{{t "admin.plugins.permissions"}}</h2><span class="box-meta">{{len $it.Permissions}}</span></header>
+  <div class="box-body">
+    {{if and .Grant (not $it.Installed)}}<p class="hint">{{t "store.consent.auto" "count" .Grant}}</p>{{end}}
+    {{if $it.Permissions}}
+    <table class="table">
+      <tbody>
+        {{range $it.Permissions}}
+        <tr>
+          <td><strong>{{if .Unknown}}<span class="mono">{{.Key}}</span>{{else}}{{t (printf "sdk.perm.%s" .Key)}}{{end}}</strong>
+            {{if not .Unknown}}<br><span class="hint">{{t (printf "sdk.perm.%s_hint" .Key)}}</span>{{end}}</td>
+          <td><code class="mono muted">{{.Key}}</code></td>
+          <td>{{with .Risk}}<span class="badge-soft{{if eq . "high"}} badge-soft-stopped{{else if eq . "medium"}} badge-soft-error{{end}}">{{t (printf "sdk.risk_group.%s" .)}}</span>{{end}}</td>
+          <td><span class="store-perm {{if .Enabled}}is-on{{else}}is-off{{end}}">{{if .Enabled}}{{template "icon_check"}} {{t "store.perm.on"}}{{else if .Unknown}}{{template "icon_x"}} {{t "store.perm.unknown"}}{{else}}{{template "icon_x"}} {{t "store.perm.off"}}{{end}}</span></td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{else}}<p class="muted">{{t "admin.plugins.no_permissions"}}</p>{{end}}
+  </div>
+</section>
+
+{{if and $it.Info $it.Info.Secrets}}
+<section class="box">
+  <header class="box-head"><h2>{{t "admin.plugins.secrets"}}</h2></header>
+  <div class="box-body">
+    <form class="form" hx-put="/store/{{$it.ID}}/secrets" hx-target="#store-detail" hx-swap="innerHTML">
+      <span class="hint">{{t "admin.plugins.secrets_hint"}}</span>
+      {{range $it.Info.Secrets}}
+      <label class="toggle-row"><span class="mono">{{.Key}}{{if not .Exists}} <span class="badge-soft">{{t "admin.plugins.secret_missing"}}</span>{{else if not .Set}} <span class="badge-soft secret-null">[NULL]</span>{{end}}</span>
+        <input type="checkbox" class="toggle" name="shared" value="{{.Key}}" {{if .Shared}}checked{{end}} {{if not .Exists}}disabled{{end}}></label>
+      {{end}}
+      <div><button type="submit" class="btn btn-primary btn-sm">{{t "admin.plugins.secrets_save"}}</button></div>
+    </form>
+  </div>
+</section>
+{{else if $it.Secrets}}
+<section class="box">
+  <header class="box-head"><h2>{{t "admin.plugins.secrets"}}</h2></header>
+  <div class="box-body">
+    <p class="hint">{{t "store.secrets_hint"}}</p>
+    <div class="chips">{{range $it.Secrets}}<span class="badge-soft mono">{{.}}</span>{{end}}</div>
+  </div>
+</section>
+{{end}}
+
+<section class="box">
+  <header class="box-head"><h2>{{t "store.facts"}}</h2></header>
+  <div class="box-body">
+    <dl class="settings-facts">
+      <dt>{{t "admin.plugins.id"}}</dt><dd class="mono">{{$it.ID}}</dd>
+      {{if not $it.Uploaded}}<dt>{{t "admin.plugins.version"}}</dt><dd class="mono">{{with $it.Published}}{{.}}{{else}}–{{end}}</dd>{{end}}
+      {{with $it.Installed}}<dt>{{t "store.installed_version"}}</dt><dd class="mono">{{.}}</dd>{{end}}
+      {{with $it.Size}}<dt>{{t "store.size"}}</dt><dd>{{bytes .}}</dd>{{end}}
+      {{with $it.License}}<dt>{{t "store.license"}}</dt><dd>{{.}}</dd>{{end}}
+      {{with $it.Info}}
+      <dt>{{t "admin.plugins.installed_at"}}</dt><dd>{{.InstalledAt}}</dd>
+      <dt>{{t "admin.plugins.sha"}}</dt><dd class="mono">{{.SHA}}…</dd>
+      {{with .Events}}<dt>{{t "admin.plugins.events"}}</dt><dd>{{range .}}<span class="badge-soft mono">{{.}}</span> {{end}}</dd>{{end}}
+      {{with .Tasks}}<dt>{{t "admin.plugins.tasks"}}</dt><dd>{{range .}}<span class="badge-soft mono">{{.}}</span> {{end}}</dd>{{end}}
+      {{end}}
+    </dl>
+  </div>
+</section>
+
+{{if $it.Installed}}
+<section class="box box-danger">
+  <header class="box-head"><h2>{{t "admin.plugins.uninstall_keep"}}</h2></header>
+  <div class="box-body">
+    <p class="hint">{{t "admin.plugins.uninstall_hint"}}</p>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-sm" hx-delete="/store/{{$it.ID}}" hx-target="#store-detail" hx-swap="innerHTML"
+        hx-confirm="{{t "admin.plugins.uninstall_confirm" "plugin" $it.Name}}">{{t "admin.plugins.uninstall_keep"}}</button>
+      {{if and $it.Layers $it.Layers.Commands}}<button type="button" class="btn btn-sm btn-danger-soft" hx-delete="/store/{{$it.ID}}?deleteCommands=1" hx-target="#store-detail" hx-swap="innerHTML"
+        hx-confirm="{{t "admin.plugins.uninstall_delete_confirm" "plugin" $it.Name}}">{{t "admin.plugins.uninstall_delete"}}</button>{{end}}
+    </div>
+  </div>
+</section>
+{{end}}
+{{end}}

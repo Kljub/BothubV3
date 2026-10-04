@@ -26,6 +26,17 @@ list item use `modset.<module>.<list>.<key>`.
 | `words`    | `["text", …]`                                           | `max`, `maxLength`                   |
 | `message`  | `{mode, content, title, description, color, image, footer}` (mode `text` or `embed`) | `default` |
 | `list`     | `[{…item fields…}]`                                     | `item` (fields), `max`, `titleField` |
+| `permissions` | `{allowed_roles: [{id, guild} or {id: "everyone"}], banned_roles: [{id, guild}], required_permissions: ["manage_messages", …], banned_channels: [{id, guild}]}` | `lists` (which of the four to show), `default`, `group` |
+
+Role and channel fields use the same picker as the node editor (server, then its roles or channels; chips; add by ID). `permissions` is the permissions block of the slash trigger: who may trigger the module and where (same check as for commands, `denied()` in bot/src/discord/commands.ts).
+With `group: true` the block describes a group of members instead (e.g. who
+is exempt; `inBlock()`): no @everyone, no open/restricted badge, and no value
+means nobody. Own card texts: `permblock.<label>.who`, `.<list>`, `.<list>_hint`,
+`.<list>_empty`, where `<label>` is the field's label key (e.g.
+`permblock.modset.honeypot.exempt.allowed_roles`).
+
+Any field may have `required: true` (empty values are refused on save). List entries get a
+stable `_id` from the API (kept on edits), so the bot can keep state per entry.
 
 List fields may have `unique: ["field", …]`: the API refuses two entries with the same
 values in these fields. `hint: true` shows the text `modset.<module>.<key>_hint` below

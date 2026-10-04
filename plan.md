@@ -121,7 +121,7 @@ Vorschlag: **Go `html/template` + htmx**, ohne SPA.
 | Guild-Übersicht und Modul-Schalter pro Guild | 🔄 In Bearbeitung |
 | Command Builder (Editor-Insel) | ⬜ Offen |
 | Modul-Seiten (je Modul eine Seite, siehe Phase 4) | ⬜ Offen |
-| Plugin-Verwaltung pro Bot (Installieren, Permissions) | ⬜ Offen |
+| Plugin-Verwaltung (global installieren, pro Bot abschalten) und SDK Policies (Admin, An/Aus pro Recht) | 🔄 SDK Policies fertig; Installation offen |
 
 Bis die API steht, arbeitet das Dashboard gegen die In-Memory-Mock-API `dashboard/cmd/mockapi` (Compose-Profil `mock`).
 
@@ -163,7 +163,7 @@ Module gelten pro Bot für alle seine Server. Katalog und Reihenfolge: `shared/m
 | utility | webhooks | ⬜ |
 | utility | message-builder | ⬜ |
 | utility | card-designer | ⬜ |
-| utility | node-editor (Beta) | ⬜ |
+| utility | node-editor: kein Modul mehr, kommt später als Plugin (2026-10-03) | ➖ |
 | utility | transcripts | ⬜ |
 | security | automod | ⬜ |
 | security | moderation | 🔄 Einstellungsseite (Zugriff mit Moderator-/Admin-Rollen, Protokoll-Kanal, Direktnachricht, Bann-Löschung, automatische Strafen), Fälle und Notizen (Migration 0008), befristeter Bann/Rolle über `scheduled_jobs`, 35 Standard-Graphen; fehlen noch: automods, channel, avatar, userinfo |

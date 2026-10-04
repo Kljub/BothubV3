@@ -50,8 +50,18 @@
         "sdk.policies.changed": {
           "$comment": "admin switched an SDK permission on or off (sdk_policies); the bot restarts the plugins of every running bot"
         },
+        "plugin.webhook": {
+          "botId": "number",
+          "pluginId": "string",
+          "name": "string",
+          "payload": "object",
+          "$comment": "a plugin webhook was called (bothub.json services.webhooks, URL with HMAC token); the bot runs the plugin's webhooks[name] handler"
+        },
         "plugins.changed": {
           "$comment": "a plugin was installed, removed, switched on or off globally or for a bot (plugin_installs, bot_plugin_disabled); the bot restarts the plugins of every running bot"
+        },
+        "secrets.changed": {
+          "$comment": "global secrets or API endpoints changed; the bot drops its secret cache"
         }
       }
     },

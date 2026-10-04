@@ -125,7 +125,7 @@ final class TimedStore
     }
 
     /** @return array{name: string, kind: string, interval: ?int, times: string, weekdays: string, enabled: int} column order of the INSERT */
-    private static function valid(array $in): array
+    public static function valid(array $in): array
     {
         $name = trim((string) ($in['name'] ?? ''));
         if ($name === '' || mb_strlen($name) > 60) {

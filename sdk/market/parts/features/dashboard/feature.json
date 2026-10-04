@@ -1,0 +1,25 @@
+{
+  "title": "Dashboard settings page",
+  "description": "A settings page per bot (dashboard/settings.json: text, select, color, channel, roles, list ...), rendered by BotHub. The plugin reads the values read-only with ctx.config; nodes/reply_for uses them.",
+  "needs": [],
+  "permissions": [],
+  "nodes": ["reply_for"],
+  "settings": [
+    { "key": "greeting", "type": "text", "default": "Welcome {user}!", "max": 200, "required": true, "hint": true },
+    { "key": "style", "type": "select", "options": ["short", "friendly"], "default": "short" },
+    { "key": "color", "type": "color", "default": "#5865f2" },
+    { "key": "log_channel", "type": "channel", "channelTypes": ["text"] },
+    { "key": "staff_roles", "type": "roles", "max": 10 },
+    {
+      "key": "replies",
+      "type": "list",
+      "max": 20,
+      "titleField": "trigger",
+      "hint": true,
+      "item": [
+        { "key": "trigger", "type": "text", "max": 50, "required": true },
+        { "key": "answer", "type": "text", "max": 500, "multiline": true }
+      ]
+    }
+  ]
+}

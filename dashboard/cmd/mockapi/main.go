@@ -67,6 +67,7 @@ type store struct {
 	php     *phpBots // nil: bots stay in memory
 
 	secEvents   []securityEvent
+	secrets     map[string]*globalSecret
 	webhooks    map[int64][]*webhook
 	webhookSeq  int64
 	webhookKeys map[int64]webhookKey
@@ -89,6 +90,7 @@ type store struct {
 	cmdGroups      map[int64][]*cmdGroup
 	groupSeq       int64
 	presets        []commandPreset
+	sdkPolicies    map[string]bool
 	data           dataStore
 	deletedCmds    map[int64][]deletedCmd
 	tplSeq         int64
@@ -161,6 +163,16 @@ func main() {
 	mux.HandleFunc("DELETE /api/v1/auth/sessions/{sessionId}", s.auth(s.auditedAuth("session_revoked", s.revokeSession)))
 	mux.HandleFunc("POST /api/v1/auth/sessions/revoke-others", s.auth(s.auditedAuth("sessions_revoked", s.revokeOtherSessions)))
 	mux.HandleFunc("GET /api/v1/auth/activity", s.auth(s.securityActivity))
+	// Admin: global secrets (write-only values).
+	mux.HandleFunc("GET /api/v1/admin/plugins", s.auth(s.adminViaPHP(adminPHPRequired)))
+	mux.HandleFunc("GET /api/v1/admin/plugins/market", s.auth(s.adminViaPHP(adminPHPRequired)))
+	mux.HandleFunc("POST /api/v1/admin/plugins/install", s.auth(s.adminViaPHP(adminPHPRequired)))
+	mux.HandleFunc("DELETE /api/v1/admin/plugins/{plugin}", s.auth(s.adminViaPHP(adminPHPRequired)))
+	mux.HandleFunc("PATCH /api/v1/admin/plugins/{plugin}", s.auth(s.adminViaPHP(adminPHPRequired)))
+	mux.HandleFunc("PUT /api/v1/admin/plugins/{plugin}/secrets", s.auth(s.adminViaPHP(adminPHPRequired)))
+	mux.HandleFunc("GET /api/v1/admin/secrets", s.auth(s.adminViaPHP(s.listSecrets)))
+	mux.HandleFunc("PUT /api/v1/admin/secrets/{key}", s.auth(s.adminViaPHP(s.putSecret)))
+	mux.HandleFunc("DELETE /api/v1/admin/secrets/{key}", s.auth(s.adminViaPHP(s.deleteSecret)))
 	mux.HandleFunc("GET /api/v1/settings", s.auth(s.settings))
 	mux.HandleFunc("PATCH /api/v1/settings", s.auth(s.updateSettings))
 	mux.HandleFunc("GET /api/v1/bots", s.auth(s.listBots))
@@ -179,9 +191,17 @@ func main() {
 	mux.HandleFunc("PUT /api/v1/bots/{id}/modules/{key}/config", s.auth(s.withBot(s.viaPHP(phpRequired))))
 	mux.HandleFunc("GET /api/v1/stats/overview", s.auth(s.overviewStats))
 	mux.HandleFunc("GET /api/v1/admin/server-settings", s.auth(s.getServerSettings))
+	mux.HandleFunc("GET /api/v1/admin/sdk-policies", s.auth(s.listSdkPolicies))
+	mux.HandleFunc("GET /api/v1/bots/{id}/backup", s.auth(s.withBot(s.viaPHP(phpRequired))))
+	mux.HandleFunc("GET /api/v1/bots/{id}/backups", s.auth(s.withBot(s.viaPHP(phpRequired))))
+	mux.HandleFunc("POST /api/v1/bots/{id}/backups", s.auth(s.withBot(s.viaPHP(phpRequired))))
+	mux.HandleFunc("GET /api/v1/bots/{id}/backups/{tid}", s.auth(s.withBot(s.viaPHP(phpRequired))))
+	mux.HandleFunc("DELETE /api/v1/bots/{id}/backups/{tid}", s.auth(s.withBot(s.viaPHP(phpRequired))))
+	mux.HandleFunc("POST /api/v1/bots/{id}/restore", s.auth(s.withBot(s.viaPHP(phpRequired))))
+	mux.HandleFunc("PUT /api/v1/admin/sdk-policies/{perm}", s.auth(s.setSdkPolicy))
 	mux.HandleFunc("GET /api/v1/admin/processes", s.auth(s.processes))
 	mux.HandleFunc("POST /api/v1/admin/processes/{key}/restart", s.auth(s.restartProcess))
-	mux.HandleFunc("GET /api/v1/admin/logs", s.auth(s.listServerLogs))
+	mux.HandleFunc("GET /api/v1/admin/logs", s.auth(s.adminViaPHP(s.listServerLogs)))
 	mux.HandleFunc("GET /api/v1/bots/{id}/modules/{key}/commands", s.auth(s.withBot(s.listModuleCommands)))
 	mux.HandleFunc("GET /api/v1/bots/{id}/commands", s.auth(s.withBot(s.viaPHP(s.listCommands))))
 	mux.HandleFunc("GET /api/v1/bots/{id}/commands/deleted", s.auth(s.withBot(s.viaPHP(s.listDeleted))))
@@ -245,10 +265,15 @@ func main() {
 	mux.HandleFunc("GET /api/v1/bots/{id}/presence", s.auth(s.withBot(s.viaPHP(s.getPresence))))
 	mux.HandleFunc("PATCH /api/v1/bots/{id}/presence", s.auth(s.withBot(s.viaPHP(s.patchPresence))))
 	mux.HandleFunc("GET /api/v1/bots/{id}/stats", s.auth(s.withBot(s.botStats)))
-	mux.HandleFunc("GET /api/v1/bots/{id}/logs", s.auth(s.withBot(s.listLogs)))
-	mux.HandleFunc("DELETE /api/v1/bots/{id}/logs", s.auth(s.withBot(s.clearLogs)))
-	mux.HandleFunc("GET /api/v1/bots/{id}/plugins", s.auth(s.withBot(s.listPlugins)))
-	mux.HandleFunc("PATCH /api/v1/bots/{id}/plugins/{plugin}", s.auth(s.withBot(s.patchPlugin)))
+	mux.HandleFunc("GET /api/v1/bots/{id}/logs", s.auth(s.withBot(s.viaPHP(s.listLogs))))
+	mux.HandleFunc("DELETE /api/v1/bots/{id}/logs", s.auth(s.withBot(s.viaPHP(s.clearLogs))))
+	mux.HandleFunc("GET /api/v1/bots/{id}/plugins", s.auth(s.withBot(s.viaPHP(s.listPlugins))))
+	mux.HandleFunc("PATCH /api/v1/bots/{id}/plugins/{plugin}", s.auth(s.withBot(s.viaPHP(s.patchPlugin))))
+	mux.HandleFunc("GET /api/v1/bots/{id}/plugins/{plugin}/config", s.auth(s.withBot(s.viaPHP(phpRequired))))
+	mux.HandleFunc("PUT /api/v1/bots/{id}/plugins/{plugin}/config", s.auth(s.withBot(s.viaPHP(phpRequired))))
+	mux.HandleFunc("GET /api/v1/bots/{id}/plugins/{plugin}/files", s.auth(s.withBot(s.viaPHP(phpRequired))))
+	mux.HandleFunc("POST /api/v1/bots/{id}/plugins/{plugin}/files", s.auth(s.withBot(s.viaPHP(phpRequired))))
+	mux.HandleFunc("GET /api/v1/bots/{id}/plugins/{plugin}/files/{name}", s.auth(s.withBot(s.viaPHP(phpRequired))))
 	mux.HandleFunc("DELETE /api/v1/bots/{id}/guilds/{guildId}", s.auth(s.withBot(s.leaveGuild)))
 	// Webhooks (module page) and the public receiver for external services.
 	mux.HandleFunc("GET /api/v1/bots/{id}/webhooks", s.auth(s.withBot(s.viaPHP(s.listWebhooks))))

@@ -1,0 +1,4 @@
+{
+  "plugin.__ID__.setting.report_channel": "Report channel",
+  "plugin.__ID__.setting.report_channel_hint": "A short report is posted here every day at 09:00 UTC. Empty: no report."
+}

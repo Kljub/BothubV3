@@ -1,0 +1,20 @@
+{
+  "category": "action",
+  "labelKey": "plugin.__ID__.node.announce.label",
+  "descriptionKey": "plugin.__ID__.node.announce.description",
+  "inputs": [{ "name": "in", "type": "flow", "multiple": true }],
+  "outputs": [{ "name": "next", "type": "flow" }],
+  "results": [{ "suffix": ".id", "labelKey": "plugin.__ID__.node.announce.result_id" }],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["channel", "text"],
+    "properties": {
+      "channel": { "type": "string", "maxLength": 40, "default": "{channel.id}" },
+      "title": { "type": "string", "maxLength": 256 },
+      "text": { "type": "string", "maxLength": 4000 },
+      "color": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$", "default": "#5865f2" },
+      "variable": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$" }
+    }
+  }
+}

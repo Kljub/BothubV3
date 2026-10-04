@@ -5,62 +5,206 @@
       "key": "basic",
       "icon": "user",
       "items": [
-        { "id": "user", "token": "{user}" },
-        { "id": "user_mention", "token": "{user.mention}" },
-        { "id": "user_name", "token": "{user.name}" },
-        { "id": "user_id", "token": "{user.id}" },
-        { "id": "user_avatar", "token": "{user.avatar}" },
-        { "id": "server", "token": "{server}" },
-        { "id": "server_id", "token": "{server.id}" },
-        { "id": "server_members", "token": "{server.members}" },
-        { "id": "server_owner_id", "token": "{server.owner_id}" },
-        { "id": "channel", "token": "{channel}" },
-        { "id": "channel_name", "token": "{channel.name}" },
-        { "id": "channel_id", "token": "{channel.id}" },
-        { "id": "channel_type", "token": "{channel.type}" },
-        { "id": "bot_name", "token": "{bot.name}" },
-        { "id": "bot_id", "token": "{bot.id}" },
-        { "id": "bot_servers", "token": "{bot.servers}" },
-        { "id": "command_name", "token": "{command.name}" },
-        { "id": "command_subcommand", "token": "{command.subcommand}" },
-        { "id": "default_server", "token": "{DEFAULT_SERVER}" }
+        {
+          "id": "user",
+          "token": "{user}"
+        },
+        {
+          "id": "user_mention",
+          "token": "{user.mention}"
+        },
+        {
+          "id": "user_name",
+          "token": "{user.name}"
+        },
+        {
+          "id": "user_id",
+          "token": "{user.id}"
+        },
+        {
+          "id": "user_avatar",
+          "token": "{user.avatar}"
+        },
+        {
+          "id": "user_voice_channel",
+          "token": "{user.voice.channel}"
+        },
+        {
+          "id": "user_voice_channel_id",
+          "token": "{user.voice.channel.id}"
+        },
+        {
+          "id": "server",
+          "token": "{server}"
+        },
+        {
+          "id": "server_id",
+          "token": "{server.id}"
+        },
+        {
+          "id": "server_members",
+          "token": "{server.members}"
+        },
+        {
+          "id": "server_owner_id",
+          "token": "{server.owner_id}"
+        },
+        {
+          "id": "server_name",
+          "token": "{server.name}"
+        },
+        {
+          "id": "server_icon",
+          "token": "{server.icon}"
+        },
+        {
+          "id": "server_created",
+          "token": "{server.created}"
+        },
+        {
+          "id": "server_channels",
+          "token": "{server.channels}"
+        },
+        {
+          "id": "server_roles",
+          "token": "{server.roles}"
+        },
+        {
+          "id": "server_boosts",
+          "token": "{server.boosts}"
+        },
+        {
+          "id": "server_boost_tier",
+          "token": "{server.boost_tier}"
+        },
+        {
+          "id": "channel",
+          "token": "{channel}"
+        },
+        {
+          "id": "channel_name",
+          "token": "{channel.name}"
+        },
+        {
+          "id": "channel_id",
+          "token": "{channel.id}"
+        },
+        {
+          "id": "channel_type",
+          "token": "{channel.type}"
+        },
+        {
+          "id": "bot_name",
+          "token": "{bot.name}"
+        },
+        {
+          "id": "bot_id",
+          "token": "{bot.id}"
+        },
+        {
+          "id": "bot_servers",
+          "token": "{bot.servers}"
+        },
+        {
+          "id": "bot_ping",
+          "token": "{bot.ping}"
+        },
+        {
+          "id": "bot_uptime",
+          "token": "{bot.uptime}"
+        },
+        {
+          "id": "bot_memory",
+          "token": "{bot.memory}"
+        },
+        {
+          "id": "command_name",
+          "token": "{command.name}"
+        },
+        {
+          "id": "command_subcommand",
+          "token": "{command.subcommand}"
+        },
+        {
+          "id": "default_server",
+          "token": "{DEFAULT_SERVER}"
+        }
       ]
     },
     {
       "key": "message",
       "icon": "message",
       "items": [
-        { "id": "message_id", "token": "{message.id}" },
-        { "id": "message_content", "token": "{message.content}" },
-        { "id": "message_url", "token": "{message.url}" }
+        {
+          "id": "message_id",
+          "token": "{message.id}"
+        },
+        {
+          "id": "message_content",
+          "token": "{message.content}"
+        },
+        {
+          "id": "message_url",
+          "token": "{message.url}"
+        }
       ]
     },
     {
       "key": "time",
       "icon": "clock",
       "items": [
-        { "id": "time_now", "token": "{time.now}" },
-        { "id": "time_unix", "token": "{time.unix}" },
-        { "id": "time_in", "token": "{time.in:1h}" },
-        { "id": "time_in_unix", "token": "{time.in_unix:1h}" }
+        {
+          "id": "time_now",
+          "token": "{time.now}"
+        },
+        {
+          "id": "time_unix",
+          "token": "{time.unix}"
+        },
+        {
+          "id": "time_in",
+          "token": "{time.in:1h}"
+        },
+        {
+          "id": "time_in_unix",
+          "token": "{time.in_unix:1h}"
+        }
       ]
     },
     {
       "key": "helpers",
       "icon": "code",
       "items": [
-        { "id": "random", "token": "{random:1-100}" },
-        { "id": "local_var", "token": "{local.NAME}" },
-        { "id": "global_var", "token": "{global.NAME}" }
+        {
+          "id": "random",
+          "token": "{random:1-100}"
+        },
+        {
+          "id": "local_var",
+          "token": "{local.NAME}"
+        },
+        {
+          "id": "global_var",
+          "token": "{global.NAME}"
+        }
       ]
     },
     {
       "key": "error",
       "icon": "alert",
       "items": [
-        { "id": "error", "token": "{error}" },
-        { "id": "error_key", "token": "{error.key}" },
-        { "id": "error_block", "token": "{error.block}" }
+        {
+          "id": "error",
+          "token": "{error}"
+        },
+        {
+          "id": "error_key",
+          "token": "{error.key}"
+        },
+        {
+          "id": "error_block",
+          "token": "{error.block}"
+        }
       ]
     }
   ]

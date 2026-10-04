@@ -1,0 +1,6 @@
+{
+  "plugin.__ID__.node.count.label": "Count",
+  "plugin.__ID__.node.count.description": "Adds a step to a counter of this server and of the member.",
+  "plugin.__ID__.node.count.result": "Server total",
+  "plugin.__ID__.node.count.result_user": "Member total"
+}

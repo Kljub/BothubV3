@@ -73,7 +73,8 @@ export function mediaViolation(m: MediaMessage, cfg: MediaConfig): 'no_media' | 
   if (count === 0) return 'no_media';
   // Without text only a bare link that Discord turned into a preview (embed) passes.
   if (cfg.allowText === false && m.content.trim() !== '' && !(embeds > 0 && m.attachments.length === 0 && /^https?:\/\/\S+$/.test(m.content.trim()))) return 'text';
-  if ((cfg.maxAttachments ?? 0) > 0 && count > (cfg.maxAttachments ?? 0)) return 'too_many';
+  // The limit counts files only; link previews are not files.
+  if ((cfg.maxAttachments ?? 0) > 0 && m.attachments.length > (cfg.maxAttachments ?? 0)) return 'too_many';
   const type = cfg.mediaType ?? 'all';
   if (type !== 'all') {
     const exts = (cfg.extensions ?? []).map((e) => e.toLowerCase().replace(/^\./, ''));
@@ -96,7 +97,7 @@ const lastResponse = new Map<string, number>(); // botId:responder:channel -> ms
 const stickyCount = new Map<string, number>(); // botId:channel -> messages since the last repost
 const stickyBusy = new Set<string>();
 
-async function tempNotice(ctx: ModuleContext, module: string, channel: SendableChannels, text: string, ms: number): Promise<void> {
+export async function tempNotice(ctx: ModuleContext, module: string, channel: SendableChannels, text: string, ms: number): Promise<void> {
   if (!text.trim()) return;
   const sent = await send(ctx, module, channel, { content: text.slice(0, 2000), allowedMentions: { parse: ['users'] } });
   if (sent && ms > 0) setTimeout(() => void sent.delete().catch(() => undefined), ms).unref();
@@ -153,7 +154,7 @@ export async function onMessage(ctx: ModuleContext, msg: Message, edited = false
       if (cfg.delete !== false) await msg.delete().catch(() => undefined);
       if (cfg.timeout && msg.member?.moderatable) await msg.member.timeout(Math.min(cfg.timeoutSeconds ?? 300, 2419200) * 1000, 'Polls filter').catch(() => undefined);
       if (cfg.notify !== false) await tempNotice(ctx, 'polls-filter', msg.channel, fill(cfg.notifyMessage || '{user.mention}, polls are not allowed here.', vars), (cfg.notifyDelete ?? 10) * 1000);
-      if (cfg.dm && cfg.dmMessage) await msg.author.send({ content: fill(cfg.dmMessage, vars).slice(0, 2000) }).catch(() => undefined);
+      if (cfg.dm && cfg.dmMessage && allow(ctx, 'polls-filter', `dm:${msg.author.id}`)) await msg.author.send({ content: fill(cfg.dmMessage, vars).slice(0, 2000) }).catch(() => undefined);
       if (cfg.delete !== false) return;
     }
   }
@@ -168,7 +169,8 @@ export async function onMessage(ctx: ModuleContext, msg: Message, edited = false
       !(cfg.ignoreEmbeds && msg.embeds.length > 0) &&
       (roles.length === 0 || roles.some((r) => roleIds.includes(r))) &&
       ((cfg.words ?? []).length === 0 || keywordMatch(msg.content, cfg.words, 'contains'));
-    if (ok && allow(ctx, 'autoreact', msg.channelId)) for (const e of cfg.emojis ?? []) await msg.react(reactionOf(e)).catch((err) => log.debug('autoreact failed', { err: String(err) }));
+    // Every reaction takes one unit of the budget.
+    if (ok) for (const e of cfg.emojis ?? []) if (allow(ctx, 'autoreact', msg.channelId)) await msg.react(reactionOf(e)).catch((err) => log.debug('autoreact failed', { err: String(err) }));
   }
 
   if (ctx.enabled('auto-responder') && !msg.author.bot) {

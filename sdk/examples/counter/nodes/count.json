@@ -1,0 +1,39 @@
+{
+  "category": "action",
+  "labelKey": "Count up",
+  "descriptionKey": "Adds 1 to a counter of this server and returns the new value.",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow"
+    }
+  ],
+  "results": [
+    {
+      "suffix": "",
+      "labelKey": "New value"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "counter": {
+        "type": "string",
+        "maxLength": 40,
+        "default": "default"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$"
+      }
+    }
+  }
+}

@@ -15,6 +15,7 @@ use BotHub\Internal\CommandStore;
 use BotHub\Internal\InternalRouter;
 use BotHub\Internal\TemplateStore;
 use BotHub\Internal\DataStore;
+use BotHub\Internal\BotBackup;
 use BotHub\Internal\SdkPolicyStore;
 use BotHub\Internal\TimedStore;
 use BotHub\Internal\WebhookStore;
@@ -34,7 +35,9 @@ $tmp = sys_get_temp_dir() . '/bothub-internal-' . bin2hex(random_bytes(4));
 mkdir($tmp);
 $pdo = Connection::open($tmp . '/bothub.sqlite');
 (new Migrator($pdo, __DIR__ . '/../migrations'))->migrate();
-$router = new InternalRouter(new BotStore($pdo, new SecretBox(random_bytes(32))), static fn () => throw new \RedisException('no redis in test'), new CommandStore($pdo), new TimedStore($pdo), new WebhookStore($pdo), new TemplateStore($pdo), new DataStore($pdo), new SdkPolicyStore($pdo, __DIR__ . '/../../shared/sdk-permissions.json'));
+$botStore = new BotStore($pdo, new SecretBox(random_bytes(32)));
+$router = new InternalRouter($botStore, static fn () => throw new \RedisException('no redis in test'), new CommandStore($pdo), new TimedStore($pdo), new WebhookStore($pdo), new TemplateStore($pdo), new DataStore($pdo), new SdkPolicyStore($pdo, __DIR__ . '/../../shared/sdk-permissions.json'),
+    backups: new BotBackup($pdo, $botStore, __DIR__ . '/../../shared'), logs: new \BotHub\Internal\LogStore($pdo));
 
 /** Sends like index.php: body as arrays and as objects. */
 function call(string $method, string $path, ?string $json = null, array $query = []): array
@@ -50,13 +53,37 @@ $token = str_repeat('a', 24) . '.' . str_repeat('b', 6) . '.' . str_repeat('c', 
 check('bot created', $s === 201 && $bot['tokenSet'] === true && !isset($bot['token']));
 $b = "/internal/bots/{$bot['id']}";
 
+// logs: the bot's rows (oldest first), level filter, clear; the instance log separately
+$pdo->exec("INSERT INTO logs (bot_id, level, code, key, params, source) VALUES ({$bot['id']}, 'update', NULL, 'log.update.bot_started', '{\"name\":\"Bot\"}', 'bot'), ({$bot['id']}, 'error', 'ERR-1005', '', '{\"command\":\"launchtoday\",\"reason\":\"error.run.block_failed: AniList: HTTP 500\"}', 'bot'), (NULL, 'change', NULL, 'log.server.plugin_enabled', '{}', 'api')");
+[$s, $logs] = call('GET', "{$b}/logs", null, ['limit' => '500']);
+check('bot log, oldest first', $s === 200 && array_column($logs['items'], 'level') === ['update', 'error'] && $logs['items'][1]['params']['reason'] === 'error.run.block_failed: AniList: HTTP 500');
+check('log level filter', array_column(call('GET', "{$b}/logs", null, ['level' => 'error'])[1]['items'], 'code') === ['ERR-1005']);
+check('instance log has only rows without bot', array_column(call('GET', '/internal/admin/logs')[1]['items'], 'key') === ['log.server.plugin_enabled']);
+check('clear bot log', call('DELETE', "{$b}/logs")[0] === 204 && call('GET', "{$b}/logs")[1]['items'] === []);
+
 [$s, $list] = call('GET', "{$b}/commands");
 $purge = array_values(array_filter($list['items'], fn ($c) => $c['name'] === 'purge'))[0] ?? null;
 check('presets listed without graph', $s === 200 && count($list['items']) > 50 && $purge !== null && !isset($purge['graph']) && $purge['enabled'] === false);
 [, , $raw] = call('GET', "{$b}/commands/{$purge['id']}");
 check('preset graph keeps {} configs', !str_contains($raw, '"config":[]'));
 [$s, $groups] = call('GET', "{$b}/command-groups");
-check('preset groups with counts', $s === 200 && in_array(['Moderation', 35], array_map(fn ($g) => [$g['name'], $g['commands']], $groups['items']), true));
+check('preset groups count only visible commands', $s === 200 && in_array(['Moderation', 0], array_map(fn ($g) => [$g['name'], $g['commands']], $groups['items']), true));
+check('preset copies hidden', $purge['hidden'] === true);
+$purgeGraph = json_decode($raw, true)['graph'];
+[$s, $saved] = call('PUT', "{$b}/commands/{$purge['id']}", json_encode(['name' => 'purge', 'description' => $purge['description'], 'enabled' => false, 'graph' => $purgeGraph]));
+check('saving a preset copy shows it', $s === 200 && $saved['hidden'] === false);
+check('preset copy knows its preset', $saved['preset'] === 'purge');
+$edited = $purgeGraph;
+$edited['nodes'][0]['note'] = 'changed by user';
+call('PUT', "{$b}/commands/{$purge['id']}", json_encode(['name' => 'purge2', 'description' => 'Mine', 'enabled' => false, 'graph' => $edited]));
+[$s] = call('DELETE', "{$b}/commands/{$purge['id']}");
+[, $reset] = call('GET', "{$b}/commands/{$purge['id']}");
+check('deleting a module copy resets it', $s === 204 && $reset['name'] === 'purge' && $reset['hidden'] === true && $reset['description'] === $purge['description']);
+check('reset copy not in recently deleted', !in_array($purge['id'], array_column(call('GET', "{$b}/commands/deleted")[1]['items'], 'id'), true));
+[, , $rawReset] = call('GET', "{$b}/commands/{$purge['id']}");
+check('reset graph is the preset', !str_contains($rawReset, 'changed by user'));
+call('PUT', "{$b}/commands/{$purge['id']}", json_encode(['name' => 'purge', 'description' => $purge['description'], 'enabled' => false, 'graph' => $purgeGraph]));
+check('saved copy counted in group', in_array(['Moderation', 1], array_map(fn ($g) => [$g['name'], $g['commands']], call('GET', "{$b}/command-groups")[1]['items']), true));
 
 // create, save, versions
 [$s, $cmd] = call('POST', "{$b}/commands", '{"name":"hello","description":"Say hi","enabled":true}');
@@ -90,6 +117,9 @@ $bad = fn (array $g) => call('PUT', $c, json_encode(['name' => 'hello', 'graph' 
 $t = ['id' => 't', 'type' => 'trigger.slash', 'typeVersion' => 1, 'config' => new \stdClass()];
 check('graph: duplicate node id', $bad(['nodes' => [$t, $t], 'edges' => []]) === 'error.graph.duplicate_node');
 check('graph: unknown block type', $bad(['nodes' => [$t, ['id' => 'x', 'type' => 'action.nope', 'config' => new \stdClass()]], 'edges' => []]) === 'error.graph.unknown_type');
+$note = ['id' => 'n', 'type' => 'action.note', 'typeVersion' => 1, 'config' => new \stdClass()];
+check('graph: unknown port', $bad(['nodes' => [$t, $note], 'edges' => [['from' => ['node' => 't', 'port' => 'nope'], 'to' => ['node' => 'n', 'port' => 'in']]]]) === 'error.graph.bad_port');
+check('graph: error path port ok', $bad(['nodes' => [$t, $note], 'edges' => [['from' => ['node' => 't', 'port' => 'next'], 'to' => ['node' => 'n', 'port' => 'in']], ['from' => ['node' => 'n', 'port' => 'error'], 'to' => ['node' => 't', 'port' => 'options']]]]) !== 'error.graph.bad_port');
 check('graph: edge to missing node', $bad(['nodes' => [$t], 'edges' => [['from' => ['node' => 't', 'port' => 'next'], 'to' => ['node' => 'gone', 'port' => 'in']]]]) === 'error.graph.bad_edge');
 
 // patch, groups
@@ -98,6 +128,18 @@ check('graph: edge to missing node', $bad(['nodes' => [$t], 'edges' => [['from' 
 check('patch enabled and group', $s === 200 && $patched['enabled'] === false && $patched['groupId'] === $g['id']);
 [$s] = call('PATCH', $c, '{"groupId":99999}');
 check('unknown group 422', $s === 422);
+// Module groups are system groups: no rename, delete or moving in or out.
+$moderation = array_values(array_filter(call('GET', "{$b}/command-groups")[1]['items'], fn ($x) => $x['name'] === 'Moderation'))[0];
+check('module group is a system group', $moderation['system'] === true && $g['system'] === false);
+[$s] = call('DELETE', "{$b}/command-groups/{$moderation['id']}");
+check('system group delete refused', $s === 403);
+[$s] = call('PUT', "{$b}/command-groups/{$moderation['id']}", '{"name":"Mine","position":0}');
+check('system group rename refused', $s === 403);
+[$s, $err] = call('PATCH', $c, json_encode(['groupId' => $moderation['id']]));
+check('moving into a system group refused', $s === 422 && ($err['error']['key'] ?? $err['key'] ?? '') === 'error.group.system');
+[$s] = call('PATCH', "{$b}/commands/{$purge['id']}", json_encode(['groupId' => $g['id']]));
+check('moving a module copy out refused', $s === 422 && call('GET', "{$b}/commands/{$purge['id']}")[1]['groupId'] === $moderation['id']);
+check('copy flag on module copy', call('GET', "{$b}/commands/{$purge['id']}")[1]['copy'] === true && call('GET', $c)[1]['copy'] === false);
 [$s] = call('DELETE', "{$b}/command-groups/{$g['id']}");
 check('delete group keeps command', $s === 204 && call('GET', $c)[1]['groupId'] === null);
 
@@ -124,7 +166,7 @@ check('unknown module 404', $s === 404);
 
 // module settings (moderation)
 [$s, $mc] = call('GET', "{$b}/modules/moderation/config");
-check('moderation config defaults', $s === 200 && $mc['defaultPermissions'] === true && $mc['autoPunishments'] === [] && $mc['dmMode'] === 'embed');
+check('moderation config defaults', $s === 200 && $mc['moderators']['required_permissions'] === ['manage_messages'] && $mc['admins']['required_permissions'] === ['administrator'] && $mc['autoPunishments'] === [] && $mc['dmMode'] === 'embed');
 $cfg = '{"logEnabled":true,"logChannels":[{"id":"111111111111111111","guild":"222222222222222222"}],"punishmentColor":"#AABBCC",'
     . '"autoPunishments":[{"trigger":"warnings","count":3,"action":"timeout","duration":"1h"},{"trigger":"timeouts","count":2,"action":"ban","duration":""}]}';
 [$s, $mc] = call('PUT', "{$b}/modules/moderation/config", $cfg);
@@ -137,6 +179,14 @@ check('log without channel 422', $s === 422 && $e['error']['key'] === 'error.mod
 check('timeout rule without duration 422', $s === 422 && $e['error']['key'] === 'error.moderation.duration_required');
 [$s] = call('PUT', "{$b}/modules/moderation/config", '{"moderatorRoles":[{"id":"x","guild":"1"}]}');
 check('bad role ref 422', $s === 422);
+[$s, $mc] = call('PUT', "{$b}/modules/moderation/config", '{"defaultPermissions":false,"moderatorRoles":[{"id":"333333333333333333","guild":"222222222222222222"}]}');
+check('old role fields become blocks', $s === 200 && $mc['moderators']['allowed_roles'][0]['id'] === '333333333333333333'
+    && $mc['moderators']['required_permissions'] === [] && $mc['admins']['required_permissions'] === [] && !isset($mc['moderatorRoles']));
+$blk = '{"moderators":{"allowed_roles":[{"id":"333333333333333333","guild":"222222222222222222"}],"banned_channels":[{"id":"111111111111111111","guild":"222222222222222222"}],"required_permissions":["manage_messages"]}}';
+[$s, $mc] = call('PUT', "{$b}/modules/moderation/config", $blk);
+check('moderator block stored', $s === 200 && $mc['moderators']['banned_channels'][0]['id'] === '111111111111111111' && $mc['admins']['required_permissions'] === ['administrator']);
+check('moderator block: everyone 422', call('PUT', "{$b}/modules/moderation/config", '{"moderators":{"allowed_roles":[{"id":"everyone"}]}}')[0] === 422);
+check('moderator block: unknown permission 422', call('PUT', "{$b}/modules/moderation/config", '{"admins":{"required_permissions":["fly"]}}')[0] === 422);
 [$s, $e] = call('GET', "{$b}/modules/economy/config");
 check('module without settings 404', $s === 404 && $e['error']['key'] === 'error.module.no_settings');
 
@@ -240,15 +290,56 @@ check('data used in counts graphs', call('GET', "{$b}/data/variables/{$coins['id
 check('data owner change drops values', $s === 200 && $coins2['values'] === 0 && $coins2['key'] === 'daily_coins');
 check('data delete', call('DELETE', "{$b}/data/variables/{$coins['id']}")[0] === 204 && call('GET', "{$b}/data/variables/{$coins['id']}")[0] === 404);
 
-// SDK policies (global)
+// SDK policies (global): allow / default / deny
 [$s, $pol] = call('GET', '/internal/admin/sdk-policies');
 $byKey = array_column($pol['items'], 'enabled', 'permission');
-check('sdk policies default by risk', $s === 200 && $byKey['storage'] === true && $byKey['discord.send_messages'] === false);
-[$s, $pol] = call('PUT', '/internal/admin/sdk-policies/discord.send_messages', '{"enabled":true}');
-check('sdk policy switched on', $s === 200 && array_column($pol['items'], 'enabled', 'permission')['discord.send_messages'] === true && $outbox('sdk.policies.changed') === 1);
-check('sdk policy unknown / bad value', call('PUT', '/internal/admin/sdk-policies/db.raw', '{"enabled":true}')[0] === 404 && call('PUT', '/internal/admin/sdk-policies/log', '{"enabled":"yes"}')[0] === 422);
+$modes = array_column($pol['items'], 'mode', 'permission');
+check('sdk policies default by risk', $s === 200 && $byKey['storage'] === true && $byKey['discord.messages.send'] === false && $byKey['modules.read'] === false && $modes['storage'] === 'default');
+[$s, $pol] = call('PUT', '/internal/admin/sdk-policies/discord.messages.send', '{"mode":"allow"}');
+$p = array_column($pol['items'], null, 'permission')['discord.messages.send'];
+check('sdk policy allow', $s === 200 && $p['mode'] === 'allow' && $p['enabled'] === true && $outbox('sdk.policies.changed') === 1);
+[, $pol] = call('PUT', '/internal/admin/sdk-policies/storage', '{"mode":"deny"}');
+$p = array_column($pol['items'], null, 'permission')['storage'];
+check('sdk policy deny beats low risk', $p['mode'] === 'deny' && $p['enabled'] === false);
+[, $pol] = call('PUT', '/internal/admin/sdk-policies/storage', '{"mode":"default"}');
+$p = array_column($pol['items'], null, 'permission')['storage'];
+check('sdk policy back to default', $p['mode'] === 'default' && $p['enabled'] === true && (int) $pdo->query("SELECT COUNT(*) FROM sdk_policies WHERE permission = 'storage'")->fetchColumn() === 0);
+check('sdk policy unknown / bad value', call('PUT', '/internal/admin/sdk-policies/db.raw', '{"mode":"allow"}')[0] === 404 && call('PUT', '/internal/admin/sdk-policies/storage', '{"mode":"yes"}')[0] === 422);
 
-check('outbox events written', $outbox('command.saved') >= 8 && $outbox('command.deleted') === 1 && $outbox('module.changed') === 2);
+check('outbox events written', $outbox('command.saved') >= 8 && $outbox('command.deleted') === 1 && $outbox('module.changed') === 4);
+// bot backups and templates
+[$s, $exp] = call('GET', "{$b}/backup");
+[, , $rawExp] = call('GET', "{$b}/backup");
+check('backup export', $s === 200 && $exp['format'] === 'bothub-bot-backup' && count($exp['commands']) > 0 && !str_contains(strtolower($rawExp), 'token_enc') && !str_contains($rawExp, $token));
+$namesBefore = array_column(call('GET', "{$b}/commands")[1]['items'], 'name');
+[$s, $saved] = call('POST', "{$b}/backups", '{"name":"Before test","kind":"backup"}');
+check('backup saved', $s === 201 && $saved['kind'] === 'backup');
+[$s, $list] = call('GET', "{$b}/backups");
+$ids = array_column($list['items'], 'kind', 'id');
+check('backups listed with ready-made templates', $s === 200 && ($ids[$saved['id']] ?? '') === 'backup' && ($ids['builtin:starter'] ?? '') === 'builtin');
+[$s, $res] = call('POST', "{$b}/restore", '{"id":"builtin:starter","name":"Starter"}');
+$names = array_column(call('GET', "{$b}/commands")[1]['items'], 'name');
+check('restore ready-made template', $s === 200 && in_array('ping', $names, true) && in_array('coins', $names, true) && !in_array('hello', $names, true));
+check('restore keeps data storage by key', in_array('coins', array_column(call('GET', "{$b}/data/variables")[1]['items'], 'key'), true));
+$auto = array_values(array_filter(call('GET', "{$b}/backups")[1]['items'], fn ($i) => $i['auto']));
+check('automatic backup before restore', count($auto) === 1 && $auto[0]['kind'] === 'backup');
+[$s] = call('POST', "{$b}/restore", json_encode(['id' => $auto[0]['id']]));
+$names = array_column(call('GET', "{$b}/commands")[1]['items'], 'name');
+sort($names);
+sort($namesBefore);
+check('restore the automatic backup', $s === 200 && $names === $namesBefore);
+$hiddenBefore = (int) $pdo->query("SELECT COUNT(*) FROM commands WHERE bot_id = {$bot['id']} AND hidden = 1")->fetchColumn();
+check('restore keeps hidden copies hidden', $hiddenBefore > 0 && count(array_filter($exp['commands'], fn ($c) => $c['hidden'])) === $hiddenBefore);
+check('upload: wrong format', call('POST', "{$b}/restore", '{"data":{"format":"x"}}')[1]['error']['key'] === 'error.backup.format');
+$bad = $exp;
+$bad['commands'][0]['name'] = 'Bad Name!';
+[$s, $err] = call('POST', "{$b}/restore", json_encode(['data' => $bad, 'name' => 'bad.json']));
+check('upload: invalid part is rejected, nothing changed', $s === 422 && $err['error']['key'] === 'error.backup.part' && in_array('hello', array_column(call('GET', "{$b}/commands")[1]['items'], 'name'), true));
+[$s, $t] = call('POST', "{$b}/backups", '{"name":"Shared","kind":"template","description":"for all bots"}');
+check('save as global template', $s === 201 && $t['kind'] === 'template');
+check('ready-made template cannot be deleted', call('DELETE', "{$b}/backups/builtin:starter")[0] === 403);
+check('delete saved backup', call('DELETE', "{$b}/backups/{$saved['id']}")[0] === 204 && call('GET', "{$b}/backups/{$saved['id']}")[0] === 404);
+
 check('unknown bot 404', call('GET', '/internal/bots/999/commands')[0] === 404);
 
 exit($failed === 0 ? 0 : 1);

@@ -7,46 +7,46 @@ environment variables, the network or files outside its own folder.
 
 ## Files of a plugin
 
-```
-my-plugin/
-├── bothub-plugin.json   manifest (shared/plugin-manifest.schema.json)
-└── index.js             ES module, default export = the plugin
-```
+The plugin file is `bothub.json`; the folder layout (commands, events,
+services, nodes, dashboard, lang, sounds) and the fields are described in
+[shared/plugin-format.md](../shared/plugin-format.md), the schema is
+`shared/plugin-manifest.schema.json`. A ready template, a scaffolder and
+example plugins live in the market repo (BothubMarketPlace).
 
-`index.js` may import other files of its own folder. It cannot import
+`index.js` (`main`) joins everything into one `definePlugin({ blocks, events,
+tasks })` and may import other files of its own folder. It cannot import
 `node:net`, `node:http(s)`, `node:child_process`, `node:worker_threads`,
 `node:module`, `node:sqlite` and similar modules, and `fetch` does not exist.
 
-## Manifest
+- **events**: names from `bothub.json` "events" (needs `discord.events`); the
+  handler gets a plain JSON payload with the builder variable names
+  (`server.id`, `user.name`, `user.bot` as boolean …).
+- **tasks**: `services.tasks` with `every` (min. 1m) or `cron` (UTC), needs
+  `scheduler`.
+- **API endpoints**: `ctx.http.endpoint(key, {method, path, query, json,
+  headers})` for endpoints in `services.endpoints` that the admin shared with
+  the plugin; the bot adds the key, the plugin never sees it.
+- **voice**: `ctx.voice.join/leave/play/stop/state`; `play` takes a file of
+  the plugin folder (`sounds/<name>.ogg|mp3|wav`, max. 10 MB), never a URL.
 
-```json
-{
-  "id": "counter",
-  "name": "Counter",
-  "version": "1.0.0",
-  "sdk": 1,
-  "main": "index.js",
-  "permissions": ["storage", "log"],
-  "blocks": [{ "name": "count", "definition": { "labelKey": "Count up", "inputs": [], "outputs": [], "config": {} } }]
-}
-```
+## Permissions and SDK policies
 
-A block `count` of plugin `counter` becomes the node type
-`plugin.counter.count` in the builder. `definition` is a node definition as
-in `shared/node-definition.schema.json` (ports, config, results).
+Every call belongs to a permission of `shared/sdk-permissions.json` (the full
+list with status is in [API.md](API.md)). Core calls (plugin info, logger,
+config, utils, locale, resources, rate limits) need none. For every other call
+the permission must be
 
-## Permissions
+1. declared in the plugin's `bothub-plugin.json`, and
+2. switched on in **admin > SDK Policies**. The switches are global for all
+   bots and plugins. Default: risk low = on, medium and high = off.
 
-| Permission | Calls |
-|---|---|
-| `storage` | `ctx.storage.get/set/delete/list`: key-value storage of the plugin for this bot |
-| `discord.send_messages` | `ctx.discord.sendMessage(channelId, message)` |
-| `discord.guild_info` | `ctx.discord.guildInfo(guildId)`: name and member count of a server of the bot |
-| `log` | `ctx.log(level, text)`: entry in the bot log |
+Otherwise the call fails with `sdk.call.denied`. Planned calls answer
+`sdk.call.not_available`.
 
-A call works only when the permission is declared in the manifest **and**
-granted by the user for the bot **and** allowed by the admin's SDK policy.
-Otherwise it fails with `sdk.call.denied`.
+## Installation
+
+Plugins are installed **globally** (one version for all bots). Per bot a
+plugin can be switched off; nothing else is set per bot.
 
 ## Limits (shared/sdk-permissions.json)
 
@@ -54,6 +54,8 @@ Otherwise it fails with `sdk.call.denied`.
 - 50 calls per second, 64 KB per message, 5 s per call, 10 s per block.
 - Storage: 1,000 keys, 16 KB per value, 1 MB per plugin and bot.
 - Discord: 5 messages per 5 seconds; mentions are not pinged.
+- Lifecycle: `onLoad`, `onEnable` when the plugin starts for a bot; `onDisable`,
+  `onUnload` when it stops (1 second, then the process ends).
 - A block that does not answer in time is stopped and the plugin restarted;
   after 3 restarts in 10 minutes the plugin is switched off for the bot.
 
@@ -62,14 +64,13 @@ Otherwise it fails with `sdk.call.denied`.
 ```js
 /** @type {import('@bothub/sdk').PluginDefinition} */
 export default {
-  async start(ctx) {
-    await ctx.log('info', 'started');
+  async onEnable(ctx) {
+    await ctx.logger.info(`${ctx.plugin.getId()} started`);
   },
   blocks: {
     async count(ctx, { config, vars }) {
       const key = `${vars['server.id']}:${config.counter}`;
-      const n = Number((await ctx.storage.get(key)) ?? '0') + 1;
-      await ctx.storage.set(key, String(n));
+      const n = await ctx.storage.increment(key);
       return { results: { '': String(n) } }; // {Var1} in later blocks
     },
   },

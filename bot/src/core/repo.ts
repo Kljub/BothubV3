@@ -129,6 +129,12 @@ export class Repo {
   }
 
   /** Module keys switched off for a bot (default is on). */
+  /** Switched on explicitly (a row with enabled = 1), like the dashboard shows it. */
+  moduleOn(botId: number, key: string): boolean {
+    const row = this.db.prepare('SELECT enabled FROM bot_modules WHERE bot_id = ? AND module_key = ?').get(botId, key) as Row | undefined;
+    return row !== undefined && Number(row.enabled) === 1;
+  }
+
   disabledModules(botId: number): Set<string> {
     const rows = this.db.prepare('SELECT module_key FROM bot_modules WHERE bot_id = ? AND enabled = 0').all(botId) as Row[];
     return new Set(rows.map((r) => String(r.module_key)));

@@ -3,7 +3,7 @@
 import { AuditLogEvent, PermissionFlagsBits, type GuildBan, type GuildMember, type PartialGuildMember } from 'discord.js';
 import { log } from '../core/log.js';
 import { baseVars, buildMessage, idIn, idsIn, reactionOf, type MessageConfig, type ModuleContext } from './context.js';
-import { assignable, send, warn } from './guard.js';
+import { allow, assignable, send, warn } from './guard.js';
 
 /** Roles a rejoining member gets back. */
 export function rolesToRestore(saved: string[], mode: unknown, selected: string[]): string[] {
@@ -28,10 +28,10 @@ export async function onMemberAdd(ctx: ModuleContext, member: GuildMember): Prom
         const payload = buildMessage(cfg.message, vars);
         if (channel?.isSendable() && payload) {
           const sent = await send(ctx, 'welcommer', channel, payload);
-          for (const e of cfg.reactions ?? []) await sent?.react(reactionOf(e)).catch(() => undefined);
+          for (const e of cfg.reactions ?? []) if (sent && allow(ctx, 'welcommer', sent.channelId)) await sent.react(reactionOf(e)).catch(() => undefined);
         }
       }
-      if (cfg.dm) {
+      if (cfg.dm && allow(ctx, 'welcommer', `dm:${member.id}`)) {
         const payload = buildMessage(cfg.dmMessage, vars);
         if (payload) await member.send(payload).catch(() => undefined);
       }

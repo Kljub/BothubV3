@@ -3,8 +3,11 @@ package web
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net/http"
+	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/Kljub/BothubV3/dashboard/internal/api"
 )
@@ -93,6 +96,12 @@ func (s *Server) handleBuilderPage(w http.ResponseWriter, r *http.Request, p Pag
 		backURL = "/bots/modules/" + info.Key
 	}
 	base := fmt.Sprintf("/api/v1/bots/%d/%s/%d", bot.ID, h.Kind, cmd.ID)
+	// Core nodes plus the blocks of the bot's plugins, with their texts.
+	nodes := slices.Clone(s.nodeDefs)
+	texts := s.editorTexts(p.Locale)
+	pluginDefs, pluginTexts := s.pluginNodes(r, p, bot.ID)
+	nodes = append(nodes, pluginDefs...)
+	maps.Copy(texts, pluginTexts)
 	s.render(w, http.StatusOK, "builder", "builder_layout", withData(p, map[string]any{
 		"Command": cmd,
 		"BotID":   bot.ID,
@@ -100,10 +109,10 @@ func (s *Server) handleBuilderPage(w http.ResponseWriter, r *http.Request, p Pag
 		"IsEvent": h.Event(),
 		"Events":  jsonIsland(events),
 		// JSON islands read by builder.js.
-		"Nodes": jsonIsland(s.nodeDefs),
+		"Nodes": jsonIsland(nodes),
 		// Re-marshalled: escapes <, > and & in user content (e.g. reply texts).
 		"Graph":     jsonIsland(graph),
-		"Texts":     jsonIsland(s.editorTexts(p.Locale)),
+		"Texts":     jsonIsland(texts),
 		"Variables": jsonIsland(variableCatalog()),
 		"Meta": jsonIsland(map[string]any{
 			"kind":           kind,
@@ -127,4 +136,114 @@ func (s *Server) handleBuilderPage(w http.ResponseWriter, r *http.Request, p Pag
 			"backUrl":        backURL,
 		}),
 	}))
+}
+
+// pluginPortWords turns a port name of a plugin block into its fallback
+// label ("not_found" -> "Not found").
+var pluginPortWords = strings.NewReplacer("_", " ")
+
+// pluginNodes turns the blocks of the bot's plugins (manifest.blocks) into
+// builder node definitions: type plugin.<id>.<block>, group "plugin", ports
+// with labels, the plugin icon. Blocks of plugins that are off for the bot
+// are still defined (existing graphs keep their ports) but not offered in
+// the palette. It also returns the texts the definitions point to.
+func (s *Server) pluginNodes(r *http.Request, p Page, botID int64) ([]json.RawMessage, map[string]string) {
+	plugins, err := s.pluginViews(r, botID)
+	if err != nil {
+		return nil, nil
+	}
+	var defs []json.RawMessage
+	texts := map[string]string{}
+	for _, pl := range plugins {
+		var m struct {
+			Blocks []struct {
+				Name       string         `json:"name"`
+				Definition map[string]any `json:"definition"`
+			} `json:"blocks"`
+		}
+		if json.Unmarshal(pl.Manifest, &m) != nil {
+			continue
+		}
+		prefix := "plugin." + pl.ID + "."
+		for i, b := range m.Blocks {
+			def := map[string]any{}
+			for k, v := range b.Definition {
+				def[k] = v
+			}
+			def["type"] = "plugin." + pl.ID + "." + b.Name
+			def["version"] = 1
+			def["group"] = "plugin"
+			def["order"] = 9000 + i
+			def["icon"] = pl.Icon
+			if pl.Icon == "" {
+				def["icon"] = "🧩"
+			}
+			if _, ok := def["category"]; !ok {
+				def["category"] = "action"
+			}
+			if _, ok := def["color"]; !ok {
+				def["color"] = "purple"
+			}
+			if !pl.Enabled || len(pl.BlockedBy) > 0 {
+				def["palette"] = false
+			}
+			for _, side := range []string{"inputs", "outputs"} {
+				ports, _ := def[side].([]any)
+				if len(ports) == 0 && side == "inputs" {
+					ports = []any{map[string]any{"name": "in", "type": "flow", "multiple": true}}
+				}
+				for _, raw := range ports {
+					port, ok := raw.(map[string]any)
+					if !ok {
+						continue
+					}
+					name, _ := port["name"].(string)
+					if _, has := port["type"]; !has {
+						port["type"] = "flow"
+					}
+					if key, _ := port["labelKey"].(string); key != "" {
+						continue
+					}
+					// The plugin's own text first (lang/<locale>.json "plugin.<id>.port.<name>"),
+					// then BotHub's port text, then the name itself.
+					k := prefix + "port." + name
+					if v := s.i18n.T(p.Locale, k); v != k {
+						port["labelKey"], texts[k] = k, v
+						continue
+					}
+					if bk := "builder.port." + name; s.i18n.T(p.Locale, bk) != bk {
+						port["labelKey"] = bk
+						continue
+					}
+					port["labelKey"] = k
+					words := pluginPortWords.Replace(name)
+					texts[k] = strings.ToUpper(words[:1]) + words[1:]
+				}
+				def[side] = ports
+			}
+			collectPluginTexts(def, prefix, func(key string) { texts[key] = s.i18n.T(p.Locale, key) })
+			if raw, err := json.Marshal(def); err == nil {
+				defs = append(defs, raw)
+			}
+		}
+	}
+	return defs, texts
+}
+
+// collectPluginTexts calls add for every "...Key" string value under prefix.
+func collectPluginTexts(v any, prefix string, add func(string)) {
+	switch x := v.(type) {
+	case map[string]any:
+		for k, val := range x {
+			if s, ok := val.(string); ok && strings.HasSuffix(k, "Key") && strings.HasPrefix(s, prefix) {
+				add(s)
+				continue
+			}
+			collectPluginTexts(val, prefix, add)
+		}
+	case []any:
+		for _, val := range x {
+			collectPluginTexts(val, prefix, add)
+		}
+	}
 }

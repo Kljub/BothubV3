@@ -1,0 +1,7 @@
+{
+  "plugin.__ID__.node.api_get.label": "Call API",
+  "plugin.__ID__.node.api_get.description": "Fetches data from the API (address and key: secrets __URL_SECRET__ and __KEY_SECRET__, set up by the admin).",
+  "plugin.__ID__.node.api_get.result": "Value",
+  "plugin.__ID__.node.api_get.result_status": "HTTP status",
+  "plugin.__ID__.node.api_get.result_missing": "Secrets without a value"
+}

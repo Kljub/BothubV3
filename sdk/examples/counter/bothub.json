@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "plugin_counter",
+  "name": "Counter",
+  "version": "1.0.0",
+  "description": "Example plugin: a block that counts how often it ran, per server.",
+  "developer": {
+    "name": "BotHub",
+    "url": "https://github.com/Kljub"
+  },
+  "license": "MIT",
+  "sdk": {
+    "version": 1,
+    "permissions": [
+      "storage"
+    ]
+  },
+  "main": "index.js",
+  "nodes": [
+    "count"
+  ]
+}

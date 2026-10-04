@@ -64,11 +64,13 @@ export function buildMessage(run: Run, node: GraphNode, customId: (component: Gr
         title: r(e.title),
         url: r(e.url),
         description: r(e.description),
-        color: hexToInt(e.color),
+        // A variable may hold the color ({weather.color}).
+        color: hexToInt(e.color ? run.render(e.color).trim() : undefined),
         author: e.author?.name ? clean({ name: run.render(e.author.name), url: r(e.author.url), icon_url: r(e.author.icon_url) }) : undefined,
         fields: (e.fields ?? []).filter((f) => f.name && f.value).map((f) => ({ name: run.render(f.name!), value: run.render(f.value!), inline: Boolean(f.inline) })),
-        image: e.image_url ? { url: run.render(e.image_url) } : undefined,
-        thumbnail: e.thumbnail_url ? { url: run.render(e.thumbnail_url) } : undefined,
+        // A variable that turned out empty leaves the image out (Discord refuses an empty URL).
+        image: r(e.image_url) ? { url: r(e.image_url)! } : undefined,
+        thumbnail: r(e.thumbnail_url) ? { url: r(e.thumbnail_url)! } : undefined,
         footer: e.footer?.text ? clean({ text: run.render(e.footer.text), icon_url: r(e.footer.icon_url) }) : undefined,
         timestamp: e.timestamp ? new Date().toISOString() : undefined,
       }),

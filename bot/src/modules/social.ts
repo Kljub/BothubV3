@@ -63,21 +63,34 @@ export async function tempVoice(ctx: ModuleContext, before: VoiceState, after: V
   const overwrites: OverwriteResolvable[] = [
     { id: member.id, type: OverwriteType.Member, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect, ...(cfg.ownerManage !== false ? [PermissionFlagsBits.ManageChannels, PermissionFlagsBits.MoveMembers] : [])] },
   ];
-  if (cfg.lock === 'locked') overwrites.push({ id: guild.roles.everyone.id, type: OverwriteType.Role, deny: [PermissionFlagsBits.Connect] });
-  if (cfg.lock === 'unlocked') overwrites.push({ id: guild.roles.everyone.id, type: OverwriteType.Role, allow: [PermissionFlagsBits.Connect] });
   const channel = await guild.channels
     .create({
       name: fill(cfg.name || "🔊 {user}'s channel", { user: member.displayName, 'user.name': member.user.username }).slice(0, 100),
       type: ChannelType.GuildVoice,
       parent,
       userLimit: Math.min(99, Math.max(0, cfg.userLimit ?? 0)),
-      permissionOverwrites: cfg.lock === 'server' ? [...(category?.type === ChannelType.GuildCategory ? category.permissionOverwrites.cache.values() : []), ...overwrites] : overwrites,
+      permissionOverwrites: lockedOverwrites(cfg.lock, category?.type === ChannelType.GuildCategory ? [...category.permissionOverwrites.cache.values()] : [], overwrites, guild.roles.everyone.id, member.id),
       reason: 'Temp voice channel',
     })
     .catch((err) => (log.debug('temp voice create failed', { err: String(err) }), null));
   if (!channel) return;
   ctx.setState('temp-voice', guild.id, `ch:${channel.id}`, member.id);
   await member.voice.setChannel(channel).catch(() => undefined);
+}
+
+/**
+ * server: the category's rules plus the creator. unlocked: everyone may join.
+ * locked: nobody but the creator — every other allow for Connect from the
+ * category becomes a deny (members with Administrator can still join).
+ */
+function lockedOverwrites(lock: string | undefined, category: { id: string; type: OverwriteType; allow: { bitfield: bigint }; deny: { bitfield: bigint } }[], own: OverwriteResolvable[], everyone: string, creator: string): OverwriteResolvable[] {
+  const connect = PermissionFlagsBits.Connect;
+  if (lock === 'unlocked') return [{ id: everyone, type: OverwriteType.Role, allow: [connect] }, ...own];
+  if (lock !== 'locked') return [...category.map((o) => ({ id: o.id, type: o.type, allow: o.allow.bitfield, deny: o.deny.bitfield })), ...own];
+  const others = category
+    .filter((o) => o.id !== creator && o.id !== everyone)
+    .map((o) => ({ id: o.id, type: o.type, allow: o.allow.bitfield & ~connect, deny: o.deny.bitfield | connect }));
+  return [{ id: everyone, type: OverwriteType.Role, deny: [connect] }, ...others, ...own];
 }
 
 // ---------- Global Chat ----------
@@ -96,7 +109,20 @@ async function hookFor(channel: TextChannel): Promise<Webhook | null> {
   return hook;
 }
 
-export async function globalChat(ctx: ModuleContext, msg: Message): Promise<void> {
+const globalQueue = new Map<number, Promise<unknown>>();
+
+/** Global chat messages of a bot are forwarded one after another. */
+export function globalChat(ctx: ModuleContext, msg: Message): Promise<void> {
+  const run = (globalQueue.get(ctx.botId) ?? Promise.resolve()).then(() => forwardGlobal(ctx, msg));
+  const tail = run.catch(() => undefined);
+  globalQueue.set(ctx.botId, tail);
+  void tail.then(() => {
+    if (globalQueue.get(ctx.botId) === tail) globalQueue.delete(ctx.botId);
+  });
+  return run;
+}
+
+async function forwardGlobal(ctx: ModuleContext, msg: Message): Promise<void> {
   if (!msg.inGuild() || msg.author.bot || msg.webhookId || !ctx.enabled('global-chat')) return;
   const cfg = ctx.config<GlobalConfig>('global-chat');
   const refs = Array.isArray(cfg.channels) ? (cfg.channels as { id: string; guild: string }[]) : [];

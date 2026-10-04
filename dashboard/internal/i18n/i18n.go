@@ -27,7 +27,16 @@ type Bundle struct {
 	matcher  language.Matcher
 
 	warned sync.Map // missing keys already logged
+
+	pluginMu sync.RWMutex
+	plugins  map[string]map[string]map[string]string // plugin id -> locale -> key -> text
 }
+
+// Plugin text limits (shared/plugin-manifest.schema.json, lang).
+const (
+	pluginTextMax = 500
+	pluginKeysMax = 2000
+)
 
 // Load reads every `*.json` file in dir of fsys.
 func Load(fsys fs.FS, dir string) (*Bundle, error) {
@@ -98,6 +107,9 @@ func (b *Bundle) T(locale, key string, args ...any) string {
 	if !ok {
 		msg, ok = b.messages[Fallback][key]
 	}
+	if !ok && strings.HasPrefix(key, "plugin.") {
+		msg, ok = b.pluginText(locale, key)
+	}
 	if !ok {
 		if _, seen := b.warned.LoadOrStore(key, true); !seen {
 			slog.Warn("i18n key missing", "key", key)
@@ -108,6 +120,45 @@ func (b *Bundle) T(locale, key string, args ...any) string {
 		msg = strings.ReplaceAll(msg, "{"+fmt.Sprint(args[i])+"}", fmt.Sprint(args[i+1]))
 	}
 	return msg
+}
+
+// SetPlugin replaces the texts of one installed plugin (its lang files).
+// Only keys under "plugin.<id>." are kept, so a plugin can never change
+// dashboard texts or another plugin's texts; long values are dropped.
+func (b *Bundle) SetPlugin(id string, lang map[string]map[string]string) {
+	prefix := "plugin." + id + "."
+	clean := map[string]map[string]string{}
+	for locale, msgs := range lang {
+		if !b.Has(locale) {
+			continue
+		}
+		m := map[string]string{}
+		for k, v := range msgs {
+			if strings.HasPrefix(k, prefix) && len(k) <= 200 && len([]rune(v)) <= pluginTextMax && len(m) < pluginKeysMax {
+				m[k] = v
+			}
+		}
+		clean[locale] = m
+	}
+	b.pluginMu.Lock()
+	defer b.pluginMu.Unlock()
+	if b.plugins == nil {
+		b.plugins = map[string]map[string]map[string]string{}
+	}
+	b.plugins[id] = clean
+}
+
+// pluginText looks a plugin key up in the locale, then in English.
+func (b *Bundle) pluginText(locale, key string) (string, bool) {
+	id, _, _ := strings.Cut(strings.TrimPrefix(key, "plugin."), ".")
+	b.pluginMu.RLock()
+	defer b.pluginMu.RUnlock()
+	texts := b.plugins[id]
+	if msg, ok := texts[locale][key]; ok {
+		return msg, true
+	}
+	msg, ok := texts[Fallback][key]
+	return msg, ok
 }
 
 // Keys returns all keys of locale. Used by tests.

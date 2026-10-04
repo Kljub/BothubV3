@@ -7,6 +7,14 @@
 <link rel="stylesheet" href="/static/css/bothub.css?v={{.AssetVersion}}">
 <script src="/static/vendor/htmx.min.js?v={{.AssetVersion}}" defer></script>
 <script src="/static/app.js?v={{.AssetVersion}}" defer></script>
+{{/* Role/channel pickers and the permissions block of settings pages. Loaded on every page:
+     hx-boost swaps pages without running their script tags (allowScriptTags false). */}}
+<script src="/static/js/icons.js?v={{.AssetVersion}}" defer></script>
+<script src="/static/js/permissions.js?v={{.AssetVersion}}" defer></script>
+<script src="/static/js/modsettings.js?v={{.AssetVersion}}" defer></script>
+<script src="/static/js/var-picker.js?v={{.AssetVersion}}" defer></script>
+<script src="/static/js/builder-message.js?v={{.AssetVersion}}" defer></script>
+<script src="/static/js/message-page.js?v={{.AssetVersion}}" defer></script>
 <script type="application/json" id="i18n-client">{{clientI18n}}</script>
 {{end}}
 
@@ -84,6 +92,7 @@
         </div>
         <hr>
         <button type="button" class="menu-item" role="menuitem" data-open-dialog="settings-dialog">{{template "icon_gear"}}<span>{{t "admin.nav.settings"}}</span></button>
+        <a class="menu-item" role="menuitem" href="/store">{{template "icon_plugin"}}<span>{{t "store.title"}}</span></a>
         <button type="button" class="menu-item" role="menuitem" data-open-dialog="admin-dialog"
           hx-get="/admin/overview" hx-target="#admin-panel">{{template "icon_chip"}}<span>{{t "admin.menu"}}</span></button>
         <hr>

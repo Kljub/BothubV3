@@ -25,6 +25,16 @@
       "labelKey": "builder.port.next"
     }
   ],
+  "results": [
+    {
+      "suffix": "",
+      "labelKey": "builder.result.poll_list.0"
+    },
+    {
+      "suffix": ".count",
+      "labelKey": "builder.result.poll_list.1"
+    }
+  ],
   "config": {
     "type": "object",
     "additionalProperties": false,

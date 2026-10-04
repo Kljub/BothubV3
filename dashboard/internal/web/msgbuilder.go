@@ -16,8 +16,6 @@ import (
 // editor of the command builder (message-page.js); renaming, copying,
 // deleting and sending are htmx forms here. Sending is a bot job.
 
-const maxTemplates = 100
-
 var jobID = regexp.MustCompile(`^[0-9a-f-]{36}$`)
 
 type msgTemplateRow struct {
@@ -35,7 +33,6 @@ type msgBuilderView struct {
 	BotName   string
 	BotAvatar string
 	Items     []msgTemplateRow
-	Max       int
 	Texts     template.JS
 	Variables template.JS
 }
@@ -94,7 +91,7 @@ func (s *Server) msgBuilderView(r *http.Request, p Page, bot api.Bot) (msgBuilde
 	if err != nil {
 		return msgBuilderView{}, err
 	}
-	v := msgBuilderView{BotID: bot.ID, BotName: bot.Name, Max: maxTemplates, Texts: jsonIsland(s.editorTexts(p.Locale)), Variables: jsonIsland(variableCatalog())}
+	v := msgBuilderView{BotID: bot.ID, BotName: bot.Name, Texts: jsonIsland(s.editorTexts(p.Locale)), Variables: jsonIsland(variableCatalog())}
 	if bot.AvatarURL != nil {
 		v.BotAvatar = *bot.AvatarURL
 	}

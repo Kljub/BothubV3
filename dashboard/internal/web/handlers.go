@@ -181,6 +181,12 @@ func (s *Server) handleBot(w http.ResponseWriter, r *http.Request, p Page) {
 			return
 		}
 		data["Media"] = mediaView{Bot: bot, Profile: profile}
+		backup, err := s.botBackupView(r, bot)
+		if err != nil {
+			s.fail(w, r, p, err)
+			return
+		}
+		data["Backup"] = backup
 	case "status":
 		presence, err := s.api.Presence(r.Context(), sess, id)
 		if err != nil {
@@ -311,7 +317,7 @@ func (s *Server) handleLeaveGuild(w http.ResponseWriter, r *http.Request, p Page
 var themes = []string{"system", "light", "dark"}
 
 // adminSections are the entries of the admin dialog's sidebar, in order.
-var adminSections = []string{"overview", "resources", "plugins", "users_roles", "logs", "sdk_policies", "server_settings", "email"}
+var adminSections = []string{"overview", "resources", "users_roles", "logs", "sdk_policies", "server_settings", "email", "api_secrets"}
 
 func (s *Server) handleAdminSection(w http.ResponseWriter, r *http.Request, p Page) {
 	section := r.PathValue("section")
@@ -360,6 +366,22 @@ func (s *Server) handleAdminSection(w http.ResponseWriter, r *http.Request, p Pa
 		}
 		data["SMTP"] = smtp
 		data["SecurityModes"] = api.SMTPSecurityModes
+	}
+	if section == "sdk_policies" {
+		v, err := s.sdkPolicies(r, p.Locale)
+		if err != nil {
+			s.fail(w, r, p, err)
+			return
+		}
+		data["SdkPolicies"] = v
+	}
+	if section == "api_secrets" {
+		v, err := s.secretsData(r, p)
+		if err != nil {
+			s.fail(w, r, p, err)
+			return
+		}
+		data["Secrets"] = v
 	}
 	if section == "server_settings" {
 		settings, err := s.api.ServerSettings(r.Context(), session(r))

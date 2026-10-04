@@ -1034,7 +1034,7 @@ paths:
     post:
       operationId: createMessageTemplate
       tags: [commands]
-      summary: Save a message as a template (max. 100 per bot)
+      summary: Save a message as a template (no limit per bot)
       parameters:
         - $ref: "#/components/parameters/CsrfToken"
       requestBody:
@@ -1339,6 +1339,117 @@ paths:
                     items: { $ref: "#/components/schemas/DataLookupValue" }
         "401": { $ref: "#/components/responses/Unauthorized" }
 
+  /api/v1/bots/{botId}/backup:
+    parameters:
+      - $ref: "#/components/parameters/BotId"
+    get:
+      operationId: exportBot
+      tags: [bots]
+      summary: "Configuration of the bot as a backup file (format bothub-bot-backup v1): commands, events, groups, modules, timed events, message templates, Data Storage definitions, webhooks without key, presence, plugin settings. Never the token, secrets, logs or stored values."
+      responses:
+        "200": { description: Backup, content: { application/json: { schema: { type: object } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/bots/{botId}/backups:
+    parameters:
+      - $ref: "#/components/parameters/BotId"
+    get:
+      operationId: listBotBackups
+      tags: [bots]
+      summary: Saved backups of the bot, global templates and ready-made templates (shared/bot-templates), without data
+      responses:
+        "200":
+          description: Entries
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, kind, name, description, auto, createdAt, size]
+                      properties:
+                        id: { type: string, description: "Number, or builtin:<key> for a ready-made template" }
+                        kind: { type: string, enum: [backup, template, builtin] }
+                        name: { type: string }
+                        description: { type: string }
+                        auto: { type: boolean, description: Made automatically before a restore }
+                        createdAt: { type: [string, "null"], format: date-time }
+                        size: { type: integer }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      operationId: saveBotBackup
+      tags: [bots]
+      summary: Save the current state as a backup of this bot (max. 50) or as a global template (max. 100)
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                kind: { type: string, enum: [backup, template], default: backup }
+                name: { type: string, minLength: 1, maxLength: 60 }
+                description: { type: string, maxLength: 300 }
+      responses:
+        "201": { description: Saved }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /api/v1/bots/{botId}/backups/{backupId}:
+    parameters:
+      - $ref: "#/components/parameters/BotId"
+      - { name: backupId, in: path, required: true, schema: { type: string, pattern: "^[a-z0-9:-]{1,60}$" } }
+    get:
+      operationId: getBotBackup
+      tags: [bots]
+      summary: Data of a saved entry or ready-made template (download)
+      responses:
+        "200": { description: Backup, content: { application/json: { schema: { type: object } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      operationId: deleteBotBackup
+      tags: [bots]
+      summary: Delete a saved backup or template (ready-made templates cannot be deleted)
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      responses:
+        "204": { description: Deleted }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/bots/{botId}/restore:
+    parameters:
+      - $ref: "#/components/parameters/BotId"
+    post:
+      operationId: restoreBot
+      tags: [bots]
+      summary: "Replaces the bot's configuration with a saved entry, a ready-made template or an uploaded backup; makes an automatic backup first. Every part is checked like in the editors (422 error.backup.part {part, reason})."
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id: { type: string, description: Saved entry or builtin:<key> }
+                data: { type: object, description: Uploaded backup file }
+                name: { type: string, description: Name for the automatic backup }
+      responses:
+        "200": { description: Restored }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
   /api/v1/plugins/market:
     get:
       operationId: listMarketPlugins
@@ -1447,6 +1558,82 @@ paths:
         "202": { $ref: "#/components/responses/JobAccepted" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/bots/{botId}/plugins/{pluginId}/files:
+    parameters:
+      - $ref: "#/components/parameters/BotId"
+      - $ref: "#/components/parameters/PluginId"
+    get:
+      operationId: listBotPluginFiles
+      tags: [plugins]
+      summary: Images of a plugin on one bot (plugin_files)
+      responses:
+        "200":
+          description: Files, oldest first
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/PluginFile" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      operationId: uploadBotPluginFile
+      tags: [plugins]
+      summary: Upload an image for an "image" settings field
+      description: |
+        PNG, GIF, WEBP or JPEG (recognized by the first bytes), max. 2 MB; 100
+        files and 25 MB per plugin and bot. The name is the first 16 hex
+        characters of the SHA-256 plus the extension, so the same picture gets
+        the same name. An upload that no setting names is removed at the next
+        settings save.
+      parameters:
+        - $ref: "#/components/parameters/CsrfToken"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [data]
+              properties:
+                data: { type: string, format: byte }
+      responses:
+        "201":
+          description: Stored
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PluginFile" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "413": { description: "error.files.too_big or error.files.full" }
+        "422": { description: "error.files.bad_type" }
+
+  /api/v1/bots/{botId}/plugins/{pluginId}/files/{name}:
+    parameters:
+      - $ref: "#/components/parameters/BotId"
+      - $ref: "#/components/parameters/PluginId"
+      - name: name
+        in: path
+        required: true
+        schema: { type: string, pattern: "^[0-9a-f]{16}\\.(png|gif|webp|jpg)$" }
+    get:
+      operationId: getBotPluginFile
+      tags: [plugins]
+      summary: One image with its content (base64)
+      responses:
+        "200":
+          description: The file
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name: { type: string }
+                  mime: { type: string }
+                  data: { type: string, format: byte }
         "404": { $ref: "#/components/responses/NotFound" }
 
   /api/v1/bots/{botId}/stats:
@@ -1615,7 +1802,7 @@ components:
       name: pluginId
       in: path
       required: true
-      schema: { type: string, pattern: "^[a-z0-9][a-z0-9-]{1,63}$" }
+      schema: { type: string, pattern: "^plugin_[a-z0-9_]{1,57}$" }
 
   responses:
     Unauthorized:
@@ -1906,13 +2093,27 @@ components:
       properties:
         id: { $ref: "#/components/schemas/Snowflake" }
         guild: { $ref: "#/components/schemas/Snowflake" }
+    PermissionsBlock:
+      type: object
+      description: Shared permissions block of commands and modules.
+      properties:
+        allowed_roles: { type: array, maxItems: 100, items: { $ref: "#/components/schemas/GuildRef" } }
+        banned_roles: { type: array, maxItems: 100, items: { $ref: "#/components/schemas/GuildRef" } }
+        required_permissions: { type: array, maxItems: 60, items: { type: string, description: "Discord permission name, e.g. manage_messages" } }
+        banned_channels: { type: array, maxItems: 100, items: { $ref: "#/components/schemas/GuildRef" } }
     ModerationConfig:
       type: object
       description: Settings of the moderation module (bot_modules.config). Missing fields keep their defaults.
       properties:
-        defaultPermissions: { type: boolean, description: "Manage Messages counts as moderator, Administrator as admin" }
-        moderatorRoles: { type: array, maxItems: 100, items: { $ref: "#/components/schemas/GuildRef" } }
-        adminRoles: { type: array, maxItems: 100, items: { $ref: "#/components/schemas/GuildRef" } }
+        moderators:
+          description: >-
+            Who counts as moderator: allowed_roles, or all of required_permissions (default manage_messages);
+            never with a banned role or in a banned channel (admins always count). No "everyone".
+            Older configs with defaultPermissions/moderatorRoles/adminRoles are read into the blocks.
+          allOf: [{ $ref: "#/components/schemas/PermissionsBlock" }]
+        admins:
+          description: The same for admins (default required_permissions administrator); Discord's Administrator always counts.
+          allOf: [{ $ref: "#/components/schemas/PermissionsBlock" }]
         logEnabled: { type: boolean }
         logChannels: { type: array, maxItems: 100, description: "One log channel per server", items: { $ref: "#/components/schemas/GuildRef" } }
         punishmentColor: { type: string, pattern: "^#[0-9a-f]{6}$" }
@@ -2013,6 +2214,15 @@ components:
           type: object
           description: See shared/graph.schema.json
 
+    PluginFile:
+      type: object
+      required: [name, mime, size]
+      properties:
+        name: { type: string, example: "3f2a9c0d1b7e4a55.png" }
+        mime: { type: string, enum: [image/png, image/gif, image/webp, image/jpeg] }
+        size: { type: integer }
+        origin: { type: string, enum: [dashboard, plugin] }
+        createdAt: { type: string, format: date-time }
     PluginVersion:
       type: string
       description: "BotHub scheme: feature X.0.0, bugfix 0.X.0, patch 0.0.X"

@@ -7,6 +7,7 @@ package api
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -632,6 +633,105 @@ func (c *Client) SetBotPluginEnabled(ctx context.Context, s Session, botID int64
 	return out, err
 }
 
+// PluginConfigRaw reads this bot's saved settings of a plugin into out.
+func (c *Client) PluginConfigRaw(ctx context.Context, s Session, botID int64, pluginID string, out any) error {
+	var wrap struct {
+		Config json.RawMessage `json:"config"`
+	}
+	if _, err := c.do(ctx, s, http.MethodGet, fmt.Sprintf("/api/v1/bots/%d/plugins/%s/config", botID, url.PathEscape(pluginID)), nil, &wrap); err != nil {
+		return err
+	}
+	if len(wrap.Config) == 0 {
+		return nil
+	}
+	return json.Unmarshal(wrap.Config, out)
+}
+
+// SetPluginConfigRaw replaces the settings; the API validates them against
+// the plugin's manifest.settings.
+func (c *Client) SetPluginConfigRaw(ctx context.Context, s Session, botID int64, pluginID string, in, out any) error {
+	var wrap struct {
+		Config json.RawMessage `json:"config"`
+	}
+	if _, err := c.do(ctx, s, http.MethodPut, fmt.Sprintf("/api/v1/bots/%d/plugins/%s/config", botID, url.PathEscape(pluginID)), map[string]any{"config": in}, &wrap); err != nil {
+		return err
+	}
+	if len(wrap.Config) == 0 {
+		return nil
+	}
+	return json.Unmarshal(wrap.Config, out)
+}
+
+// AdminPlugins lists the plugins installed on the instance.
+func (c *Client) AdminPlugins(ctx context.Context, s Session) ([]AdminPlugin, error) {
+	var out list[AdminPlugin]
+	_, err := c.do(ctx, s, http.MethodGet, "/api/v1/admin/plugins", nil, &out)
+	return out.Items, err
+}
+
+// MarketPlugins lists the plugins of the market repo (cached 5 min by the
+// API; refresh asks GitHub again).
+// MarketPluginsCached returns the API's last market list of any age without
+// a download; fresh reports it is younger than 5 minutes (false also when
+// there is no list yet).
+func (c *Client) MarketPluginsCached(ctx context.Context, s Session) ([]MarketPlugin, bool, error) {
+	var out struct {
+		Items []MarketPlugin `json:"items"`
+		Fresh bool           `json:"fresh"`
+	}
+	_, err := c.do(ctx, s, http.MethodGet, "/api/v1/admin/plugins/market?cached=1", nil, &out)
+	return out.Items, out.Fresh, err
+}
+
+func (c *Client) MarketPlugins(ctx context.Context, s Session, refresh bool) ([]MarketPlugin, error) {
+	var out list[MarketPlugin]
+	path := "/api/v1/admin/plugins/market"
+	if refresh {
+		path += "?refresh=1"
+	}
+	_, err := c.do(ctx, s, http.MethodGet, path, nil, &out)
+	return out.Items, err
+}
+
+// InstallPluginUpload installs a plugin zip (max 5 MB; the API checks it).
+func (c *Client) InstallPluginUpload(ctx context.Context, s Session, zip []byte) (PluginInstall, error) {
+	var out PluginInstall
+	_, err := c.do(ctx, s, http.MethodPost, "/api/v1/admin/plugins/install",
+		map[string]string{"source": "upload", "zip": base64.StdEncoding.EncodeToString(zip)}, &out)
+	return out, err
+}
+
+// InstallPluginMarket installs a version listed in the market index.
+func (c *Client) InstallPluginMarket(ctx context.Context, s Session, id, version string) (PluginInstall, error) {
+	var out PluginInstall
+	_, err := c.do(ctx, s, http.MethodPost, "/api/v1/admin/plugins/install",
+		map[string]string{"source": "market", "id": id, "version": version}, &out)
+	return out, err
+}
+
+// SharePluginSecrets sets the secrets a plugin may read by name (secrets.read).
+func (c *Client) SharePluginSecrets(ctx context.Context, s Session, id string, shared []string) error {
+	_, err := c.do(ctx, s, http.MethodPut, "/api/v1/admin/plugins/"+url.PathEscape(id)+"/secrets", map[string][]string{"shared": shared}, nil)
+	return err
+}
+
+// UninstallPlugin removes a plugin; deleteCommands also deletes its Custom
+// Command copies on every bot.
+// SetPluginEnabled switches an installed plugin on or off for every bot.
+func (c *Client) SetPluginEnabled(ctx context.Context, s Session, id string, enabled bool) error {
+	_, err := c.do(ctx, s, http.MethodPatch, "/api/v1/admin/plugins/"+url.PathEscape(id), map[string]bool{"enabled": enabled}, nil)
+	return err
+}
+
+func (c *Client) UninstallPlugin(ctx context.Context, s Session, id string, deleteCommands bool) error {
+	path := "/api/v1/admin/plugins/" + url.PathEscape(id)
+	if deleteCommands {
+		path += "?deleteCommands=1"
+	}
+	_, err := c.do(ctx, s, http.MethodDelete, path, nil, nil)
+	return err
+}
+
 // --- logs ---
 
 // Logs returns the bot's log entries, oldest first. level "" means all.
@@ -846,4 +946,65 @@ func (c *Client) SecurityActivity(ctx context.Context, s Session) ([]SecurityEve
 	var out list[SecurityEvent]
 	_, err := c.do(ctx, s, http.MethodGet, "/api/v1/auth/activity", nil, &out)
 	return out.Items, err
+}
+
+// --- admin: global API secrets and endpoints ---
+
+// GlobalSecret never carries its value: secrets are write-only.
+type GlobalSecret struct {
+	Key         string `json:"key"`
+	Description string `json:"description"`
+	// Set: false for a placeholder a plugin install created ([NULL]).
+	Set       bool      `json:"set"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
+}
+
+func (c *Client) GlobalSecrets(ctx context.Context, s Session) ([]GlobalSecret, error) {
+	var out list[GlobalSecret]
+	_, err := c.do(ctx, s, http.MethodGet, "/api/v1/admin/secrets", nil, &out)
+	return out.Items, err
+}
+
+// SaveGlobalSecret creates or updates a secret; value nil keeps the stored value.
+func (c *Client) SaveGlobalSecret(ctx context.Context, s Session, key, description string, value *string) error {
+	in := map[string]any{"description": description}
+	if value != nil {
+		in["value"] = *value
+	}
+	_, err := c.do(ctx, s, http.MethodPut, "/api/v1/admin/secrets/"+url.PathEscape(key), in, nil)
+	return err
+}
+
+func (c *Client) DeleteGlobalSecret(ctx context.Context, s Session, key string) error {
+	_, err := c.do(ctx, s, http.MethodDelete, "/api/v1/admin/secrets/"+url.PathEscape(key), nil, nil)
+	return err
+}
+
+// PluginFile is an image of a plugin's files (plugin_files); the name is
+// the content hash plus the extension.
+type PluginFile struct {
+	Name string `json:"name"`
+	Mime string `json:"mime"`
+	Size int64  `json:"size"`
+}
+
+// UploadPluginFile stores an image for the plugin's "image" settings fields.
+func (c *Client) UploadPluginFile(ctx context.Context, s Session, botID int64, pluginID string, data []byte) (PluginFile, error) {
+	var out PluginFile
+	_, err := c.do(ctx, s, http.MethodPost, fmt.Sprintf("/api/v1/bots/%d/plugins/%s/files", botID, url.PathEscape(pluginID)), map[string]string{"data": base64.StdEncoding.EncodeToString(data)}, &out)
+	return out, err
+}
+
+// PluginFileData reads one image of a plugin: its type and its bytes.
+func (c *Client) PluginFileData(ctx context.Context, s Session, botID int64, pluginID, name string) (string, []byte, error) {
+	var out struct {
+		Mime string `json:"mime"`
+		Data string `json:"data"`
+	}
+	if _, err := c.do(ctx, s, http.MethodGet, fmt.Sprintf("/api/v1/bots/%d/plugins/%s/files/%s", botID, url.PathEscape(pluginID), url.PathEscape(name)), nil, &out); err != nil {
+		return "", nil, err
+	}
+	data, err := base64.StdEncoding.DecodeString(out.Data)
+	return out.Mime, data, err
 }

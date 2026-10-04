@@ -10,12 +10,12 @@ import list (`TestMainCSSImportsAllComponents` checks this).
 
 **Global components** (usable in module and plugin content):
 `bh-base`, `bh-form`, `bh-button`, `bh-toggle`, `bh-chip`, `bh-card`, `bh-section`, `bh-datepicker`, `bh-pagination`, `bh-command`, `bh-gauge`,
-`bh-badge`, `bh-alert`, `bh-table`, `bh-utilities`.
+`bh-badge`, `bh-alert`, `bh-table`, `bh-utilities`, `bh-permissions` (role/channel pickers and the permissions block, built by `static/js/permissions.js`).
 
 **Page parts** (dashboard chrome only, never in content):
 `bh-layout`, `bh-sidebar`, `bh-topbar`, `bh-page`, `bh-modal`, `bh-tiles`,
 `bh-bot-card`, `bh-chart`, `bh-terminal`, `bh-mod-card`, `bh-server`,
-`bh-status`, `bh-media`.
+`bh-status`, `bh-media`, `bh-store`.
 
 ## Content rules
 

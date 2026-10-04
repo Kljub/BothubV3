@@ -2,19 +2,86 @@
   "module": "media-channels",
   "fields": [
     {
-      "key": "channels", "type": "list", "max": 10, "titleField": "channel",
+      "key": "channels",
+      "type": "list",
+      "max": 10,
+      "titleField": "channel",
       "item": [
-        { "key": "channel", "type": "channel", "channelTypes": ["text", "forum"] },
-        { "key": "whitelist", "type": "roles", "max": 25 }
+        {
+          "key": "channel",
+          "type": "channel",
+          "channelTypes": [
+            "text",
+            "forum"
+          ]
+        },
+        {
+          "key": "whitelist",
+          "type": "roles",
+          "max": 25
+        }
       ]
     },
-    { "key": "allowText", "type": "bool", "default": true },
-    { "key": "allowEmbeds", "type": "bool", "default": true },
-    { "key": "blockDuplicates", "type": "bool", "default": false },
-    { "key": "maxAttachments", "type": "number", "min": 0, "max": 100, "default": 10 },
-    { "key": "mediaType", "type": "select", "options": ["all", "images", "videos", "advanced"], "default": "all" },
-    { "key": "extensions", "type": "words", "max": 30, "maxLength": 10, "showIf": { "mediaType": ["advanced"] } },
-    { "key": "errorEnabled", "type": "bool", "default": true },
-    { "key": "errorMessage", "type": "text", "max": 500, "showIf": { "errorEnabled": ["true"] }, "default": "{user.mention}, only media can be posted in this channel." }
+    {
+      "key": "allowText",
+      "type": "bool",
+      "default": true,
+      "hint": true
+    },
+    {
+      "key": "allowEmbeds",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "blockDuplicates",
+      "type": "bool",
+      "default": false
+    },
+    {
+      "key": "maxAttachments",
+      "type": "number",
+      "min": 0,
+      "max": 100,
+      "default": 10
+    },
+    {
+      "key": "mediaType",
+      "type": "select",
+      "options": [
+        "all",
+        "images",
+        "videos",
+        "advanced"
+      ],
+      "default": "all"
+    },
+    {
+      "key": "extensions",
+      "type": "words",
+      "max": 30,
+      "maxLength": 10,
+      "showIf": {
+        "mediaType": [
+          "advanced"
+        ]
+      }
+    },
+    {
+      "key": "errorEnabled",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "errorMessage",
+      "type": "text",
+      "max": 500,
+      "showIf": {
+        "errorEnabled": [
+          "true"
+        ]
+      },
+      "default": "{user.mention}, only media can be posted in this channel."
+    }
   ]
 }

@@ -1,0 +1,65 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.ticket_panel",
+  "version": 1,
+  "category": "action",
+  "group": "tickets",
+  "order": 1300,
+  "color": "green",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_ticket_panel.label",
+  "descriptionKey": "builder.node.action_ticket_panel.description",
+  "module": "ticket",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": ".id",
+      "labelKey": "builder.result.ticket_panel.0"
+    },
+    {
+      "suffix": ".url",
+      "labelKey": "builder.result.ticket_panel.1"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "panel": {
+        "type": "string",
+        "maxLength": 100,
+        "x-labelKey": "builder.cfg.ticket_panel",
+        "x-hintKey": "builder.cfg.ticket_panel_hint"
+      },
+      "channel": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.ticket_channel",
+        "x-hintKey": "builder.cfg.ticket_channel_hint",
+        "x-ref": "channel",
+        "default": "{channel.id}"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  },
+  "produces": "message"
+}

@@ -1,0 +1,6 @@
+{
+  "plugin.__ID__.node.hello.label": "Hallo sagen",
+  "plugin.__ID__.node.hello.description": "Baut eine Begrüßung für einen Namen.",
+  "plugin.__ID__.node.hello.result": "Begrüßung",
+  "plugin.__ID__.node.hello.result_length": "Länge der Begrüßung"
+}

@@ -1,0 +1,7 @@
+{
+  "title": "Messages service",
+  "description": "Sends text or embeds to a channel (services/messages.js, ctx.message.send; no pings, at most 5 messages per 5 s) and a node \"Announce\".",
+  "needs": [],
+  "permissions": ["discord.messages.send"],
+  "nodes": ["announce"]
+}

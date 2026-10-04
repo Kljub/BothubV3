@@ -1,0 +1,13 @@
+{
+  "title": "Timed tasks service",
+  "description": "Runs code on a schedule (services/tasks.js): \"every\" (1m, 6h, 1d ...) or \"cron\" (5 fields, UTC). Example: a daily report into a channel from the settings page.",
+  "needs": ["storage", "messages"],
+  "permissions": ["scheduler", "storage", "discord.messages.send"],
+  "tasks": [
+    { "name": "daily_report", "cron": "0 9 * * *" },
+    { "name": "cleanup", "every": "6h" }
+  ],
+  "settings": [
+    { "key": "report_channel", "type": "channel", "channelTypes": ["text"], "hint": true }
+  ]
+}

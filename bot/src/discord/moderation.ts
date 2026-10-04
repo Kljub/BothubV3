@@ -5,6 +5,7 @@
 
 import { PermissionFlagsBits, type Client, type Guild, type GuildMember } from 'discord.js';
 import type { CaseAction, Repo } from '../core/repo.js';
+import { inBlock } from './commands.js';
 import { log } from '../core/log.js';
 import { parseDuration } from '../graph/util.js';
 
@@ -20,10 +21,17 @@ export interface AutoPunishment {
   duration: string;
 }
 
+/** Permissions block: who counts as moderator or admin (see inBlock). */
+export interface RoleBlock {
+  allowed_roles: GuildRef[];
+  banned_roles: GuildRef[];
+  required_permissions: string[];
+  banned_channels: GuildRef[];
+}
+
 export interface ModerationConfig {
-  defaultPermissions: boolean;
-  moderatorRoles: GuildRef[];
-  adminRoles: GuildRef[];
+  moderators: RoleBlock;
+  admins: RoleBlock;
   logEnabled: boolean;
   logChannels: GuildRef[];
   punishmentColor: string;
@@ -39,10 +47,16 @@ export interface ModerationConfig {
 export const MODERATOR_ROLE = 'moderation:moderator';
 export const ADMIN_ROLE = 'moderation:admin';
 
+const block = (roles: GuildRef[], permissions: string[]): RoleBlock => ({
+  allowed_roles: roles,
+  banned_roles: [],
+  required_permissions: permissions,
+  banned_channels: [],
+});
+
 export const DEFAULT_CONFIG: ModerationConfig = {
-  defaultPermissions: true,
-  moderatorRoles: [],
-  adminRoles: [],
+  moderators: block([], ['manage_messages']),
+  admins: block([], ['administrator']),
   logEnabled: false,
   logChannels: [],
   punishmentColor: '#ed4245',
@@ -60,17 +74,35 @@ const RULE_DURATION = /^[1-9][0-9]{0,4}[smhd]$/;
 const refs = (v: unknown): GuildRef[] =>
   Array.isArray(v) ? v.filter((r): r is GuildRef => !!r && typeof r.id === 'string' && typeof r.guild === 'string') : [];
 
-/** Stored config over the defaults; wrong types fall back to the default. */
+function parseBlock(v: unknown, fallback: RoleBlock): RoleBlock {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return fallback;
+  const b = v as Record<string, unknown>;
+  return {
+    allowed_roles: refs(b.allowed_roles),
+    banned_roles: refs(b.banned_roles),
+    required_permissions: Array.isArray(b.required_permissions) ? b.required_permissions.filter((p): p is string => typeof p === 'string') : [],
+    banned_channels: refs(b.banned_channels),
+  };
+}
+
+/**
+ * Stored config over the defaults; wrong types fall back to the default.
+ * Configs from before the blocks (defaultPermissions, moderatorRoles,
+ * adminRoles) are read into them, as ModerationConfig.php does.
+ */
 export function parseConfig(raw: Record<string, unknown>): ModerationConfig {
   const c = { ...DEFAULT_CONFIG };
-  const bool = (k: 'defaultPermissions' | 'logEnabled' | 'dmEnabled') => {
+  const bool = (k: 'logEnabled' | 'dmEnabled') => {
     if (typeof raw[k] === 'boolean') c[k] = raw[k] as boolean;
   };
-  bool('defaultPermissions');
   bool('logEnabled');
   bool('dmEnabled');
-  c.moderatorRoles = refs(raw.moderatorRoles);
-  c.adminRoles = refs(raw.adminRoles);
+  const legacy = 'moderatorRoles' in raw || 'adminRoles' in raw || 'defaultPermissions' in raw;
+  const defaults = raw.defaultPermissions !== false;
+  c.moderators = 'moderators' in raw ? parseBlock(raw.moderators, DEFAULT_CONFIG.moderators)
+    : legacy ? block(refs(raw.moderatorRoles), defaults ? ['manage_messages'] : []) : DEFAULT_CONFIG.moderators;
+  c.admins = 'admins' in raw ? parseBlock(raw.admins, DEFAULT_CONFIG.admins)
+    : legacy ? block(refs(raw.adminRoles), defaults ? ['administrator'] : []) : DEFAULT_CONFIG.admins;
   c.logChannels = refs(raw.logChannels);
   for (const k of ['punishmentColor', 'logColor'] as const) if (typeof raw[k] === 'string' && /^#[0-9a-f]{6}$/i.test(raw[k] as string)) c[k] = raw[k] as string;
   if (raw.dmMode === 'text' || raw.dmMode === 'embed') c.dmMode = raw.dmMode;
@@ -160,18 +192,16 @@ export class Moderation {
 
   /**
    * Pseudo roles of the permissions block: true/false for MODERATOR_ROLE and
-   * ADMIN_ROLE, undefined for any other role ID.
+   * ADMIN_ROLE, undefined for any other role ID. Discord's Administrator is
+   * always an admin; admins are moderators too.
    */
-  hasPseudoRole(id: string, member: GuildMember): boolean | undefined {
+  hasPseudoRole(id: string, member: GuildMember, channelId: string | null = null): boolean | undefined {
     if (id !== MODERATOR_ROLE && id !== ADMIN_ROLE) return undefined;
     const c = this.config;
-    const guild = member.guild.id;
-    const inRoles = (list: GuildRef[]) => list.some((r) => r.guild === guild && member.roles.cache.has(r.id));
     if (member.permissions.has(PermissionFlagsBits.Administrator)) return true;
-    if (inRoles(c.adminRoles)) return true;
+    if (inBlock(c.admins, member, channelId)) return true;
     if (id === ADMIN_ROLE) return false;
-    if (inRoles(c.moderatorRoles)) return true;
-    return c.defaultPermissions && member.permissions.has(PermissionFlagsBits.ManageMessages);
+    return inBlock(c.moderators, member, channelId);
   }
 
   /** Message deletion for ban blocks that keep "none". */

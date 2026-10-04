@@ -1,0 +1,116 @@
+{
+  "module": "free-games",
+  "fields": [
+    {
+      "key": "channel",
+      "type": "channel",
+      "channelTypes": [
+        "text",
+        "announcement"
+      ]
+    },
+    {
+      "key": "pingRole",
+      "type": "role"
+    },
+    {
+      "key": "epic",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "steam",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "schedule",
+      "type": "bool",
+      "default": false,
+      "hint": true
+    },
+    {
+      "key": "time",
+      "type": "text",
+      "max": 5,
+      "default": "18:00",
+      "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+      "hint": true,
+      "showIf": {
+        "schedule": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "mon",
+      "type": "bool",
+      "default": true,
+      "showIf": {
+        "schedule": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "tue",
+      "type": "bool",
+      "default": true,
+      "showIf": {
+        "schedule": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "wed",
+      "type": "bool",
+      "default": true,
+      "showIf": {
+        "schedule": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "thu",
+      "type": "bool",
+      "default": true,
+      "showIf": {
+        "schedule": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "fri",
+      "type": "bool",
+      "default": true,
+      "showIf": {
+        "schedule": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "sat",
+      "type": "bool",
+      "default": true,
+      "showIf": {
+        "schedule": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "sun",
+      "type": "bool",
+      "default": true,
+      "showIf": {
+        "schedule": [
+          "true"
+        ]
+      }
+    }
+  ]
+}

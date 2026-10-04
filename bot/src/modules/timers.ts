@@ -1,12 +1,13 @@
 // Time-driven modules: Timed Messages, Statistic Channels, Birthdays,
-// Question of the Day. tick() runs every 30 seconds per bot; times and days
+// Question of the Day, Free Games. tick() runs every 30 seconds per bot; times and days
 // use the bot's time zone (Timed Events settings).
 
 import { ChannelType, type Client, type Guild } from 'discord.js';
 import { localTime } from '../core/timed.js';
 import { log } from '../core/log.js';
 import { baseVars, buildMessage, fill, idIn, idsIn, reactionOf, type MessageConfig, type ModuleContext } from './context.js';
-import { assignable, send, warn } from './guard.js';
+import { allow, assignable, send, warn } from './guard.js';
+import { postFreeGames } from './freegames.js';
 
 // ---------- pure helpers ----------
 
@@ -96,7 +97,7 @@ const MAX_TRIES = 5;
 
 // ---------- runtime ----------
 
-interface TimedMessage { name: string; channel: unknown; days: number; hours: number; minutes: number; message: MessageConfig; skipStacked: boolean }
+interface TimedMessage { _id?: string; name: string; channel: unknown; days: number; hours: number; minutes: number; message: MessageConfig; skipStacked: boolean }
 
 export class ModuleTimers {
   private timer: NodeJS.Timeout | undefined;
@@ -128,6 +129,10 @@ export class ModuleTimers {
       const local = localTime(now, this.timezone());
       await this.birthdays(guilds, local);
       await this.qotd(guilds, local);
+      if (this.ctx.enabled('free-games')) {
+        const check = Math.floor(now / 1_800_000) !== Math.floor((now - 30_000) / 1_800_000);
+        for (const g of guilds) await postFreeGames(this.ctx, g, local, check);
+      }
     } catch (err) {
       log.warn('module timers failed', { botId: this.ctx.botId, err: String(err) });
     } finally {
@@ -147,7 +152,8 @@ export class ModuleTimers {
         warn(ctx, 'WAR-2008', { module: 'timed-messages', problem: `"${m.name || i + 1}" has no channel the bot can write in` });
         continue;
       }
-      const key = `last:${entryKey([m.name ?? '', channel.id])}`;
+      // Stable entry ID from the API; older entries fall back to name + channel.
+      const key = `last:${m._id ?? entryKey([m.name ?? '', channel.id])}`;
       const last = ctx.getState<{ at: number; message: string }>('timed-messages', guild.id, key);
       if (!last) {
         ctx.setState('timed-messages', guild.id, key, { at: now, message: '' }); // first run after one interval
@@ -247,17 +253,20 @@ export class ModuleTimers {
           done(r.user_id); // left the server: nothing to announce
           continue;
         }
-        const channel = guild.channels.cache.get(idIn(cfg.channel, guild.id) ?? '');
+        const channelId = idIn(cfg.channel, guild.id);
+        const channel = channelId ? guild.channels.cache.get(channelId) : null;
         const payload = buildMessage(r.year ? cfg.message : cfg.messageNoYear, { ...baseVars(guild, member), age: age(r.year, { year }) });
         let sent = null;
-        if (channel?.isSendable() && payload) {
-          sent = await send(ctx, 'birthday', channel, payload);
+        // No channel chosen (or an empty message): only the role is given.
+        // A chosen channel that cannot be used counts as a failed try.
+        if (channelId && payload) {
+          sent = channel?.isSendable() ? await send(ctx, 'birthday', channel, payload) : null;
           if (!sent) {
             // Not sent: try again on the next tick, at most 5 times.
             const tries = (ctx.getState<number>('birthday', guild.id, `try:${r.user_id}`) ?? 0) + 1;
             ctx.setState('birthday', guild.id, `try:${r.user_id}`, tries);
             if (tries < MAX_TRIES) continue;
-            warn(ctx, 'WAR-2008', { module: 'birthday', problem: `the birthday message could not be sent in <#${channel.id}>` });
+            warn(ctx, 'WAR-2008', { module: 'birthday', problem: `the birthday message could not be sent in <#${channelId}>` });
           }
         }
         done(r.user_id);
@@ -266,7 +275,7 @@ export class ModuleTimers {
           const g = ctx.getState<{ day: string; role: string; users: string[] }>('birthday', guild.id, 'given') ?? { day: today, role: roleId, users: [] };
           ctx.setState('birthday', guild.id, 'given', { ...g, users: [...new Set([...g.users, member.id])] });
         }
-        for (const e of cfg.reactions ?? []) await sent?.react(reactionOf(e)).catch(() => undefined);
+        for (const e of cfg.reactions ?? []) if (sent && allow(ctx, 'birthday', sent.channelId)) await sent.react(reactionOf(e)).catch(() => undefined);
         if (sent && cfg.thread && channel?.type === ChannelType.GuildText) await sent.startThread({ name: `🎂 ${member.displayName}`.slice(0, 100) }).catch(() => undefined);
       }
     }

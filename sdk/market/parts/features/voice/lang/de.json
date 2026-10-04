@@ -1,0 +1,11 @@
+{
+  "plugin.__ID__.setting.voice_channel": "Sprachkanal",
+  "plugin.__ID__.setting.voice_channel_hint": "Wird genutzt, wenn das auslösende Mitglied in keinem Sprachkanal ist und der Node keinen Kanal nennt.",
+  "plugin.__ID__.setting.volume": "Lautstärke (%)",
+  "plugin.__ID__.setting.stay_connected": "Nach „Sound stoppen“ im Kanal bleiben",
+  "plugin.__ID__.node.play_sound.label": "Sound abspielen",
+  "plugin.__ID__.node.play_sound.description": "Betritt einen Sprachkanal und spielt einen Sound des Plugins ab.",
+  "plugin.__ID__.node.play_sound.result": "Sound-Datei",
+  "plugin.__ID__.node.stop_sound.label": "Sound stoppen",
+  "plugin.__ID__.node.stop_sound.description": "Stoppt den Sound und verlässt den Sprachkanal."
+}

@@ -1,0 +1,5 @@
+{
+  "plugin.__ID__.setting.welcome_channel": "Willkommenskanal",
+  "plugin.__ID__.setting.welcome_text": "Willkommensnachricht",
+  "plugin.__ID__.setting.welcome_text_hint": "{user} erwähnt das neue Mitglied, {server} ist der Servername, {count} die Mitgliederzahl."
+}

@@ -1,0 +1,17 @@
+{
+  "plugin.__ID__.setting.greeting": "Begrüßung",
+  "plugin.__ID__.setting.greeting_hint": "{user} wird zum Namen des Mitglieds.",
+  "plugin.__ID__.setting.style": "Stil",
+  "plugin.__ID__.setting.style.short": "Kurz",
+  "plugin.__ID__.setting.style.friendly": "Freundlich",
+  "plugin.__ID__.setting.color": "Embed-Farbe",
+  "plugin.__ID__.setting.log_channel": "Log-Kanal",
+  "plugin.__ID__.setting.staff_roles": "Team-Rollen",
+  "plugin.__ID__.setting.replies": "Automatische Antworten",
+  "plugin.__ID__.setting.replies_hint": "Der Node „Antwort finden“ antwortet mit dem ersten Eintrag, dessen Auslöser im Text vorkommt.",
+  "plugin.__ID__.setting.replies.trigger": "Auslösewort",
+  "plugin.__ID__.setting.replies.answer": "Antwort",
+  "plugin.__ID__.node.reply_for.label": "Antwort finden",
+  "plugin.__ID__.node.reply_for.description": "Sucht die automatische Antwort für einen Text (Einstellungen).",
+  "plugin.__ID__.node.reply_for.result": "Antwort"
+}

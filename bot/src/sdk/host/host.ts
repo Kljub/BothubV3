@@ -80,6 +80,8 @@ type Plugin = {
 
 let plugin: Plugin = {};
 let ctx: unknown = {};
+/** The init of the loaded plugin; "config" replaces its settings (ctx.config reads them per call). */
+let current: Init | null = null;
 
 // Answered here without the manager: facts about the plugin and pure helpers.
 function localArea(init: Init): Record<string, Record<string, (...a: unknown[]) => unknown>> {
@@ -93,6 +95,11 @@ function localArea(init: Init): Record<string, Record<string, (...a: unknown[]) 
       isEnabled: () => true,
       getPath: () => init.pluginDir,
       getManifest: () => structuredClone(init.manifest),
+    },
+    config: {
+      get: (key) => init.config[String(key)],
+      has: (key) => Object.hasOwn(init.config, String(key)),
+      getAll: () => ({ ...init.config }),
     },
     utils: {
       uuid: () => randomUUID(),
@@ -138,7 +145,6 @@ function makeCtx(init: Init): unknown {
   return new Proxy(Object.freeze({}), {
     get(_t, name) {
       if (name === 'botId') return init.botId;
-      if (name === 'config') return Object.freeze({ ...init.config });
       if (typeof name !== 'string' || name === 'then') return undefined;
       if (!areas.has(name)) areas.set(name, area(name));
       return areas.get(name);
@@ -152,6 +158,7 @@ async function load(init: Init): Promise<string[]> {
   if (!file.startsWith(dir + sep)) throw new Error('main must stay inside the plugin folder');
   const mod = (await import(pathToFileURL(file).href)) as { default?: Plugin };
   plugin = mod.default ?? {};
+  current = init;
   ctx = makeCtx(init);
   await plugin.onLoad?.(ctx);
   return Object.keys(plugin.blocks ?? {});
@@ -193,10 +200,37 @@ process.on('message', (raw: unknown) => {
         return load(params as unknown as Init);
       case 'start':
         return (plugin.onEnable ?? plugin.start)?.(ctx);
+      case 'config':
+        if (current && params.config && typeof params.config === 'object' && !Array.isArray(params.config)) current.config = params.config as Record<string, unknown>;
+        return null;
+      case 'event': {
+        const fn = (plugin as { events?: Record<string, (c: unknown, p: unknown) => unknown> }).events?.[String(params.name)];
+        if (!fn) throw Object.assign(new Error('sdk.event.unknown'), { key: 'sdk.event.unknown' });
+        return fn(ctx, params.payload ?? {});
+      }
+      case 'webhook': {
+        const fn = (plugin as { webhooks?: Record<string, (c: unknown, p: unknown) => unknown> }).webhooks?.[String(params.name)];
+        if (!fn) throw Object.assign(new Error('sdk.webhook.unknown'), { key: 'sdk.webhook.unknown' });
+        return fn(ctx, params.payload ?? {});
+      }
+      case 'task': {
+        const fn = (plugin as { tasks?: Record<string, (c: unknown) => unknown> }).tasks?.[String(params.name)];
+        if (!fn) throw Object.assign(new Error('sdk.task.unknown'), { key: 'sdk.task.unknown' });
+        return fn(ctx);
+      }
       case 'block': {
         const fn = plugin.blocks?.[String(params.name)];
         if (!fn) throw new Error(`unknown block ${String(params.name)}`);
-        return fn(ctx, { config: params.config ?? {}, vars: params.vars ?? {} });
+        // interaction: handle of the command/click that runs the graph (ctx.interaction.*), else undefined.
+        return fn(ctx, { config: params.config ?? {}, vars: params.vars ?? {}, interaction: typeof params.interaction === 'string' ? params.interaction : undefined });
+      }
+      case 'component':
+      case 'modal': {
+        const area = msg.method === 'component' ? 'components' : 'modals';
+        const fn = (plugin as Record<string, unknown>)[area] as Record<string, (c: unknown, e: unknown) => unknown> | undefined;
+        const handler = fn?.[String(params.key)];
+        if (!handler) throw Object.assign(new Error('sdk.component.unknown'), { key: 'sdk.component.unknown' });
+        return handler(ctx, params.event ?? {});
       }
       default:
         throw new Error(`unknown method ${String(msg.method)}`);

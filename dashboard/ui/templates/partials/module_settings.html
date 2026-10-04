@@ -5,6 +5,9 @@
 
 {{define "module_settings"}}
 {{$v := .}}
+{{/* Data and texts of the role/channel pickers and the permissions block (static/js/permissions.js). */}}
+{{/* Attributes, not <script> blocks: hx-boost drops script tags of swapped pages. */}}
+{{with .Picker}}<div hidden data-picker-data="{{printf "%s" .}}" data-picker-texts="{{printf "%s" pickerTexts}}"></div>{{end}}
 {{if .Top}}
 <section class="box">
   <header class="box-head"><h2>{{t "modset.title"}}</h2><span class="hint hint-top">{{t "modset.setup_hint"}}</span></header>
@@ -22,7 +25,7 @@
     {{if $l.Field.Hint}}<p class="hint hint-top">{{t (printf "%s_hint" $l.Field.Label)}}</p>{{end}}
     {{range $l.Items}}
     <details class="modset-item">
-      <summary><strong>{{.Title}}</strong></summary>
+      <summary>{{with .Thumb}}<img class="modset-thumb" src="{{.}}" alt="" loading="lazy">{{end}}<strong>{{.Title}}</strong></summary>
       <form class="form modset-form" hx-put="{{$v.URL $l.Field.Key .Index}}" hx-target="#modset-body" hx-swap="innerHTML">
         {{range .Fields}}{{template "modset_field" .}}{{end}}
         <div class="modal-actions">
@@ -75,26 +78,46 @@
   <label class="field">{{t .Label}}<input name="{{.Name}}" value="{{.Text}}" placeholder="👍 🎉 <:name:123…>"><span class="hint">{{t "modset.emojis_hint"}}</span></label>
 {{else if or (eq .Type "channel") (eq .Type "channels")}}
   <label class="field">{{t .Label}}
-    <select name="{{.Name}}" {{if eq .Type "channels"}}multiple size="6"{{end}}>
+    <select name="{{.Name}}" data-pick="channel" data-channel-types="{{join .ChannelTypes ","}}" {{if eq .Type "channels"}}multiple size="6"{{end}}>
       {{if eq .Type "channel"}}<option value="">{{t "modset.none"}}</option>{{end}}
       {{range .View.Guilds}}{{$g := .}}<optgroup label="{{.Name}}">
-        {{range .Channels}}{{if $f.ChannelOK .Type}}<option value="{{$g.ID}}:{{.ID}}" {{if index $f.Selected (printf "%s:%s" $g.ID .ID)}}selected{{end}}>{{if eq .Type "voice"}}🔊{{else if eq .Type "category"}}📁{{else}}#{{end}} {{.Name}}</option>{{end}}{{end}}
+        {{range .Channels}}{{if $f.ChannelOK .Type}}<option value="{{$g.ID}}:{{.ID}}" data-type="{{.Type}}" data-name="{{.Name}}" {{if index $f.Selected (printf "%s:%s" $g.ID .ID)}}selected{{end}}>{{if eq .Type "voice"}}🔊{{else if eq .Type "category"}}📁{{else}}#{{end}} {{.Name}}</option>{{end}}{{end}}
       </optgroup>{{end}}
     </select>
-    {{if eq .Type "channels"}}<span class="hint">{{t "modset.multi_hint"}}</span>{{end}}
+    {{if eq .Type "channels"}}<span class="hint pick-native-hint">{{t "modset.multi_hint"}}</span>{{end}}
     {{if not .View.Guilds}}<span class="hint">{{t "modset.no_servers"}}</span>{{end}}
   </label>
 {{else if or (eq .Type "role") (eq .Type "roles")}}
   <label class="field">{{t .Label}}
-    <select name="{{.Name}}" {{if eq .Type "roles"}}multiple size="6"{{end}}>
+    <select name="{{.Name}}" data-pick="role" {{if eq .Type "roles"}}multiple size="6"{{end}}>
       {{if eq .Type "role"}}<option value="">{{t "modset.none"}}</option>{{end}}
       {{range .View.Guilds}}{{$g := .}}<optgroup label="{{.Name}}">
-        {{range .Roles}}{{if not .Managed}}<option value="{{$g.ID}}:{{.ID}}" {{if index $f.Selected (printf "%s:%s" $g.ID .ID)}}selected{{end}}>@{{.Name}}</option>{{end}}{{end}}
+        {{range .Roles}}{{if not .Managed}}<option value="{{$g.ID}}:{{.ID}}" data-name="{{.Name}}" {{if index $f.Selected (printf "%s:%s" $g.ID .ID)}}selected{{end}}>@{{.Name}}</option>{{end}}{{end}}
       </optgroup>{{end}}
     </select>
-    {{if eq .Type "roles"}}<span class="hint">{{t "modset.multi_hint"}}</span>{{end}}
+    {{if eq .Type "roles"}}<span class="hint pick-native-hint">{{t "modset.multi_hint"}}</span>{{end}}
     {{if not .View.Guilds}}<span class="hint">{{t "modset.no_servers"}}</span>{{end}}
   </label>
+{{else if eq .Type "image"}}
+  {{/* An image of the plugin files: modsettings.js uploads it, the hidden field keeps its name. */}}
+  <div class="field modset-image" data-image-field>
+    <span class="field-label">{{t .Label}}</span>
+    <input type="hidden" name="{{.Name}}" value="{{.Text}}">
+    <div class="modset-image-row">
+      <img class="modset-image-preview" alt="" {{if .ImageURL}}src="{{.ImageURL}}"{{else}}hidden{{end}}>
+      {{if .UploadURL}}<label class="btn btn-sm">{{if .Text}}{{t "modset.image.replace"}}{{else}}{{t "modset.image.upload"}}{{end}}<input type="file" accept="image/png,image/gif,image/webp,image/jpeg" data-image-upload="{{.UploadURL}}" hidden></label>{{end}}
+      <button type="button" class="btn btn-sm btn-danger-soft" data-image-clear {{if not .Text}}hidden{{end}}>{{t "modset.image.remove"}}</button>
+    </div>
+    <span class="hint" data-image-status data-uploading="{{t "modset.image.uploading"}}" data-too-big="{{t "error.files.too_big"}}">{{t "modset.image.hint"}}</span>
+  </div>
+{{else if eq .Type "permissions"}}
+  {{/* The permissions block (allowed/banned roles, required permissions, banned channels); the hidden field holds its JSON. */}}
+  <div class="field modset-perm">
+    <span class="field-label">{{t .Label}}</span>
+    <input type="hidden" name="{{.Name}}" value="{{.PermJSON}}">
+    <div data-perm-block data-lists="{{.PermLists}}" data-texts="permblock.{{.Label}}"{{if .Group}} data-no-everyone data-no-badge{{end}}></div>
+    {{if not .View.Guilds}}<span class="hint">{{t "modset.no_servers"}}</span>{{end}}
+  </div>
 {{else if eq .Type "message"}}
   <fieldset class="modset-message">
     <legend>{{t .Label}}</legend>

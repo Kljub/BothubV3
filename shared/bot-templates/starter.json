@@ -1,0 +1,273 @@
+{
+  "name": "Starter",
+  "description": "A few ready commands (/ping, /serverinfo, /coins), a Coins variable and a welcome message to start from.",
+  "data": {
+    "format": "bothub-bot-backup",
+    "version": 1,
+    "createdAt": "2026-10-01T00:00:00Z",
+    "bot": {
+      "name": "Starter"
+    },
+    "settings": {
+      "timezone": ""
+    },
+    "presence": {
+      "status": "online",
+      "activity": {
+        "type": "watching",
+        "name": "{bot.members} members"
+      },
+      "customStatus": "",
+      "show": "activity",
+      "rotation": {
+        "enabled": false,
+        "intervalSeconds": 300,
+        "entries": []
+      }
+    },
+    "modules": [],
+    "groups": [
+      {
+        "ref": 1,
+        "name": "Starter",
+        "description": "Commands of the Starter template",
+        "position": 0
+      }
+    ],
+    "commands": [
+      {
+        "kind": "command",
+        "name": "ping",
+        "description": "Checks that the bot answers",
+        "enabled": true,
+        "group": 1,
+        "eventType": null,
+        "graph": {
+          "schemaVersion": 1,
+          "nodes": [
+            {
+              "id": "trigger",
+              "type": "trigger.slash",
+              "typeVersion": 1,
+              "config": {
+                "command_name": "ping",
+                "description": "Checks that the bot answers"
+              },
+              "position": {
+                "x": 120,
+                "y": 120
+              }
+            },
+            {
+              "id": "reply",
+              "type": "action.send_message",
+              "typeVersion": 1,
+              "config": {
+                "message": {
+                  "mode": "normal",
+                  "content": "Pong!"
+                },
+                "target": "reply"
+              },
+              "position": {
+                "x": 440,
+                "y": 120
+              }
+            },
+            {
+              "id": "error",
+              "type": "utility.error_handler",
+              "typeVersion": 1,
+              "config": {
+                "variable": "error"
+              },
+              "position": {
+                "x": 120,
+                "y": 320
+              }
+            }
+          ],
+          "edges": [
+            {
+              "from": {
+                "node": "trigger",
+                "port": "next"
+              },
+              "to": {
+                "node": "reply",
+                "port": "in"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "kind": "command",
+        "name": "serverinfo",
+        "description": "Shows information about this server",
+        "enabled": true,
+        "group": 1,
+        "eventType": null,
+        "graph": {
+          "schemaVersion": 1,
+          "nodes": [
+            {
+              "id": "trigger",
+              "type": "trigger.slash",
+              "typeVersion": 1,
+              "config": {
+                "command_name": "serverinfo",
+                "description": "Shows information about this server"
+              },
+              "position": {
+                "x": 120,
+                "y": 120
+              }
+            },
+            {
+              "id": "reply",
+              "type": "action.send_message",
+              "typeVersion": 1,
+              "config": {
+                "message": {
+                  "mode": "normal",
+                  "content": "**{server}**\nMembers: {server.members}\nOwner: <@{server.owner_id}>"
+                },
+                "target": "reply"
+              },
+              "position": {
+                "x": 440,
+                "y": 120
+              }
+            },
+            {
+              "id": "error",
+              "type": "utility.error_handler",
+              "typeVersion": 1,
+              "config": {
+                "variable": "error"
+              },
+              "position": {
+                "x": 120,
+                "y": 320
+              }
+            }
+          ],
+          "edges": [
+            {
+              "from": {
+                "node": "trigger",
+                "port": "next"
+              },
+              "to": {
+                "node": "reply",
+                "port": "in"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "kind": "command",
+        "name": "coins",
+        "description": "Shows your coins",
+        "enabled": true,
+        "group": 1,
+        "eventType": null,
+        "graph": {
+          "schemaVersion": 1,
+          "nodes": [
+            {
+              "id": "trigger",
+              "type": "trigger.slash",
+              "typeVersion": 1,
+              "config": {
+                "command_name": "coins",
+                "description": "Shows your coins"
+              },
+              "position": {
+                "x": 120,
+                "y": 120
+              }
+            },
+            {
+              "id": "reply",
+              "type": "action.send_message",
+              "typeVersion": 1,
+              "config": {
+                "message": {
+                  "mode": "normal",
+                  "content": "You have {var.coins} coins."
+                },
+                "target": "reply"
+              },
+              "position": {
+                "x": 440,
+                "y": 120
+              }
+            },
+            {
+              "id": "error",
+              "type": "utility.error_handler",
+              "typeVersion": 1,
+              "config": {
+                "variable": "error"
+              },
+              "position": {
+                "x": 120,
+                "y": 320
+              }
+            }
+          ],
+          "edges": [
+            {
+              "from": {
+                "node": "trigger",
+                "port": "next"
+              },
+              "to": {
+                "node": "reply",
+                "port": "in"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "builtinCommands": [],
+    "timedEvents": [],
+    "messageTemplates": [
+      {
+        "name": "Welcome",
+        "message": {
+          "mode": "normal",
+          "content": "",
+          "embeds": [
+            {
+              "color": "#5865f2",
+              "title": "Welcome to {server}!",
+              "description": "Read the rules and have fun."
+            }
+          ]
+        }
+      }
+    ],
+    "dataVariables": [
+      {
+        "key": "coins",
+        "name": "Coins",
+        "description": "Coins of each member",
+        "type": "number",
+        "owner": "member",
+        "perServer": true,
+        "defaultValue": "0",
+        "group": "Economy"
+      }
+    ],
+    "webhooks": [],
+    "plugins": {
+      "settings": [],
+      "disabled": []
+    }
+  }
+}

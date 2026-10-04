@@ -264,6 +264,11 @@ async function handleJoin(ctx: ModuleContext, member: GuildMember): Promise<void
   const inviterId = code ? (after?.inviter.get(code) ?? before?.inviter.get(code) ?? null) : null;
   const cfg = ctx.config<InviteConfig>('invite-tracker');
   const fake = (cfg.minAccountAge ?? 0) > 0 && Date.now() - member.user.createdTimestamp < (cfg.minAccountAge ?? 0) * 86_400_000;
+  // The same join event twice (gateway resume): keep the first row.
+  const recent = ctx.db
+    .prepare("SELECT 1 FROM invite_joins WHERE bot_id = ? AND guild_id = ? AND user_id = ? AND left_at IS NULL AND joined_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-60 seconds')")
+    .get(ctx.botId, guild.id, member.id);
+  if (recent) return;
   // A rejoin without a recorded leave (bot was offline) closes the old row first.
   ctx.db.prepare("UPDATE invite_joins SET left_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE bot_id = ? AND guild_id = ? AND user_id = ? AND left_at IS NULL").run(ctx.botId, guild.id, member.id);
   ctx.db.prepare('INSERT INTO invite_joins (bot_id, guild_id, user_id, inviter_id, code, fake) VALUES (?, ?, ?, ?, ?, ?)').run(ctx.botId, guild.id, member.id, inviterId, code, fake ? 1 : 0);
@@ -324,14 +329,17 @@ export async function suggestionMessage(ctx: ModuleContext, msg: Message): Promi
     await msg.delete().catch(() => undefined);
     return;
   }
-  await msg.delete().catch(() => undefined);
   const key = `${ctx.botId}:${msg.author.id}`;
   if (Date.now() - (lastSuggestion.get(key) ?? 0) < 60_000) {
+    await msg.delete().catch(() => undefined);
     await msg.author.send({ content: 'Please wait a minute before you post the next suggestion.' }).catch(() => undefined);
     return;
   }
   lastSuggestion.set(key, Date.now());
-  await createSuggestion(ctx, msg.guild, msg.member, msg.content);
+  // The original message goes only after the suggestion was posted.
+  const res = await createSuggestion(ctx, msg.guild, msg.member, msg.content);
+  if (res) await msg.delete().catch(() => undefined);
+  else warn(ctx, 'WAR-2008', { module: 'suggestions', problem: 'a suggestion could not be posted (check the channel and the bot permissions)' });
 }
 
 const lastSuggestion = new Map<string, number>();
@@ -375,7 +383,11 @@ export async function decideSuggestion(ctx: ModuleContext, guild: Guild, ref: st
     .prepare("SELECT id, number, author_id, channel_id, message_id FROM suggestions WHERE bot_id = ? AND guild_id = ? AND (message_id = ? OR number = ?) AND status = 'pending'")
     .get(ctx.botId, guild.id, ref, /^\d{1,9}$/.test(ref) ? Number(ref) : -1) as { id: number; number: number; author_id: string; channel_id: string | null; message_id: string | null } | undefined;
   if (!row) return false;
-  ctx.db.prepare("UPDATE suggestions SET status = ?, decided_by = ?, reason = ?, decided_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?").run(verdict, by, reason || null, row.id);
+  // Atomic: only the first decision wins (a second one changes no row).
+  const changed = ctx.db
+    .prepare("UPDATE suggestions SET status = ?, decided_by = ?, reason = ?, decided_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ? AND status = 'pending'")
+    .run(verdict, by, reason || null, row.id);
+  if (Number(changed.changes) !== 1) return false;
   const channel = guild.channels.cache.get(row.channel_id ?? '');
   const msg = channel?.isTextBased() && row.message_id ? await channel.messages.fetch(row.message_id).catch(() => null) : null;
   if (msg?.embeds[0]) {
@@ -405,7 +417,8 @@ export async function suggestionVote(ctx: ModuleContext, partial: MessageReactio
   const count = (e: string) => Math.max(0, (full.reactions.cache.find((r) => sameEmoji(e, r.emoji))?.count ?? 1) - 1);
   const verdict = autoVerdict(count(up), count(down), cfg.autoApprove ?? 0, cfg.autoDeny ?? 0);
   if (!verdict) return;
-  ctx.db.prepare("UPDATE suggestions SET status = ?, decided_by = 'auto', decided_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?").run(verdict, row.id);
+  const changed = ctx.db.prepare("UPDATE suggestions SET status = ?, decided_by = 'auto', decided_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ? AND status = 'pending'").run(verdict, row.id);
+  if (Number(changed.changes) !== 1) return;
   const embed = EmbedBuilder.from(full.embeds[0]!).setColor(COLORS[verdict]).setFooter({ text: verdict === 'approved' ? '✅ Approved' : '❌ Denied' });
   await full.edit({ embeds: [embed] }).catch(() => undefined);
   if (cfg.dmAuthor !== false) {

@@ -3,6 +3,7 @@
 
 import { randomUUID, randomInt } from 'node:crypto';
 import { request, parseHeaders } from './http.js';
+import { mask } from '../core/secrets-global.js';
 import { GraphError, StopLoop, type Handler, type Run } from './interpreter.js';
 import type { GraphNode } from './types.js';
 import { parseDuration } from './util.js';
@@ -27,6 +28,8 @@ export interface CoreDeps {
   resetCooldown?(command: string, scopeKey: string): void;
   /** API Request block; tests replace it. */
   http?: typeof request;
+  /** A secret of the admin tab API / Secrets by name, null when unknown. */
+  secret?(key: string): string | null;
   /** Data Storage variables ({var.<key>}); absent in tests without a database. */
   data?: DataStore;
 }
@@ -315,11 +318,47 @@ export function coreHandlers(deps: CoreDeps): Map<string, Handler> {
         if (body !== undefined && !Object.keys(headers).some((h) => h.toLowerCase() === 'content-type')) {
           headers['Content-Type'] = /^\s*[[{]/.test(body) ? 'application/json' : 'text/plain';
         }
-        const res = await http(method, run.str(node, 'url').trim(), headers, body);
-        run.setResult(node, '.status', res.status);
-        run.setResult(node, '.body', res.body);
+        // Admin secrets: the address can come from a secret (then the URL field
+        // is a path), and a key can go into a header or URL parameter. A key
+        // needs an address from a secret, so nobody sends it to their own server.
+        const urlSecret = run.str(node, 'url_secret').trim();
+        const authSecret = run.str(node, 'auth_secret').trim();
+        let url = run.str(node, 'url').trim();
+        const hide: string[] = [];
+        const secretOf = (name: string) => {
+          const v = deps.secret?.(name) ?? null;
+          if (!v) throw new GraphError('error.run.unknown_secret', { value: name, message: `The secret ${name} does not exist (Admin → API / Secrets).` });
+          hide.push(v);
+          return v;
+        };
+        if (urlSecret) {
+          url = joinPath(secretOf(urlSecret).trim(), url);
+        }
+        if (authSecret) {
+          if (!urlSecret) throw new GraphError('error.run.secret_needs_url', { message: 'A key from a secret needs the address from a secret too (field "Address from secret").' });
+          const key = secretOf(authSecret);
+          const format = String(run.raw(node, 'auth_format') ?? 'bearer');
+          if (format === 'query') {
+            const param = run.str(node, 'auth_param').trim() || 'key';
+            const u = new URL(url);
+            u.searchParams.set(param, key);
+            url = u.toString();
+          } else {
+            headers[run.str(node, 'auth_header').trim() || 'Authorization'] = format === 'plain' ? key : `Bearer ${key}`;
+          }
+        }
+        let res;
         try {
-          setJson(run, node, '.json', JSON.parse(res.body));
+          res = await http(method, url, headers, body);
+        } catch (err) {
+          if (err instanceof GraphError && hide.length) throw new GraphError(err.key, JSON.parse(mask(JSON.stringify(err.params), hide)));
+          throw err;
+        }
+        const text = mask(res.body, hide);
+        run.setResult(node, '.status', res.status);
+        run.setResult(node, '.body', text);
+        try {
+          setJson(run, node, '.json', JSON.parse(text));
         } catch {
           run.setResult(node, '.json', '');
         }
@@ -386,4 +425,13 @@ export function coreHandlers(deps: CoreDeps): Map<string, Handler> {
       },
     ],
   ]);
+}
+
+/** Address from a secret + path from the block (a path must not be a full URL). */
+export function joinPath(base: string, path: string): string {
+  const p = path.trim();
+  if (/^[a-z][a-z0-9+.-]*:/i.test(p) || p.startsWith('//')) throw new GraphError('error.run.bad_url', { value: 'with an address from a secret, the URL field takes a path only' });
+  if (!/^https?:\/\//i.test(base)) throw new GraphError('error.run.bad_url', { value: 'the address secret does not hold an http(s) URL' });
+  if (!p) return base;
+  return `${base.replace(/\/+$/, '')}/${p.replace(/^\/+/, '')}`;
 }

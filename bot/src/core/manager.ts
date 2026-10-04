@@ -5,6 +5,7 @@
 // Bots do not wait for each other: every bot has its own work queue, so a
 // slow login or restart of one bot never delays events of another.
 
+import { clearSecretCache } from './secrets-global.js';
 import { log } from './log.js';
 import type { Repo } from './repo.js';
 import { decrypt } from './secrets.js';
@@ -93,6 +94,10 @@ export class BotManager {
       return;
     }
     const id = ev.botId;
+    if (ev.type === 'secrets.changed') {
+      clearSecretCache(); // global: the next request reads the new values
+      return;
+    }
     if (typeof id !== 'number') return;
     switch (ev.type) {
       case 'bot.deleted':
@@ -106,6 +111,10 @@ export class BotManager {
         if (this.bots.get(id)?.running || (bot.autostart && bot.tokenEnc)) await this.start(id);
         return;
       }
+      case 'plugin.webhook':
+        // Only for a running bot: its plugins run only then.
+        if (this.bots.get(id)?.running) this.deps.plugins?.dispatchWebhook(id, String((ev as unknown as Record<string, unknown>).pluginId ?? ''), String((ev as unknown as Record<string, unknown>).name ?? ''), ((ev as unknown as Record<string, unknown>).payload ?? {}) as Record<string, unknown>);
+        return;
       case 'webhook.called':
         await this.bots.get(id)?.runWebhook(ev as unknown as WebhookCall);
         return;
@@ -115,10 +124,16 @@ export class BotManager {
       case 'bot.presence':
         this.bots.get(id)?.applyPresence();
         return;
+      case 'module.changed': {
+        // Plugin settings (module "plugin:<id>"): the running plugin gets them at once.
+        const module = String((ev as unknown as Record<string, unknown>).module ?? '');
+        if (module.startsWith('plugin:')) this.deps.plugins?.refreshConfig(id, module.slice('plugin:'.length));
+        await this.bots.get(id)?.reload();
+        return;
+      }
       case 'command.saved':
       case 'command.deleted':
       case 'commands.changed':
-      case 'module.changed':
         await this.bots.get(id)?.reload();
         return;
       default:

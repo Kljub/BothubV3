@@ -69,7 +69,8 @@ func TestModuleSettingsRender(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, sc := range loadSchemas(t) {
-		v := settingsView{BotID: 1, Module: sc.Module, Guilds: []settingsGuild{{
+		labels := "modset." + sc.Module + "."
+		v := settingsView{BotID: 1, Module: sc.Module, Base: "/bot/1/modules/" + sc.Module + "/settings", Guilds: []settingsGuild{{
 			ID: "900000000000000001", Name: "Test",
 			Channels: []api.GuildChannel{{ID: "900000000000000002", Name: "general", Type: "text"}},
 			Roles:    []api.GuildRole{{ID: "900000000000000003", Name: "Member"}},
@@ -89,15 +90,15 @@ func TestModuleSettingsRender(t *testing.T) {
 		}
 		v.Values = cfg
 		s := &Server{}
-		v.Top = s.buildFields(&v, sc.Module, "", sc.Fields, cfg)
+		v.Top = s.buildFields(&v, labels, "", sc.Fields, cfg)
 		for _, f := range sc.Fields {
 			if f.Type != "list" {
 				continue
 			}
 			items := cfg[f.Key].([]any)
 			lv := settingsListView{Field: fieldView{settingsField: f, Label: "modset." + sc.Module + "." + f.Key}}
-			lv.Items = []settingsItemView{{Index: 0, Title: s.itemTitle(v, f, items[0].(map[string]any), 0), Fields: s.buildFields(&v, sc.Module, f.Key+".", f.Item, items[0].(map[string]any))}}
-			lv.New = s.buildFields(&v, sc.Module, f.Key+".", f.Item, itemDefaults(f.Item))
+			lv.Items = []settingsItemView{{Index: 0, Title: s.itemTitle(v, f, items[0].(map[string]any), 0), Fields: s.buildFields(&v, labels, f.Key+".", f.Item, items[0].(map[string]any))}}
+			lv.New = s.buildFields(&v, labels, f.Key+".", f.Item, itemDefaults(f.Item))
 			v.Lists = append(v.Lists, lv)
 		}
 		var out strings.Builder

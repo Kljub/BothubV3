@@ -16,7 +16,6 @@ use PDO;
  */
 final class TemplateStore
 {
-    private const MAX = 100;
     private const MAX_MESSAGE = 65536;
     /** Sends per bot: at most 5 per 10 seconds (Discord allows about 5/5 s per channel). */
     private const SEND_MAX = 5;
@@ -48,12 +47,8 @@ final class TemplateStore
     {
         $name = self::name($in->name ?? null);
         $message = self::message($in->message ?? null);
+        // No limit on the number of saved messages (user decision 2026-10-03).
         $id = Connection::write($this->pdo, function (PDO $pdo) use ($botId, $name, $message): int {
-            $stmt = $pdo->prepare('SELECT COUNT(*) FROM message_templates WHERE bot_id = ?');
-            $stmt->execute([$botId]);
-            if ((int) $stmt->fetchColumn() >= self::MAX) {
-                throw new ApiError(422, 'error.template.limit', ['max' => self::MAX]);
-            }
             $pdo->prepare('INSERT INTO message_templates (bot_id, name, message) VALUES (?, ?, ?)')->execute([$botId, $name, $message]);
             return (int) $pdo->lastInsertId();
         });

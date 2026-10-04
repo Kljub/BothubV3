@@ -1,0 +1,60 @@
+/* bh-store: App Store page (/store): toolbar, plugin cards, detail actions.
+   Cards take --group from module-group-<category> (bh-mod-card). */
+
+.store-intro { margin-bottom: 16px; }
+.store-toolbar { gap: 12px; margin-bottom: 20px; }
+.store-toolbar-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.store-toolbar-row input[type="search"] { flex: 1 1 260px; }
+.store-refresh { margin-left: auto; }
+.store-count { margin-bottom: 10px; font-size: 12px; }
+
+.store-card { position: relative; display: flex; flex-direction: column; overflow: hidden; border-radius: 10px; color: inherit; text-decoration: none; transition: border-color 0.2s ease, transform 0.2s ease; }
+.store-card:hover, .store-card:focus-visible { border-color: var(--group, var(--accent)); transform: translateY(-1px); }
+.store-card-top { position: relative; display: grid; place-items: center; height: 80px; background: color-mix(in srgb, var(--surface) 88%, var(--group, var(--accent)) 8%); }
+.store-card-icon { font-size: 30px; line-height: 1; }
+.store-card-body { display: flex; flex-direction: column; gap: 6px; padding: 14px 14px 16px; flex: 1; }
+.store-card-body h3 { font-size: 14px; }
+.store-card-meta { font-size: 11px; font-weight: 600; color: var(--group, var(--text-2)); }
+.store-card-body p { font-size: 12px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+.store-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; }
+.module-head:has(.store-actions) { flex-wrap: wrap; }
+
+@media (prefers-reduced-motion: reduce) { .store-card { transition: none; } .store-card:hover { transform: none; } }
+
+/* Zip upload: a collapsible box under the toolbar. */
+.store-upload > summary { list-style: none; cursor: pointer; }
+.store-upload > summary::-webkit-details-marker { display: none; }
+.store-upload:not([open]) > summary { border-bottom: 0; }
+
+/* Instance switch and the "SDK off" alert with its fix button. */
+.store-switch { display: inline-flex; align-items: center; gap: 8px; margin: 0; font-size: 12px; }
+.store-blocked { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.store-perm { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.store-perm .icon { width: 16px; height: 16px; }
+.store-perm.is-on { color: var(--green); }
+.store-perm.is-off { color: var(--red); }
+
+/* Install consent dialog (like an OAuth screen). */
+.store-consent { width: min(440px, calc(100vw - 32px)); }
+.store-consent-head { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 0 16px; text-align: center; }
+.store-consent-icon { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; font-size: 32px; background: var(--surface-2); }
+.store-consent-head h2 { font-size: 18px; }
+.store-consent-box { display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: 10px; background: var(--surface-2); }
+.store-consent-list { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.store-consent-list li { display: flex; align-items: flex-start; gap: 10px; }
+.store-consent-list li > span { display: flex; flex-direction: column; gap: 2px; }
+.store-consent-list .icon { flex: none; width: 20px; height: 20px; margin-top: 1px; }
+.store-consent-list li.is-on .icon { color: var(--green); }
+.store-consent-list li.is-off .icon { color: var(--muted); }
+.store-consent-list li.is-off strong { color: var(--text-2); }
+.store-consent-key { flex: none; width: 20px; text-align: center; line-height: 20px; }
+.store-consent-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+.store-consent-actions .btn { justify-content: center; width: 100%; }
+
+/* Sign-in helper box (services.connect), above the SDK alert. */
+.store-connect-row { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+.store-connect-logo { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; font-size: 18px; color: #1f1f1f; background: #e5a00d; }
+.store-connect-text { display: flex; flex: 1 1 240px; flex-direction: column; gap: 2px; }
+.store-connect-list { display: flex; flex-direction: column; gap: 8px; margin: 14px 0 0; padding: 0; list-style: none; }
+.store-connect-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; background: var(--surface-2); }

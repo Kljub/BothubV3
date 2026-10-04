@@ -1,0 +1,89 @@
+{{/* Bot settings > Backup & templates. Rows like Settings > Security; the
+   saved list reloads after every change. Data: botBackupView. */}}
+{{define "bot_backup"}}
+<h3 class="settings-group">{{t "backup.title"}}</h3>
+<p class="hint">{{t "backup.hint"}}</p>
+<div id="backup-error"></div>
+<div class="settings-card">
+  <div class="settings-row">
+    <span class="settings-row-text"><strong>{{t "backup.download"}}</strong><span class="hint">{{t "backup.download_hint"}}</span></span>
+    <a class="btn btn-sm" href="/bot/{{.BotID}}/backup/download" download>{{t "backup.download_button"}}</a>
+  </div>
+  <details class="settings-row settings-expand">
+    <summary>
+      <span class="settings-row-text"><strong>{{t "backup.save"}}</strong><span class="hint">{{t "backup.save_hint"}}</span></span>
+      <span class="settings-action">{{t "backup.save_action"}} ›</span>
+    </summary>
+    <form class="form settings-expand-body" hx-post="/bot/{{.BotID}}/backups" hx-target="#backup-list" hx-swap="outerHTML" data-reset-on="bothub:reset-forms">
+      <input type="hidden" name="kind" value="backup">
+      <label class="field">{{t "backup.name"}}
+        <input name="name" required maxlength="60" class="input-medium" placeholder="{{t "backup.name_placeholder"}}">
+      </label>
+      <div><button type="submit" class="btn btn-primary btn-sm">{{t "backup.save_button"}}</button></div>
+    </form>
+  </details>
+  <details class="settings-row settings-expand">
+    <summary>
+      <span class="settings-row-text"><strong>{{t "backup.template"}}</strong><span class="hint">{{t "backup.template_hint"}}</span></span>
+      <span class="settings-action">{{t "backup.save_action"}} ›</span>
+    </summary>
+    <form class="form settings-expand-body" hx-post="/bot/{{.BotID}}/backups" hx-target="#backup-list" hx-swap="outerHTML" data-reset-on="bothub:reset-forms">
+      <input type="hidden" name="kind" value="template">
+      <label class="field">{{t "backup.name"}}
+        <input name="name" required maxlength="60" class="input-medium">
+      </label>
+      <label class="field">{{t "backup.description"}}
+        <input name="description" maxlength="300" class="input-wide">
+      </label>
+      <div><button type="submit" class="btn btn-primary btn-sm">{{t "backup.template_button"}}</button></div>
+    </form>
+  </details>
+  <details class="settings-row settings-expand">
+    <summary>
+      <span class="settings-row-text"><strong>{{t "backup.upload"}}</strong><span class="hint">{{t "backup.upload_hint"}}</span></span>
+      <span class="settings-action">{{t "backup.upload_action"}} ›</span>
+    </summary>
+    <form class="form settings-expand-body" hx-post="/bot/{{.BotID}}/restore" hx-encoding="multipart/form-data" hx-target="#backup-list" hx-swap="outerHTML"
+      hx-confirm="{{t "backup.load_confirm" "name" .BotName}}" data-reset-on="bothub:reset-forms">
+      <label class="field">{{t "backup.file"}}
+        <input type="file" name="file" accept=".json,application/json" required>
+      </label>
+      <div><button type="submit" class="btn btn-danger-soft btn-sm">{{t "backup.upload_button"}}</button></div>
+    </form>
+  </details>
+</div>
+
+<h3 class="settings-group">{{t "backup.saved"}}</h3>
+{{template "bot_backup_list" .}}
+{{end}}
+
+{{define "bot_backup_list_fragment"}}{{template "bot_backup_list" .Data}}{{end}}
+
+{{define "bot_backup_list"}}
+<div class="settings-card" id="backup-list">
+  {{range .Items}}
+  <div class="settings-row">
+    <span class="settings-row-text">
+      <strong>{{.Name}}
+        {{if eq .Kind "builtin"}}<span class="badge-soft badge-soft-running">{{t "backup.kind.builtin"}}</span>
+        {{else if eq .Kind "template"}}<span class="badge-soft badge-soft-stopped">{{t "backup.kind.template"}}</span>
+        {{else if .Auto}}<span class="badge-soft">{{t "backup.kind.auto"}}</span>
+        {{else}}<span class="badge-soft">{{t "backup.kind.backup"}}</span>{{end}}
+      </strong>
+      <span class="hint">{{if .Description}}{{.Description}} · {{end}}{{with .CreatedAt}}{{.}}{{end}}{{if .Size}} · {{bytes .Size}}{{end}}</span>
+    </span>
+    <span class="inline-form">
+      <form hx-post="/bot/{{$.BotID}}/restore" hx-target="#backup-list" hx-swap="outerHTML" hx-confirm="{{t "backup.load_confirm" "name" $.BotName}}">
+        <input type="hidden" name="id" value="{{.ID}}"><input type="hidden" name="name" value="{{.Name}}">
+        <button type="submit" class="btn btn-sm btn-primary">{{t "backup.load"}}</button>
+      </form>
+      <a class="btn btn-sm" href="/bot/{{$.BotID}}/backup/download?id={{.ID}}" download>{{t "backup.download_button"}}</a>
+      {{if ne .Kind "builtin"}}<button type="button" class="icon-btn icon-btn-plain" title="{{t "backup.delete"}}" aria-label="{{t "backup.delete"}}"
+        hx-delete="/bot/{{$.BotID}}/backups/{{.ID}}" hx-target="#backup-list" hx-swap="outerHTML" hx-confirm="{{t "backup.delete_confirm" "name" .Name}}">{{template "icon_trash"}}</button>{{end}}
+    </span>
+  </div>
+  {{else}}
+  <div class="settings-row"><span class="muted">{{t "backup.empty"}}</span></div>
+  {{end}}
+</div>
+{{end}}

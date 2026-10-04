@@ -86,7 +86,19 @@ check('different emoji is fine', count(ModuleSettings::normalize($rr, ['entries'
 check('read() drops duplicates and keeps the rest', count(ModuleSettings::read($rr, ['entries' => [$entry, $entry, 'junk']])['entries']) === 1);
 $old = ModuleSettings::read($ar, ['responders' => [['keywords' => ['hi'], 'cooldown' => 0]]]);
 check('read() repairs one field, keeps the others', $old['responders'][0]['cooldown'] === 5 && $old['responders'][0]['keywords'] === ['hi']);
+$hp = ModuleSettings::schema('honeypot');
+$hpc = ModuleSettings::normalize($hp, ['traps' => [['channel' => $ref]]]);
+check('honeypot defaults', $hpc['traps'][0]['action'] === 'softban' && $hpc['exempt']['required_permissions'] === ['manage_messages'] && $hpc['exempt']['allowed_roles'] === []);
+check('group block: no everyone', rejects($hp, ['exempt' => ['allowed_roles' => [['id' => 'everyone']]]], 'exempt.allowed_roles'));
+check('honeypot: one trap per channel', rejects2($hp, ['traps' => [['channel' => $ref], ['channel' => $ref]]]) === 'error.validation.duplicate');
 check('cooldown minimum', rejects($ar, ['responders' => [['cooldown' => 0]]], 'responders.0.cooldown'));
+$tm = ModuleSettings::schema('timed-messages');
+check('required channel', rejects($tm, ['messages' => [['name' => 'x']]], 'messages.0.channel'));
+$saved = ModuleSettings::normalize($tm, ['messages' => [['name' => 'x', 'channel' => $ref]]]);
+$id = $saved['messages'][0]['_id'] ?? '';
+check('list entry gets a stable id', preg_match('/^[a-z0-9]{12}$/', $id) === 1);
+check('id kept on save', ModuleSettings::normalize($tm, $saved)['messages'][0]['_id'] === $id);
+check('bad id replaced', ModuleSettings::normalize($tm, ['messages' => [['channel' => $ref, '_id' => 'X!']]])['messages'][0]['_id'] !== 'X!');
 check('no schema for unknown module', ModuleSettings::schema('nope') === null && ModuleSettings::schema('../x') === null);
 
 exit($failed === 0 ? 0 : 1);

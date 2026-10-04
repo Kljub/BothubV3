@@ -1,38 +1,658 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://bothub.local/schemas/plugin-manifest.json",
-  "title": "BotHub plugin manifest (bothub-plugin.json)",
-  "description": "Describes a plugin: who it is, which SDK it needs, which permissions it asks for and which builder blocks it adds. Checked by the API on install and by the SDK manager in the bot on start.",
+  "$id": "https://bothub.local/schemas/bothub.json",
+  "title": "BotHub plugin (bothub.json)",
+  "description": "The plugin file: who made it, which version, which SDK it needs and what the plugin consists of. A plugin talks only to the BotHub SDK; the SDK talks to the core (Discord, database, Redis). Layers: commands/ (slash command graphs), events/ (Discord event handlers), services/ (timed tasks, external APIs, shared code), nodes/ (builder blocks), dashboard/ (settings page). The API and the bot read this file and the files it names and turn them into one normalized manifest (shared/plugin-format.md).",
   "type": "object",
   "additionalProperties": false,
-  "required": ["id", "name", "version", "sdk", "main", "permissions"],
+  "required": [
+    "schemaVersion",
+    "id",
+    "name",
+    "version",
+    "description",
+    "developer",
+    "sdk",
+    "main"
+  ],
   "properties": {
-    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,63}$" },
-    "name": { "type": "string", "minLength": 1, "maxLength": 60 },
-    "version": { "type": "string", "pattern": "^\\d{1,4}\\.\\d{1,4}\\.\\d{1,6}$" },
-    "description": { "type": "string", "maxLength": 300 },
-    "author": { "type": "string", "maxLength": 60 },
-    "sdk": { "const": 1, "description": "SDK version (shared/sdk-permissions.json sdkVersion)" },
-    "main": { "type": "string", "pattern": "^[A-Za-z0-9_./-]{1,100}\\.m?js$", "description": "Entry file inside the plugin folder; must not leave it" },
-    "permissions": {
-      "type": "array",
-      "uniqueItems": true,
-      "maxItems": 20,
-      "items": { "enum": ["storage", "discord.send_messages", "discord.guild_info", "log"] }
+    "$schema": {
+      "type": "string",
+      "maxLength": 300,
+      "description": "Optional, for editors."
     },
-    "blocks": {
-      "type": "array",
-      "maxItems": 50,
-      "description": "Builder blocks; each is a node definition (shared/node-definition.schema.json) whose type is plugin.<id>.<name>",
-      "items": {
-        "type": "object",
-        "required": ["name", "definition"],
-        "additionalProperties": false,
-        "properties": {
-          "name": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,31}$" },
-          "definition": { "type": "object" }
+    "schemaVersion": {
+      "const": 1,
+      "description": "Format of this file."
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^plugin_[a-z0-9_]{1,57}$",
+      "description": "plugin_<name>: lowercase letters, digits and _, at most 64 characters. Also the folder name and the text prefix plugin.<id>."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 60
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d{1,4}\\.\\d{1,4}\\.\\d{1,6}$",
+      "description": "Plugin version (major.minor.patch). Raise it for every release; a known version with other files is refused."
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300,
+      "description": "Short description for the plugin list."
+    },
+    "developer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name"
+      ],
+      "description": "Who made and maintains the plugin.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "url": {
+          "type": "string",
+          "maxLength": 200,
+          "pattern": "^https://"
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 120,
+          "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"
         }
       }
+    },
+    "license": {
+      "type": "string",
+      "maxLength": 40,
+      "description": "SPDX identifier, e.g. MIT."
+    },
+    "icon": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 16,
+      "pattern": "^[^\\s<>&\"']+$",
+      "description": "Optional emoji shown in the App Store and on the plugin card (default 🧩)."
+    },
+    "category": {
+      "enum": [
+        "utility",
+        "security",
+        "messages",
+        "fun",
+        "ticket",
+        "social"
+      ],
+      "description": "Optional App Store category, same keys as the module groups (shared/modules.json). Default utility."
+    },
+    "sdk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "permissions"
+      ],
+      "description": "The SDK the plugin needs: its version and the SDK permissions the admin must enable (Admin -> SDK policies).",
+      "properties": {
+        "version": {
+          "const": 1,
+          "description": "SDK version (shared/sdk-permissions.json sdkVersion)."
+        },
+        "permissions": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 40,
+          "description": "Permission keys of shared/sdk-permissions.json the plugin needs; a call works only when its permission is listed here and switched on in the SDK policies",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9.]{1,63}$"
+          }
+        }
+      }
+    },
+    "main": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_./-]{1,100}\\.m?js$",
+      "description": "Entry file: its default export joins nodes, events and services (definePlugin)."
+    },
+    "commands": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 25,
+      "description": "Layer \"Commands\": slash command graphs ({name, description, graph}); every bot gets a disabled copy in Custom Commands.",
+      "items": {
+        "type": "string",
+        "pattern": "^commands/[a-z0-9_-]{1,32}\\.json$"
+      }
+    },
+    "events": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 18,
+      "description": "Layer \"Events\": Discord events the plugin handles (handler in events/<event>.js, joined in main). Needs the SDK permission discord.events.",
+      "items": {
+        "enum": [
+          "messageCreate",
+          "messageUpdate",
+          "messageDelete",
+          "interactionCreate",
+          "guildCreate",
+          "guildDelete",
+          "guildMemberAdd",
+          "guildMemberRemove",
+          "guildMemberUpdate",
+          "channelCreate",
+          "channelDelete",
+          "channelUpdate",
+          "roleCreate",
+          "roleDelete",
+          "roleUpdate",
+          "voiceStateUpdate",
+          "reactionAdd",
+          "reactionRemove"
+        ]
+      }
+    },
+    "services": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Layer \"Services\": background work and external systems. Code lives in services/.",
+      "properties": {
+        "tasks": {
+          "type": "array",
+          "maxItems": 20,
+          "description": "Timed tasks (every: 1m..; cron: 5 fields). Needs the SDK permission scheduler.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{0,31}$"
+              },
+              "every": {
+                "type": "string",
+                "pattern": "^([1-9][0-9]{0,4}[mhd]|([6-9][0-9]|[1-9][0-9]{2,4})s)$"
+              },
+              "cron": {
+                "type": "string",
+                "maxLength": 100,
+                "pattern": "^\\S+( \\S+){4}$"
+              }
+            },
+            "oneOf": [
+              {
+                "required": [
+                  "every"
+                ]
+              },
+              {
+                "required": [
+                  "cron"
+                ]
+              }
+            ]
+          }
+        },
+        "secrets": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 20,
+          "description": "Secrets of Admin > API / Secrets the plugin uses by exact name: with ctx.http.secret (needs secrets.use; address and key, the plugin never sees them) or ctx.secrets.get (needs secrets.read; the value). The admin shares each one; a plugin can never list secrets.",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9_]{1,39}$"
+          }
+        },
+        "connect": {
+          "type": "object",
+          "maxProperties": 10,
+          "description": "Sign-in helpers for secrets of \"secrets\": key = token secret (e.g. PLEX_TOKEN), value = provider. The admin signs in once on the plugin's App Store page; BotHub stores the token and the server address (PLEX_TOKEN -> PLEX_URL, PLEX_TOKEN_2 -> PLEX_URL_2) as secrets and shares both with the plugin. Providers: plex (Plex PIN sign-in, finds the server address).",
+          "propertyNames": {
+            "pattern": "^[A-Z][A-Z0-9_]{1,39}$"
+          },
+          "additionalProperties": {
+            "enum": [
+              "plex"
+            ]
+          }
+        },
+        "webhooks": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 10,
+          "description": "Inbound webhooks (name a-z0-9_): each bot gets a secret URL per name, shown on the plugin page; calls go to webhooks[name](ctx, payload). Body: JSON or a form field \"payload\" with JSON (Plex). Needs the SDK permission webhooks.inbound.",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,31}$"
+          }
+        },
+        "hosts": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 20,
+          "description": "Hosts ctx.http.get/post/... may reach (https only, exact host names, no IPs or wildcards; private addresses are refused at run time). Needs the SDK permission http.outbound. Keys belong in endpoints, not here.",
+          "items": {
+            "type": "string",
+            "pattern": "^(?=.{4,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z][a-z0-9-]{0,61}[a-z0-9]$"
+          }
+        }
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 50,
+      "description": "Layer \"Nodes\": builder blocks. Each name has nodes/<name>.json (node definition, type plugin.<id>.<name>) and a handler in nodes/<name>.js.",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]{0,31}$"
+      }
+    },
+    "dashboard": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Layer \"Dashboard\": what the dashboard shows for the plugin. Rendered by BotHub, the plugin ships no HTML, CSS or JS.",
+      "properties": {
+        "settings": {
+          "const": "dashboard/settings.json",
+          "description": "Settings page per bot: {\"fields\": [...]} in the module-settings format (no secrets)."
+        }
+      }
+    },
+    "lang": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "en"
+      ],
+      "description": "Text files, flat {\"plugin.<id>.<...>\": \"text\"}, only keys with the plugin's prefix, values up to 500 chars, file up to 64 KB. Missing German texts fall back to English.",
+      "properties": {
+        "en": {
+          "const": "lang/en.json"
+        },
+        "de": {
+          "const": "lang/de.json"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "settingsFile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fields"
+      ],
+      "description": "dashboard/settings.json",
+      "properties": {
+        "$schema": {
+          "type": "string"
+        },
+        "fields": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "$ref": "#/$defs/field"
+          }
+        }
+      }
+    },
+    "nodeFile": {
+      "type": "object",
+      "required": [
+        "category",
+        "labelKey"
+      ],
+      "description": "nodes/<name>.json: a node definition (shared/node-definition.schema.json) without type/version; the type is plugin.<id>.<name>.",
+      "properties": {
+        "type": {
+          "type": "string",
+          "pattern": "^plugin\\.plugin_[a-z0-9_]{1,57}\\.[a-z][a-z0-9_]{0,31}$",
+          "description": "Optional; if set it must be plugin.<id>.<name>."
+        },
+        "version": false
+      }
+    },
+    "field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "type"
+      ],
+      "properties": {
+        "key": {
+          "type": "string",
+          "pattern": "^[a-z][a-zA-Z0-9_]{0,31}$"
+        },
+        "type": {
+          "enum": [
+            "bool",
+            "text",
+            "number",
+            "select",
+            "color",
+            "channel",
+            "channels",
+            "role",
+            "roles",
+            "emojis",
+            "words",
+            "message",
+            "list",
+            "permissions",
+            "image"
+          ]
+        },
+        "default": {},
+        "required": {
+          "type": "boolean"
+        },
+        "hint": {
+          "type": "boolean"
+        },
+        "min": {
+          "type": "integer"
+        },
+        "max": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2000
+        },
+        "maxLength": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2000
+        },
+        "multiline": {
+          "type": "boolean"
+        },
+        "pattern": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "options": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 25,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]{1,32}$"
+          }
+        },
+        "channelTypes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "text",
+              "voice",
+              "category",
+              "forum",
+              "announcement"
+            ]
+          }
+        },
+        "showIf": {
+          "type": "object",
+          "maxProperties": 1,
+          "additionalProperties": {
+            "type": "array",
+            "maxItems": 25,
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "item": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 20,
+          "items": {
+            "$ref": "#/$defs/itemField"
+          }
+        },
+        "titleField": {
+          "type": "string",
+          "pattern": "^[a-z][a-zA-Z0-9_]{0,31}$"
+        },
+        "unique": {
+          "type": "array",
+          "maxItems": 5,
+          "items": {
+            "type": "string"
+          }
+        },
+        "lists": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "allowed_roles",
+              "banned_roles",
+              "required_permissions",
+              "banned_channels"
+            ]
+          },
+          "description": "permissions: lists of the block to show (default all four)."
+        },
+        "group": {
+          "type": "boolean",
+          "description": "permissions: the block is a group of members (e.g. who is exempt), not access: no @everyone, no value is nobody."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "enum": [
+                  "channels",
+                  "roles",
+                  "emojis",
+                  "words",
+                  "list"
+                ]
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "max": {
+                "maximum": 50
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "select"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "required": [
+              "options"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "list"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "required": [
+              "item"
+            ]
+          }
+        }
+      ]
+    },
+    "itemField": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "type"
+      ],
+      "properties": {
+        "key": {
+          "type": "string",
+          "pattern": "^[a-z][a-zA-Z0-9_]{0,31}$"
+        },
+        "type": {
+          "enum": [
+            "bool",
+            "text",
+            "number",
+            "select",
+            "color",
+            "channel",
+            "channels",
+            "role",
+            "roles",
+            "emojis",
+            "words",
+            "message",
+            "permissions",
+            "image"
+          ]
+        },
+        "default": {},
+        "required": {
+          "type": "boolean"
+        },
+        "hint": {
+          "type": "boolean"
+        },
+        "min": {
+          "type": "integer"
+        },
+        "max": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2000
+        },
+        "maxLength": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2000
+        },
+        "multiline": {
+          "type": "boolean"
+        },
+        "pattern": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "options": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 25,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]{1,32}$"
+          }
+        },
+        "channelTypes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "text",
+              "voice",
+              "category",
+              "forum",
+              "announcement"
+            ]
+          }
+        },
+        "showIf": {
+          "type": "object",
+          "maxProperties": 1,
+          "additionalProperties": {
+            "type": "array",
+            "maxItems": 25,
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "enum": [
+                  "channels",
+                  "roles",
+                  "emojis",
+                  "words",
+                  "list"
+                ]
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "max": {
+                "maximum": 50
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "select"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "required": [
+              "options"
+            ]
+          }
+        }
+      ]
     }
   }
 }

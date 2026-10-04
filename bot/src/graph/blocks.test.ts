@@ -206,3 +206,51 @@ test('helper placeholders: time and random', async () => {
   assert.equal(helperValue('random:5-3'), undefined);
   assert.equal(helperValue('nope'), undefined);
 });
+
+test('api request with an endpoint: header from the secret, value masked', async () => {
+  const said: string[] = [];
+  let seen: unknown[] = [];
+  const secret = 'sk-top-secret-123';
+  const http = async (...args: unknown[]) => {
+    seen = args;
+    return { status: 200, body: `{"echo":"Bearer ${secret}","ok":true}` };
+  };
+  const secrets: Record<string, string> = { OPENAI_URL: 'https://api.example.com/v1/', OPENAI_KEY: secret };
+  const secretFn = (key: string) => secrets[key] ?? null;
+  const t = n('trigger.slash');
+  const req = n('action.api_request', { url_secret: 'OPENAI_URL', auth_secret: 'OPENAI_KEY', url: '/models', variable: 'R' });
+  const say = n('test.say', { text: '{R.body}|{R.json.echo}' });
+  const r = await new Run(graph([t, req, say], [edge(t, 'next', req), edge(req, 'next', say)]), engine(said, { http: http as never, secret: secretFn })).start();
+  assert.equal(r.ok, true);
+  assert.equal(seen[1], 'https://api.example.com/v1/models');
+  assert.deepEqual(seen[2], { Authorization: `Bearer ${secret}` });
+  assert.ok(!said[0]!.includes(secret), 'secret masked in results');
+  assert.match(said[0]!, /Bearer ••••/);
+
+  const run1 = (config: Record<string, unknown>) => {
+    const tt = n('trigger.slash');
+    const x = n('action.api_request', config);
+    return new Run(graph([tt, x], [edge(tt, 'next', x)]), engine([], { http: http as never, secret: secretFn })).start();
+  };
+  assert.equal((await run1({ url_secret: 'OPENAI_URL', url: 'https://evil.example/x' })).errorKey, 'error.run.bad_url', 'a path only');
+  assert.equal((await run1({ url_secret: 'NOPE' })).errorKey, 'error.run.unknown_secret');
+  assert.equal((await run1({ url: 'https://evil.example/x', auth_secret: 'OPENAI_KEY' })).errorKey, 'error.run.secret_needs_url', 'a key never goes to a free address');
+  await run1({ url_secret: 'OPENAI_URL', url: 'q', auth_secret: 'OPENAI_KEY', auth_format: 'query', auth_param: 'appid' });
+  assert.equal(seen[1], `https://api.example.com/v1/q?appid=${secret}`);
+});
+
+test('polls: answers, length, summary', async () => {
+  const { pollAnswers, pollHours, pollSummary } = await import('../discord/handlers.js');
+  assert.deepEqual(pollAnswers('Yes | No |  | Maybe'), ['Yes', 'No', 'Maybe']);
+  assert.deepEqual(pollAnswers('Red\nGreen\r\nBlue'), ['Red', 'Green', 'Blue']);
+  assert.equal(pollHours(''), 24);
+  assert.equal(pollHours('10m'), 1, 'Discord polls last at least one hour');
+  assert.equal(pollHours('3d'), 72);
+  assert.equal(pollHours('60d'), 768, 'at most 32 days');
+  const s = pollSummary([{ text: 'Yes', votes: 3 }, { text: 'No', votes: 1 }]);
+  assert.equal(s.total, 4);
+  assert.equal(s.winner, 'Yes');
+  assert.match(s.text, /\*\*Yes\*\* — 3 votes \(75 %\)/);
+  assert.equal(pollSummary([{ text: 'A', votes: 2 }, { text: 'B', votes: 2 }]).winner, '', 'tie');
+  assert.equal(pollSummary([{ text: 'A', votes: 0 }]).winner, '', 'no votes');
+});

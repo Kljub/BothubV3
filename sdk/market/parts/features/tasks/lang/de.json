@@ -1,0 +1,4 @@
+{
+  "plugin.__ID__.setting.report_channel": "Bericht-Kanal",
+  "plugin.__ID__.setting.report_channel_hint": "Hier wird jeden Tag um 09:00 UTC ein kurzer Bericht gepostet. Leer: kein Bericht."
+}

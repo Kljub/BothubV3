@@ -43,7 +43,7 @@ func TestMessageBuilderTemplates(t *testing.T) {
 	}
 	set.Funcs(template.FuncMap{"t": func(key string, _ ...any) string { return key }})
 	now := time.Date(2026, 9, 30, 8, 0, 0, 0, time.UTC)
-	view := msgBuilderView{BotID: 1, BotName: "Njetflix", Max: 100, Texts: "{}",
+	view := msgBuilderView{BotID: 1, BotName: "Njetflix", Texts: "{}",
 		Items: []msgTemplateRow{{ID: 4, Name: "Welcome", Summary: "Hello", Embeds: 1, CreatedAt: now}}}
 	errKey := "error.run.channel_not_found"
 	cases := []struct {
@@ -51,7 +51,7 @@ func TestMessageBuilderTemplates(t *testing.T) {
 		data any
 		want []string
 	}{
-		{"message_builder", view, []string{`data-msgb-edit="4"`, `/bot/1/message-templates/4/send`, `id="msgb-name-dialog"`, `message-page.js`}},
+		{"message_builder", view, []string{`data-msgb-edit="4"`, `/bot/1/message-templates/4/send`, `id="msgb-name-dialog"`}},
 		{"message_builder_list_fragment", Page{Data: view}, []string{`hx-swap-oob="true"`, `msgb.embeds`}},
 		{"message_builder_send_fragment", Page{Data: msgSendView{BotID: 1, Template: api.MessageTemplate{ID: 4, Name: "Welcome"}, Guilds: []api.Guild{{ID: "1", Name: "Home"}}}}, []string{`<option value="1">Home</option>`, `name="webhook_url"`}},
 		{"message_builder_channels_fragment", Page{Data: msgChannelsView{Channels: []api.GuildChannel{{ID: "9", Name: "general"}}}}, []string{`#general`}},

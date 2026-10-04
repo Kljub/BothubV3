@@ -1,0 +1,19 @@
+{
+  "category": "action",
+  "labelKey": "plugin.__ID__.node.reply_for.label",
+  "descriptionKey": "plugin.__ID__.node.reply_for.description",
+  "inputs": [{ "name": "in", "type": "flow", "multiple": true }],
+  "outputs": [
+    { "name": "next", "type": "flow" },
+    { "name": "none", "type": "flow" }
+  ],
+  "results": [{ "suffix": "", "labelKey": "plugin.__ID__.node.reply_for.result" }],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "text": { "type": "string", "maxLength": 2000, "default": "{message.content}" },
+      "variable": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$" }
+    }
+  }
+}

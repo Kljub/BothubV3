@@ -1,0 +1,11 @@
+{
+  "plugin.__ID__.setting.voice_channel": "Voice channel",
+  "plugin.__ID__.setting.voice_channel_hint": "Used when the member who triggers the node is not in a voice channel and the node names none.",
+  "plugin.__ID__.setting.volume": "Volume (%)",
+  "plugin.__ID__.setting.stay_connected": "Stay in the channel after \"Stop sound\"",
+  "plugin.__ID__.node.play_sound.label": "Play sound",
+  "plugin.__ID__.node.play_sound.description": "Joins a voice channel and plays a sound of the plugin.",
+  "plugin.__ID__.node.play_sound.result": "Sound file",
+  "plugin.__ID__.node.stop_sound.label": "Stop sound",
+  "plugin.__ID__.node.stop_sound.description": "Stops the sound and leaves the voice channel."
+}

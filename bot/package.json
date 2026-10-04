@@ -16,7 +16,9 @@
     "typescript": "^5.9.0"
   },
   "dependencies": {
+    "@discordjs/voice": "^0.19.2",
     "discord.js": "^14.27.0",
+    "opusscript": "^0.1.1",
     "redis": "^5.12.1"
   }
 }

@@ -66,7 +66,12 @@
 .settings-group { margin: 22px 0 8px; font-size: 13px; font-weight: 600; color: var(--text-2); }
 .settings-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
 .settings-card + .settings-card { margin-top: 12px; }
+/* On a page a card is followed by boxes (e.g. the danger zone): same gap as between boxes. */
+.settings-card + .box { margin-top: 20px; }
 .settings-card > .settings-row { padding: 12px 14px; border-bottom: 1px solid var(--border); }
+/* A row that only links somewhere (e.g. Plugins → App Store). */
+a.settings-row { color: inherit; text-decoration: none; }
+a.settings-row:hover .settings-action { color: var(--text); }
 .settings-card > .settings-row:last-child { border-bottom: 0; }
 .settings-row-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .settings-row-text strong { font-size: 13px; font-weight: 600; }
@@ -79,5 +84,48 @@
 .settings-expand > summary:hover .settings-action { color: var(--text); }
 .settings-expand[open] > summary .settings-action { color: var(--text); }
 .settings-expand-body { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--border); }
+
+/* API / Secrets: icon, name and description, plugins that use it; forms in a grid. */
+.secret-row > summary, .secret-add > summary { justify-content: flex-start; }
+.secret-row > summary > .settings-row-text, .secret-add > summary > .settings-row-text { flex: 1; }
+.secret-icon { display: grid; place-items: center; flex: none; width: 32px; height: 32px; border-radius: 8px; background: var(--surface-2); font-size: 15px; }
+.secret-add .secret-icon { color: var(--accent); font-weight: 700; }
+.secret-uses { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.secret-row .settings-action .badge-soft { margin-right: 4px; }
+.secret-form .secret-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 640px) { .secret-form .secret-grid { grid-template-columns: 1fr; } }
+.secret-form .secret-grid .field { min-width: 0; }
+.secret-form .secret-grid .field input { width: 100%; max-width: none; }
+.secret-form .secret-wide { grid-column: 1 / -1; }
+.secret-form > .hint { margin: 8px 0 0; }
+.secret-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+.secret-empty .hint { max-width: 60ch; }
+/* [NULL]: placeholder of a plugin install, the value is still missing. */
+.badge-soft.secret-null { color: var(--yellow, #f0b232); border-color: currentColor; font-family: var(--mono, monospace); margin-right: 4px; }
+/* Label/value pairs inside an open row (plugin details …). */
+.settings-facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0; font-size: 13px; }
+.settings-facts dt { color: var(--text-2); }
+.settings-facts dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 560px) { .settings-facts { grid-template-columns: 1fr; } .settings-facts dd { margin-bottom: 6px; } }
 /* While searching, several tabs show one below the other. */
 .settings-dialog.is-searching .settings-content:not([hidden]) ~ .settings-content:not([hidden]) { margin-top: 24px; }
+
+/* SDK policies: a main group opens to its permission rows. */
+.sdk-group-body { display: flex; flex-direction: column; padding-top: 0; }
+.sdk-group-body > .settings-row { padding: 12px 0 12px 12px; border-bottom: 1px solid var(--border); }
+.sdk-group-body > .settings-row:last-child { border-bottom: 0; }
+.sdk-group-body .badge-soft { margin-left: 6px; vertical-align: middle; }
+.sdk-search { margin: 12px 0 14px; }
+.sdk-search input { width: 100%; }
+.sdk-module { margin: 14px 0 2px; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-2); }
+.sdk-module:first-child { margin-top: 4px; }
+
+/* App Store: the cached list shows at once; this line while the current one loads. */
+.store-live { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; }
+.store-live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: store-live 1s ease-in-out infinite alternate; }
+@keyframes store-live { from { opacity: .25; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .store-live-dot { animation: none; } }
+
+/* App Store: what an installed plugin still needs (secrets, sign-in). */
+.store-setup ul { margin: 6px 0 10px; padding-left: 18px; }
+.store-setup li { margin: 2px 0; }

@@ -1,0 +1,12 @@
+{
+  "title": "Voice / sounds service",
+  "description": "Plays sound files of the plugin (sounds/*.ogg|mp3|wav, max 2 MB each) in a voice channel: services/voice.js joins, plays, stops, leaves; nodes \"Play sound\" and \"Stop sound\". One player per server.",
+  "needs": [],
+  "permissions": ["discord.voice.connect", "discord.voice.speak"],
+  "nodes": ["play_sound", "stop_sound"],
+  "settings": [
+    { "key": "voice_channel", "type": "channel", "channelTypes": ["voice"], "hint": true },
+    { "key": "volume", "type": "number", "min": 0, "max": 100, "default": 80 },
+    { "key": "stay_connected", "type": "bool", "default": false }
+  ]
+}

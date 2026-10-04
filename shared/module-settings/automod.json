@@ -88,6 +88,49 @@
       "max": 50
     },
     {
+      "key": "mediaFilters",
+      "type": "list",
+      "max": 25,
+      "hint": true,
+      "titleField": "channels",
+      "item": [
+        {
+          "key": "channels",
+          "type": "channels",
+          "channelTypes": [
+            "text",
+            "announcement",
+            "forum",
+            "voice"
+          ],
+          "max": 50,
+          "required": true
+        },
+        {
+          "key": "gifs",
+          "type": "bool",
+          "default": true
+        },
+        {
+          "key": "images",
+          "type": "bool",
+          "default": false
+        },
+        {
+          "key": "videos",
+          "type": "bool",
+          "default": false
+        },
+        {
+          "key": "notice",
+          "type": "text",
+          "max": 300,
+          "hint": true,
+          "default": "{user.mention}, {media} are not allowed in this channel."
+        }
+      ]
+    },
+    {
       "key": "punishments",
       "type": "list",
       "max": 10,

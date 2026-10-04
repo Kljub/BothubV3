@@ -88,9 +88,28 @@ var commandStatuses = []string{"all", "enabled", "disabled"}
 // customCommands loads commands and groups; q and status come from the
 // query string or the toolbar values htmx sends along.
 func (s *Server) customCommands(r *http.Request, h hub, botID int64) (customCommandsView, error) {
-	cmds, err := s.api.CustomCommands(r.Context(), session(r), h.Kind, botID)
+	all, err := s.api.CustomCommands(r.Context(), session(r), h.Kind, botID)
 	if err != nil {
 		return customCommandsView{}, err
+	}
+	// Module and plugin copies (and their system folders) are managed on the
+	// module and plugin pages, never listed here. Other hidden commands stay
+	// hidden; a group holding only such commands is hidden with them.
+	cmds := make([]api.CustomCommand, 0, len(all))
+	onlyHidden := map[int64]bool{}
+	for _, c := range all {
+		if c.Hidden || c.Copy {
+			if c.GroupID != nil {
+				if _, seen := onlyHidden[*c.GroupID]; !seen {
+					onlyHidden[*c.GroupID] = true
+				}
+			}
+			continue
+		}
+		if c.GroupID != nil {
+			onlyHidden[*c.GroupID] = false
+		}
+		cmds = append(cmds, c)
 	}
 	groups, err := s.api.CommandGroups(r.Context(), session(r), botID)
 	if err != nil {
@@ -101,7 +120,7 @@ func (s *Server) customCommands(r *http.Request, h hub, botID int64) (customComm
 	if !slices.Contains(commandStatuses, status) {
 		status = "all"
 	}
-	v := customCommandsView{Hub: h, BotID: botID, Total: len(cmds), Query: q, Status: status, AllGroups: groups}
+	v := customCommandsView{Hub: h, BotID: botID, Total: len(cmds), Query: q, Status: status, AllGroups: api.UserGroups(groups)}
 	if h.Event() {
 		counts := map[string]int{}
 		for _, c := range cmds {
@@ -127,7 +146,8 @@ func (s *Server) customCommands(r *http.Request, h hub, botID int64) (customComm
 	byGroup := map[int64][]api.CustomCommand{}
 	known := map[int64]bool{}
 	for _, g := range groups {
-		known[g.ID] = true
+		// A user command in a system folder (should not happen) shows ungrouped.
+		known[g.ID] = !g.System
 	}
 	for _, c := range cmds {
 		if !match(c) {
@@ -143,6 +163,9 @@ func (s *Server) customCommands(r *http.Request, h hub, botID int64) (customComm
 		slices.SortFunc(list, func(a, b api.CustomCommand) int { return strings.Compare(a.Name, b.Name) })
 	}
 	for _, g := range groups {
+		if onlyHidden[g.ID] || g.System {
+			continue
+		}
 		if list := byGroup[g.ID]; len(list) > 0 || !v.Filtered {
 			sortByName(list)
 			v.Groups = append(v.Groups, commandGroupView{ID: g.ID, Name: g.Name, Description: g.Description, Commands: list})
@@ -291,7 +314,7 @@ func (s *Server) renderGroups(w http.ResponseWriter, r *http.Request, p Page, bo
 		// The command list listens for this and reloads itself.
 		w.Header().Set("HX-Trigger", "bothub:commands-changed")
 	}
-	s.render(w, http.StatusOK, "module_item", "command_groups_fragment", withData(p, commandGroupsView{BotID: botID, Groups: groups}))
+	s.render(w, http.StatusOK, "module_item", "command_groups_fragment", withData(p, commandGroupsView{BotID: botID, Groups: api.UserGroups(groups)}))
 }
 
 func (s *Server) handleCommandGroups(w http.ResponseWriter, r *http.Request, p Page) {

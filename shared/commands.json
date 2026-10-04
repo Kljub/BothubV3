@@ -85,7 +85,19 @@
     { "name": "suggest-list", "usage": "/suggest-list", "module": "suggestions" },
 
     { "name": "birthday", "usage": "/birthday [datum]", "module": "birthday" },
-    { "name": "ticket", "usage": "/ticket", "module": "ticket" },
-    { "name": "modmail", "usage": "/modmail [nachricht]", "module": "modmail" }
+    { "name": "ticket setup", "usage": "/ticket setup #channel", "module": "ticket" },
+    { "name": "ticket create", "usage": "/ticket create", "module": "ticket" },
+    { "name": "ticket close", "usage": "/ticket close [reason]", "module": "ticket" },
+    { "name": "ticket reopen", "usage": "/ticket reopen", "module": "ticket" },
+    { "name": "ticket delete", "usage": "/ticket delete", "module": "ticket" },
+    { "name": "ticket add", "usage": "/ticket add @user", "module": "ticket" },
+    { "name": "ticket remove", "usage": "/ticket remove @user", "module": "ticket" },
+    { "name": "ticket automation", "usage": "/ticket automation", "module": "ticket" },
+    { "name": "ticket update-counts", "usage": "/ticket update-counts", "module": "ticket" },
+    { "name": "modmail close", "usage": "/modmail close [reason]", "module": "modmail" },
+    { "name": "modmail reply", "usage": "/modmail reply [message]", "module": "modmail" },
+    { "name": "modmail block", "usage": "/modmail block @user", "module": "modmail" },
+    { "name": "modmail unblock", "usage": "/modmail unblock @user", "module": "modmail" },
+    { "name": "free-games", "usage": "/free-games", "module": "free-games" }
   ]
 }

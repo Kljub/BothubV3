@@ -32,7 +32,7 @@
   </div>
   <div class="module-card-body">
     <h3>{{t (printf "module.%s.name" .Key)}}</h3>
-    <p class="muted">{{t (printf "module.%s.description" .Key)}}</p>
+    <p class="muted" title="{{t (printf "module.%s.description" .Key)}}">{{t (printf "module.%s.description" .Key)}}</p>
     <a class="module-card-edit" href="/bots/modules/{{.Key}}">{{t "modules.edit"}}</a>
   </div>
 </article>
@@ -47,8 +47,8 @@
 {{define "plugin_card"}}
 <article class="card module-card module-card-plugin {{if .Enabled}}module-card-on{{else}}module-card-off{{end}}" id="plugin-{{.ID}}">
   <div class="module-card-top">
-    <span class="card-badges"><span class="badge-plugin">{{t "plugins.badge"}}</span>{{if .Beta}}<span class="beta">{{t "modules.beta"}}</span>{{end}}</span>
-    <span class="module-card-icon" aria-hidden="true">{{.Icon}}</span>
+    <span class="card-badges"><span class="badge-plugin">{{t "plugins.badge"}}</span>{{if .BlockedBy}}<span class="badge-disabled" title="{{t "plugins.blocked_hint" "permissions" (join .BlockedBy ", ")}}">{{t "plugins.badge_disabled"}}</span>{{end}}{{if .Beta}}<span class="beta">{{t "modules.beta"}}</span>{{end}}</span>
+    <span class="module-card-icon" aria-hidden="true">{{or .Icon "🧩"}}</span>
     <form class="module-card-toggle" hx-put="/bot/{{.BotID}}/plugins/{{.ID}}" hx-trigger="change" hx-target="#plugin-{{.ID}}" hx-swap="outerHTML swap:250ms">
       <input type="checkbox" class="toggle toggle-sm" name="enabled" value="true" {{if .Enabled}}checked{{end}}
         aria-label="{{t "modules.toggle" "name" .Name}}">
@@ -56,7 +56,7 @@
   </div>
   <div class="module-card-body">
     <h3>{{.Name}}</h3>
-    <p class="muted">{{.Description}}</p>
+    <p class="muted" title="{{.Description}}">{{.Description}}</p>
     <a class="module-card-edit" href="/bots/plugins/{{.ID}}">{{t "modules.edit"}}</a>
   </div>
 </article>

@@ -1,0 +1,92 @@
+{
+  "module": "honeypot",
+  "fields": [
+    {
+      "key": "traps",
+      "type": "list",
+      "max": 25,
+      "hint": true,
+      "titleField": "channel",
+      "unique": [
+        "channel"
+      ],
+      "item": [
+        {
+          "key": "channel",
+          "type": "channel",
+          "channelTypes": [
+            "text"
+          ],
+          "required": true
+        },
+        {
+          "key": "action",
+          "type": "select",
+          "options": [
+            "kick",
+            "softban",
+            "ban",
+            "timeout"
+          ],
+          "default": "softban"
+        },
+        {
+          "key": "duration",
+          "type": "text",
+          "max": 6,
+          "pattern": "^[1-9][0-9]{0,4}[smhd]$",
+          "default": "1d",
+          "showIf": {
+            "action": [
+              "timeout"
+            ]
+          }
+        },
+        {
+          "key": "title",
+          "type": "text",
+          "max": 200,
+          "required": true,
+          "default": "⚠️ Do not send messages in this channel!"
+        },
+        {
+          "key": "description",
+          "type": "text",
+          "max": 2000,
+          "multiline": true,
+          "hint": true,
+          "default": "This channel is a honeypot to detect and catch spam bots.\nEvery message leads **automatically** to a **{action}**."
+        },
+        {
+          "key": "counter",
+          "type": "bool",
+          "default": true
+        }
+      ]
+    },
+    {
+      "key": "exempt",
+      "type": "permissions",
+      "group": true,
+      "hint": true,
+      "lists": [
+        "allowed_roles",
+        "required_permissions"
+      ],
+      "default": {
+        "allowed_roles": [],
+        "required_permissions": [
+          "manage_messages"
+        ]
+      }
+    },
+    {
+      "key": "logChannel",
+      "type": "channel",
+      "channelTypes": [
+        "text",
+        "announcement"
+      ]
+    }
+  ]
+}

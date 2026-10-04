@@ -22,7 +22,7 @@ final class SdkPolicyStore
     {
     }
 
-    /** @return list<array{permission: string, risk: string, calls: list<string>, enabled: bool, default: bool}> */
+    /** @return list<array{permission: string, risk: string, calls: list<string>, implemented: int, mode: string, enabled: bool, default: bool}> */
     public function list(): array
     {
         $rows = $this->pdo->query('SELECT permission, enabled FROM sdk_policies')->fetchAll(PDO::FETCH_KEY_PAIR);
@@ -30,27 +30,41 @@ final class SdkPolicyStore
             $default = ($p['risk'] ?? '') === 'low';
             return [
                 'permission' => $p['key'],
+                'group' => is_string($p['group'] ?? null) ? $p['group'] : 'other',
+                // BotHub module of a modules.<module>.* permission ("all" = modules.read), else "".
+                'module' => is_string($p['module'] ?? null) ? $p['module'] : '',
                 'risk' => $p['risk'] ?? 'medium',
                 'calls' => array_values($p['calls'] ?? []),
+                // How many of the calls the bot answers today (the rest: sdk.call.not_available).
+                'implemented' => count(array_intersect($p['calls'] ?? [], $p['implemented'] ?? [])),
+                // allow / deny: a row; default: no row, the risk decides.
+                'mode' => array_key_exists($p['key'], $rows) ? ((int) $rows[$p['key']] === 1 ? 'allow' : 'deny') : 'default',
                 'enabled' => array_key_exists($p['key'], $rows) ? (int) $rows[$p['key']] === 1 : $default,
                 'default' => $default,
             ];
         }, $this->permissions());
     }
 
-    /** Switches one permission; answers the full list. */
-    public function set(string $permission, mixed $enabled): array
+    /**
+     * Sets one permission to allow (always on), deny (always off) or default
+     * (the risk decides: low = on); answers the full list.
+     */
+    public function set(string $permission, mixed $mode): array
     {
         if (!in_array($permission, array_column($this->permissions(), 'key'), true)) {
             throw ApiError::notFound('error.sdk.unknown_permission');
         }
-        if (!is_bool($enabled)) {
-            throw new ApiError(422, 'error.validation.failed', ['field' => 'enabled']);
+        if (!in_array($mode, ['allow', 'default', 'deny'], true)) {
+            throw new ApiError(422, 'error.validation.failed', ['field' => 'mode']);
         }
-        Connection::write($this->pdo, function (PDO $pdo) use ($permission, $enabled): void {
-            $pdo->prepare("INSERT INTO sdk_policies (permission, enabled) VALUES (?, ?)
-                ON CONFLICT (permission) DO UPDATE SET enabled = excluded.enabled, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')")
-                ->execute([$permission, $enabled ? 1 : 0]);
+        Connection::write($this->pdo, function (PDO $pdo) use ($permission, $mode): void {
+            if ($mode === 'default') {
+                $pdo->prepare('DELETE FROM sdk_policies WHERE permission = ?')->execute([$permission]);
+            } else {
+                $pdo->prepare("INSERT INTO sdk_policies (permission, enabled) VALUES (?, ?)
+                    ON CONFLICT (permission) DO UPDATE SET enabled = excluded.enabled, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')")
+                    ->execute([$permission, $mode === 'allow' ? 1 : 0]);
+            }
             Outbox::add($pdo, 'sdk.policies.changed', []);
         });
         return $this->list();

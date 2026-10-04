@@ -1,6 +1,8 @@
 {{/* Moderation module settings. Receives a moderationView. Saved through the save bar. */}}
 {{define "moderation_settings"}}
 {{$c := .Config}}
+{{/* Attributes, not <script> blocks: hx-boost drops script tags of swapped pages. */}}
+{{with .Picker}}<div hidden data-picker-data="{{printf "%s" .}}" data-picker-texts="{{printf "%s" pickerTexts}}"></div>{{end}}
 <form class="form" id="moderation-settings" hx-put="/bot/{{.BotID}}/modules/moderation/config" hx-target="#flash" data-savebar>
   {{/* Servers whose roles and channels loaded; only these are replaced on save. */}}
   {{range .Guilds}}{{if not .Failed}}<input type="hidden" name="loaded_guild" value="{{.ID}}">{{end}}{{end}}
@@ -10,12 +12,8 @@
       <span class="box-meta">{{t "moderation.access.meta"}}</span>
     </header>
     <div class="box-body form">
-      <label class="toggle-row">
-        <span><strong>{{t "moderation.access.default"}}</strong><span class="hint">{{t "moderation.access.default_hint"}}</span></span>
-        <input type="checkbox" class="toggle" name="default_permissions" value="true" {{if $c.DefaultPermissions}}checked{{end}}>
-      </label>
-      {{template "moderation_roles" (list . "moderator_roles" "moderation.access.moderator_roles" "moderation.access.moderator_roles_hint" .Moderator)}}
-      {{template "moderation_roles" (list . "admin_roles" "moderation.access.admin_roles" "moderation.access.admin_roles_hint" .Admin)}}
+      {{template "moderation_block" (list "moderators" .Moderators)}}
+      {{template "moderation_block" (list "admins" .Admins)}}
     </div>
   </section>
 
@@ -31,10 +29,10 @@
       </label>
       {{range .Guilds}}
       <label class="field">{{t "moderation.log.channel" "server" .Name}}
-        <select name="log_channel_{{.ID}}" class="input-medium">
+        <select name="log_channel_{{.ID}}" class="input-medium" data-pick="channel" data-guild="{{.ID}}" data-channel-types="text,announcement">
           <option value="">{{t "moderation.log.channel_none"}}</option>
-          {{$sel := .LogChannel}}
-          {{range .Channels}}{{if or (eq .Type "text") (eq .Type "announcement")}}<option value="{{.ID}}" {{if eq .ID $sel}}selected{{end}}>#{{.Name}}</option>{{end}}{{end}}
+          {{$sel := .LogChannel}}{{$g := .ID}}
+          {{range .Channels}}{{if or (eq .Type "text") (eq .Type "announcement")}}<option value="{{$g}}:{{.ID}}" data-name="{{.Name}}" data-type="{{.Type}}" {{if eq .ID $sel}}selected{{end}}>#{{.Name}}</option>{{end}}{{end}}
         </select>
         {{if .Failed}}<span class="hint">{{t "moderation.server_unreachable"}}</span>{{end}}
       </label>
@@ -105,21 +103,15 @@
 </form>
 {{end}}
 
-{{/* Role chips of every server. Receives (list view fieldName labelKey hintKey selected). */}}
-{{define "moderation_roles"}}
-{{$v := index . 0}}{{$name := index . 1}}{{$sel := index . 4}}
+{{/* Who counts as moderator or admin: a permissions block (static/js/modsettings.js).
+     Receives (list name json); texts come from permblock.moderation.<name>.*. */}}
+{{define "moderation_block"}}
+{{$name := index . 0}}
 <div class="field">
-  <span class="field-label">{{t (index . 2)}}</span>
-  <span class="hint hint-top">{{t (index . 3)}}</span>
-  {{range $v.Guilds}}
-  {{$g := .}}
-  <span class="muted">{{.Name}}</span>
-  <div class="chips">
-    {{range .Roles}}{{if not .Managed}}<label class="chip"><input type="checkbox" name="{{$name}}" value="{{$g.ID}}:{{.ID}}" {{if index $sel .ID}}checked{{end}}> @{{.Name}}</label>{{end}}{{else}}<span class="hint">{{if $g.Failed}}{{t "moderation.server_unreachable"}}{{else}}{{t "moderation.access.no_roles"}}{{end}}</span>{{end}}
-  </div>
-  {{else}}
-  <p class="muted">{{t "moderation.no_servers"}}</p>
-  {{end}}
+  <span class="field-label">{{t (printf "moderation.access.%s" $name)}}</span>
+  <span class="hint hint-top">{{t (printf "moderation.access.%s_hint" $name)}}</span>
+  <input type="hidden" name="{{$name}}" value="{{index . 1}}">
+  <div data-perm-block data-no-everyone data-no-badge data-texts="permblock.moderation.{{$name}}"></div>
 </div>
 {{end}}
 

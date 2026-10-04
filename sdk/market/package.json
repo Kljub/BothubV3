@@ -1,0 +1,19 @@
+{
+  "name": "bothub-market-tools",
+  "private": true,
+  "type": "module",
+  "description": "Tools for the BotHub plugin market repo (BOTHUB_MARKET_DIR, default ../BothubMarketPlace): create, validate, pack, index.",
+  "scripts": {
+    "create": "node scripts/create.mjs",
+    "validate": "node scripts/validate.mjs",
+    "test": "node scripts/test.mjs",
+    "pack": "node scripts/pack.mjs",
+    "index": "node scripts/index.mjs",
+    "check": "node scripts/validate.mjs && node scripts/test.mjs && node scripts/index.mjs --check",
+    "sync-sdk": "node scripts/sync-sdk.mjs"
+  },
+  "devDependencies": {
+    "ajv": "^8.20.0"
+  },
+  "engines": { "node": ">=24" }
+}

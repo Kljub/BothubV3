@@ -1,0 +1,6 @@
+{
+  "plugin.__ID__.node.hello.label": "Say hello",
+  "plugin.__ID__.node.hello.description": "Builds a greeting for a name.",
+  "plugin.__ID__.node.hello.result": "Greeting",
+  "plugin.__ID__.node.hello.result_length": "Length of the greeting"
+}

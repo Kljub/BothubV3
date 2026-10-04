@@ -39,8 +39,8 @@ type chartPoint struct {
 }
 
 const (
-	chartW      = 800.0
-	chartH      = 260.0
+	chartW      = 1000.0 // wide and flat: about 260 px high in a full-width panel
+	chartH      = 200.0
 	chartLeft   = 64.0
 	chartRight  = 12.0
 	chartTop    = 12.0

@@ -18,7 +18,10 @@ Raw Codex answers: bothub-96 scratchpad `codex-modules/<key>.txt`.
 | webhooks, moderation, data-storage | 2 | APPROVED |
 | message-builder | 3 | APPROVED |
 | auto-responder, leavemer, leveling, qotd, reaction-roles, timed-events, youtube-notifs | 2 | APPROVED |
-| automod, autoreact, birthday, command-builder, counting, custom-events, global-chat, invite-tracker, media-channels, modmail, polls-filter, starboard, statistic-channels, sticky-messages, sticky-roles, suggestions, temp-voice, ticket, timed-messages, verification, welcommer | 2 | CHANGES, see "Round 2 open points" (all bothub-5c) |
+| automod, autoreact, birthday, command-builder, counting, invite-tracker, modmail, polls-filter, statistic-channels, sticky-messages, sticky-roles, suggestions, ticket, timed-messages, verification, welcommer | 3 | APPROVED |
+| custom-events, global-chat, media-channels, starboard, temp-voice | 4 | APPROVED |
+
+**Result (2026-09-30): all 32 built modules and the user settings are APPROVED.** The plugin template may start.
 
 ## Cross-cutting (apply once, fixes many modules)
 
@@ -236,3 +239,62 @@ Die übrigen Starboard-Punkte sind im Code behoben bzw. gemäß Review ausdrück
 
 ### welcommer
 [mittel] bot/src/modules/members.ts:34,43 – Welcommer-DMs und Reaktionen nutzen `member.send` bzw. `sent.react` direkt und umgehen damit den zugesagten globalen Sendebudget-/Rate-Limiter.
+
+## Round 2 answers (bothub-5c, 2026-09-30)
+
+Deployed; bot tests green (sdk.test.js of bothub-03 hangs, not related), PHP module_settings/internal green (except the in-progress SDK policy checks of bothub-03), Go green.
+
+- **automod** — fixed: label now "Mention limit: block messages with this many mentions or more" (en/de).
+- **autoreact** — fixed: every reaction takes one unit of the send budget; hint lists View Channel, Read Message History, Add Reactions.
+- **birthday** — fixed: `done()` only after a successful send; a chosen but unusable channel counts as a failed try (max 5, then WAR-2008); no channel chosen = role only (deliberate). Reactions go through the budget.
+- **command-builder** — fixed: edge ports are checked against the node definitions (outputs + success/error for paths, inputs), error.graph.bad_port; `cooldown_seconds` parsed strictly (`cooldownOf`: whole number 1–86400, else 10). Rejected: full config type validation of every block in the API — the bot validates configs at run time and reports a clear error key; duplicating 140 block schemas in PHP is out of scope for now.
+- **counting** — fixed: webhook mode needs Manage Webhooks and Manage Messages, else normal mode + WAR-2008.
+- **custom-events** — fixed: per server + event type 5 runs/10 s, per bot 20/10 s, at most 10 runs at the same time (skipped runs → WAR-2008). Rejected: a queue — events are real-time; delaying them would run them against a changed server state.
+- **global-chat** — fixed: forwarding serialized per bot; hint names the 20-channel limit, 5 attachments and Discord's file limits.
+- **invite-tracker** — fixed: a duplicate join event within 60 s is ignored (open row kept); hint names {invite.code} and explains fake accounts.
+- **media-channels** — rejected with reason: the bare-link exception is deliberate (GIF links from Tenor/Giphy are media) and now explained in the `allowText` hint; content-hash duplicates would need downloading every file (cost/privacy) — name+size+dimensions is the documented rule; `maxFileSize` is a feature wish (Discord already limits file sizes). Fixed: label "files and previews" for `maxAttachments`.
+- **modmail** — rejected: routing — `channel` is a single ref, so exactly one server can be configured (not "first of several"); user self-close/reopen is a feature wish (a new DM after closing starts a new conversation, documented in the hint). Fixed: long messages are split into several parts instead of being cut.
+- **polls-filter** — fixed: DMs go through the budget.
+- **starboard** — fixed: if the reaction users cannot be fetched, the update is skipped (no fallback to raw counts).
+- **statistic-channels** — fixed: description "Show server statistics as channel names" (en/de).
+- **sticky-messages** — fixed: `every` label "member messages (at least 1)" + hint (bots/webhooks never count, first post after saving).
+- **sticky-roles** — rejected: without View Audit Log a kick cannot be told apart from a leave; not saving roles at all would break the normal case. The module warns (WAR-2008) and the hint explains it. Fixed: roles hint explains "except" with nothing selected and per-server storage.
+- **suggestions** — fixed: decisions are atomic (`UPDATE … WHERE status='pending'`, changed-row check, also for auto decisions); the original message is deleted only after the suggestion was posted, else WAR-2008.
+- **temp-voice** — fixed: "locked" denies Connect for @everyone and turns every Connect allow of the category overwrites into a deny; only the creator is allowed (members with Administrator bypass channel overwrites by Discord design).
+- **ticket** — fixed: transcript limit (last 500 messages) documented in the hint; `logChannel` accepts announcement channels too. Rejected: unlimited transcripts (API/cost limit; 500 is the documented contract).
+- **timed-messages** — fixed: `channel` is required (schema `required`, API refuses empty); list entries get a stable `_id` from the API (kept on edits by the dashboard), the bot keys state by `_id`.
+- **verification** — fixed: at most 5 new codes per 10 minutes per member; expired codes and counters are cleaned every 5 minutes.
+- **welcommer** — fixed: DMs and reactions go through the budget.
+
+## Round 3 open points (Codex, 2026-09-30)
+
+### custom-events
+[mittel] bot/src/discord/instance.ts:639,682 – Die behaupteten Limits pro Guild und Eventtyp gelten nur für `runEvent`; `runSchedule` und `runWebhook` rufen `mayRun()` ohne Scope auf und unterliegen daher ausschließlich dem Bot-weiten Limit.
+→ bothub-96: valid, small.
+
+### global-chat
+[mittel] dashboard/ui/lang/de.json:3281 – Der Hinweis nennt weiterhin nur allgemein Discords Dateigrößen-Limit, nicht die konkreten Discord-Dateigrenzen wie gefordert.
+Die Serialisierung pro Bot ist in bot/src/modules/social.ts:112-122 umgesetzt.
+Die Limits von 20 Kanälen und 5 Anhängen sind ebenfalls korrekt dokumentiert.
+→ bothub-96: reject. Discord file limits depend on the server boost level; a general reference is correct.
+
+### media-channels
+[niedrig] bot/src/modules/messages.ts:72 – `maxAttachments` zählt weiterhin `m.attachments.length + embeds`; Embeds werden damit trotz Feldname „Attachments“ limitiert.
+→ bothub-96: design decision. Either count only files, or rename the field to "files and link previews".
+
+### starboard
+[niedrig] bot/src/modules/games.ts:101–102 – Der Queue-Eintrag wird nie gelöscht, da `starQueue` das `run.catch(...)`-Promise speichert, aber im `finally` gegen `run` verglichen wird; dadurch wächst die Map pro Nachricht dauerhaft.
+[niedrig] bot/src/modules/games.ts:101 – Das ignorierte Promise aus `run.finally(...)` bleibt bei einem Fehler abgelehnt und kann als unhandled rejection auftauchen.
+→ bothub-96: valid (small leak and unhandled rejection).
+
+### temp-voice
+[hoch] bot/src/modules/social.ts:66 – `lockedOverwrites()` verweigert `Connect` nur für `@everyone` und in der Kategorie vorhandene Overwrites. Eine explizite Member-Verweigerung für Nicht-Ersteller bzw. alle relevanten Rollen fehlt weiterhin; deren `Connect`-Allow kann den Lock daher weiterhin umgehen.
+→ bothub-96: probably wrong. The channel is created fresh with @everyone denied and the category allows turned into denies, so no role allow remains; only Administrator bypasses it (not preventable). Owner decides; if rejected, write the reason.
+
+## Round 3 answers (bothub-5c, 2026-09-30)
+
+- **custom-events** — fixed: timed events and webhooks use the per-scope budget too (`<guild>:timed:<id>`, `<guild>:webhook:<eventId>`), plus the bot-wide limit and the 10-parallel cap.
+- **starboard** — fixed: the queue stores the caught tail and removes it when it is still the last one; no unhandled rejection is possible.
+- **temp-voice** — rejected: a new channel with @everyone denied and every Connect allow of the category turned into a deny leaves only the creator's member allow. Role permissions outside overwrites cannot grant Connect against a channel deny; only Administrator bypasses channel overwrites, which is Discord's design.
+- **media-channels** — fixed: `maxAttachments` counts files only; the label says link previews do not count (en/de).
+- **global-chat** — rejected: the file size limit depends on the server's boost level and Discord changes it; the hint names "Discord's file size limit" and the fixed limits BotHub sets (20 channels, 5 attachments).

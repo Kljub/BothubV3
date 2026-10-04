@@ -7,6 +7,7 @@ import {
   Client,
   Events,
   GatewayIntentBits,
+  MessageFlags,
   Partials,
   Routes,
   type ChatInputCommandInteraction,
@@ -28,14 +29,19 @@ import { cronMatches, parseCron, type Cron } from '../graph/cron.js';
 import { coreHandlers, helperValue, lookupVariable } from '../graph/handlers-core.js';
 import { dataStore } from '../core/datastore.js';
 import type { PluginManager } from '../sdk/manager.js';
+import type { DiscordApiDeps } from '../sdk/discord-api.js';
 import type { Graph, GraphNode, NodeDefinition } from '../graph/types.js';
-import { buildCommands, denied, settingsOf } from './commands.js';
+import { endGiveaway } from '../modules/giveaway.js';
+import { buildCommands, denied, settingsOf, type Permissions, type PseudoRoles } from './commands.js';
 import { discordHandlers, type DiscordData } from './handlers.js';
 import { buildMessage, hasBody } from './message.js';
+import { VoiceManager } from './voice.js';
+import { MusicManager, musicOrNull, setMusic } from './music.js';
 import { Moderation } from './moderation.js';
 import { matchState } from './match.js';
 import { bindEvents, type EventContext } from './events.js';
 import { bindModules, ModuleContext } from '../modules/index.js';
+import { secretValue } from '../core/secrets-global.js';
 import { Bucket, warn } from '../modules/guard.js';
 import { moduleHandlers } from './handlers-modules.js';
 import { parsePresence, PresenceRunner } from './presence.js';
@@ -57,6 +63,10 @@ const BASE_INTENTS = [
 ];
 /** Buttons and menus keep their run this long. */
 const PENDING_TTL_MS = 15 * 60_000;
+/** Commands still running after this get a "thinking …" reply (Discord allows 3 s). */
+const AUTO_DEFER_MS = 2200;
+/** Event graphs of one bot that may run at the same time. */
+const MAX_ACTIVE_RUNS = 10;
 /** Command list changes are sent to Discord this long after the last change. */
 const REGISTER_DEBOUNCE_MS = 2000;
 
@@ -74,6 +84,8 @@ export interface InstanceDeps {
   limits: GraphLimits;
   /** SDK manager: sandboxed plugins (installed globally, plugin_installs). */
   plugins?: PluginManager;
+  /** Key for secrets (bot tokens, global secrets); absent in tests. */
+  secretKey?: () => Buffer;
 }
 
 interface Pending {
@@ -83,8 +95,33 @@ interface Pending {
   expires: number;
 }
 
+/** Event types of events.ts → event names of the plugin SDK. */
+const PLUGIN_EVENTS: Record<string, string> = {
+  message_create: 'messageCreate',
+  message_update: 'messageUpdate',
+  message_delete: 'messageDelete',
+  bot_guild_join: 'guildCreate',
+  bot_guild_leave: 'guildDelete',
+  member_join: 'guildMemberAdd',
+  member_leave: 'guildMemberRemove',
+  member_update: 'guildMemberUpdate',
+  channel_create: 'channelCreate',
+  channel_delete: 'channelDelete',
+  channel_update: 'channelUpdate',
+  role_create: 'roleCreate',
+  role_delete: 'roleDelete',
+  role_update: 'roleUpdate',
+  voice_join: 'voiceStateUpdate',
+  voice_leave: 'voiceStateUpdate',
+  voice_switch: 'voiceStateUpdate',
+  reaction_add: 'reactionAdd',
+  reaction_remove: 'reactionRemove',
+};
+
 export class BotInstance {
   private client: Client | null = null;
+  /** Voice connections of this bot (plugins, later music); set while logged in. */
+  voice: VoiceManager | undefined;
   private commands = new Map<string, CommandRow>();
   private events = new Map<string, CommandRow[]>();
   private timed: { cmd: CommandRow; cron: Cron }[] = [];
@@ -100,6 +137,10 @@ export class BotInstance {
   private readonly modules: ModuleContext;
   /** Custom, timed and webhook events: at most 20 runs per 10 seconds per bot. */
   private readonly runBudget = new Bucket(20, 10_000);
+  /** Per server and event type: 5 runs per 10 s, so one busy channel cannot use the whole budget. */
+  private readonly eventBudgets = new Map<string, Bucket>();
+  /** Event runs in progress; above MAX_ACTIVE_RUNS new ones are skipped. */
+  private activeRuns = 0;
   private registerTimer: NodeJS.Timeout | undefined;
   private pending = new Map<string, Pending>();
   private registeredHash = '';
@@ -117,6 +158,7 @@ export class BotInstance {
     const vars = deps.repo.varStore(botId);
     const core = {
       vars,
+      secret: (key: string) => (deps.secretKey ? secretValue(deps.repo, deps.secretKey, key) : null),
       data: dataStore(deps.repo.db, botId),
       logError: (run: Run, text: string) => this.logRun(run, 'ERR-1007', { text }),
       resetCooldown: (command: string, scopeKey: string) => {
@@ -128,7 +170,16 @@ export class BotInstance {
     this.moderation = new Moderation(botId, deps.repo, () => this.client);
     const handlers = new Map<string, Handler>([...coreHandlers(core), ...discordHandlers(deps.repo, this.moderation), ...moduleHandlers(deps.repo, botId)]);
     // Own copy of the definitions: plugin blocks exist only for this bot.
-    this.engine = { defs: new Map(deps.defs), handlers, limits: deps.limits, match: matchState, lookup: (name, run) => lookupVariable(core, name, run) };
+    this.engine = { defs: new Map(deps.defs), handlers, limits: deps.limits, match: matchState, lookup: (name, run) => lookupVariable(core, name, run) ?? this.liveVar(name) };
+  }
+
+  /** {bot.ping}, {bot.uptime}, {bot.memory}: read when a block uses them, not on every run. */
+  private liveVar(name: string): string | undefined {
+    const c = this.client;
+    if (name === 'bot.ping') return c ? String(Math.max(0, Math.round(c.ws.ping))) : undefined;
+    if (name === 'bot.uptime') return c?.uptime ? formatUptime(c.uptime) : undefined;
+    if (name === 'bot.memory') return String(Math.round(process.memoryUsage().rss / 1024 / 1024));
+    return undefined;
   }
 
   get running(): boolean {
@@ -164,6 +215,8 @@ export class BotInstance {
     this.scheduleTimer.unref();
     this.jobTimer = setInterval(() => void this.runJobs().catch((err) => log.error('scheduled jobs failed', { botId: this.botId, err })), 15_000);
     this.jobTimer.unref();
+    this.voice = this.client ? new VoiceManager(this.client) : undefined;
+    if (this.client) setMusic(this.client, new MusicManager(this.client, () => this.voice));
     await this.startPlugins();
   }
 
@@ -183,22 +236,62 @@ export class BotInstance {
     for (const [type, handler] of plugins.blockHandlers(this.botId)) this.engine.handlers.set(type, handler);
   }
 
-  /** SDK call discord.sendMessage: a message in the shape of the send block. */
-  async pluginSend(channelId: string, message: unknown): Promise<string> {
+  /** SDK call discord.sendMessage: a message in the shape of the send block; files: images of the plugin files (message.sendFile). */
+  async pluginSend(channelId: string, message: unknown, files: { name: string; data: Buffer }[] = []): Promise<string> {
     if (!this.client?.isReady()) throw new GraphError('error.bot.not_running');
     const channel = await this.client.channels.fetch(channelId).catch(() => null);
     if (!channel || !channel.isSendable()) throw new GraphError('error.run.channel_not_found', { value: channelId });
-    const guild = 'guild' in channel ? (channel.guild as Guild) : null;
-    const node: GraphNode = { id: 'plugin', type: 'action.send_message', typeVersion: 1, config: { message } };
-    // Placeholders are not filled in: plugin text is sent as written.
-    const run = new Run({ schemaVersion: 1, nodes: [node], edges: [] }, this.engine, this.data({ runKey: 'plugin', guild, channel }) as never, {});
-    const payload = buildMessage(run, node, () => '');
-    if (!hasBody(payload)) throw new GraphError('error.run.empty_message');
-    const sent = await channel.send({ ...payload, allowedMentions: { parse: [] } } as never);
+    // Plugin buttons/selects arrive already built by the SDK manager (_components).
+    const built = message && typeof message === 'object' ? (message as { _components?: unknown[] })._components : undefined;
+    const empty = message === undefined || message === null || (typeof message === 'object' && !Object.keys(message as object).length);
+    const payload = files.length && empty ? {} : this.pluginPayload(message);
+    const attach = files.length ? { files: files.map((f) => ({ attachment: f.data, name: f.name })) } : {};
+    const sent = await channel.send({ ...payload, ...attach, ...(built?.length ? { components: built } : {}), allowedMentions: { parse: [] } } as never);
     return sent.id;
   }
 
-  /** SDK call discord.guildInfo: only servers the bot is in. */
+  /** BotHub message format (Send Message block) -> discord.js payload; placeholders are not filled in. */
+  pluginPayload(message: unknown): Record<string, unknown> {
+    const node: GraphNode = { id: 'plugin', type: 'action.send_message', typeVersion: 1, config: { message: typeof message === 'string' ? { mode: 'normal', content: message } : message } };
+    const run = new Run({ schemaVersion: 1, nodes: [node], edges: [] }, this.engine, this.data({ runKey: 'plugin' }) as never, {});
+    const payload = buildMessage(run, node, () => '') as Record<string, unknown>;
+    if (!hasBody(payload) && !(message && typeof message === 'object' && ((message as { _components?: unknown[] })._components?.length || Array.isArray((message as { components?: unknown }).components)))) throw new GraphError('error.run.empty_message');
+    return payload;
+  }
+
+  /** What the SDK's Discord, HTTP and economy calls need (sdk/discord-api.ts). */
+  pluginApi(): DiscordApiDeps {
+    const repo = this.deps.repo;
+    const botId = this.botId;
+    return {
+      client: () => this.client ?? undefined,
+      render: (m) => this.pluginPayload(m),
+      moderation: {
+        record: async (guild, c) => {
+          const handle = await this.moderation.begin({ guild, userId: c.userId, moderatorId: c.moderatorId, action: c.action, reason: c.reason, duration: c.duration });
+          await handle.finish();
+          return handle.number;
+        },
+        cases: (g, u) => repo.cases(botId, g, u),
+        modCase: (g, n) => repo.modCase(botId, g, n),
+        addNote: (g, u, author, content) => repo.addNote(botId, g, u, author, content),
+        notes: (g, u) => repo.notes(botId, g, u),
+      },
+      economy: {
+        balance: (g, u) => repo.balance(botId, g, u),
+        change: (g, u, n, mode) => repo.changeBalance(botId, g, u, n, mode),
+        pay: (g, f, t, n) => repo.pay(botId, g, f, t, n),
+        leaderboard: (g, n) => repo.leaderboard(botId, g, n),
+      },
+    };
+  }
+
+  /** SDK call guild.list: the servers the bot is in (max. 200). */
+  pluginGuildList(): { id: string; name: string; memberCount: number }[] {
+    return [...(this.client?.guilds.cache.values() ?? [])].slice(0, 200).map((g) => ({ id: g.id, name: g.name, memberCount: g.memberCount }));
+  }
+
+  /** SDK call guild.get: only servers the bot is in. */
   pluginGuildInfo(guildId: string): { id: string; name: string; memberCount: number } {
     const g = this.client?.guilds.cache.get(guildId);
     if (!g) throw new GraphError('error.run.server_not_found', { value: guildId });
@@ -223,6 +316,12 @@ export class BotInstance {
     clearInterval(this.jobTimer);
     this.presence.stop();
     this.deps.plugins?.stopBot(this.botId);
+    if (this.client) {
+      musicOrNull(this.client)?.destroyAll();
+      setMusic(this.client, undefined);
+    }
+    this.voice?.destroyAll();
+    this.voice = undefined;
     this.pending.clear();
     if (this.client) {
       const c = this.client;
@@ -244,7 +343,10 @@ export class BotInstance {
     client.on(Events.GuildDelete, (g) => this.deps.repo.guildLeft(this.botId, g.id));
     client.on(Events.ShardDisconnect, (e) => this.deps.repo.logCode(this.botId, 'ERR-1006', { code: e.code }));
     client.on(Events.Error, (err) => log.error('discord client error', { botId: this.botId, err }));
-    bindEvents(client, (ctx) => void this.runEvent(ctx));
+    bindEvents(client, (ctx) => {
+      void this.runEvent(ctx);
+      this.pluginEvent(ctx);
+    });
     bindModules(client, this.modules, () => this.timeSettings.timezone);
     try {
       await client.login(token);
@@ -390,8 +492,10 @@ export class BotInstance {
   private async registerCommands(): Promise<void> {
     const c = this.client;
     if (!c?.application) return;
-    const body = buildCommands([...this.commands.values()], (dropped) =>
-      this.deps.repo.logCode(this.botId, 'WAR-2008', { module: 'commands', problem: `Discord allows 100 commands; ${dropped} were not registered` }),
+    const body = buildCommands(
+      [...this.commands.values()],
+      (dropped) => this.deps.repo.logCode(this.botId, 'WAR-2008', { module: 'commands', problem: `Discord allows 100 commands; ${dropped} were not registered` }),
+      this.deps.repo.moduleOn(this.botId, 'dm-commands'),
     );
     const hash = createHash('sha256').update(JSON.stringify(body)).digest('hex');
     if (hash === this.registeredHash) return;
@@ -437,7 +541,22 @@ export class BotInstance {
     if (i.isChatInputCommand()) return this.onCommand(i, [i.commandName, i.options.getSubcommandGroup(false), i.options.getSubcommand(false)].filter(Boolean).join(' '));
     if (i.isUserContextMenuCommand()) return this.onCommand(i, `user:${i.commandName}`);
     if (i.isMessageContextMenuCommand()) return this.onCommand(i, `message:${i.commandName}`);
+    // Plugin components and modals (custom_id p:…) go to their plugin.
+    if (this.deps.plugins?.dispatchInteraction(this.botId, i)) return;
     if (i.isButton() || i.isStringSelectMenu()) return this.onComponent(i);
+  }
+
+  /**
+   * DMs: allowed when the user is on one of the bot's servers and the
+   * command's permissions allow them there (banned channels do not apply).
+   */
+  private async allowedInDm(p: Permissions, userId: string, pseudo: PseudoRoles): Promise<boolean> {
+    const guilds = [...(this.client?.guilds.cache.values() ?? [])].slice(0, 50);
+    for (const g of guilds) {
+      const m = g.members.cache.get(userId) ?? (await g.members.fetch(userId).catch(() => null));
+      if (m && !denied(p, m, null, pseudo)) return true;
+    }
+    return false;
   }
 
   private async onCommand(i: ChatInputCommandInteraction | UserContextMenuCommandInteraction | MessageContextMenuCommandInteraction, key: string): Promise<void> {
@@ -448,7 +567,10 @@ export class BotInstance {
     }
     const s = settingsOf(cmd);
     const member = (i.member && 'roles' in i.member && typeof i.member.roles !== 'string' && 'cache' in i.member.roles ? i.member : null) as GuildMember | null;
-    if (denied(s.permissions, member, i.channelId, (id, m) => this.moderation.hasPseudoRole(id, m))) {
+    const pseudo = (id: string, m: GuildMember, ch: string | null) => this.moderation.hasPseudoRole(id, m, ch);
+    // In DMs a member may use what they may use on one of the bot's servers.
+    const allowed = i.guildId ? !denied(s.permissions, member, i.channelId, pseudo) : await this.allowedInDm(s.permissions, i.user.id, pseudo);
+    if (!allowed) {
       await i.reply({ content: 'You are not allowed to use this command here.', flags: 64 }).catch(() => undefined);
       return;
     }
@@ -485,8 +607,17 @@ export class BotInstance {
     }
 
     const runKey = randomUUID().slice(0, 12);
-    const run = new Run(cmd.graph, this.engine, this.data({ runKey, guild: i.guild, channel, member, user: i.user, interaction: i, hideReplies: s.hideReplies }) as never, vars);
+    const d = this.data({ runKey, guild: i.guild, channel, member, user: i.user, interaction: i, hideReplies: s.hideReplies });
+    const run = new Run(cmd.graph, this.engine, d as never, vars);
+    // Discord waits 3 seconds for an answer: slow blocks (loading games,
+    // finding music) get a "thinking …" first; the reply then fills it.
+    const defer = setTimeout(() => {
+      if (!i.replied && !i.deferred) d.deferring = i.deferReply(s.hideReplies ? { flags: MessageFlags.Ephemeral } : {}).catch(() => undefined);
+    }, AUTO_DEFER_MS);
+    defer.unref();
     const result = await run.start();
+    clearTimeout(defer);
+    await d.deferring;
     this.keepIfInteractive(runKey, run, cmd, i.user.id);
     await this.finishInteraction(i, run, cmd, result);
   }
@@ -532,7 +663,12 @@ export class BotInstance {
 
   /** Discord needs an answer within 3 s; answer when the graph did not. */
   private async finishInteraction(i: RepliableInteraction, run: Run, cmd: CommandRow, result: RunResult, component = false): Promise<void> {
-    if (!result.ok) this.logRun(run, result.errorKey === 'error.run.too_many_steps' ? 'WAR-2005' : 'ERR-1005', { reason: result.errorKey ?? '' }, cmd);
+    if (!result.ok) this.logRun(run, result.errorKey === 'error.run.too_many_steps' ? 'WAR-2005' : 'ERR-1005', { reason: reasonOf(result) }, cmd);
+    // Deferred ("thinking …") but nothing answered: replace the loading state.
+    if (i.deferred && !i.replied && !component) {
+      await i.editReply({ content: result.ok ? '✅' : 'Something went wrong while running this command.' }).catch(() => undefined);
+      return;
+    }
     if (i.replied || i.deferred) return;
     if (component && i.isMessageComponent()) {
       await i.deferUpdate().catch(() => undefined);
@@ -541,24 +677,68 @@ export class BotInstance {
     await i.reply({ content: result.ok ? '✅' : 'Something went wrong while running this command.', flags: 64 }).catch(() => undefined);
   }
 
-  /** Takes one event run from the budget; logs (throttled) when it is used up. */
-  private mayRun(kind: string): boolean {
+  /**
+   * Takes one event run from the budgets (per server + event type, per bot,
+   * running at the same time); logs (throttled) when one is used up.
+   */
+  private mayRun(kind: string, scope = ''): boolean {
+    if (this.activeRuns >= MAX_ACTIVE_RUNS) {
+      warn(this.modules, 'WAR-2008', { module: 'events', problem: `${MAX_ACTIVE_RUNS} event runs are already running, ${kind} was skipped` });
+      return false;
+    }
+    if (scope) {
+      let b = this.eventBudgets.get(scope);
+      if (!b) {
+        if (this.eventBudgets.size > 2000) this.eventBudgets.clear();
+        this.eventBudgets.set(scope, (b = new Bucket(5, 10_000)));
+      }
+      if (!b.take()) {
+        warn(this.modules, 'WAR-2008', { module: 'events', problem: `too many ${kind} runs in one server, some were skipped (limit 5 per 10 seconds)` });
+        return false;
+      }
+    }
     if (this.runBudget.take()) return true;
     warn(this.modules, 'WAR-2008', { module: 'events', problem: `too many ${kind} runs, some were skipped (limit 20 per 10 seconds)` });
     return false;
+  }
+
+  /** Runs a graph and counts it as active while it runs. */
+  private async tracked(run: Run): Promise<RunResult> {
+    this.activeRuns++;
+    try {
+      return await run.start();
+    } finally {
+      this.activeRuns--;
+    }
+  }
+
+  /**
+   * Hands an event to the bot's plugins (SDK "events"): catalog name
+   * (shared/sdk-permissions.json discord.events) and a plain JSON payload
+   * with the builder variable names; user.bot is a boolean.
+   */
+  private pluginEvent(ctx: EventContext): void {
+    const plugins = this.deps.plugins;
+    const name = PLUGIN_EVENTS[ctx.type];
+    if (!plugins || !name) return;
+    const payload: Record<string, unknown> = { ...this.baseVars(ctx.guild, ctx.channel, ctx.user, ctx.member), ...ctx.vars };
+    for (const key of Object.keys(payload)) if (key === 'DEFAULT_SERVER' || key.startsWith('bot.')) delete payload[key];
+    if (ctx.user) payload['user.bot'] = ctx.user.bot;
+    if (name === 'voiceStateUpdate') payload['voice.action'] = ctx.type.slice(6); // join, leave, switch
+    plugins.dispatchEvent(this.botId, name, payload);
   }
 
   private async runEvent(ctx: EventContext): Promise<void> {
     const list = this.events.get(ctx.type);
     if (!list?.length || !this.client) return;
     for (const ev of list) {
-      if (!this.mayRun(`event ${ctx.type}`)) return;
+      if (!this.mayRun(`event ${ctx.type}`, `${ctx.guild?.id ?? 'dm'}:${ctx.type}`)) return;
       const runKey = randomUUID().slice(0, 12);
       const vars = { ...this.baseVars(ctx.guild, ctx.channel, ctx.user, ctx.member), ...ctx.vars, 'event.name': ev.name };
       const run = new Run(ev.graph, this.engine, this.data({ runKey, guild: ctx.guild, channel: ctx.channel, member: ctx.member, user: ctx.user, message: ctx.message }) as never, vars);
-      const result = await run.start().catch((err: Error) => ({ ok: false, steps: [], errorKey: err.message }) as RunResult);
+      const result = await this.tracked(run).catch((err: Error) => ({ ok: false, steps: [], errorKey: err.message }) as RunResult);
       this.keepIfInteractive(runKey, run, ev, null);
-      if (!result.ok) this.deps.repo.logCode(this.botId, 'ERR-1008', { event: ev.name, reason: result.errorKey ?? '' });
+      if (!result.ok) this.deps.repo.logCode(this.botId, 'ERR-1008', { event: ev.name, reason: reasonOf(result) });
     }
   }
 
@@ -597,7 +777,7 @@ export class BotInstance {
     const guildId = this.timeSettings.defaultGuildId;
     const guild = guildId ? (this.client.guilds.cache.get(guildId) ?? null) : null;
     for (const cmd of list) {
-      if (!this.mayRun('timed event')) return;
+      if (!this.mayRun('timed event', `${guild?.id ?? 'none'}:timed:${ev.id}`)) return;
       const runKey = randomUUID().slice(0, 12);
       const vars = {
         ...this.baseVars(guild, null, null, null),
@@ -606,9 +786,9 @@ export class BotInstance {
         'schedule.next': nextRun(ev, Date.now(), this.timeSettings.timezone),
       };
       const run = new Run(cmd.graph, this.engine, this.data({ runKey, guild }) as never, vars);
-      const result = await run.start().catch((err: Error) => ({ ok: false, steps: [], errorKey: err.message }) as RunResult);
+      const result = await this.tracked(run).catch((err: Error) => ({ ok: false, steps: [], errorKey: err.message }) as RunResult);
       this.keepIfInteractive(runKey, run, cmd, null);
-      if (!result.ok) this.deps.repo.logCode(this.botId, 'ERR-1008', { event: cmd.name, reason: result.errorKey ?? '' });
+      if (!result.ok) this.deps.repo.logCode(this.botId, 'ERR-1008', { event: cmd.name, reason: reasonOf(result) });
     }
   }
 
@@ -640,12 +820,12 @@ export class BotInstance {
     };
     for (const [k, v] of Object.entries(call.variables ?? {})) if (/^[A-Za-z0-9_]{1,32}$/.test(k)) vars[`webhook.${k}`] = String(v).slice(0, 1000);
     for (const cmd of list) {
-      if (!this.mayRun('webhook')) return;
+      if (!this.mayRun('webhook', `${guild?.id ?? 'none'}:webhook:${call.eventId}`)) return;
       const runKey = randomUUID().slice(0, 12);
       const run = new Run(cmd.graph, this.engine, this.data({ runKey, guild }) as never, { ...vars, 'event.name': cmd.name });
-      const result = await run.start().catch((err: Error) => ({ ok: false, steps: [], errorKey: err.message }) as RunResult);
+      const result = await this.tracked(run).catch((err: Error) => ({ ok: false, steps: [], errorKey: err.message }) as RunResult);
       this.keepIfInteractive(runKey, run, cmd, null);
-      if (!result.ok) this.deps.repo.logCode(this.botId, 'ERR-1008', { event: cmd.name, reason: result.errorKey ?? '' });
+      if (!result.ok) this.deps.repo.logCode(this.botId, 'ERR-1008', { event: cmd.name, reason: reasonOf(result) });
     }
   }
 
@@ -657,9 +837,9 @@ export class BotInstance {
       const runKey = randomUUID().slice(0, 12);
       const vars = { ...this.baseVars(null, null, null, null), 'event.name': cmd.name };
       const run = new Run(cmd.graph, this.engine, this.data({ runKey }) as never, vars);
-      const result = await run.start().catch((err: Error) => ({ ok: false, steps: [], errorKey: err.message }) as RunResult);
+      const result = await this.tracked(run).catch((err: Error) => ({ ok: false, steps: [], errorKey: err.message }) as RunResult);
       this.keepIfInteractive(runKey, run, cmd, null);
-      if (!result.ok) this.deps.repo.logCode(this.botId, 'ERR-1008', { event: cmd.name, reason: result.errorKey ?? '' });
+      if (!result.ok) this.deps.repo.logCode(this.botId, 'ERR-1008', { event: cmd.name, reason: reasonOf(result) });
     }
   }
 
@@ -682,6 +862,11 @@ export class BotInstance {
   private async runDueJobs(c: Client<true>): Promise<void> {
     for (const job of this.deps.repo.dueJobs(this.botId, ['undo'], new Date())) {
       const p = job.payload;
+      if (p.op === 'giveaway_end') {
+        await endGiveaway(this.deps.repo, this.botId, c, String(p.guild ?? ''), String(p.message ?? '')).catch((err) => log.warn('giveaway end failed', { botId: this.botId, err: String(err) }));
+        this.deps.repo.finishJob(job.id);
+        continue;
+      }
       const guild = c.guilds.cache.get(String(p.guild ?? ''));
       const user = String(p.user ?? '');
       if (!guild || !user) {
@@ -737,6 +922,12 @@ export class BotInstance {
   }
 }
 
+/** Log reason of a failed run: the error key, plus the block's own message when there is one. */
+function reasonOf(result: RunResult): string {
+  const key = result.errorKey ?? '';
+  return result.errorMessage ? `${key}: ${result.errorMessage}`.slice(0, 500) : key;
+}
+
 function optionNodes(cmd: CommandRow): GraphNode[] {
   const trig = cmd.graph.nodes.find((n) => n.type === 'trigger.slash');
   if (!trig) return [];
@@ -762,4 +953,12 @@ function optionValue(i: ChatInputCommandInteraction, type: string, name: string)
     default:
       return o.getString(name);
   }
+}
+
+/** 93784000 -> "1d 2h 3m". */
+export function formatUptime(ms: number): string {
+  const m = Math.floor(ms / 60_000);
+  const d = Math.floor(m / 1440);
+  const h = Math.floor((m % 1440) / 60);
+  return [d ? `${d}d` : '', h ? `${h}h` : '', `${m % 60}m`].filter(Boolean).join(' ');
 }

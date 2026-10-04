@@ -65,11 +65,12 @@
 
 {{define "avatar"}}{{with .AvatarURL}}<img class="avatar" src="{{.}}" alt="" width="40" height="40">{{else}}<span class="avatar avatar-fallback" aria-hidden="true">{{initial $.Name}}</span>{{end}}{{end}}
 
-{{define "admin_icon"}}{{if eq . "overview"}}{{template "icon_gear"}}{{else if eq . "resources"}}{{template "icon_activity"}}{{else if eq . "plugins"}}{{template "icon_plugin"}}{{else if eq . "users_roles"}}{{template "icon_users"}}{{else if eq . "email"}}{{template "icon_mail"}}{{else if eq . "server_settings"}}{{template "icon_server"}}{{else if eq . "logs"}}{{template "icon_log"}}{{else if eq . "sdk_policies"}}{{template "icon_plugin"}}{{else}}{{template "icon_gear"}}{{end}}{{end}}
+{{define "admin_icon"}}{{if eq . "overview"}}{{template "icon_gear"}}{{else if eq . "resources"}}{{template "icon_activity"}}{{else if eq . "users_roles"}}{{template "icon_users"}}{{else if eq . "email"}}{{template "icon_mail"}}{{else if eq . "server_settings"}}{{template "icon_server"}}{{else if eq . "logs"}}{{template "icon_log"}}{{else if eq . "sdk_policies"}}{{template "icon_plugin"}}{{else if eq . "api_secrets"}}{{template "icon_key"}}{{else}}{{template "icon_gear"}}{{end}}{{end}}
 
 {{define "bot_icon"}}{{if eq . "overview"}}{{template "icon_chip"}}{{else if eq . "docs"}}{{template "icon_book"}}{{else if eq . "invite"}}{{template "icon_user_plus"}}{{else if eq . "status"}}{{template "icon_activity"}}{{else if eq . "server"}}{{template "icon_server"}}{{else if eq . "logs"}}{{template "icon_log"}}{{else if eq . "modules"}}{{template "icon_grid"}}{{else}}{{template "icon_plugin"}}{{end}}{{end}}
 
 {{/* Icons: 16px, stroke uses currentColor. */}}
+{{define "icon_key"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="7.5" cy="15.5" r="4.5"/><path d="M10.7 12.3 21 2M16 7l3 3M18 5l2 2"/></svg>{{end}}
 {{define "icon_shield"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>{{end}}
 {{define "icon_mail"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg>{{end}}
 {{define "icon_users"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>{{end}}
@@ -87,6 +88,8 @@
 {{define "icon_chip"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>{{end}}
 {{define "icon_terminal"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l6-6-6-6M12 19h8"/></svg>{{end}}
 {{define "icon_folder"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>{{end}}
+{{define "icon_check"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>{{end}}
+{{define "icon_x"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>{{end}}
 {{define "icon_trash"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>{{end}}
 {{define "icon_copy"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>{{end}}
 {{define "icon_history"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>{{end}}

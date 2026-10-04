@@ -1,0 +1,5 @@
+{
+  "plugin.__ID__.setting.welcome_channel": "Welcome channel",
+  "plugin.__ID__.setting.welcome_text": "Welcome message",
+  "plugin.__ID__.setting.welcome_text_hint": "{user} mentions the new member, {server} is the server name, {count} the member count."
+}

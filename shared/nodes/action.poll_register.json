@@ -25,6 +25,12 @@
       "labelKey": "builder.port.next"
     }
   ],
+  "results": [
+    {
+      "suffix": ".id",
+      "labelKey": "builder.result.poll_register.0"
+    }
+  ],
   "config": {
     "type": "object",
     "additionalProperties": false,

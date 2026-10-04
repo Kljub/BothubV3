@@ -1,0 +1,12 @@
+{
+  "name": "__ID__",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#sdk-testing": "./test/lib/sdk-testing.js"
+  },
+  "scripts": {
+    "test": "node --test \"test/*.test.js\""
+  },
+  "engines": { "node": ">=24" }
+}

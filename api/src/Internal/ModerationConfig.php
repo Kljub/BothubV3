@@ -9,9 +9,14 @@ namespace BotHub\Internal;
  * 'moderation'). normalize() fills defaults and rejects invalid values; the
  * bot reads the same shape (bot/src/discord/moderation.ts).
  *
- *   defaultPermissions  Manage Messages counts as moderator, Administrator as admin
- *   moderatorRoles      [{id, guild}] roles for moderator commands
- *   adminRoles          [{id, guild}] roles for admin commands (and moderator commands)
+ *   moderators          permissions block: who counts as moderator (allowed
+ *                       roles, or all required permissions), banned roles and
+ *                       banned channels (no moderator rights there)
+ *   admins              permissions block, the same for admins (admins are
+ *                       also moderators; Discord's Administrator always is one)
+ * Configs from before the blocks (defaultPermissions, moderatorRoles,
+ * adminRoles) are read into them: roles -> allowed_roles, defaultPermissions
+ * -> manage_messages / administrator.
  *   logEnabled          log moderation actions
  *   logChannels         [{id, guild}] one log channel per server
  *   punishmentColor     embed color of the direct message (#rrggbb)
@@ -33,9 +38,8 @@ final class ModerationConfig
     public static function defaults(): array
     {
         return [
-            'defaultPermissions' => true,
-            'moderatorRoles' => [],
-            'adminRoles' => [],
+            'moderators' => self::block([], ['manage_messages']),
+            'admins' => self::block([], ['administrator']),
             'logEnabled' => false,
             'logChannels' => [],
             'punishmentColor' => '#ed4245',
@@ -57,6 +61,24 @@ final class ModerationConfig
                 $out[$k] = $stored[$k];
             }
         }
+        return self::legacy($stored, $out);
+    }
+
+    private static function block(array $roles, array $permissions): array
+    {
+        return ['allowed_roles' => $roles, 'banned_roles' => [], 'required_permissions' => $permissions, 'banned_channels' => []];
+    }
+
+    /** Old fields (moderatorRoles, adminRoles, defaultPermissions) become the blocks when those are missing. */
+    private static function legacy(array $in, array $out): array
+    {
+        $default = !array_key_exists('defaultPermissions', $in) || $in['defaultPermissions'] !== false;
+        if (!array_key_exists('moderators', $in) && (array_key_exists('moderatorRoles', $in) || array_key_exists('defaultPermissions', $in))) {
+            $out['moderators'] = self::block(is_array($in['moderatorRoles'] ?? null) ? self::refs($in['moderatorRoles'], 'moderatorRoles') : [], $default ? ['manage_messages'] : []);
+        }
+        if (!array_key_exists('admins', $in) && (array_key_exists('adminRoles', $in) || array_key_exists('defaultPermissions', $in))) {
+            $out['admins'] = self::block(is_array($in['adminRoles'] ?? null) ? self::refs($in['adminRoles'], 'adminRoles') : [], $default ? ['administrator'] : []);
+        }
         return $out;
     }
 
@@ -64,15 +86,26 @@ final class ModerationConfig
     public static function normalize(array $in): array
     {
         $c = self::defaults();
-        foreach (['defaultPermissions', 'logEnabled', 'dmEnabled'] as $k) {
+        foreach (['logEnabled', 'dmEnabled'] as $k) {
             if (array_key_exists($k, $in)) {
                 $c[$k] = is_bool($in[$k]) ? $in[$k] : self::fail($k);
             }
         }
-        foreach (['moderatorRoles', 'adminRoles', 'logChannels'] as $k) {
+        if (array_key_exists('defaultPermissions', $in) && !is_bool($in['defaultPermissions'])) {
+            self::fail('defaultPermissions');
+        }
+        $c = self::legacy($in, $c);
+        foreach (['moderators', 'admins'] as $k) {
             if (array_key_exists($k, $in)) {
-                $c[$k] = self::refs($in[$k], $k);
+                $c[$k] = ModuleSettings::permissions($in[$k], $k);
+                // "everyone" would make every member a moderator.
+                foreach ($c[$k]['allowed_roles'] as $r) {
+                    $r['id'] === 'everyone' && self::fail("{$k}.allowed_roles");
+                }
             }
+        }
+        if (array_key_exists('logChannels', $in)) {
+            $c['logChannels'] = self::refs($in['logChannels'], 'logChannels');
         }
         if ($c['logEnabled'] && $c['logChannels'] === []) {
             throw new ApiError(422, 'error.moderation.log_channel_required', ['field' => 'logChannels']);

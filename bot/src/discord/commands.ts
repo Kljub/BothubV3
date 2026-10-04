@@ -56,7 +56,7 @@ export function settingsOf(cmd: CommandRow): TriggerSettings {
     hideReplies: c.hide_replies === true,
     contexts: s('contexts') === 'guild_dm' ? 'guild_dm' : 'guild',
     cooldownType: (['user', 'server', 'global'].includes(s('cooldown_type')) ? s('cooldown_type') : 'none') as TriggerSettings['cooldownType'],
-    cooldownSeconds: Math.min(86_400, Math.max(1, Math.floor(Number(c.cooldown_seconds ?? 10) || 10))),
+    cooldownSeconds: cooldownOf(c.cooldown_seconds),
     permissions: { ...OPEN, ...((c.permissions as Partial<Permissions> | undefined) ?? {}) },
   };
 }
@@ -102,15 +102,32 @@ function optionJson(run: { nodes: GraphNode[] }, cmd: CommandRow): Record<string
  * Builds the payload for PUT /applications/{id}/commands. Commands of
  * disabled modules and duplicate names are left out (first one wins).
  */
-/** Discord accepts 100 top-level commands (+ menus); onOverflow gets the number left out. */
-export function buildCommands(cmds: CommandRow[], onOverflow?: (dropped: number) => void): Record<string, unknown>[] {
+/** cooldown_seconds: a whole number 1–86400; anything else (text, NaN, Infinity) is the default 10. */
+export function cooldownOf(v: unknown): number {
+  return typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 86_400 ? v : 10;
+}
+
+/**
+ * Discord accepts 100 top-level commands (+ menus); onOverflow gets the number left out.
+ * allDm: the DM Commands module is on, every command is offered in DMs too.
+ */
+export function buildCommands(cmds: CommandRow[], onOverflow?: (dropped: number) => void, allDm = false): Record<string, unknown>[] {
   const top = new Map<string, Record<string, unknown>>();
   const menus: Record<string, unknown>[] = [];
   const menuNames = new Set<string>();
+  // A plain command and subcommands cannot share a name on Discord: the
+  // subcommands win (e.g. a plugin turned /emoji-menu into /emoji-menu show),
+  // whatever the order of the rows.
+  const subRoots = new Set<string>();
+  for (const cmd of cmds) {
+    const s = settingsOf(cmd);
+    const parts = s.name.trim().split(/\s+/);
+    if (s.commandType === 'slash' && parts.length > 1) subRoots.add(parts[0]!);
+  }
 
   for (const cmd of cmds) {
     const s = settingsOf(cmd);
-    const contexts = s.contexts === 'guild_dm' ? [0, 1] : [0];
+    const contexts = allDm || s.contexts === 'guild_dm' ? [0, 1] : [0];
     let defaultPerms: string | null = null;
     if (s.permissions.hide_without_permission && s.permissions.required_permissions.length) {
       let bits = 0n;
@@ -137,7 +154,7 @@ export function buildCommands(cmds: CommandRow[], onOverflow?: (dropped: number)
     const description = (s.description || parts.join(' ')).slice(0, 100);
     let root = top.get(parts[0]!);
     if (parts.length === 1) {
-      if (root) continue; // name taken
+      if (root || subRoots.has(parts[0]!)) continue; // name taken
       top.set(parts[0]!, { type: ApplicationCommandType.ChatInput, name: parts[0], description, options, contexts, integration_types: [0], default_member_permissions: defaultPerms });
       continue;
     }
@@ -167,7 +184,23 @@ export function buildCommands(cmds: CommandRow[], onOverflow?: (dropped: number)
 }
 
 /** Resolves pseudo roles (e.g. the moderation module's moderators); undefined = a normal role. */
-export type PseudoRoles = (id: string, member: GuildMember) => boolean | undefined;
+export type PseudoRoles = (id: string, member: GuildMember, channelId: string | null) => boolean | undefined;
+
+/**
+ * Whether a member belongs to the group a permissions block describes (who
+ * counts as moderator, …): never in a banned channel or with a banned role;
+ * otherwise with one of the allowed roles, or with all required permissions
+ * (when there are any). Entries of other servers do not count.
+ */
+export function inBlock(p: Omit<Permissions, 'hide_without_permission'>, member: GuildMember, channelId: string | null): boolean {
+  const guild = member.guild.id;
+  const inGuild = (r: { id: string; guild?: string }) => !r.guild || r.guild === guild;
+  if (p.banned_channels.some((c) => inGuild(c) && c.id === channelId)) return false;
+  if (p.banned_roles.some((r) => inGuild(r) && member.roles.cache.has(r.id))) return false;
+  if (p.allowed_roles.some((r) => inGuild(r) && (r.id === 'everyone' || member.roles.cache.has(r.id)))) return true;
+  const bits = p.required_permissions.map(permissionBit).filter((b): b is bigint => b !== undefined);
+  return bits.length > 0 && bits.every((b) => member.permissions.has(b));
+}
 
 /** Why a member may not run a command, or null when allowed. */
 export function denied(
@@ -176,11 +209,11 @@ export function denied(
   channelId: string | null,
   pseudo?: PseudoRoles,
 ): 'role' | 'banned_role' | 'permission' | 'channel' | null {
-  if (!member) return null; // DMs: only commands allowed in DMs reach here
+  if (!member) return null; // DMs: checked per server of the bot (BotInstance.allowedInDm)
   const guild = member.guild.id;
   // Pseudo roles have no guild: they apply on every server.
   const inGuild = (r: { id: string; guild?: string }) => !r.guild || r.guild === guild;
-  const has = (r: { id: string }) => (r.id === 'everyone' ? true : (pseudo?.(r.id, member) ?? member.roles.cache.has(r.id)));
+  const has = (r: { id: string }) => (r.id === 'everyone' ? true : (pseudo?.(r.id, member, channelId) ?? member.roles.cache.has(r.id)));
   if (p.banned_channels.some((c) => inGuild(c) && c.id === channelId)) return 'channel';
   if (p.banned_roles.some((r) => inGuild(r) && r.id !== 'everyone' && has(r))) return 'banned_role';
   const allowed = p.allowed_roles.filter(inGuild);

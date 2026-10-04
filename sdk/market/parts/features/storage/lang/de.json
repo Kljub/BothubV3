@@ -1,0 +1,6 @@
+{
+  "plugin.__ID__.node.count.label": "Zählen",
+  "plugin.__ID__.node.count.description": "Addiert einen Schritt zu einem Zähler dieses Servers und des Mitglieds.",
+  "plugin.__ID__.node.count.result": "Summe Server",
+  "plugin.__ID__.node.count.result_user": "Summe Mitglied"
+}

@@ -1,0 +1,19 @@
+{
+  "category": "action",
+  "labelKey": "plugin.__ID__.node.hello.label",
+  "descriptionKey": "plugin.__ID__.node.hello.description",
+  "inputs": [{ "name": "in", "type": "flow", "multiple": true }],
+  "outputs": [{ "name": "next", "type": "flow" }],
+  "results": [
+    { "suffix": "", "labelKey": "plugin.__ID__.node.hello.result" },
+    { "suffix": ".length", "labelKey": "plugin.__ID__.node.hello.result_length" }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "name": { "type": "string", "maxLength": 100, "default": "{user.name}" },
+      "variable": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$" }
+    }
+  }
+}

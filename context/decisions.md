@@ -56,3 +56,18 @@ Reihenfolge laut User: erst Dashboard, dann API, dann Bot.
 - Ändert die Vorgabe „genau ein User“: Es dürfen weitere Nutzer angelegt werden (Admin → Users & Roles).
   Der erste Nutzer entsteht weiter über Setup-Wizard oder ENV. Keine Selbstregistrierung.
 - Offen: Umfang der Rollen (siehe `context/questions.md`).
+
+## Plugins und SDK (2026-09-30)
+
+- Plugins werden **global** installiert (eine Version für alle Bots), nicht pro Bot. Pro Bot kann ein Plugin nur abgeschaltet werden (Tabelle `bot_plugin_disabled`). Ersetzt Entscheidung 6 („pro Bot installiert").
+- **SDK Policies** (Admin): eine Tabelle mit An/Aus pro SDK-Recht, global für alle Bots und Plugins (Tabelle `sdk_policies`). Standard: Risiko niedrig = an, mittel und hoch = aus.
+- Ein Plugin nutzt ein Recht nur, wenn es im Manifest steht **und** in den SDK Policies an ist. Keine Bestätigung pro Bot.
+- API-Fläche des SDK: Liste des Users (29 Bereiche) plus `module.*` (BotHub-Module lesen, Recht `modules.read`, Risiko mittel, weil Modul-Einstellungen Zugangsschlüssel enthalten können). Katalog: `shared/sdk-permissions.json`, Stand: `sdk/API.md`.
+- Plugins haben nie direkten Zugriff auf DB, Bot-Token, Umgebung oder Netzwerk; alles läuft über den SDK-Manager im Bot (RPC mit Prüfung).
+
+
+## 2026-10-03: Node Editor is no longer a module
+
+The user decided: the "Node Editor" module (custom nodes for the builder) is
+removed from the modules. It will come back later as a plugin. Migration 0023
+deletes its module rows and its SDK rule (`modules.node-editor.read`).

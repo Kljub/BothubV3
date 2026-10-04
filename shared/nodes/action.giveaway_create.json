@@ -65,6 +65,13 @@
         "x-placeholder": "10m",
         "x-hintKey": "builder.cfg.duration_hint"
       },
+      "role": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.giveaway_role",
+        "x-hintKey": "builder.cfg.giveaway_role_hint",
+        "x-ref": "role"
+      },
       "variable": {
         "type": "string",
         "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",

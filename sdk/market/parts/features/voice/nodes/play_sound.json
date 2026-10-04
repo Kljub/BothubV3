@@ -1,0 +1,20 @@
+{
+  "category": "action",
+  "labelKey": "plugin.__ID__.node.play_sound.label",
+  "descriptionKey": "plugin.__ID__.node.play_sound.description",
+  "inputs": [{ "name": "in", "type": "flow", "multiple": true }],
+  "outputs": [
+    { "name": "next", "type": "flow" },
+    { "name": "no_channel", "type": "flow" }
+  ],
+  "results": [{ "suffix": "", "labelKey": "plugin.__ID__.node.play_sound.result" }],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "sound": { "enum": ["chime", "ding"], "default": "chime" },
+      "channel": { "type": "string", "maxLength": 40, "default": "{user.voice.channel.id}" },
+      "variable": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$" }
+    }
+  }
+}

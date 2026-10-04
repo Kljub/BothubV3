@@ -46,18 +46,20 @@ var baseFuncs = template.FuncMap{
 	"add":   func(a, b float64) float64 { return a + b },
 	"upper": strings.ToUpper,
 	"list":  func(v ...any) []any { return v },
+	"join":  strings.Join,
 	"deref": func(p *int64) int64 {
 		if p == nil {
 			return 0
 		}
 		return *p
 	},
-	"inviteURL":  inviteURL,
-	"pager":      pager,
-	"clientI18n": func() template.JS { return "{}" },
-	"rangeForm":  newRangeForm,
-	"twofaState": func(enabled bool) map[string]any { return map[string]any{"TwoFactorEnabled": enabled} },
-	"minutes":    func(sec int) int { return sec / 60 },
+	"inviteURL":   inviteURL,
+	"pager":       pager,
+	"clientI18n":  func() template.JS { return "{}" },
+	"pickerTexts": func() template.JS { return "{}" },
+	"rangeForm":   newRangeForm,
+	"twofaState":  func(enabled bool) map[string]any { return map[string]any{"TwoFactorEnabled": enabled} },
+	"minutes":     func(sec int) int { return sec / 60 },
 	"initial": func(name string) string {
 		for _, r := range strings.TrimSpace(name) {
 			return strings.ToUpper(string(r))
@@ -135,9 +137,10 @@ func (s *Server) render(w http.ResponseWriter, status int, page, name string, da
 	}
 	locale := data.Locale
 	clone.Funcs(template.FuncMap{
-		"t":          func(key string, args ...any) string { return s.i18n.T(locale, key, args...) },
-		"bytes":      func(b int64) string { return formatBytes(b, locale) },
-		"clientI18n": func() template.JS { return s.clientI18n(locale) },
+		"t":           func(key string, args ...any) string { return s.i18n.T(locale, key, args...) },
+		"bytes":       func(b int64) string { return formatBytes(b, locale) },
+		"clientI18n":  func() template.JS { return s.clientI18n(locale) },
+		"pickerTexts": func() template.JS { return s.pickerTexts(locale) },
 	})
 
 	data.Locales = s.i18n.Locales()
@@ -185,4 +188,22 @@ func (s *Server) clientI18n(locale string) template.JS {
 		return "{}"
 	}
 	return template.JS(b)
+}
+
+// pickerTexts are the texts of the role/channel pickers and the permissions
+// block (permissions.js) for pages outside the node editor.
+func (s *Server) pickerTexts(locale string) template.JS {
+	m := map[string]string{}
+	for _, k := range s.i18n.Keys("en") {
+		for _, p := range []string{"builder.perm.", "builder.pick.", "builder.permission.", "builder.permgroup.", "builder.chan.", "permblock."} {
+			if strings.HasPrefix(k, p) {
+				m[k] = s.i18n.T(locale, k)
+				break
+			}
+		}
+	}
+	for _, k := range []string{"builder.close", "builder.cfg.permissions", "action.cancel"} {
+		m[k] = s.i18n.T(locale, k)
+	}
+	return jsonIsland(m)
 }

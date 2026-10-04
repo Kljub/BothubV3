@@ -17,9 +17,13 @@ use BotHub\Internal\InternalRouter;
 use BotHub\Internal\ProcessStatus;
 use BotHub\Internal\TemplateStore;
 use BotHub\Internal\DataStore;
+use BotHub\Internal\BotBackup;
 use BotHub\Internal\SdkPolicyStore;
 use BotHub\Internal\TimedStore;
 use BotHub\Internal\WebhookStore;
+use BotHub\Internal\SecretStore;
+use BotHub\Internal\PluginStore;
+use BotHub\Internal\LogStore;
 use BotHub\Internal\ApiError;
 use BotHub\Redis\RedisConnect;
 
@@ -37,6 +41,50 @@ $send = static function (int $status, ?array $body): void {
 
 if ($path === '/api/health') {
     $send(200, ['status' => 'ok']);
+    return;
+}
+
+// Public webhook of a plugin (bothub.json services.webhooks): the URL holds an HMAC token.
+if (preg_match('#^/api/hooks/plugin/(plugin_[a-z0-9_]{1,57})/(\d+)/([a-z][a-z0-9_]{0,31})/([a-f0-9]{40})$#', $path, $m)) {
+    $error = static fn (int $status, string $key) => $send($status, ['error' => ['key' => $key, 'params' => (object) []]]);
+    if ($method !== 'POST') {
+        $error(405, 'error.method_not_allowed');
+        return;
+    }
+    // Plex sends multipart with a thumbnail: the JSON is in the form field "payload"; the file is ignored.
+    if ((int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > 2 * 1024 * 1024) {
+        $error(413, 'error.webhook.too_large');
+        return;
+    }
+    $form = isset($_POST['payload']) && is_string($_POST['payload']) ? $_POST['payload'] : null;
+    $raw = $form === null ? (string) file_get_contents('php://input', false, null, 0, WebhookStore::MAX_BODY + 1) : '';
+    if (strlen($raw) > WebhookStore::MAX_BODY || ($form !== null && strlen($form) > WebhookStore::MAX_BODY)) {
+        $error(413, 'error.webhook.too_large');
+        return;
+    }
+    try {
+        $redis = RedisConnect::open(RedisConnect::url(), 0.5, true);
+        $rl = "bothub:rl:phook:{$m[2]}:{$m[1]}:" . intdiv(time(), 60);
+        $calls = $redis->incr($rl);
+        if ($calls === 1) {
+            $redis->expire($rl, 120);
+        }
+        if ($calls > 120) {
+            $error(429, 'error.webhook.rate_limited');
+            return;
+        }
+    } catch (\RedisException) {
+    }
+    try {
+        (new PluginStore(Connection::open(Connection::defaultPath()), getenv('DATA_DIR') ?: '/data', null, SecretBox::loadOrCreate()))
+            ->receiveWebhook((int) $m[2], $m[1], $m[3], $m[4], $raw, $form);
+        $send(202, ['ok' => true]);
+    } catch (ApiError $e) {
+        $error($e->status, $e->key);
+    } catch (\Throwable $e) {
+        error_log('plugin hooks: ' . $e::class . ': ' . $e->getMessage());
+        $error(500, 'error.internal');
+    }
     return;
 }
 
@@ -122,8 +170,11 @@ if (str_starts_with($path, '/internal/')) {
     }
     try {
         $pdo = Connection::open(Connection::defaultPath());
+        $secrets = new SecretStore($pdo, SecretBox::loadOrCreate());
+        $plugins = new PluginStore($pdo, getenv('DATA_DIR') ?: '/data', static fn (): ?string => $secrets->value('MARKET_GITHUB_TOKEN'), SecretBox::loadOrCreate());
+        $botStore = new BotStore($pdo, SecretBox::loadOrCreate(), $plugins);
         $router = new InternalRouter(
-            new BotStore($pdo, SecretBox::loadOrCreate()),
+            $botStore,
             static fn () => new Jobs(RedisConnect::open(RedisConnect::url(), 1.0, true)),
             new CommandStore($pdo),
             new TimedStore($pdo),
@@ -131,6 +182,11 @@ if (str_starts_with($path, '/internal/')) {
             new TemplateStore($pdo),
             new DataStore($pdo),
             new SdkPolicyStore($pdo),
+            $secrets,
+            mb_substr((string) ($_SERVER['HTTP_X_BOTHUB_ACTOR'] ?? ''), 0, 64),
+            $plugins,
+            new BotBackup($pdo, $botStore),
+            new LogStore($pdo),
         );
         [$status, $out] = $router->handle($method, $path, $body, $raw === '' ? null : json_decode($raw, false), $_GET);
     } catch (\Throwable $e) {
