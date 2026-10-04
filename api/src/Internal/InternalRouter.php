@@ -34,6 +34,7 @@ final class InternalRouter
         private readonly ?GuildAccessStore $guildAccess = null,
         // The signed-in user (auth layer): owner of their secrets and new bots.
         private readonly int $userId = 1,
+        private readonly ?StatsStore $stats = null,
     ) {
     }
 
@@ -134,6 +135,10 @@ final class InternalRouter
             if ($this->plugins !== null && preg_match('#^/internal/bots/(\d+)/plugins(?:/([a-z0-9_-]{2,64})(/config|/commands|/options)?)?$#', $path, $m)) {
                 $this->bots->find((int) $m[1]) ?? throw ApiError::notFound();
                 return $this->botPluginRoute($method, (int) $m[1], $m[2] ?? null, $m[3] ?? '', $body);
+            }
+            if ($this->stats !== null && preg_match('#^/internal/bots/(\d+)/stats$#', $path, $m)) {
+                $this->bots->find((int) $m[1]) ?? throw ApiError::notFound();
+                return $method === 'GET' ? [200, $this->stats->bot((int) $m[1], $query)] : throw new ApiError(405, 'error.method_not_allowed');
             }
             if ($this->secrets !== null && preg_match('#^/internal/admin/secrets(?:/([^/]+))?$#', $path, $m)) {
                 return $this->secretRoute(SecretStore::INSTANCE, $method, isset($m[1]) ? rawurldecode($m[1]) : null, $body);

@@ -42,6 +42,7 @@ import { matchState } from './match.js';
 import { bindEvents, type EventContext } from './events.js';
 import { bindModules, ModuleContext } from '../modules/index.js';
 import { secretValue } from '../core/secrets-global.js';
+import { stats } from '../core/stats.js';
 import { Bucket, warn } from '../modules/guard.js';
 import { moduleHandlers } from './handlers-modules.js';
 import { parsePresence, PresenceRunner } from './presence.js';
@@ -346,6 +347,7 @@ export class BotInstance {
     bindEvents(client, (ctx) => {
       void this.runEvent(ctx);
       this.pluginEvent(ctx);
+      this.countEvent(ctx);
     });
     bindModules(client, this.modules, () => this.timeSettings.timezone);
     try {
@@ -606,6 +608,10 @@ export class BotInstance {
       await i.reply({ content: 'You are not allowed to use this command here.', flags: 64 }).catch(() => undefined);
       return;
     }
+    const st = stats(this.deps.repo.db);
+    st.add(this.botId, i.guildId, 'commands');
+    st.add(this.botId, i.guildId, `cmd:${key}`);
+    st.active(this.botId, i.guildId, i.user.id);
     if (s.cooldownType !== 'none') {
       const scope = s.cooldownType === 'global' ? '' : s.cooldownType === 'server' ? `g:${i.guildId ?? ''}` : `g:${i.guildId ?? ''}:u:${i.user.id}`;
       const until = this.deps.repo.cooldownUntil(cmd.id, scope);
@@ -732,6 +738,39 @@ export class BotInstance {
     if (this.runBudget.take()) return true;
     warn(this.modules, 'WAR-2008', { module: 'events', problem: `too many ${kind} runs, some were skipped (limit 20 per 10 seconds)` });
     return false;
+  }
+
+  // Voice minutes: when a member joined a voice channel (guild:user -> ms).
+  private voiceSince = new Map<string, number>();
+
+  /** Usage numbers of the overview (core/stats.ts). */
+  private countEvent(ctx: EventContext): void {
+    const s = stats(this.deps.repo.db);
+    const guild = ctx.guild?.id;
+    const user = ctx.user;
+    if (!guild || !user || user.bot) return;
+    switch (ctx.type) {
+      case 'member_join':
+        s.add(this.botId, guild, 'joins');
+        break;
+      case 'member_leave':
+        s.add(this.botId, guild, 'leaves');
+        break;
+      case 'message_create':
+        s.add(this.botId, guild, 'messages');
+        s.active(this.botId, guild, user.id);
+        break;
+      case 'voice_join':
+        this.voiceSince.set(`${guild}:${user.id}`, Date.now());
+        s.active(this.botId, guild, user.id);
+        break;
+      case 'voice_leave': {
+        const since = this.voiceSince.get(`${guild}:${user.id}`);
+        this.voiceSince.delete(`${guild}:${user.id}`);
+        if (since) s.add(this.botId, guild, 'voice_minutes', Math.round((Date.now() - since) / 60_000));
+        break;
+      }
+    }
   }
 
   /** Runs a graph and counts it as active while it runs. */

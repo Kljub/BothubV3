@@ -13,6 +13,7 @@ import type { Handler, Run } from '../graph/interpreter.js';
 import type { GraphNode, NodeDefinition } from '../graph/types.js';
 import { SdkError } from './errors.js';
 import { mask } from '../core/secrets-global.js';
+import { stats } from '../core/stats.js';
 import { cronMatches, parseCron, type Cron } from '../graph/cron.js';
 import { parseDuration } from '../graph/util.js';
 import { catalog } from './catalog.js';
@@ -339,6 +340,8 @@ export class PluginManager {
       return true;
     }
     const handle = this.interactions.hold(botId, p.manifest.id, ri, true);
+    stats(this.db).add(botId, i.guildId, 'plugin_uses');
+    stats(this.db).add(botId, i.guildId, `plugin:${p.manifest.id}`);
     p.runInteraction(i.isModalSubmit() ? 'modal' : 'component', id.key, interactionEvent(i, handle, id.key, id.data)).catch((err) => {
       this.logRunError(botId, p, `${i.isModalSubmit() ? 'modal' : 'component'} ${id.key}`, err);
       if (!ri.replied && !ri.deferred) void ri.reply({ content: 'Something went wrong.', flags: 64 }).catch(() => undefined);
@@ -455,6 +458,8 @@ export class PluginManager {
     const handle = interaction && (p.permissions.has('discord.interactions.reply' as Permission) || p.permissions.has('discord.modals' as Permission))
       ? this.interactions.hold(p.botId, p.manifest.id, interaction, false)
       : undefined;
+    stats(this.db).add(p.botId, vars['server.id'], 'plugin_uses');
+    stats(this.db).add(p.botId, vars['server.id'], `plugin:${p.manifest.id}`);
     const res = (await p.runBlock(name, config, vars, handle)) as { port?: unknown; results?: unknown } | null;
     if (res && typeof res === 'object') {
       if (res.results && typeof res.results === 'object') {

@@ -22,6 +22,7 @@ use BotHub\Internal\SdkPolicyStore;
 use BotHub\Internal\TimedStore;
 use BotHub\Internal\WebhookStore;
 use BotHub\Internal\SecretStore;
+use BotHub\Internal\StatsStore;
 use BotHub\Internal\PluginStore;
 use BotHub\Internal\GuildAccessStore;
 use BotHub\Internal\InviteStore;
@@ -196,6 +197,7 @@ if (str_starts_with($path, '/internal/')) {
             new InviteStore($pdo),
             new GuildAccessStore($pdo),
             $userId,
+            new StatsStore($pdo),
         );
         [$status, $out] = $router->handle($method, $path, $body, $raw === '' ? null : json_decode($raw, false), $_GET);
     } catch (\Throwable $e) {

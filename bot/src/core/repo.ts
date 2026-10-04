@@ -3,6 +3,7 @@
 // variables, cooldowns and module data.
 
 import type { Db } from './db.js';
+import { stats } from './stats.js';
 import { now, write } from './db.js';
 import type { Graph } from '../graph/types.js';
 import { isGraph } from '../graph/types.js';
@@ -273,6 +274,9 @@ export class Repo {
       this.db
         .prepare('INSERT INTO mod_cases (bot_id, guild_id, number, user_id, moderator_id, action, reason, duration, auto) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
         .run(botId, c.guildId, n, c.userId, c.moderatorId, c.action, c.reason.slice(0, 512), c.duration.slice(0, 20), c.auto ? 1 : 0);
+      // Overview: automatic cases (AutoMod, honeypot …) apart from moderators' commands.
+      stats(this.db).add(botId, c.guildId, c.auto ? 'mod_automod' : 'mod_commands');
+      stats(this.db).add(botId, c.guildId, `mod:${c.action}`);
       return n;
     });
   }

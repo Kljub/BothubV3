@@ -217,3 +217,26 @@ test('closed invites: null while open, else the allowed servers', () => {
   repo.db.prepare("INSERT INTO bot_allowed_guilds (bot_id, guild_id) VALUES (1, '100000000000000001')").run();
   assert.deepEqual([...repo.guildAccess(1)!], ['100000000000000001']);
 });
+
+test('stats: counted in memory, written per hour, active users once, old hours purged', async () => {
+  const { StatsCollector, hourOf } = await import('./stats.js');
+  const { repo } = migratedDb();
+  repo.db.exec("INSERT INTO bots (id, name) VALUES (1, 'Bot')");
+  const s = new StatsCollector(repo.db);
+  const t = Date.parse('2026-10-04T12:30:00Z');
+  s.add(1, 'G', 'messages', 1, t);
+  s.add(1, 'G', 'messages', 2, t);
+  s.add(1, null, 'messages', 5, t);
+  s.active(1, 'G', 'U', t);
+  s.active(1, 'G', 'U', t);
+  s.flush(t);
+  s.add(1, 'G', 'messages', 1, t);
+  s.flush(t);
+  assert.equal((repo.db.prepare("SELECT value FROM bot_stats WHERE metric = 'messages'").get() as { value: number }).value, 4);
+  assert.equal(hourOf(t), '2026-10-04T12');
+  assert.equal((repo.db.prepare('SELECT COUNT(*) AS n FROM bot_stat_users').get() as { n: number }).n, 1);
+  // 40 days later the old hour is gone.
+  s.add(1, 'G', 'joins', 1, t + 40 * 86_400_000);
+  s.flush(t + 40 * 86_400_000 + 7_200_000);
+  assert.equal((repo.db.prepare("SELECT COUNT(*) AS n FROM bot_stats WHERE metric = 'messages'").get() as { n: number }).n, 0);
+});

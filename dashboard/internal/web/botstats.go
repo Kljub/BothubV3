@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"math"
 	"net/http"
+	"regexp"
 	"slices"
 	"time"
 
@@ -26,9 +27,14 @@ type botStatsView struct {
 	Tiles        []metricTile
 	Chart        lineChart
 	AverageLabel string
-	TopCommands  []topRow
-	TopPlugins   []topRow
-	TopMod       []topRow
+	// Overview grid: one small chart per metric (two lines where it compares).
+	Charts []miniChart
+	// Server filter: "" = all servers.
+	Guild       string
+	Guilds      []api.Guild
+	TopCommands []topRow
+	TopPlugins  []topRow
+	TopMod      []topRow
 }
 
 type metricTile struct {
@@ -77,6 +83,10 @@ func (s *Server) botStats(r *http.Request, p Page, botID int64) (botStatsView, e
 	if !slices.Contains(api.BotMetrics, metric) {
 		metric = "messages"
 	}
+	guild := q.Get("guild")
+	if !snowflake.MatchString(guild) {
+		guild = ""
+	}
 
 	picker := newRangeForm("", "", "stats.retention")
 	var stats api.BotStats
@@ -88,13 +98,13 @@ func (s *Server) botStats(r *http.Request, p Page, botID int64) (botStatsView, e
 			return botStatsView{}, &api.Error{Status: http.StatusUnprocessableEntity, Key: errKey}
 		}
 		var err error
-		if stats, err = s.api.BotStatsBetween(r.Context(), session(r), botID, from, to); err != nil {
+		if stats, err = s.api.BotStatsBetween(r.Context(), session(r), botID, from, to, guild); err != nil {
 			return botStatsView{}, err
 		}
 		picker.From, picker.To = from.Format(inputTime), to.Format(inputTime)
 	} else {
 		var err error
-		if stats, err = s.api.BotStats(r.Context(), session(r), botID, rng); err != nil {
+		if stats, err = s.api.BotStats(r.Context(), session(r), botID, rng, guild); err != nil {
 			return botStatsView{}, err
 		}
 	}
@@ -104,7 +114,12 @@ func (s *Server) botStats(r *http.Request, p Page, botID int64) (botStatsView, e
 		format = func(v int64) string { return formatInt(v, p.Locale) + " min" }
 	}
 
-	v := botStatsView{BotID: botID, Range: rng, Ranges: botStatRanges, Metric: metric, Picker: picker, RangeQuery: rangeQuery(rng, from, to)}
+	v := botStatsView{BotID: botID, Range: rng, Ranges: botStatRanges, Metric: metric, Picker: picker, RangeQuery: rangeQuery(rng, from, to), Guild: guild}
+	if guild != "" {
+		v.RangeQuery += template.URL("&guild=" + guild)
+	}
+	// Without a running bot there are no servers to pick; the filter then shows "all".
+	v.Guilds, _ = s.api.ListGuilds(r.Context(), session(r), botID)
 	if rng == "custom" {
 		v.RangeLabel = rangeLabel(from, to, p.Locale)
 	}
@@ -130,6 +145,19 @@ func (s *Server) botStats(r *http.Request, p Page, botID int64) (botStatsView, e
 	}
 	v.Chart = buildLineChart(pts, avg, rng, p.Locale, format)
 	v.AverageLabel = format(avg)
+
+	plain := func(v int64) string { return formatInt(v, p.Locale) }
+	for _, c := range overviewCharts {
+		var lines []miniSeries
+		for _, l := range c.Lines {
+			pts := make([]chartPoint, len(stats.Series[l.Metric]))
+			for i, pt := range stats.Series[l.Metric] {
+				pts[i] = chartPoint{T: pt.T, V: pt.V}
+			}
+			lines = append(lines, miniSeries{Key: l.Label, Color: l.Color, Points: pts})
+		}
+		v.Charts = append(v.Charts, buildMiniChart(c.Key, c.Icon, lines, rng, p.Locale, plain))
+	}
 
 	v.TopCommands = topRows(stats.Top.Commands, p.Locale, func(n string) string { return "/" + n })
 	v.TopPlugins = topRows(stats.Top.Plugins, p.Locale, nil)
@@ -176,3 +204,5 @@ func topRows(entries []api.TopEntry, locale string, label func(string) string) [
 	}
 	return rows
 }
+
+var snowflake = regexp.MustCompile(`^\d{17,20}$`)

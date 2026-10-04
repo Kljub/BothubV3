@@ -316,16 +316,23 @@ func (c *Client) UpdatePresence(ctx context.Context, s Session, botID int64, in 
 }
 
 // BotStatsBetween returns the stats of a bot for a custom time range.
-func (c *Client) BotStatsBetween(ctx context.Context, s Session, botID int64, from, to time.Time) (BotStats, error) {
+func (c *Client) BotStatsBetween(ctx context.Context, s Session, botID int64, from, to time.Time, guild string) (BotStats, error) {
 	var out BotStats
 	q := url.Values{"range": {"custom"}, "from": {from.UTC().Format(time.RFC3339)}, "to": {to.UTC().Format(time.RFC3339)}}
+	if guild != "" {
+		q.Set("guild", guild)
+	}
 	_, err := c.do(ctx, s, http.MethodGet, fmt.Sprintf("/api/v1/bots/%d/stats?%s", botID, q.Encode()), nil, &out)
 	return out, err
 }
 
-func (c *Client) BotStats(ctx context.Context, s Session, botID int64, rng string) (BotStats, error) {
+// BotStats: the overview numbers of a range; guild "" is every server.
+func (c *Client) BotStats(ctx context.Context, s Session, botID int64, rng, guild string) (BotStats, error) {
 	var out BotStats
 	path := fmt.Sprintf("/api/v1/bots/%d/stats?range=%s", botID, url.QueryEscape(rng))
+	if guild != "" {
+		path += "&guild=" + url.QueryEscape(guild)
+	}
 	_, err := c.do(ctx, s, http.MethodGet, path, nil, &out)
 	return out, err
 }

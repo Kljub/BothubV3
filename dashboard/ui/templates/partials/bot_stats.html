@@ -7,68 +7,37 @@
 <input type="hidden" name="metric" id="stats-range-metric" value="{{.Data.Metric}}" hx-swap-oob="true">{{end}}
 
 {{define "bot_stats"}}
-<div id="bot-stats" {{if ne .Range "custom"}}hx-get="/bot/{{.BotID}}/stats?{{.RangeQuery}}&metric={{.Metric}}" hx-trigger="every 30s" hx-swap="outerHTML"{{end}}>
-  <header class="stats-toolbar">
-    <div class="segmented" role="group" aria-label="{{t "overview.range.label"}}">
-      {{range .Ranges}}
-      <button type="button" class="segment" hx-get="/bot/{{$.BotID}}/stats?range={{.}}&metric={{$.Metric}}" hx-target="#bot-stats" hx-swap="outerHTML"
-        aria-pressed="{{if eq . $.Range}}true{{else}}false{{end}}">{{t (printf "stats.range.%s" .)}}</button>
-      {{end}}
-      <button type="button" class="segment" data-open-dialog="stats-range-dialog"
-        aria-pressed="{{if eq .Range "custom"}}true{{else}}false{{end}}">{{t "stats.range.custom"}}</button>
+<div id="bot-stats" class="bot-overview" {{if ne .Range "custom"}}hx-get="/bot/{{.BotID}}/stats?{{.RangeQuery}}" hx-trigger="every 60s" hx-swap="outerHTML"{{end}}>
+  <header class="overview-head">
+    <div>
+      <h2>📊 {{t "overview.title"}}</h2>
+      <p class="muted">{{t "overview.subtitle"}}{{if eq .Range "custom"}} · {{.RangeLabel}}{{end}}</p>
     </div>
+    <form class="overview-filters" hx-get="/bot/{{.BotID}}/stats" hx-target="#bot-stats" hx-swap="outerHTML" hx-trigger="change">
+      <select name="guild" class="select-plain" aria-label="{{t "overview.server"}}">
+        <option value="">{{t "overview.all_servers"}}</option>
+        {{range .Guilds}}<option value="{{.ID}}" {{if eq .ID $.Guild}}selected{{end}}>{{.Name}}</option>{{end}}
+      </select>
+      <select name="range" class="select-plain" aria-label="{{t "overview.range.label"}}">
+        {{range .Ranges}}<option value="{{.}}" {{if eq . $.Range}}selected{{end}}>{{t (printf "stats.range_long.%s" .)}}</option>{{end}}
+        {{if eq .Range "custom"}}<option value="custom" selected>{{t "stats.range.custom"}}</option>{{end}}
+      </select>
+      <button type="button" class="btn btn-sm" data-open-dialog="stats-range-dialog">{{t "stats.range.custom"}}</button>
+    </form>
   </header>
 
-  <section class="metric-tiles">
+  <section class="overview-tiles">
     {{range .Tiles}}
-    <button type="button" class="tile metric-tile" aria-pressed="{{if .Selected}}true{{else}}false{{end}}"
-      hx-get="/bot/{{$.BotID}}/stats?{{$.RangeQuery}}&metric={{.Key}}" hx-target="#bot-stats" hx-swap="outerHTML">
+    <div class="tile overview-tile">
       <span class="tile-value">{{.Value}}</span>
-      <span class="tile-label">{{t (printf "stats.metric.%s" .Key)}}</span>
-      {{if .Delta}}<span class="tile-delta tile-delta-{{.DeltaDir}}">{{.Delta}} <span class="muted">{{t "stats.vs_previous"}}</span></span>{{end}}
-    </button>
+      <span class="tile-label">{{t (printf "stats.tile.%s" .Key)}}</span>
+      {{if .Delta}}<span class="tile-delta tile-delta-{{.DeltaDir}}">{{.Delta}}</span>{{end}}
+    </div>
     {{end}}
   </section>
 
-  <section class="panel chart-panel section-gap">
-    <header class="chart-header">
-      <div>
-        <h2>{{t (printf "stats.metric.%s" .Metric)}}</h2>
-        <p class="muted chart-subtitle">{{if eq .Range "custom"}}{{.RangeLabel}}{{else}}{{t (printf "stats.range_long.%s" .Range)}}{{end}}</p>
-      </div>
-    </header>
-    {{with .Chart}}
-    {{if .Empty}}
-    <p class="muted">{{t "overview.chart.empty"}}</p>
-    {{else}}
-    <div class="chart" data-chart-points="{{.Points}}">
-      <svg viewBox="0 0 {{.W}} {{.H}}" role="img" aria-label="{{t (printf "stats.metric.%s" $.Metric)}}">
-        <g class="chart-grid">
-          {{range .YTicks}}<line x1="{{$.Chart.Left}}" x2="{{$.Chart.Right}}" y1="{{.Pos}}" y2="{{.Pos}}"/>{{end}}
-        </g>
-        <g class="chart-axis" aria-hidden="true">
-          {{range .YTicks}}<text x="{{sub $.Chart.Left 8}}" y="{{.Pos}}" text-anchor="end" dominant-baseline="middle">{{.Label}}</text>{{end}}
-          {{range $i, $tick := .XTicks}}<text x="{{$tick.Pos}}" y="{{add $.Chart.Bot 18}}" text-anchor="{{if eq $i 0}}start{{else if eq $i 4}}end{{else}}middle{{end}}">{{$tick.Label}}</text>{{end}}
-        </g>
-        <path class="chart-area" d="{{.Area}}"/>
-        <line class="chart-avg" x1="{{.Left}}" x2="{{.Right}}" y1="{{.AvgY}}" y2="{{.AvgY}}"/>
-        <text class="chart-avg-label" x="{{sub .Right 4}}" y="{{sub .AvgY 6}}" text-anchor="end">{{t "overview.chart.average"}} {{$.AverageLabel}}</text>
-        <path class="chart-line" d="{{.Line}}"/>
-        <line class="chart-crosshair" x1="0" x2="0" y1="{{.Top}}" y2="{{.Bot}}" visibility="hidden"/>
-        <circle class="chart-dot" r="5" cx="0" cy="0" visibility="hidden"/>
-        <rect class="chart-hit" x="{{.Left}}" y="{{.Top}}" width="{{sub .Right .Left}}" height="{{sub .Bot .Top}}"/>
-      </svg>
-      <div class="chart-tooltip" role="status" hidden></div>
-    </div>
-    <details class="chart-table">
-      <summary>{{t "overview.chart.show_table"}}</summary>
-      <table>
-        <thead><tr><th>{{t "overview.chart.col_time"}}</th><th class="num">{{t (printf "stats.metric.%s" $.Metric)}}</th></tr></thead>
-        <tbody>{{range .Rows}}<tr><td>{{.Time}}</td><td class="num">{{.Value}}</td></tr>{{end}}</tbody>
-      </table>
-    </details>
-    {{end}}
-    {{end}}
+  <section class="overview-charts">
+    {{range .Charts}}{{template "mini_chart" .}}{{end}}
   </section>
 
   <section class="top-lists section-gap">
@@ -77,6 +46,31 @@
     {{template "top_list" (list "stats.top.mod_actions" .TopMod)}}
   </section>
 </div>
+{{end}}
+
+{{/* One chart of the overview grid (minichart.go). */}}
+{{define "mini_chart"}}
+{{$c := .}}
+<article class="panel mini-chart">
+  <header class="mini-chart-head">
+    <h3>{{.Icon}} {{t (printf "stats.metric.%s" .Key)}}</h3>
+    {{if .Legend}}<span class="mini-legend">{{range .Lines}}<span><i style="background:{{.Color}}"></i>{{t .Key}}</span>{{end}}</span>{{end}}
+  </header>
+  {{if .Empty}}<p class="muted">{{t "overview.chart.empty"}}</p>{{else}}
+  <svg viewBox="0 0 {{.W}} {{.H}}" role="img" aria-label="{{t (printf "stats.metric.%s" .Key)}}">
+    <g class="chart-grid">{{range .YTicks}}<line x1="{{$c.Left}}" x2="{{$c.Right}}" y1="{{.Pos}}" y2="{{.Pos}}"/>{{end}}</g>
+    <g class="chart-axis" aria-hidden="true">
+      {{range .YTicks}}<text x="{{sub $c.Left 6}}" y="{{.Pos}}" text-anchor="end" dominant-baseline="middle">{{.Label}}</text>{{end}}
+      {{range $i, $tick := .XTicks}}<text x="{{$tick.Pos}}" y="{{add $c.Bot 16}}" text-anchor="{{if eq $i 0}}start{{else if eq $i 5}}end{{else}}middle{{end}}">{{$tick.Label}}</text>{{end}}
+    </g>
+    {{range .Lines}}
+    <path class="mini-area" d="{{.Area}}" style="fill:{{.Color}}"/>
+    <path class="mini-line" d="{{.Path}}" style="stroke:{{.Color}}"/>
+    {{$color := .Color}}{{range .Dots}}<circle class="mini-dot" cx="{{index . 0}}" cy="{{index . 1}}" r="2.2" style="fill:{{$color}}"/>{{end}}
+    {{end}}
+  </svg>
+  {{end}}
+</article>
 {{end}}
 
 {{/* top_list receives [titleKey, []topRow]. */}}
@@ -113,6 +107,7 @@
   <form class="custom-range" hx-get="/bot/{{.BotID}}/stats" hx-target="#bot-stats" hx-swap="outerHTML">
     <input type="hidden" name="range" value="custom">
     <input type="hidden" name="metric" id="stats-range-metric" value="{{.Metric}}">
+    <input type="hidden" name="guild" value="{{.Guild}}">
     {{template "range_picker" .Picker}}
   </form>
 </dialog>
