@@ -213,6 +213,15 @@ await ctx.files.delete(name);
 
 `ctx.files.put(base64)` stores small images (about 48 KB per call, the size
 of one plugin message); bigger ones come from the dashboard or from Discord.
+
+Other files (PDF, ZIP, documents, audio, …) work too: `ctx.files.put(base64,
+filename)` and `ctx.files.fromDiscord(url, filename?)` keep the extension and
+the original name (`filename` in list and get). Programs (exe, bat, js, …)
+and image names without image content are refused (`sdk.files.bad_type`).
+Limits: 8 MB per file, 100 files and 50 MB per plugin and bot. Only images
+show in the dashboard. `ctx.interaction.reply(handle, message, { ephemeral:
+true, file: name })` (also `followUp`) sends a stored file with the answer,
+e.g. privately after a button click.
 `fromDiscord` accepts only `https://cdn.discordapp.com/…` and
 `https://media.discordapp.net/…` links below `/attachments/` or
 `/ephemeral-attachments/` (the files of a command's attachment option).

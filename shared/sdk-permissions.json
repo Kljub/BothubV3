@@ -845,7 +845,7 @@
         "files.delete",
         "files.fromDiscord"
       ],
-      "$comment": "Images per bot (PNG, GIF, WEBP, JPEG; max. 2 MB each, 100 files, 25 MB). Uploaded in the dashboard for \"image\" settings fields, or stored by the plugin: base64 (files.put) or a Discord attachment link (files.fromDiscord, cdn.discordapp.com / media.discordapp.net only). Name = content hash + extension."
+      "$comment": "Files per bot: images (PNG, GIF, WEBP, JPEG) and other files with their original name (no programs); max. 8 MB each, 100 files, 50 MB. Uploaded in the dashboard for \"image\" settings fields (images only), or stored by the plugin: base64 (files.put, a file name allows other types) or a Discord attachment link (files.fromDiscord, cdn.discordapp.com / media.discordapp.net only). Name = content hash + extension. interaction.reply / followUp can send one (options.file)."
     },
     {
       "key": "data.variables",

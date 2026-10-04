@@ -18,7 +18,7 @@ final class PluginFileStore
 {
     public const MAX_BYTES = 2 * 1024 * 1024;
     public const MAX_FILES = 100;
-    public const MAX_TOTAL = 25 * 1024 * 1024;
+    public const MAX_TOTAL = 50 * 1024 * 1024;
     public const NAME = '/^[0-9a-f]{16}\.(png|gif|webp|jpg)$/';
 
     public function __construct(private readonly PDO $pdo)

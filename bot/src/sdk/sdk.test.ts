@@ -885,3 +885,21 @@ test('http.check: status and latency of public websites only, redirects followed
   await assert.rejects(siteCheck('ftp://up.example/', {}, resolve, raw), /sdk.http.bad_url/);
   await assert.rejects(siteCheck('https://user:pw@up.example/', {}, resolve, raw), /sdk.http.bad_url/);
 });
+
+test('plugin files: any file type with its name, executables and fake images refused', async () => {
+  const { PluginFiles, fileType, cleanFilename } = await import('./files.js');
+  const { db } = setup();
+  const files = new PluginFiles(db, 1, 'plugin_files');
+  const pdf = files.put(Buffer.from('%PDF-1.7 hello'), 'C:\\Users\\x\\Report 2026.pdf');
+  assert.match(pdf.name, /^[0-9a-f]{16}\.pdf$/);
+  assert.equal(pdf.mime, 'application/pdf');
+  assert.equal(pdf.filename, 'Report 2026.pdf', 'path dropped, name kept');
+  assert.equal(files.get(pdf.name)?.filename, 'Report 2026.pdf');
+  assert.equal(files.list()[0]?.filename, 'Report 2026.pdf');
+  assert.throws(() => files.put(Buffer.from('MZ...'), 'setup.exe'), /sdk.files.bad_type/);
+  assert.throws(() => files.put(Buffer.from('not a picture'), 'cat.png'), /sdk.files.bad_type/);
+  assert.throws(() => files.put(Buffer.from('plain'), '', true), /sdk.files.bad_type/, 'images only without a file name');
+  assert.equal(fileType(Buffer.from('x'), 'notes')?.ext, 'bin');
+  assert.equal(cleanFilename('../../etc/pass<wd>.txt'), 'pass_wd_.txt');
+  assert.equal(files.delete(pdf.name), true);
+});

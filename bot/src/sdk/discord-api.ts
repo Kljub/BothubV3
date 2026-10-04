@@ -506,7 +506,15 @@ function emojiJson(e: { id: string; name: string | null; animated: boolean | nul
   return { id: e.id, name: e.name, animated: e.animated === true, available: e.available !== false, url: e.imageURL(), mention: `<${e.animated ? 'a' : ''}:${e.name}:${e.id}>` };
 }
 
-export function discordApi(botId: number, pluginId: string, hosts: string[], deps: DiscordApiDeps, interactions: InteractionRegistry, net?: { resolve?: (h: string) => Promise<string[]>; raw?: RawHttp; checkRaw?: RawHttp }): Record<string, Handler> {
+export function discordApi(
+  botId: number,
+  pluginId: string,
+  hosts: string[],
+  deps: DiscordApiDeps,
+  interactions: InteractionRegistry,
+  net?: { resolve?: (h: string) => Promise<string[]>; raw?: RawHttp; checkRaw?: RawHttp },
+  fileOf?: (name: unknown) => { name: string; filename: string; data: Buffer } | null,
+): Record<string, Handler> {
   const a = (q: Record<string, unknown>): unknown[] => (Array.isArray(q.args) ? q.args : []);
   const client = (): Client => {
     const c = deps.client();
@@ -598,6 +606,14 @@ export function discordApi(botId: number, pluginId: string, hosts: string[], dep
   // At most HTTP_PARALLEL open requests per plugin and bot: slow servers must not fill the call slots.
   let open = 0;
   const checks: number[] = [];
+  // options.file of interaction.reply / followUp: a plugin file as attachment (storage.files).
+  const withFile = (options: unknown): { files?: { attachment: Buffer; name: string }[] } => {
+    const name = options && typeof options === 'object' ? (options as { file?: unknown }).file : undefined;
+    if (name === undefined) return {};
+    const f = fileOf?.(name);
+    if (!f) throw new SdkError(fileOf ? 'sdk.files.unknown' : 'sdk.call.denied');
+    return { files: [{ attachment: f.data, name: f.filename || f.name }] };
+  };
   const http = (method: string) => async (q: Record<string, unknown>) => {
     if (open >= HTTP_PARALLEL) throw new SdkError('sdk.http.busy');
     open++;
@@ -876,7 +892,7 @@ export function discordApi(botId: number, pluginId: string, hosts: string[], dep
     // --- interactions (handles from blocks, clicks, selects, modals) ---
     'interaction.reply': async (q) => {
       const i = held(a(q)[0]);
-      const p = { ...payload(a(q)[1]), flags: ephemeralFlag(a(q)[2]) };
+      const p = { ...payload(a(q)[1]), flags: ephemeralFlag(a(q)[2]), ...withFile(a(q)[2]) };
       if (i.replied || i.deferred) await i.followUp(p as never);
       else await i.reply(p as never);
     },
@@ -892,7 +908,7 @@ export function discordApi(botId: number, pluginId: string, hosts: string[], dep
     'interaction.followUp': async (q) => {
       const i = held(a(q)[0]);
       if (!i.replied && !i.deferred) throw new SdkError('sdk.interaction.not_replied');
-      await i.followUp({ ...payload(a(q)[1]), flags: ephemeralFlag(a(q)[2]) } as never);
+      await i.followUp({ ...payload(a(q)[1]), flags: ephemeralFlag(a(q)[2]), ...withFile(a(q)[2]) } as never);
     },
     /** Updates the message of the clicked button/select (component interactions). */
     'interaction.update': async (q) => {

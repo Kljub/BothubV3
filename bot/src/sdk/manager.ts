@@ -607,7 +607,7 @@ export class PluginManager {
     const outHeaders: Record<string, string> = {};
     for (const [k, v] of res.headers) if (!/^(set-cookie|www-authenticate)$/.test(k) && Object.keys(outHeaders).length < 50) outHeaders[k] = mask(v, hide);
     // The answer is an image: into the plugin files (type checked like an upload).
-    if (saveAsFile && res.ok) return { status: res.status, headers: outHeaders, file: needFiles().put(Buffer.concat(chunks)) };
+    if (saveAsFile && res.ok) return { status: res.status, headers: outHeaders, file: needFiles().put(Buffer.concat(chunks), '', true) };
     const text = mask(Buffer.concat(chunks).toString('utf8'), hide);
     let json: unknown = null;
     if ((res.headers.get('content-type') ?? '').includes('json')) {
@@ -815,7 +815,7 @@ export class PluginManager {
         // spoiler: Discord blurs the image until clicked (file name SPOILER_…).
         const spoiler = msg.spoiler === true;
         delete msg.spoiler;
-        const fileName = spoiler ? `SPOILER_${file.name}` : file.name;
+        const fileName = `${spoiler ? 'SPOILER_' : ''}${file.filename || file.name}`;
         if (Array.isArray(msg.embeds)) {
           msg.embeds = msg.embeds.map((e: unknown) => {
             if (!e || typeof e !== 'object') return e;
@@ -833,16 +833,17 @@ export class PluginManager {
       'variables.get': (q) => variables().get(a(q)[0], a(q)[1]),
       'variables.set': (q) => variables().set(a(q)[0], a(q)[1], a(q)[2]),
       'variables.reset': (q) => variables().reset(a(q)[0], a(q)[1]),
-      // Plugin files (storage.files): images per bot.
+      // Plugin files (storage.files): images and other files per bot.
       'files.list': () => files.list(),
       'files.get': (q) => {
         const f = files.get(a(q)[0]);
-        return f ? { name: f.name, mime: f.mime, size: f.size, data: f.data.toString('base64') } : null;
+        return f ? { name: f.name, mime: f.mime, size: f.size, filename: f.filename, data: f.data.toString('base64') } : null;
       },
+      // Without a file name only images (as before); with one any file but executables.
       'files.put': (q) => {
-        const data = a(q)[0];
+        const [data, filename] = a(q);
         if (typeof data !== 'string' || !/^[A-Za-z0-9+/]+={0,2}$/.test(data)) throw new SdkError('sdk.files.bad_type');
-        return files.put(Buffer.from(data, 'base64'));
+        return files.put(Buffer.from(data, 'base64'), typeof filename === 'string' ? filename : '', typeof filename !== 'string');
       },
       'files.delete': (q) => files.delete(a(q)[0]),
       'files.fromDiscord': async (q) => {
@@ -869,7 +870,10 @@ export class PluginManager {
           }
           chunks.push(value);
         }
-        return files.put(Buffer.concat(chunks));
+        // The original name: given, else the last part of the link (…/attachments/1/2/report.pdf).
+        const given = a(q)[1];
+        const filename = typeof given === 'string' && given.trim() ? given : decodeURIComponent(url.pathname.split('/').pop() ?? '');
+        return files.put(Buffer.concat(chunks), filename);
       },
       'config.set': (q) => writeSetting(a(q)[0], a(q)[1], false),
       'config.delete': (q) => writeSetting(a(q)[0], undefined, true),
@@ -979,7 +983,9 @@ export class PluginManager {
         leaderboard: (g, n) => live().economy.leaderboard(g, n),
       },
     };
-    Object.assign(handlers, discordApi(botId, manifest.id, manifest.hosts, liveDeps, this.interactions, this.deps.outbound));
+    // Interaction answers may carry a plugin file (options.file) when the plugin has storage.files.
+    const fileOf = allowed.has('storage.files' as Permission) ? (name: unknown) => files.get(name) : undefined;
+    Object.assign(handlers, discordApi(botId, manifest.id, manifest.hosts, liveDeps, this.interactions, this.deps.outbound, fileOf));
     proc = new PluginProcess(
       botId,
       manifest,
