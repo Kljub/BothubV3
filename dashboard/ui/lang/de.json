@@ -4024,7 +4024,7 @@
   "legal_settings.saved": "Rechtliche Angaben gespeichert.",
   "log.server.legal_saved": "Betreiber-Angaben für Nutzungsbedingungen und Datenschutz gespeichert ({actor})",
   "legal_settings.source": "Quellcode-URL (optional)",
-  "legal_settings.source_hint": "Link zum öffentlichen Repository (https). Die Seiten nennen BotHub ein Open-Source-Projekt ohne Gewinnabsicht; mit Link kann jeder den Code prüfen.",
+  "legal_settings.source_hint": "Link zum öffentlichen Repository (https). Die Seiten nennen BotHub ein quelloffenes Projekt ohne Gewinnabsicht; mit Link kann jeder den Code prüfen.",
   "invite_settings.title": "Eigener Einladungslink",
   "invite_settings.hint": "Trag diesen Link im Discord Developer Portal unter Installation als „Benutzerdefinierte URL“ ein. Wer auf „App hinzufügen“ klickt, landet auf dieser Seite statt bei Discord; du entscheidest, wer den echten Einladungslink bekommt.",
   "invite_settings.enabled": "Eigene Einladungsseite verwenden",

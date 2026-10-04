@@ -4024,7 +4024,7 @@
   "legal_settings.saved": "Legal details saved.",
   "log.server.legal_saved": "Operator details for Terms and Privacy saved ({actor})",
   "legal_settings.source": "Source code URL (optional)",
-  "legal_settings.source_hint": "Link to the public repository (https). The pages say BotHub is open source and non-profit; with a link anyone can check the code.",
+  "legal_settings.source_hint": "Link to the public repository (https). The pages say BotHub is source available and non-profit; with a link anyone can check the code.",
   "invite_settings.title": "Custom invite link",
   "invite_settings.hint": "Enter this link as \"Custom URL\" under Installation in the Discord Developer Portal. People who click \"Add App\" land on this page instead of Discord's; you decide who gets the real invite.",
   "invite_settings.enabled": "Use the custom invite page",

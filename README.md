@@ -140,3 +140,15 @@ shipped docs (`shared/docs`, Markdown in English and German).
 Plugins come from the [BotHub Marketplace](https://github.com/Kljub/BothubMarketPlace).
 To write your own, see **Docs → Plugins & SDK → Develop a plugin** and
 `sdk/API.md`.
+
+## License
+
+BotHub by [Kljub](https://github.com/Kljub), original repository:
+<https://github.com/Kljub/BothubV3>.
+
+Licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE):
+free for personal use, hobby projects, communities, education and
+non-profit organisations; **no commercial use**. Copies, forks and derived
+works must keep the `Required Notice:` lines of [LICENSE](LICENSE), that
+is, the name BotHub, the copyright and the link to this repository as the
+original. For commercial use, ask for a separate license.
