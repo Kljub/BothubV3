@@ -168,8 +168,14 @@ func (s *store) setupTwoFactor(w http.ResponseWriter, r *http.Request, sid strin
 	secret := b32.EncodeToString(raw)
 	s.mu.Lock()
 	u := s.sessUser(sid)
-	u.pendingSecret = secret
-	s.persistUser(u)
+	// A started set-up keeps its secret until it is finished: a second click
+	// or a reload must not make the code in the authenticator app invalid.
+	if u.pendingSecret != "" {
+		secret = u.pendingSecret
+	} else {
+		u.pendingSecret = secret
+		s.persistUser(u)
+	}
 	user := u.Username
 	s.mu.Unlock()
 	uri := "otpauth://totp/" + url.PathEscape("BotHub:"+user) + "?" + url.Values{
