@@ -1,0 +1,18 @@
+# Optional: updates from the dashboard (Admin → Server settings → Updates).
+# Turn on with COMPOSE_FILE=docker-compose.yml:docker-compose.update.yml in
+# .env (Windows: ";" instead of ":"). It gives the gateway the Docker socket,
+# which is as strong as root on the host: only admins can start an update.
+
+services:
+  mockapi:
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    group_add:
+      # Group of the Docker socket (Linux: getent group docker | cut -d: -f3).
+      - "${DOCKER_GID:-0}"
+    environment:
+      # Path of this folder on the host (Docker Desktop on Windows:
+      # /run/desktop/mnt/host/d/path/to/Bothub).
+      BOTHUB_HOST_DIR: "${BOTHUB_HOST_DIR:-}"
+      # Only for a private GitHub repository: a token with read access.
+      BOTHUB_GIT_TOKEN: "${BOTHUB_GIT_TOKEN:-}"

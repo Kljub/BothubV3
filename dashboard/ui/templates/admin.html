@@ -16,6 +16,7 @@
 {{else if eq .Section "resources"}}
   {{template "resources" .Processes}}
 {{else if eq .Section "server_settings"}}
+  {{template "update_box" .Update}}
   {{template "server_settings" .Server}}
   {{template "legal_settings" .Legal}}
 {{else if eq .Section "invite_policies"}}
@@ -555,3 +556,43 @@
 {{end}}
 {{end}}
 
+
+{{define "update_box_fragment"}}{{template "update_box" .Data}}{{end}}
+
+{{/* Updates from the git repository (internal/web/update.go). */}}
+{{define "update_box"}}
+<section class="section update-box" id="update-box" {{if .Running}}hx-get="/admin/update/status" hx-trigger="every 3s" hx-swap="outerHTML"{{end}}>
+  <header class="section-head"><h3>🔄 {{t "update.title"}}</h3></header>
+  <div id="update-error"></div>
+  {{if not .Info.Configured}}
+  <p class="muted">{{t "update.not_configured"}}</p>
+  <pre class="update-cmd">git pull
+docker compose up -d --build</pre>
+  <p class="hint">{{t "update.how_to_enable"}}</p>
+  {{else}}
+  <p class="muted">{{t "update.intro"}} <span class="mono">{{.Info.HostDir}}</span></p>
+  {{with .Check}}
+    {{if .Error}}<div class="alert alert-error">{{t "update.check_failed"}}: {{.Error}}</div>
+    {{else if eq .Behind 0}}<div class="alert alert-success">✅ {{t "update.up_to_date"}} <span class="mono">{{.Current}}</span></div>
+    {{else}}
+    <div class="alert alert-warning">{{t "update.available" "count" .Behind}} <span class="mono">{{.Current}} → {{.Remote}}</span></div>
+    <ul class="update-commits">{{range .Commits}}<li class="mono">{{.}}</li>{{end}}</ul>
+    {{end}}
+  {{end}}
+  {{with .Info.Run}}
+  <div class="update-run">
+    <strong>{{if or (eq .Status "running") (eq .Status "created")}}⏳ {{t "update.running"}}{{else if eq .ExitCode 0}}✅ {{t "update.done"}}{{else}}❌ {{t "update.failed" "code" .ExitCode}}{{end}}</strong>
+    {{with .FinishedAt}}{{if ne . "0001-01-01T00:00:00Z"}}<span class="muted"> · {{.}}</span>{{end}}{{end}}
+    <pre class="update-log">{{.Log}}</pre>
+  </div>
+  {{end}}
+  <div class="update-actions">
+    <button type="button" class="btn" hx-post="/admin/update/check" hx-target="#update-box" hx-swap="outerHTML" hx-disabled-elt="this">{{t "update.check"}}</button>
+    {{if not .Running}}
+    <button type="button" class="btn btn-primary" hx-post="/admin/update/run" hx-target="#update-box" hx-swap="outerHTML" hx-confirm="{{t "update.confirm"}}" hx-disabled-elt="this">{{t "update.run"}}</button>
+    {{end}}
+  </div>
+  <p class="hint">{{t "update.hint"}}</p>
+  {{end}}
+</section>
+{{end}}

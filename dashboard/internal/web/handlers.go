@@ -411,6 +411,8 @@ func (s *Server) handleAdminSection(w http.ResponseWriter, r *http.Request, p Pa
 		data["Server"] = settings
 		legal, _ := s.api.AdminLegal(r.Context(), session(r)) // optional: an empty form on error
 		data["Legal"] = legal
+		info, _ := s.api.UpdateInfo(r.Context(), session(r)) // optional: "not set up" on error
+		data["Update"] = updateView{Info: info}
 	}
 	if section == "invite_policies" {
 		invite, err := s.api.InviteSettings(r.Context(), session(r))

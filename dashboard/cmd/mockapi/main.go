@@ -74,6 +74,7 @@ type store struct {
 	sessions      map[string]*sessionData
 	// envPasswordPlain: BOTHUB_ADMIN_PASSWORD is set as plain text (admins see a warning).
 	envPasswordPlain bool
+	updater          *updater // nil: updates from git are not set up
 	bots             map[int64]*bot
 	nextID           int64
 	modules          map[string]bool // "<botID>/<key>"
@@ -163,6 +164,7 @@ func main() {
 	s.passkeys = newPasskeyStore()
 	s.cmdStates, s.commandCatalog = map[string]bool{}, loadCommandCatalog()
 	s.loadAccounts()
+	s.updater = newUpdater()
 	// BOTHUB_ADMIN_PASSWORD may be plain text or an Argon2id hash
 	// ("$argon2id$…", see "app hash-password"). Plain text works, but admins see
 	// a warning until the variable holds a hash.
@@ -271,6 +273,10 @@ func main() {
 	mux.HandleFunc("GET /api/v1/stats/overview", s.auth(s.overviewStats))
 	mux.HandleFunc("GET /api/v1/admin/server-settings", s.auth(s.getServerSettings))
 	mux.HandleFunc("GET /api/v1/admin/sdk-policies", s.auth(s.listSdkPolicies))
+	// Updates from the git repository (updater.go).
+	mux.HandleFunc("GET /api/v1/admin/update", s.auth(s.getUpdate))
+	mux.HandleFunc("POST /api/v1/admin/update/check", s.auth(s.checkUpdate))
+	mux.HandleFunc("POST /api/v1/admin/update/run", s.auth(s.runUpdate))
 	mux.HandleFunc("GET /api/v1/bots/{id}/backup", s.auth(s.withBot(s.viaPHP(phpRequired))))
 	mux.HandleFunc("GET /api/v1/bots/{id}/guild-access", s.auth(s.withBot(s.viaPHP(phpRequired))))
 	mux.HandleFunc("PUT /api/v1/bots/{id}/guild-access", s.auth(s.withBot(s.viaPHP(phpRequired))))

@@ -92,6 +92,22 @@ git pull
 docker compose up -d --build
 ```
 
+Or with one click: **Admin → Server settings → Updates** checks the git
+repository for new commits and runs the same two steps in a short-lived
+helper container. Turn it on in `.env`:
+
+```
+COMPOSE_FILE=docker-compose.yml:docker-compose.update.yml   # Windows: ; instead of :
+BOTHUB_HOST_DIR=/opt/bothub        # this folder on the host
+DOCKER_GID=999                     # Linux: getent group docker | cut -d: -f3
+BOTHUB_GIT_TOKEN=                  # only for a private repository
+```
+
+On Docker Desktop for Windows, `BOTHUB_HOST_DIR` is the folder as Docker
+sees it, e.g. `/run/desktop/mnt/host/d/Work/Projects/Bothub`. The gateway
+then has the Docker socket, which is as strong as root on the host; only
+instance admins can start an update.
+
 The API migrates the database on start; the bot starts once the database
 has its schema version. Back up `./data` before larger updates.
 

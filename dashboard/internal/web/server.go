@@ -246,6 +246,10 @@ func (s *Server) routes() http.Handler {
 	mux.Handle("PUT /bot/{id}/plugins/{plugin}/settings/{list}/{idx}", auth(s.handlePluginSettingsItem))
 	mux.Handle("DELETE /bot/{id}/plugins/{plugin}/settings/{list}/{idx}", auth(s.handlePluginSettingsItem))
 	mux.Handle("GET /select-bot/{id}", auth(s.handleOpenBot))
+	// Updates from the git repository (admins).
+	mux.Handle("GET /admin/update/status", auth(s.handleUpdateStatus))
+	mux.Handle("POST /admin/update/check", auth(s.handleUpdateCheck))
+	mux.Handle("POST /admin/update/run", auth(s.handleUpdateRun))
 	// Co-Work: members, invites, saved roles; joining by link or invite.
 	mux.Handle("POST /bot/{id}/cowork/members/{user}", auth(s.handleCoworkMember))
 	mux.Handle("POST /bot/{id}/cowork/members/{user}/remove", auth(s.handleCoworkRemove))
