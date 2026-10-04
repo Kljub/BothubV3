@@ -1,0 +1,75 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.economy_give_item",
+  "version": 1,
+  "category": "action",
+  "group": "economy",
+  "order": 947,
+  "color": "green",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_economy_give_item.label",
+  "descriptionKey": "builder.node.action_economy_give_item.description",
+  "module": "economy",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": "",
+      "labelKey": "builder.result.economy_give_item.0"
+    },
+    {
+      "suffix": ".qty",
+      "labelKey": "builder.result.economy_give_item.qty"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "from_user": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.from_user_from_member",
+        "x-hintKey": "builder.cfg.ref_hint",
+        "x-ref": "member",
+        "default": "{user.id}"
+      },
+      "to_user": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.to_user",
+        "x-hintKey": "builder.cfg.ref_hint",
+        "x-ref": "member"
+      },
+      "item": {
+        "type": "string",
+        "maxLength": 100,
+        "x-labelKey": "builder.cfg.economy_item"
+      },
+      "amount": {
+        "type": "string",
+        "maxLength": 20,
+        "x-labelKey": "builder.cfg.amount_amount"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  }
+}

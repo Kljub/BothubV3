@@ -63,6 +63,10 @@ export interface DiscordApiDeps {
     change(guildId: string, userId: string, amount: number, mode: 'add' | 'set'): number;
     pay(guildId: string, from: string, to: string, amount: number): boolean;
     leaderboard(guildId: string, limit: number): { userId: string; balance: number }[];
+    /** Bank amount with the interest up to today. */
+    bank(guildId: string, userId: string): number;
+    /** Bank money of from into the wallet of to; false when from has too little. */
+    bankTake(guildId: string, from: string, to: string, amount: number): boolean;
   };
 }
 
@@ -993,6 +997,11 @@ export function discordApi(
     'economy.transfer': (q) => {
       const g = econGuild(a(q)[0]);
       if (!deps.economy.pay(g, sf(a(q)[1], 'user'), sf(a(q)[2], 'user'), amount(a(q)[3]))) throw new SdkError('sdk.economy.not_enough');
+    },
+    'economy.bank': (q) => deps.economy.bank(econGuild(a(q)[0]), sf(a(q)[1], 'user')),
+    'economy.bankTransfer': (q) => {
+      const g = econGuild(a(q)[0]);
+      if (!deps.economy.bankTake(g, sf(a(q)[1], 'user'), sf(a(q)[2], 'user'), amount(a(q)[3]))) throw new SdkError('sdk.economy.not_enough');
     },
     'economy.leaderboard': (q) => deps.economy.leaderboard(econGuild(a(q)[0]), Math.max(1, Math.min(50, Number(a(q)[1]) || 10))),
   };

@@ -368,6 +368,10 @@ export interface PluginContext {
     remove(guildId: Id, userId: Id, amount: number): Async<number>;
     transfer(guildId: Id, fromUserId: Id, toUserId: Id, amount: number): Async<void>;
     leaderboard(guildId: Id, limit?: number): Async<Array<{ userId: Id; balance: number }>>;
+    /** Bank amount (with the daily interest up to today). */
+    bank(guildId: Id, userId: Id): Async<number>;
+    /** "modules.economy.bank.write": bank money of one member into the wallet of another; sdk.economy.not_enough when too little. */
+    bankTransfer(guildId: Id, fromUserId: Id, toUserId: Id, amount: number): Async<void>;
   };
   readonly commands: {
     register(definition: Record<string, Json>): Async<Id>;

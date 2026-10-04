@@ -492,10 +492,12 @@
       "risk": "low",
       "calls": [
         "economy.get",
+        "economy.bank",
         "economy.leaderboard"
       ],
       "implemented": [
         "economy.get",
+        "economy.bank",
         "economy.leaderboard"
       ],
       "module": "economy"
@@ -513,6 +515,18 @@
         "economy.add",
         "economy.remove",
         "economy.transfer"
+      ],
+      "module": "economy"
+    },
+    {
+      "key": "modules.economy.bank.write",
+      "group": "modules",
+      "risk": "high",
+      "calls": [
+        "economy.bankTransfer"
+      ],
+      "implemented": [
+        "economy.bankTransfer"
       ],
       "module": "economy"
     },

@@ -113,6 +113,17 @@ export function withdraw(ctx: ModuleContext, guild: string, user: string, raw: s
   return { moved: n, wallet, bank: current - n };
 }
 
+/** Bank money of one member into the wallet of another (SDK economy.bankTransfer); false when too little. */
+export function bankTake(ctx: ModuleContext, guild: string, from: string, to: string, n: number): boolean {
+  const currency = ctx.repo.currencyId(ctx.botId);
+  return write(ctx.db, () => {
+    if (bank(ctx, guild, from) < n) return false;
+    ctx.db.prepare('UPDATE economy_bank SET amount = amount - ? WHERE currency_id = ? AND guild_id = ? AND user_id = ?').run(n, currency, guild, from);
+    ctx.repo.changeBalance(ctx.botId, guild, to, n, 'add');
+    return true;
+  });
+}
+
 // ---------- daily ----------
 
 /** The daily bonus once per 24 hours. */
@@ -205,6 +216,50 @@ export async function use(ctx: ModuleContext, guild: Guild, member: GuildMember,
   for (const r of roles) await member.roles.add(r, `Economy item ${item.name}`).catch(() => undefined);
   if (item.destroyOnUse) setQty(ctx, guild.id, member.id, item.key, qtyOf(ctx, guild.id, member.id, item.key) - 1);
   return `${item.name} used${roles.length ? `: ${roles.map((r) => `<@&${r}>`).join(' ')}` : ''}.`;
+}
+
+/** Gives owned items to another member (static items too). */
+export function giveItem(ctx: ModuleContext, guild: string, from: string, to: string, name: string, count = 1): { item: ShopItem; qty: number } {
+  const item = findItem(ctx, name);
+  if (!item) throw new EconomyError('Unknown item.');
+  if (from === to) throw new EconomyError('You cannot give an item to yourself.');
+  const qty = Math.max(1, Math.floor(count) || 1);
+  const mine = qtyOf(ctx, guild, from, item.key);
+  if (mine < qty) throw new EconomyError(`You own ${mine} × ${item.name}.`);
+  const theirs = qtyOf(ctx, guild, to, item.key);
+  if (!item.allowMultiple && theirs + qty > 1) throw new EconomyError(`The member can own only one ${item.name}.`);
+  if (item.limit > 0 && theirs + qty > item.limit) throw new EconomyError(`The member can own at most ${item.limit} × ${item.name}.`);
+  write(ctx.db, () => {
+    setQty(ctx, guild, from, item.key, mine - qty);
+    setQty(ctx, guild, to, item.key, theirs + qty);
+  });
+  return { item, qty };
+}
+
+// ---------- stats and cooldowns ----------
+
+/** Wallet, bank and total per currency, items and lottery tickets of a member. */
+export function stats(ctx: ModuleContext, guild: string, user: string): { text: string; total: number; items: number; tickets: number } {
+  bank(ctx, guild, user);
+  const list = ctx.repo.balances(ctx.botId, guild, user);
+  const items = owned(ctx, guild, user).reduce((s, r) => s + r.qty, 0);
+  const tickets = lottery(ctx, guild).tickets[user] ?? 0;
+  const lines = list.map((c) => `**${c.name}**: wallet ${money(ctx, c.balance, c.key)} · bank ${money(ctx, c.bank, c.key)} · total ${money(ctx, c.balance + c.bank, c.key)}`);
+  lines.push(`Items: **${items}** · lottery tickets: **${tickets}**`);
+  return { text: lines.join('\n'), total: list[0] ? list[0].balance + list[0].bank : 0, items, tickets };
+}
+
+/** When the daily bonus and the message reward are ready again. */
+export function cooldowns(ctx: ModuleContext, guild: string, user: string, now = Date.now()): { text: string; daily: number; message: number } {
+  const c = config(ctx);
+  const at = (last: number, ms: number) => (last + ms > now ? last + ms : 0);
+  const daily = at(ctx.getState<number>('economy', guild, `daily:${user}`) ?? 0, 86_400_000);
+  const message = c.messageRewards ? at(ctx.getState<number>('economy', guild, `msg:${user}`) ?? 0, Math.max(1, c.messageCooldown) * 60_000) : 0;
+  const when = (t: number) => (t ? `<t:${Math.floor(t / 1000)}:R>` : '✅ ready');
+  const lines = [`🎁 Daily bonus: ${when(daily)}`];
+  if (c.messageRewards) lines.push(`💬 Message reward: ${when(message)}`);
+  if (idIn(c.lotteryChannel, guild)) lines.push(`🎟️ Lottery draw: daily at ${c.lotteryTime}`);
+  return { text: lines.join('\n'), daily: daily ? Math.floor(daily / 1000) : 0, message: message ? Math.floor(message / 1000) : 0 };
 }
 
 // ---------- lottery ----------

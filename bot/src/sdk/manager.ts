@@ -1000,6 +1000,8 @@ export class PluginManager {
         change: (g, u, n, mode) => live().economy.change(g, u, n, mode),
         pay: (g, f, t, n) => live().economy.pay(g, f, t, n),
         leaderboard: (g, n) => live().economy.leaderboard(g, n),
+        bank: (g, u) => live().economy.bank(g, u),
+        bankTake: (g, f, t, n) => live().economy.bankTake(g, f, t, n),
       },
     };
     // Interaction answers may carry a plugin file (options.file) when the plugin has storage.files.

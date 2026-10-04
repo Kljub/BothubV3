@@ -40,6 +40,7 @@ import { MusicManager, musicOrNull, setMusic } from './music.js';
 import { Moderation } from './moderation.js';
 import { matchState } from './match.js';
 import { bindEvents, type EventContext } from './events.js';
+import * as eco from '../modules/economy.js';
 import { bindModules, ModuleContext } from '../modules/index.js';
 import { secretValue } from '../core/secrets-global.js';
 import { stats } from '../core/stats.js';
@@ -283,6 +284,8 @@ export class BotInstance {
         change: (g, u, n, mode) => repo.changeBalance(botId, g, u, n, mode),
         pay: (g, f, t, n) => repo.pay(botId, g, f, t, n),
         leaderboard: (g, n) => repo.leaderboard(botId, g, n),
+        bank: (g, u) => eco.bank(this.modules, g, u),
+        bankTake: (g, f, t, n) => eco.bankTake(this.modules, g, f, t, n),
       },
     };
   }

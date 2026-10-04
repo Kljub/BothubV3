@@ -4,7 +4,7 @@ Generated from `shared/sdk-permissions.json` by `sdk/scripts/api-doc.mjs`; do no
 
 Call a function as `ctx.<area>.<name>(...)`. A call needs its permission declared in `bothub-plugin.json` and switched on in the SDK policies (admin). Planned calls exist already and answer `sdk.call.not_available`.
 
-**Status:** 141 of 230 calls available.
+**Status:** 143 of 232 calls available.
 
 Events (`discord.events`, `bothub.events`): messageCreate, messageUpdate, messageDelete, reactionAdd, reactionRemove; guildMemberAdd, guildMemberRemove, guildMemberUpdate; guildCreate, guildDelete, channelCreate, channelDelete, channelUpdate, roleCreate, roleDelete, roleUpdate; voiceStateUpdate; interactionCreate; bot.ready, bot.start, bot.stop, bot.restart, bot.shutdown, plugin.load, plugin.enable, plugin.disable, plugin.unload.
 
@@ -195,10 +195,12 @@ Events (`discord.events`, `bothub.events`): messageCreate, messageUpdate, messag
 | Call | Permission | Risk | Status |
 |---|---|---|---|
 | `economy.get()` | modules.economy.balance.read | low | ✅ |
+| `economy.bank()` | modules.economy.balance.read | low | ✅ |
 | `economy.leaderboard()` | modules.economy.balance.read | low | ✅ |
 | `economy.add()` | modules.economy.balance.write | high | ✅ |
 | `economy.remove()` | modules.economy.balance.write | high | ✅ |
 | `economy.transfer()` | modules.economy.balance.write | high | ✅ |
+| `economy.bankTransfer()` | modules.economy.bank.write | high | ✅ |
 | `economy.history()` | modules.economy.transactions | medium | 🕓 planned |
 | `economy.getSettings()` | modules.economy.settings | high | 🕓 planned |
 | `economy.setSettings()` | modules.economy.settings | high | 🕓 planned |

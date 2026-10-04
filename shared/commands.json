@@ -57,6 +57,9 @@
     { "name": "inventory", "usage": "/inventory [@user]", "module": "economy" },
     { "name": "item use", "usage": "/item use [item]", "module": "economy" },
     { "name": "lottery", "usage": "/lottery [view|buy] [tickets]", "module": "economy" },
+    { "name": "item give", "usage": "/item give @user [item] [anzahl]", "module": "economy" },
+    { "name": "ec stats", "usage": "/ec stats [@user]", "module": "economy" },
+    { "name": "ec cooldowns", "usage": "/ec cooldowns", "module": "economy" },
 
     { "name": "level", "usage": "/level [@user]", "module": "leveling" },
     { "name": "rank", "usage": "/rank", "module": "leveling" },

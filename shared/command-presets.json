@@ -12737,6 +12737,465 @@
    }
   },
   {
+   "module": "economy",
+   "group": "Economy",
+   "name": "item give",
+   "title": "Give item",
+   "description": "Give someone an item",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "item give",
+       "description": "Give someone an item"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 760
+      }
+     },
+     {
+      "id": "option_user",
+      "type": "option.user",
+      "typeVersion": 1,
+      "config": {
+       "name": "user",
+       "description": "The member",
+       "required": true,
+       "variable": "user"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "option_item",
+      "type": "option.text",
+      "typeVersion": 1,
+      "config": {
+       "name": "item",
+       "description": "Item name or key",
+       "required": true,
+       "variable": "item"
+      },
+      "position": {
+       "x": 440,
+       "y": 110
+      }
+     },
+     {
+      "id": "option_amount",
+      "type": "option.number",
+      "typeVersion": 1,
+      "config": {
+       "name": "amount",
+       "description": "How many (default 1)",
+       "required": false,
+       "variable": "amount"
+      },
+      "position": {
+       "x": 760,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.economy_give_item",
+      "typeVersion": 1,
+      "config": {
+       "from_user": "{user.id}",
+       "to_user": "{option_user}",
+       "item": "{option_item}",
+       "amount": "{option_amount}",
+       "variable": "g"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "🎁 <@{user.id}> gave **{g.qty} × {g}** to <@{option_user}>."
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_user",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "option_item",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "option_amount",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "economy",
+   "group": "Economy",
+   "name": "ec stats",
+   "title": "Economy stats",
+   "description": "Check out your economy stats",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "ec stats",
+       "description": "Check out your economy stats"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 760
+      }
+     },
+     {
+      "id": "option_user",
+      "type": "option.user",
+      "typeVersion": 1,
+      "config": {
+       "name": "user",
+       "description": "The member (you when empty)",
+       "required": false,
+       "variable": "user"
+      },
+      "position": {
+       "x": 120,
+       "y": 110
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.economy_stats",
+      "typeVersion": 1,
+      "config": {
+       "user": "{option_user}",
+       "variable": "s"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "embeds": [
+         {
+          "color": "#5865f2",
+          "title": "📊 Economy stats",
+          "description": "{s}"
+         }
+        ]
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "option_user",
+       "port": "option"
+      },
+      "to": {
+       "node": "trigger",
+       "port": "options"
+      }
+     },
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "module": "economy",
+   "group": "Economy",
+   "name": "ec cooldowns",
+   "title": "Economy cooldowns",
+   "description": "Check your economy cooldowns",
+   "graph": {
+    "schemaVersion": 1,
+    "nodes": [
+     {
+      "id": "trigger",
+      "type": "trigger.slash",
+      "typeVersion": 1,
+      "config": {
+       "command_name": "ec cooldowns",
+       "description": "Check your economy cooldowns"
+      },
+      "position": {
+       "x": 120,
+       "y": 240
+      }
+     },
+     {
+      "id": "error",
+      "type": "utility.error_handler",
+      "typeVersion": 1,
+      "config": {
+       "variable": "error"
+      },
+      "position": {
+       "x": 120,
+       "y": 760
+      }
+     },
+     {
+      "id": "step1",
+      "type": "action.economy_cooldowns",
+      "typeVersion": 1,
+      "config": {
+       "variable": "c"
+      },
+      "position": {
+       "x": 440,
+       "y": 240
+      }
+     },
+     {
+      "id": "step2",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "embeds": [
+         {
+          "color": "#f59e0b",
+          "title": "⏳ Cooldowns",
+          "description": "{c}"
+         }
+        ]
+       },
+       "target": "reply"
+      },
+      "position": {
+       "x": 760,
+       "y": 240
+      }
+     },
+     {
+      "id": "error_reply",
+      "type": "action.send_message",
+      "typeVersion": 1,
+      "config": {
+       "message": {
+        "mode": "normal",
+        "content": "❌ {error}"
+       },
+       "target": "reply",
+       "ephemeral": true
+      },
+      "position": {
+       "x": 440,
+       "y": 760
+      }
+     }
+    ],
+    "edges": [
+     {
+      "from": {
+       "node": "trigger",
+       "port": "next"
+      },
+      "to": {
+       "node": "step1",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "step1",
+       "port": "next"
+      },
+      "to": {
+       "node": "step2",
+       "port": "in"
+      }
+     },
+     {
+      "from": {
+       "node": "error",
+       "port": "next"
+      },
+      "to": {
+       "node": "error_reply",
+       "port": "in"
+      }
+     }
+    ]
+   }
+  },
+  {
    "module": "ticket-system",
    "group": "Ticket System",
    "name": "ticket setup",

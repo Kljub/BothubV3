@@ -94,6 +94,7 @@ test('interaction handles are bound to bot and plugin', () => {
 
 test('economy: plugins never take more than a member has', async () => {
   const balances = new Map<string, number>([['200000000000000001:100000000000000001', 50]]);
+  const banks = new Map<string, number>([['200000000000000001:100000000000000002', 40]]);
   const guild = { id: '200000000000000001' };
   const deps: DiscordApiDeps = {
     client: () => ({ isReady: () => true, guilds: { cache: new Map([[guild.id, guild]]) } }) as never,
@@ -107,6 +108,13 @@ test('economy: plugins never take more than a member has', async () => {
       },
       pay: () => false,
       leaderboard: () => [],
+      bank: (g, u) => banks.get(`${g}:${u}`) ?? 0,
+      bankTake: (g, f, t, n) => {
+        if ((banks.get(`${g}:${f}`) ?? 0) < n) return false;
+        banks.set(`${g}:${f}`, (banks.get(`${g}:${f}`) ?? 0) - n);
+        balances.set(`${g}:${t}`, (balances.get(`${g}:${t}`) ?? 0) + n);
+        return true;
+      },
     },
   };
   const api = discordApi(1, 'plugin_a', [], deps, new InteractionRegistry());
@@ -116,6 +124,10 @@ test('economy: plugins never take more than a member has', async () => {
   assert.throws(() => call('economy.add', guild.id, '100000000000000001', -5), /sdk.economy.bad_amount/);
   assert.throws(() => call('economy.get', '999999999999999999', '100000000000000001'), /sdk.discord.unknown_guild/);
   assert.throws(() => call('economy.transfer', guild.id, '100000000000000001', '100000000000000002', 10), /sdk.economy.not_enough/);
+  assert.equal(await call('economy.bank', guild.id, '100000000000000002'), 40);
+  await call('economy.bankTransfer', guild.id, '100000000000000002', '100000000000000001', 25);
+  assert.deepEqual([banks.get('200000000000000001:100000000000000002'), balances.get('200000000000000001:100000000000000001')], [15, 55]);
+  assert.throws(() => call('economy.bankTransfer', guild.id, '100000000000000002', '100000000000000001', 16), /sdk.economy.not_enough/);
 });
 
 test('emoji.list / emoji.get: the custom emojis of a server', async () => {
@@ -124,7 +136,7 @@ test('emoji.list / emoji.get: the custom emojis of a server', async () => {
   const deps: DiscordApiDeps = {
     client: () => ({ isReady: () => true, guilds: { cache: new Map([[guild.id, guild]]) } }) as never,
     render: (m) => m as Record<string, unknown>,
-    economy: { balance: () => 0, change: () => 0, pay: () => false, leaderboard: () => [] },
+    economy: { balance: () => 0, change: () => 0, pay: () => false, leaderboard: () => [], bank: () => 0, bankTake: () => false },
   };
   const api = discordApi(1, 'plugin_a', [], deps, new InteractionRegistry());
   const call = (name: string, ...args: unknown[]) => api[name]!({ args });
@@ -153,7 +165,7 @@ test('moderation cases, voice moderation and the audit log', async () => {
   const deps: DiscordApiDeps = {
     client: () => ({ isReady: () => true, user: { id: me.id }, guilds: { cache: new Map([[guild.id, guild]]) } }) as never,
     render: (m) => m as Record<string, unknown>,
-    economy: { balance: () => 0, change: () => 0, pay: () => false, leaderboard: () => [] },
+    economy: { balance: () => 0, change: () => 0, pay: () => false, leaderboard: () => [], bank: () => 0, bankTake: () => false },
     moderation: {
       record: async (_g, c) => { recorded.push(c); return recorded.length; },
       cases: () => [], modCase: (_g, n) => (n === 1 ? { number: 1, guildId: guild.id, userId: '1', moderatorId: null, action: 'warn', reason: '', duration: '', auto: false, createdAt: '' } : undefined),

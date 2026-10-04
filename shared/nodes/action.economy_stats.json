@@ -1,0 +1,66 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.economy_stats",
+  "version": 1,
+  "category": "action",
+  "group": "economy",
+  "order": 948,
+  "color": "green",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_economy_stats.label",
+  "descriptionKey": "builder.node.action_economy_stats.description",
+  "module": "economy",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": "",
+      "labelKey": "builder.result.economy_stats.0"
+    },
+    {
+      "suffix": ".total",
+      "labelKey": "builder.result.economy_stats.total"
+    },
+    {
+      "suffix": ".items",
+      "labelKey": "builder.result.economy_stats.items"
+    },
+    {
+      "suffix": ".tickets",
+      "labelKey": "builder.result.economy_stats.tickets"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "user": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.user",
+        "x-hintKey": "builder.cfg.ref_hint",
+        "x-ref": "member",
+        "default": "{user.id}"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  }
+}

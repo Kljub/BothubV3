@@ -68,7 +68,7 @@ const CALLS: Record<string, string | null> = {
   'emoji.create': 'discord.emojis.manage', 'emoji.delete': 'discord.emojis.manage',
   'interaction.reply': 'discord.interactions.reply', 'interaction.editReply': 'discord.interactions.reply', 'interaction.deferReply': 'discord.interactions.reply',
   'interaction.followUp': 'discord.interactions.reply', 'interaction.update': 'discord.interactions.reply', 'interaction.showModal': 'discord.modals',
-  'economy.get': 'modules.economy.balance.read', 'economy.add': 'modules.economy.balance.write', 'economy.remove': 'modules.economy.balance.write', 'economy.transfer': 'modules.economy.balance.write', 'economy.leaderboard': 'modules.economy.balance.read',
+  'economy.get': 'modules.economy.balance.read', 'economy.add': 'modules.economy.balance.write', 'economy.remove': 'modules.economy.balance.write', 'economy.transfer': 'modules.economy.balance.write', 'economy.leaderboard': 'modules.economy.balance.read', 'economy.bank': 'modules.economy.balance.read', 'economy.bankTransfer': 'modules.economy.bank.write',
 };
 
 // Old coarse permission keys and their finer replacements (shared/sdk-permissions.json "replaced"):
@@ -167,6 +167,8 @@ export interface TestContextOptions {
   hosts?: string[];
   /** Start balances of the Economy module: "<guildId>:<userId>" -> coins. */
   balances?: Record<string, number>;
+  /** Start bank amounts of the Economy module: "<guildId>:<userId>" -> coins. */
+  banks?: Record<string, number>;
   /**
    * dashboard/settings.json: its "permissions" fields are what
    * config.checkAccess checks; config.set takes only its keys.
@@ -245,6 +247,8 @@ export interface TestContext {
   readonly answers: InteractionAnswer[];
   /** Economy balances: "<guildId>:<userId>" -> coins. */
   readonly balances: Map<string, number>;
+  /** Economy bank amounts: "<guildId>:<userId>" -> coins. */
+  readonly banks: Map<string, number>;
   /** Current plugin files: name -> base64. */
   readonly fileStore: Map<string, string>;
   /** Current settings (config.set changes them). */
@@ -286,6 +290,7 @@ export function createTestContext(options: TestContextOptions = {}): TestContext
   const actions: Array<{ call: string; args: unknown[] }> = [];
   const answers: InteractionAnswer[] = [];
   const balances = new Map(Object.entries(options.balances ?? {}));
+  const banks = new Map(Object.entries(options.banks ?? {}));
   const fileStore = new Map(Object.entries(options.files ?? {}));
   const fileNames = new Map<string, string>();
   const fileOf = (name: unknown): { name: string; mime: string; size: number; filename: string; data: string } | null => {
@@ -676,6 +681,13 @@ export function createTestContext(options: TestContextOptions = {}): TestContext
         coins(g, from, -n);
         coins(g, to, n);
       },
+      bank: async (g: string, u: string) => banks.get(`${g}:${u}`) ?? 0,
+      bankTransfer: async (g: string, from: string, to: string, n: number) => {
+        if (typeof n !== 'number' || !Number.isInteger(n) || n < 1) throw new SdkCallError('sdk.economy.bad_amount');
+        if ((banks.get(`${g}:${from}`) ?? 0) < n) throw new SdkCallError('sdk.economy.not_enough');
+        banks.set(`${g}:${from}`, (banks.get(`${g}:${from}`) ?? 0) - n);
+        coins(g, to, n);
+      },
       leaderboard: async (g: string, limit = 10) =>
         [...balances].filter(([k]) => k.startsWith(`${g}:`)).map(([k, v]) => ({ userId: k.split(':')[1]!, balance: v })).sort((x, y) => y.balance - x.balance).slice(0, limit),
     },
@@ -841,7 +853,7 @@ export function createTestContext(options: TestContextOptions = {}): TestContext
     return areas.get(name);
   };
 
-  return new Proxy({ botId, sent, logs, store, globalStore, calls, played, requests, web: webRequests, actions, answers, balances, fileStore, settingsNow: config, fieldOptions, variableDefs, variableValues } as TestContext, {
+  return new Proxy({ botId, sent, logs, store, globalStore, calls, played, requests, web: webRequests, actions, answers, balances, banks, fileStore, settingsNow: config, fieldOptions, variableDefs, variableValues } as TestContext, {
     get: (target, prop) => {
       if (typeof prop !== 'string') return undefined;
       if (prop in target) return target[prop];

@@ -80,3 +80,19 @@ test('invite blocks', async () => {
   await block(r, 'action.invites_reset', {});
   assert.equal((await block(r, 'action.invites_get', {})).vars.get('R.total'), '0');
 });
+
+test('economy: give items, stats and cooldowns', async () => {
+  const r = repo();
+  r.db.prepare("INSERT INTO bot_modules (bot_id, module_key, enabled, config) VALUES (1, 'economy', 1, ?)").run(JSON.stringify({ shop: [{ key: 'gem', name: 'Gem', price: 10, allowMultiple: true, type: 'static' }] }));
+  const G = '900000000000000001';
+  r.db.prepare("INSERT INTO economy_inventory (bot_id, guild_id, user_id, item, qty) VALUES (1, ?, '100000000000000001', 'gem', 3)").run(G);
+  const give = await block(r, 'action.economy_give_item', { from_user: '{user.id}', to_user: '100000000000000002', item: 'Gem', amount: '2' });
+  assert.deepEqual([give.vars.get('R'), give.vars.get('R.qty')], ['Gem', '2']);
+  await assert.rejects(block(r, 'action.economy_give_item', { from_user: '{user.id}', to_user: '100000000000000002', item: 'gem', amount: '2' }));
+  const stats = await block(r, 'action.economy_stats', { user: '100000000000000002' });
+  assert.equal(stats.vars.get('R.items'), '2');
+  await block(r, 'action.economy_daily', {});
+  const cd = await block(r, 'action.economy_cooldowns', {});
+  assert.notEqual(cd.vars.get('R.daily'), '0');
+  assert.match(cd.vars.get('R') ?? '', /Daily bonus: <t:\d+:R>/);
+});

@@ -133,6 +133,25 @@ export function moduleHandlers(repo: Repo, botId: number): Map<string, Handler> 
     ['action.economy_use', async (node, run) => econ(async () => {
       run.setResult(node, '', await eco.use(ctx, guildOf(run), memberOf(run), run.str(node, 'item')));
     })],
+    ['action.economy_give_item', (node, run) => econ(() => {
+      const guild = guildOf(run).id;
+      const r = eco.giveItem(ctx, guild, userOf(run, node, 'from_user'), userOf(run, node, 'to_user'), run.str(node, 'item'), Number(run.str(node, 'amount')) || 1);
+      run.setResult(node, '', r.item.name);
+      run.setResult(node, '.qty', r.qty);
+    })],
+    ['action.economy_stats', (node, run) => {
+      const r = eco.stats(ctx, guildOf(run).id, userOf(run, node));
+      run.setResult(node, '', r.text);
+      run.setResult(node, '.total', r.total);
+      run.setResult(node, '.items', r.items);
+      run.setResult(node, '.tickets', r.tickets);
+    }],
+    ['action.economy_cooldowns', (node, run) => {
+      const r = eco.cooldowns(ctx, guildOf(run).id, userOf(run, node));
+      run.setResult(node, '', r.text);
+      run.setResult(node, '.daily', r.daily);
+      run.setResult(node, '.message', r.message);
+    }],
     ['action.economy_lottery', (node, run) => econ(() => {
       const guild = guildOf(run).id;
       const user = userOf(run, node);
