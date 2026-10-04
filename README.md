@@ -22,7 +22,9 @@ writing code.
   permission (SDK policies). Their keys live in per-user secrets the plugin
   never sees.
 - **Accounts**: several users with roles, two-factor sign-in (TOTP),
-  recovery codes and passkeys; **Co-Work** lets other users work on a bot
+  recovery codes and passkeys; sessions survive restarts, with optional
+  "stay signed in" (30 days) bound to a non-exportable browser key, so a
+  copied cookie does not work on another device; **Co-Work** lets other users work on a bot
   with a role (viewer, operator, builder, admin or custom rights).
 - **Docs** inside the dashboard (`/docs`), English and German, with a page
   for every module, and a guided **Start Tour**.

@@ -44,6 +44,18 @@ check('load', $u['username'] === 'admin' && $u['totpSecret'] === 'JBSWY3DPEHPK3P
     && $all['passkeys'][0]['name'] === 'Laptop' && count($all['roles']) >= 3);
 $call('PUT', '/internal/accounts/users/1', ['username' => 'admin', 'passwordHash' => '$argon2id$y', 'roleId' => 1]);
 check('update keeps passkeys', count($call('GET', '/internal/accounts')[1]['passkeys']) === 1);
+$hash = hash('sha256', 'cookie');
+$sess = ['id' => 'abcd1234', 'userId' => 1, 'csrf' => 'c', 'remember' => true, 'deviceKey' => 'MFkw', 'userAgent' => 'Firefox', 'ip' => '1.2.3.4',
+    'createdAt' => '2026-01-01T00:00:00Z', 'lastSeenAt' => '2026-01-01T00:00:00Z', 'expiresAt' => '2099-01-01T00:00:00Z'];
+check('session', $call('PUT', '/internal/accounts/sessions/' . $hash, $sess)[0] === 204);
+$call('PUT', '/internal/accounts/sessions/' . $hash, ['lastSeenAt' => '2026-02-01T00:00:00Z', 'userAgent' => 'Chrome'] + $sess);
+$s = $call('GET', '/internal/accounts')[1]['sessions'];
+check('session load', count($s) === 1 && $s[0]['keyHash'] === $hash && $s[0]['remember'] === true && $s[0]['deviceKey'] === 'MFkw'
+    && $s[0]['userAgent'] === 'Chrome' && $s[0]['lastSeenAt'] === '2026-02-01T00:00:00Z');
+check('bad session refused', $call('PUT', '/internal/accounts/sessions/xyz', $sess)[0] === 422);
+$call('PUT', '/internal/accounts/sessions/' . hash('sha256', 'old'), ['id' => 'beef0000', 'expiresAt' => '2020-01-01T00:00:00Z'] + $sess);
+check('expired session dropped', count($call('GET', '/internal/accounts')[1]['sessions']) === 1);
+check('delete session', $call('DELETE', '/internal/accounts/sessions/' . $hash)[0] === 204 && $call('GET', '/internal/accounts')[1]['sessions'] === []);
 check('role in use stays', $call('DELETE', '/internal/accounts/roles/1')[0] === 409);
 check('delete user', $call('DELETE', '/internal/accounts/users/1')[0] === 204 && $call('GET', '/internal/accounts')[1]['users'] === []);
 check('bad user refused', $call('PUT', '/internal/accounts/users/2', ['username' => 'x'])[0] === 422);

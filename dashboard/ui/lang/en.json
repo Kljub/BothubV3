@@ -4479,5 +4479,18 @@
   "error.update.not_configured": "Updates from the dashboard are not set up on this server.",
   "error.update.running": "An update is already running.",
   "error.update.failed": "The update could not start: {reason}",
-  "log.server.update_started": "Update from git started ({actor})"
+  "log.server.update_started": "Update from git started ({actor})",
+  "login.remember": "Stay signed in on this browser (30 days)",
+  "device.check.title": "Checking this browser",
+  "device.check.working": "One moment, this browser confirms its sign-in key …",
+  "device.check.failed": "This browser could not confirm its sign-in key (for example after clearing site data, or the sign-in was copied to another device). Please sign in again.",
+  "device.check.login": "Sign in again",
+  "error.auth.device_proof": "This browser has to confirm its sign-in key.",
+  "error.auth.device_proof_failed": "This browser could not confirm its sign-in key. Please sign in again.",
+  "error.auth.device_challenge_expired": "The check took too long. Please try again.",
+  "error.auth.device_key_invalid": "The browser sent an invalid sign-in key.",
+  "settings.security.remembered": "Stays signed in",
+  "settings.security.device_bound": "Device-bound",
+  "settings.security.device_bound_hint": "Tied to a key that never leaves this browser: a copied cookie does not work elsewhere.",
+  "settings.security.expires": "ends {date}"
 }

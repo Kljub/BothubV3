@@ -142,7 +142,7 @@ final class InternalRouter
             if ($this->cowork !== null && preg_match('#^/internal/(?:bots/(\d+)/cowork(/[a-z/0-9-]*)?|invites(/[a-z/0-9-]*)?)$#', $path, $m)) {
                 return $this->coworkRoute($method, (int) ($m[1] ?? 0), ($m[1] ?? '') !== '' ? ($m[2] ?? '') : null, $m[3] ?? '', $body);
             }
-            if ($this->accounts !== null && preg_match('#^/internal/accounts(?:/(users|roles|passkeys)/([^/]{1,400}))?$#', $path, $m)) {
+            if ($this->accounts !== null && preg_match('#^/internal/accounts(?:/(users|roles|passkeys|sessions)/([^/]{1,400}))?$#', $path, $m)) {
                 return $this->accountsRoute($method, $m[1] ?? '', isset($m[2]) ? rawurldecode($m[2]) : '', $body);
             }
             if ($this->docs !== null && preg_match('#^/internal/docs(?:/categories(?:/([a-z0-9-]{1,60}))?|/(\d+))?$#', $path, $m)) {
@@ -681,6 +681,8 @@ final class InternalRouter
             $kind === 'roles' && $method === 'DELETE' => $a->deleteRole($num),
             $kind === 'passkeys' && $method === 'PUT' => $a->savePasskey($id, $body),
             $kind === 'passkeys' && $method === 'DELETE' => $a->deletePasskey($id),
+            $kind === 'sessions' && $method === 'PUT' => $a->saveSession($id, $body),
+            $kind === 'sessions' && $method === 'DELETE' => $a->deleteSession($id),
             default => throw new ApiError(405, 'error.method_not_allowed'),
         };
         return [204, null];

@@ -12,7 +12,8 @@ use PDO;
  * Accounts of the dashboard gateway: users (with password hash, 2FA secrets,
  * recovery code hashes, language, theme), roles and passkeys. The gateway
  * (Go) does the sign-in logic and keeps them in memory; this store keeps
- * them in the database so they survive restarts and can be several. 2FA
+ * them in the database so they survive restarts and can be several. Sign-in
+ * sessions are kept by the SHA-256 of their cookie only. 2FA
  * secrets are encrypted at rest (SecretBox). Internal routes only.
  */
 final class AccountStore
@@ -45,7 +46,13 @@ final class AccountStore
             'id' => (int) $r['id'], 'key' => $r['key'], 'name' => $r['name'], 'builtin' => (int) $r['builtin'] === 1,
             'permissions' => json_decode($r['permissions'], true),
         ], $this->pdo->query('SELECT * FROM roles ORDER BY id')->fetchAll());
-        return ['users' => $users, 'roles' => $roles, 'passkeys' => $keys];
+        $this->pdo->prepare('DELETE FROM user_sessions WHERE expires_at < ?')->execute([gmdate('Y-m-d\TH:i:s\Z')]);
+        $sessions = array_map(static fn (array $x) => [
+            'keyHash' => $x['key_hash'], 'id' => $x['public_id'], 'userId' => (int) $x['user_id'], 'csrf' => $x['csrf'],
+            'remember' => (int) $x['remember'] === 1, 'deviceKey' => $x['device_key'], 'userAgent' => $x['user_agent'], 'ip' => $x['ip'],
+            'createdAt' => $x['created_at'], 'lastSeenAt' => $x['last_seen_at'], 'expiresAt' => $x['expires_at'],
+        ], $this->pdo->query('SELECT * FROM user_sessions ORDER BY created_at')->fetchAll());
+        return ['users' => $users, 'roles' => $roles, 'passkeys' => $keys, 'sessions' => $sessions];
     }
 
     /** Adds or changes a user (the gateway's ID). */
@@ -129,5 +136,31 @@ final class AccountStore
     public function deletePasskey(string $id): void
     {
         $this->pdo->prepare('DELETE FROM passkeys WHERE id = ?')->execute([$id]);
+    }
+
+    /** Adds or changes a sign-in session (key: SHA-256 hex of the cookie). */
+    public function saveSession(string $keyHash, array $in): void
+    {
+        $userId = $in['userId'] ?? 0;
+        $time = static fn (mixed $v): bool => is_string($v) && strtotime($v) !== false;
+        $deviceKey = $in['deviceKey'] ?? null;
+        if (!preg_match('/^[0-9a-f]{64}$/', $keyHash) || !is_int($userId) || $userId < 1 || !preg_match('/^[0-9a-f]{8,64}$/', (string) ($in['id'] ?? ''))
+            || !is_string($in['csrf'] ?? null) || $in['csrf'] === '' || !$time($in['createdAt'] ?? null) || !$time($in['lastSeenAt'] ?? null)
+            || !$time($in['expiresAt'] ?? null) || ($deviceKey !== null && (!is_string($deviceKey) || strlen($deviceKey) > 400))) {
+            throw new ApiError(422, 'error.validation', ['field' => 'session']);
+        }
+        $this->pdo->prepare(
+            'INSERT INTO user_sessions (key_hash, public_id, user_id, csrf, remember, device_key, user_agent, ip, created_at, last_seen_at, expires_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             ON CONFLICT (key_hash) DO UPDATE SET user_agent = excluded.user_agent, ip = excluded.ip, last_seen_at = excluded.last_seen_at,
+               expires_at = excluded.expires_at',
+        )->execute([$keyHash, $in['id'], $userId, $in['csrf'], ($in['remember'] ?? false) === true ? 1 : 0, $deviceKey ?: null,
+            mb_substr((string) ($in['userAgent'] ?? ''), 0, 300), mb_substr((string) ($in['ip'] ?? ''), 0, 64),
+            $in['createdAt'], $in['lastSeenAt'], $in['expiresAt']]);
+    }
+
+    public function deleteSession(string $keyHash): void
+    {
+        $this->pdo->prepare('DELETE FROM user_sessions WHERE key_hash = ?')->execute([$keyHash]);
     }
 }

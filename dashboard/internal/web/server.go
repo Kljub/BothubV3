@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httputil"
+	"net/url"
 	"os"
 	"regexp"
 	"strconv"
@@ -140,6 +141,7 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /setup", s.handleSetupPage)
 	mux.HandleFunc("POST /setup", s.handleSetup)
 	mux.HandleFunc("GET /login", s.handleLoginPage)
+	mux.HandleFunc("GET /device-check", s.handleDeviceCheck)
 	// Public legal pages (Discord Developer Portal: Terms of Service and Privacy Policy URLs).
 	mux.HandleFunc("GET /terms", s.legalPage("terms"))
 	mux.HandleFunc("GET /privacy", s.legalPage("privacy"))
@@ -377,12 +379,12 @@ func (s *Server) requireAuth(h authHandler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		sess := session(r)
 		if sess.Cookie == "" {
-			s.redirectToLogin(w, r)
+			s.redirectToLogin(w, r, nil)
 			return
 		}
 		me, err := s.api.Me(r.Context(), sess)
 		if api.IsStatus(err, http.StatusUnauthorized) {
-			s.redirectToLogin(w, r)
+			s.redirectToLogin(w, r, err)
 			return
 		}
 		if err != nil {
@@ -444,7 +446,13 @@ func selectedBot(r *http.Request, bots []api.Bot) *api.Bot {
 	return nil
 }
 
-func (s *Server) redirectToLogin(w http.ResponseWriter, r *http.Request) {
+// redirectToLogin: a lost session goes to login (or setup); a device-bound
+// session whose proof ran out goes to the device check first.
+func (s *Server) redirectToLogin(w http.ResponseWriter, r *http.Request, err error) {
+	if err != nil && api.AsError(err).Key == "error.auth.device_proof" {
+		fullRedirect(w, r, "/device-check?next="+url.QueryEscape(returnPath(r)))
+		return
+	}
 	target := "/login"
 	if required, err := s.api.SetupRequired(r.Context()); err == nil && required {
 		target = "/setup"
@@ -601,7 +609,7 @@ func (s *Server) fail(w http.ResponseWriter, r *http.Request, p Page, err error)
 func (s *Server) failTo(w http.ResponseWriter, r *http.Request, p Page, err error, target string) {
 	apiErr := api.AsError(err)
 	if apiErr.Status == http.StatusUnauthorized {
-		s.redirectToLogin(w, r)
+		s.redirectToLogin(w, r, err)
 		return
 	}
 	if apiErr.Status >= 500 || apiErr.Key == "error.api.unreachable" {

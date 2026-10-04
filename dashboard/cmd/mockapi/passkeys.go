@@ -241,5 +241,6 @@ func (s *store) loginPasskeyFinish(w http.ResponseWriter, r *http.Request) {
 		apiError(w, 401, "error.passkey.failed")
 		return
 	}
-	s.startSession(w, r, 200, who)
+	q := r.URL.Query()
+	s.startSession(w, r, 200, who, sessionOpts{Remember: q.Get("remember") == "1", DeviceKey: q.Get("deviceKey")})
 }

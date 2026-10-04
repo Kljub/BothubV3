@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
 	"slices"
 	"sort"
@@ -19,6 +20,7 @@ import (
 const maxSecurityEvents = 200
 
 type securityEvent struct {
+	userID    int64 // whose history (0: unknown user, shown to nobody)
 	ID        string    `json:"id"`
 	Type      string    `json:"type"`
 	Time      time.Time `json:"time"`
@@ -44,15 +46,9 @@ func clientIP(r *http.Request) string {
 	return host
 }
 
-// touchSession records who uses a session and when. Caller holds s.mu.
-func touchSession(sess *sessionData, r *http.Request) {
-	sess.lastSeen = time.Now().UTC()
-	sess.userAgent, sess.ip = clientAgent(r), clientIP(r)
-}
-
 // addSecurityEvent keeps the newest events. Caller holds s.mu.
-func (s *store) addSecurityEvent(r *http.Request, typ string) {
-	s.secEvents = append(s.secEvents, securityEvent{ID: randomHex(8), Type: typ, Time: time.Now().UTC(), IP: clientIP(r), UserAgent: clientAgent(r)})
+func (s *store) addSecurityEvent(r *http.Request, userID int64, typ string) {
+	s.secEvents = append(s.secEvents, securityEvent{userID: userID, ID: randomHex(8), Type: typ, Time: time.Now().UTC(), IP: clientIP(r), UserAgent: clientAgent(r)})
 	if n := len(s.secEvents); n > maxSecurityEvents {
 		s.secEvents = s.secEvents[n-maxSecurityEvents:]
 	}
@@ -81,9 +77,27 @@ func (w *statusRecorder) Write(b []byte) (int, error) {
 }
 
 // audited records ok on a 2xx answer and failed (if set) on the listed
-// error keys, e.g. a wrong password at sign-in.
+// error keys, e.g. a wrong password at sign-in. The event belongs to the
+// signed-in user, the user of a new session, or the user named in the
+// sign-in request (username or 2FA ticket).
 func (s *store) audited(ok, failed string, failKeys []string, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		var named struct{ Username, Ticket string }
+		if r.Body != nil && r.Method == http.MethodPost {
+			raw, _ := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+			_ = json.Unmarshal(raw, &named)
+			r.Body = io.NopCloser(bytes.NewReader(raw))
+		}
+		s.mu.Lock()
+		var userID int64
+		if u := s.sessUserFromRequest(r); u != nil {
+			userID = u.ID
+		} else if u := s.userByName(named.Username); named.Username != "" && u != nil {
+			userID = u.ID
+		} else if t, ok := s.tickets[named.Ticket]; ok {
+			userID = t.userID
+		}
+		s.mu.Unlock()
 		rec := &statusRecorder{ResponseWriter: w}
 		next(rec, r)
 		typ := ""
@@ -103,7 +117,15 @@ func (s *store) audited(ok, failed string, failKeys []string, next http.HandlerF
 		}
 		if typ != "" {
 			s.mu.Lock()
-			s.addSecurityEvent(r, typ)
+			// A new session (sign-in) names its user.
+			for _, c := range (&http.Response{Header: rec.Header()}).Cookies() {
+				if c.Name == "bothub_session" && c.Value != "" {
+					if sess := s.sessions[sessionKey(c.Value)]; sess != nil {
+						userID = sess.userID
+					}
+				}
+			}
+			s.addSecurityEvent(r, userID, typ)
 			s.mu.Unlock()
 		}
 	}
@@ -120,10 +142,15 @@ func (s *store) listSessions(w http.ResponseWriter, r *http.Request, sid string)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	items := []map[string]any{}
+	me := s.sessions[sid].userID
 	for key, sess := range s.sessions {
+		if sess.userID != me || time.Now().After(sess.expiresAt) {
+			continue
+		}
 		items = append(items, map[string]any{
 			"id": sess.id, "current": key == sid, "createdAt": sess.createdAt, "lastSeenAt": sess.lastSeen,
-			"userAgent": sess.userAgent, "ip": sess.ip,
+			"userAgent": sess.userAgent, "ip": sess.ip, "remember": sess.remember, "deviceBound": sess.deviceKey != "",
+			"expiresAt": sess.expiresAt,
 		})
 	}
 	sort.Slice(items, func(i, j int) bool {
@@ -140,13 +167,14 @@ func (s *store) revokeSession(w http.ResponseWriter, r *http.Request, sid string
 	id := r.PathValue("sessionId")
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	me := s.sessions[sid].userID
 	for key, sess := range s.sessions {
-		if sess.id == id {
+		if sess.id == id && sess.userID == me {
 			if key == sid {
 				apiError(w, 422, "error.session.current")
 				return
 			}
-			delete(s.sessions, key)
+			s.dropSession(key)
 			w.WriteHeader(204)
 			return
 		}
@@ -159,21 +187,25 @@ func (s *store) revokeOtherSessions(w http.ResponseWriter, r *http.Request, sid 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	n := 0
-	for key := range s.sessions {
-		if key != sid {
-			delete(s.sessions, key)
+	me := s.sessions[sid].userID
+	for key, sess := range s.sessions {
+		if key != sid && sess.userID == me {
+			s.dropSession(key)
 			n++
 		}
 	}
 	writeJSON(w, 200, map[string]any{"revoked": n})
 }
 
-func (s *store) securityActivity(w http.ResponseWriter, r *http.Request, _ string) {
+func (s *store) securityActivity(w http.ResponseWriter, r *http.Request, sid string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	items := make([]securityEvent, 0, len(s.secEvents))
+	me := s.sessions[sid].userID
 	for i := len(s.secEvents) - 1; i >= 0; i-- {
-		items = append(items, s.secEvents[i])
+		if s.secEvents[i].userID == me {
+			items = append(items, s.secEvents[i])
+		}
 	}
 	writeJSON(w, 200, map[string]any{"items": items})
 }

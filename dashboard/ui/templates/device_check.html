@@ -1,0 +1,14 @@
+{{define "title"}}{{t "device.check.title"}}{{end}}
+
+{{/* Device check: a device-bound session proves it still holds its browser
+     key (app.js signs the challenge), then goes on to Next. */}}
+{{define "content"}}
+<h2>{{t "device.check.title"}}</h2>
+<div data-device-check data-next="{{.Data.Next}}">
+  <p class="muted" data-device-working>{{t "device.check.working"}}</p>
+  <div data-device-failed hidden>
+    <div class="alert alert-error">{{t "device.check.failed"}}</div>
+    <a class="btn btn-primary btn-block" href="/login">{{t "device.check.login"}}</a>
+  </div>
+</div>
+{{end}}

@@ -4479,5 +4479,18 @@
   "error.update.not_configured": "Updates aus dem Dashboard sind auf diesem Server nicht eingerichtet.",
   "error.update.running": "Es läuft schon ein Update.",
   "error.update.failed": "Das Update konnte nicht starten: {reason}",
-  "log.server.update_started": "Update aus Git gestartet ({actor})"
+  "log.server.update_started": "Update aus Git gestartet ({actor})",
+  "login.remember": "In diesem Browser angemeldet bleiben (30 Tage)",
+  "device.check.title": "Browser wird geprüft",
+  "device.check.working": "Einen Moment, dieser Browser bestätigt seinen Anmeldeschlüssel …",
+  "device.check.failed": "Dieser Browser konnte seinen Anmeldeschlüssel nicht bestätigen (z. B. nach dem Löschen der Websitedaten, oder die Anmeldung wurde auf ein anderes Gerät kopiert). Bitte melde dich neu an.",
+  "device.check.login": "Neu anmelden",
+  "error.auth.device_proof": "Dieser Browser muss seinen Anmeldeschlüssel bestätigen.",
+  "error.auth.device_proof_failed": "Dieser Browser konnte seinen Anmeldeschlüssel nicht bestätigen. Bitte melde dich neu an.",
+  "error.auth.device_challenge_expired": "Die Prüfung hat zu lange gedauert. Bitte versuche es erneut.",
+  "error.auth.device_key_invalid": "Der Browser hat einen ungültigen Anmeldeschlüssel gesendet.",
+  "settings.security.remembered": "Bleibt angemeldet",
+  "settings.security.device_bound": "Gerätegebunden",
+  "settings.security.device_bound_hint": "An einen Schlüssel gebunden, der diesen Browser nie verlässt: ein kopiertes Cookie funktioniert anderswo nicht.",
+  "settings.security.expires": "endet {date}"
 }

@@ -89,7 +89,7 @@ func (s *store) userByName(name string) *mockUser {
 	return nil
 }
 
-// sessUser is the user of a session (nil when unknown).
+// sessUser is the user of a session (by sessionKey; nil when unknown).
 func (s *store) sessUser(sid string) *mockUser {
 	if sess := s.sessions[sid]; sess != nil {
 		return s.userByID(sess.userID)
@@ -103,7 +103,7 @@ func (s *store) sessUserFromRequest(r *http.Request) *mockUser {
 	if err != nil {
 		return nil
 	}
-	return s.sessUser(c.Value)
+	return s.sessUser(sessionKey(c.Value))
 }
 
 // requestUser is the signed-in user of a request (by its session cookie).
@@ -114,7 +114,7 @@ func (s *store) requestUser(r *http.Request) *mockUser {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.sessUser(c.Value)
+	return s.sessUser(sessionKey(c.Value))
 }
 
 // nameOfLocked: the session's user name; caller holds s.mu.
@@ -244,6 +244,19 @@ func (s *store) loadAccounts() {
 			CreatedAt  string          `json:"createdAt"`
 			LastUsedAt *string         `json:"lastUsedAt"`
 		} `json:"passkeys"`
+		Sessions []struct {
+			KeyHash    string    `json:"keyHash"`
+			ID         string    `json:"id"`
+			UserID     int64     `json:"userId"`
+			CSRF       string    `json:"csrf"`
+			Remember   bool      `json:"remember"`
+			DeviceKey  *string   `json:"deviceKey"`
+			UserAgent  string    `json:"userAgent"`
+			IP         string    `json:"ip"`
+			CreatedAt  time.Time `json:"createdAt"`
+			LastSeenAt time.Time `json:"lastSeenAt"`
+			ExpiresAt  time.Time `json:"expiresAt"`
+		} `json:"sessions"`
 	}
 	var err error
 	for try := 0; try < 30; try++ {
@@ -309,5 +322,17 @@ func (s *store) loadAccounts() {
 		s.passkeys.keys = append(s.passkeys.keys, pk)
 	}
 	s.passkeys.mu.Unlock()
-	slog.Info("mockapi: accounts loaded", "users", len(s.users), "roles", len(s.roles))
+	// Sessions: device-bound ones need a fresh proof first (provenAt is zero).
+	for _, x := range in.Sessions {
+		if s.userByID(x.UserID) == nil || time.Now().After(x.ExpiresAt) {
+			continue
+		}
+		sess := &sessionData{id: x.ID, csrf: x.CSRF, userID: x.UserID, remember: x.Remember, userAgent: x.UserAgent, ip: x.IP,
+			createdAt: x.CreatedAt, lastSeen: x.LastSeenAt, savedSeen: x.LastSeenAt, expiresAt: x.ExpiresAt}
+		if x.DeviceKey != nil {
+			sess.deviceKey = *x.DeviceKey
+		}
+		s.sessions[x.KeyHash] = sess
+	}
+	slog.Info("mockapi: accounts loaded", "users", len(s.users), "roles", len(s.roles), "sessions", len(in.Sessions))
 }

@@ -58,12 +58,22 @@ type sessionData struct {
 	userAgent string
 	ip        string
 	userID    int64 // the signed-in user
+	remember  bool  // "stay signed in"
+	expiresAt time.Time
+	savedSeen time.Time // lastSeen as last stored in the database
+	// Device binding (sessions.go): public key, last proof, open challenge.
+	deviceKey    string
+	provenAt     time.Time
+	challenge    string
+	challengeExp time.Time
 }
 
-// loginTicket: password right, 2FA asked next (valid 5 minutes).
+// loginTicket: password right, 2FA asked next (valid 5 minutes). opts are
+// the sign-in wishes of the first step.
 type loginTicket struct {
 	userID  int64
 	expires time.Time
+	opts    sessionOpts
 }
 
 type store struct {
@@ -71,7 +81,7 @@ type store struct {
 	syncMu        sync.Mutex // orders the writes of account data to the PHP API
 	defaultLocale string
 	tickets       map[string]loginTicket
-	sessions      map[string]*sessionData
+	sessions      map[string]*sessionData // by sessionKey(cookie)
 	// envPasswordPlain: BOTHUB_ADMIN_PASSWORD is set as plain text (admins see a warning).
 	envPasswordPlain bool
 	updater          *updater // nil: updates from git are not set up
@@ -215,6 +225,8 @@ func main() {
 	mux.HandleFunc("POST /api/v1/auth/logout", s.auth(s.logout))
 	mux.HandleFunc("GET /api/v1/auth/me", s.auth(s.me))
 	mux.HandleFunc("GET /api/v1/auth/sessions", s.auth(s.listSessions))
+	mux.HandleFunc("GET /api/v1/auth/device/challenge", s.auth(s.deviceChallenge))
+	mux.HandleFunc("POST /api/v1/auth/device/proof", s.auth(s.deviceProof))
 	mux.HandleFunc("DELETE /api/v1/auth/sessions/{sessionId}", s.auth(s.auditedAuth("session_revoked", s.revokeSession)))
 	mux.HandleFunc("POST /api/v1/auth/sessions/revoke-others", s.auth(s.auditedAuth("sessions_revoked", s.revokeOtherSessions)))
 	mux.HandleFunc("GET /api/v1/auth/activity", s.auth(s.securityActivity))
@@ -398,23 +410,31 @@ type authed func(w http.ResponseWriter, r *http.Request, sid string)
 func (s *store) auth(next authed) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c, err := r.Cookie("bothub_session")
+		key := ""
 		s.mu.Lock()
 		var sess *sessionData
 		if err == nil {
-			sess = s.sessions[c.Value]
+			key = sessionKey(c.Value)
+			sess = s.sessions[key]
 		}
-		if sess != nil && s.userByID(sess.userID) == nil {
-			sess = nil // the user was deleted
+		if sess != nil && (s.userByID(sess.userID) == nil || time.Now().After(sess.expiresAt)) {
+			s.dropSession(key) // the user was deleted, or the session ran out
+			sess = nil
 		}
+		proof := sess != nil && needsDeviceProof(sess, r.URL.Path)
 		admin := false
-		if sess != nil {
-			touchSession(sess, r)
+		if sess != nil && !proof {
+			s.touchSession(key, sess, r)
 			r = r.WithContext(withUser(r.Context(), sess.userID))
 			admin = slices.Contains(s.permissionsOf(s.userByID(sess.userID)), "admin.access")
 		}
 		s.mu.Unlock()
 		if sess == nil {
 			apiError(w, 401, "error.auth.required")
+			return
+		}
+		if proof {
+			apiError(w, 401, "error.auth.device_proof")
 			return
 		}
 		// The admin area (users, roles, server settings, SDK policies, …) is for instance admins only.
@@ -429,7 +449,7 @@ func (s *store) auth(next authed) http.HandlerFunc {
 				return
 			}
 		}
-		next(w, r, c.Value)
+		next(w, r, key)
 	}
 }
 
@@ -460,11 +480,14 @@ func (s *store) setup(w http.ResponseWriter, r *http.Request) {
 	}
 	u := s.newUser(in.Username, in.Password, 1, nil)
 	s.mu.Unlock()
-	s.startSession(w, r, 201, u.ID)
+	s.startSession(w, r, 201, u.ID, sessionOpts{})
 }
 
 func (s *store) login(w http.ResponseWriter, r *http.Request) {
-	var in struct{ Username, Password string }
+	var in struct {
+		Username, Password string
+		sessionOpts
+	}
 	if !readJSON(w, r, &in) {
 		return
 	}
@@ -487,7 +510,7 @@ func (s *store) login(w http.ResponseWriter, r *http.Request) {
 	}
 	if ok && u.totpSecret != "" {
 		// Password right, 2FA on: hand out a short-lived ticket for the second step.
-		ticket := s.newTicket(u.ID)
+		ticket := s.newTicket(u.ID, in.sessionOpts)
 		s.mu.Unlock()
 		apiErrorParams(w, 401, "error.auth.totp_required", map[string]any{"ticket": ticket})
 		return
@@ -497,32 +520,47 @@ func (s *store) login(w http.ResponseWriter, r *http.Request) {
 		apiError(w, 401, "error.auth.invalid_credentials")
 		return
 	}
-	s.startSession(w, r, 200, u.ID)
+	s.startSession(w, r, 200, u.ID, in.sessionOpts)
 }
 
-// startSession always creates a new session ID (no fixation).
-func (s *store) startSession(w http.ResponseWriter, r *http.Request, status int, userID int64) {
+// startSession always creates a new session ID (no fixation). The cookie is
+// 32 random bytes; only its hash is kept (sessions.go).
+func (s *store) startSession(w http.ResponseWriter, r *http.Request, status int, userID int64, opts sessionOpts) {
+	if opts.DeviceKey != "" {
+		if _, err := parseDeviceKey(opts.DeviceKey); err != nil {
+			apiError(w, 422, "error.auth.device_key_invalid")
+			return
+		}
+	}
 	sid, csrf := randomHex(32), randomHex(32)
+	key := sessionKey(sid)
+	now := time.Now().UTC()
 	s.mu.Lock()
-	sess := &sessionData{csrf: csrf, id: randomHex(8), createdAt: time.Now().UTC(), userID: userID}
-	touchSession(sess, r)
-	s.sessions[sid] = sess
+	sess := &sessionData{csrf: csrf, id: randomHex(8), createdAt: now, userID: userID,
+		remember: opts.Remember, deviceKey: opts.DeviceKey, provenAt: now, expiresAt: s.sessionExpiry(now, opts.Remember)}
+	s.sessions[key] = sess
+	sess.lastSeen, sess.userAgent, sess.ip = now, clientAgent(r), clientIP(r)
+	s.persistSession(key, sess)
 	if u := s.userByID(userID); u != nil {
 		now := time.Now().UTC()
 		u.LastLoginAt = &now
 		s.persistUser(u)
 	}
 	s.mu.Unlock()
-	http.SetCookie(w, &http.Cookie{
+	cookie := &http.Cookie{
 		Name: "bothub_session", Value: sid, Path: "/",
-		HttpOnly: true, SameSite: http.SameSiteStrictMode,
-	})
+		HttpOnly: true, SameSite: http.SameSiteStrictMode, Secure: r.Header.Get("X-Forwarded-Proto") == "https",
+	}
+	if opts.Remember {
+		cookie.MaxAge = int(rememberFor / time.Second)
+	}
+	http.SetCookie(w, cookie)
 	writeJSON(w, status, s.meFor(userID, csrf))
 }
 
 func (s *store) logout(w http.ResponseWriter, r *http.Request, sid string) {
 	s.mu.Lock()
-	delete(s.sessions, sid)
+	s.dropSession(sid)
 	s.mu.Unlock()
 	http.SetCookie(w, &http.Cookie{Name: "bothub_session", Value: "", Path: "/", MaxAge: -1, HttpOnly: true, SameSite: http.SameSiteStrictMode})
 	w.WriteHeader(204)

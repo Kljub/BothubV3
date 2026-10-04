@@ -15,6 +15,7 @@ import (
 
 type authForm struct {
 	Username string
+	Remember bool
 	Error    string
 }
 
@@ -68,9 +69,10 @@ func (s *Server) handleLoginPage(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	p := s.pageFor(r, nil)
-	form := authForm{Username: strings.TrimSpace(r.PostFormValue("username"))}
+	form := authForm{Username: strings.TrimSpace(r.PostFormValue("username")), Remember: r.PostFormValue("remember") == "1"}
+	opts := api.LoginOptions{Remember: form.Remember, DeviceKey: r.PostFormValue("device_key")}
 
-	_, resp, err := s.api.Login(r.Context(), form.Username, r.PostFormValue("password"))
+	_, resp, err := s.api.Login(r.Context(), form.Username, r.PostFormValue("password"), opts)
 	if err != nil {
 		apiErr := api.AsError(err)
 		// Password correct, 2FA active: ask for the code. The API hands out a

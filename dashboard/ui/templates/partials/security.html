@@ -124,8 +124,10 @@
   <ul class="list">
     {{range .Items}}
     <li>
-      <span><strong>{{.Device}}</strong>{{if .Current}} <span class="badge-soft badge-soft-running">{{t "settings.security.this_device"}}</span>{{end}}<br>
-        <span class="muted">{{.IP}} · {{t "settings.security.last_active" "date" .LastSeen}} · {{t "settings.security.signed_in" "date" .Created}}</span></span>
+      <span><strong>{{.Device}}</strong>{{if .Current}} <span class="badge-soft badge-soft-running">{{t "settings.security.this_device"}}</span>{{end}}
+        {{if .Remember}} <span class="badge-soft">{{t "settings.security.remembered"}}</span>{{end}}
+        {{if .Bound}} <span class="badge-soft" title="{{t "settings.security.device_bound_hint"}}">🔐 {{t "settings.security.device_bound"}}</span>{{end}}<br>
+        <span class="muted">{{.IP}} · {{t "settings.security.last_active" "date" .LastSeen}} · {{t "settings.security.signed_in" "date" .Created}} · {{t "settings.security.expires" "date" .Expires}}</span></span>
       {{if not .Current}}<button type="button" class="btn btn-danger-soft btn-sm" hx-delete="/account/sessions/{{.ID}}" hx-target="#sessions" hx-swap="outerHTML">{{t "settings.security.sign_out"}}</button>{{end}}
     </li>
     {{end}}

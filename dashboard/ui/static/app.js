@@ -661,7 +661,9 @@ document.addEventListener('click', async (event) => {
   try {
     const begin = await apiPost('/api/v1/auth/passkeys/login/begin');
     const cred = await navigator.credentials.get({ publicKey: requestOptions(begin.options.publicKey) });
-    await apiPost('/api/v1/auth/passkeys/login/finish?ceremony=' + encodeURIComponent(begin.ceremony), credentialJSON(cred));
+    const remember = document.querySelector('[data-login-form] [name="remember"]')?.checked;
+    const q = new URLSearchParams({ ceremony: begin.ceremony, remember: remember ? '1' : '0', deviceKey: await newDeviceKey() });
+    await apiPost('/api/v1/auth/passkeys/login/finish?' + q, credentialJSON(cred));
     window.location.href = '/';
   } catch (err) {
     showPasskeyError(err.name === 'NotAllowedError' ? 'error.passkey.cancelled' : err.message);
@@ -747,4 +749,113 @@ document.addEventListener('click', (event) => {
   input.focus();
   input.setSelectionRange(start + text.length, start + text.length);
   input.dispatchEvent(new Event('input', { bubbles: true }));
+});
+
+// Device-bound sessions. At sign-in the browser makes an ECDSA P-256 key
+// whose private part cannot be exported (kept in IndexedDB); the gateway only
+// gets the public key. Signed-in pages renew the proof in the background, the
+// device check page (/device-check) proves once and goes back. A copied
+// session cookie is useless without this browser's key.
+const deviceStore = {
+  open() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open('bothub-device', 1);
+      req.onupgradeneeded = () => req.result.createObjectStore('keys');
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  },
+  async get() {
+    const db = await this.open();
+    return new Promise((resolve, reject) => {
+      const req = db.transaction('keys').objectStore('keys').get('session');
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+  },
+  async put(pair) {
+    const db = await this.open();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('keys', 'readwrite');
+      tx.objectStore('keys').put(pair, 'session');
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  },
+};
+
+function deviceKeysSupported() {
+  return Boolean(window.crypto?.subtle && window.indexedDB);
+}
+
+// newDeviceKey makes and stores a fresh key pair and returns its public key
+// (SPKI, base64url); '' when the browser cannot (the session is then unbound).
+async function newDeviceKey() {
+  if (!deviceKeysSupported()) return '';
+  try {
+    const pair = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign', 'verify']);
+    await deviceStore.put(pair);
+    return b64u.encode(await crypto.subtle.exportKey('spki', pair.publicKey));
+  } catch {
+    return '';
+  }
+}
+
+// proveDevice signs the gateway's challenge. true: proven (or the session is
+// not bound); false: this browser lacks the key or the session is gone.
+async function proveDevice() {
+  const res = await fetch('/api/v1/auth/device/challenge', { credentials: 'same-origin', headers: { Accept: 'application/json' } });
+  if (!res.ok) return false;
+  const ch = await res.json();
+  if (!ch.bound) return true;
+  const pair = await deviceStore.get();
+  if (!pair) return false;
+  const sig = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, pair.privateKey,
+    new TextEncoder().encode('bothub-device-proof:' + ch.challenge));
+  const proof = await fetch('/api/v1/auth/device/proof', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': ch.csrfToken },
+    body: JSON.stringify({ signature: b64u.encode(sig) }),
+  });
+  return proof.ok;
+}
+
+// Sign-in form: make the device key first, then send the form.
+document.addEventListener('submit', async (event) => {
+  const form = event.target.closest('[data-login-form]');
+  if (!form || form.dataset.keyReady) return;
+  event.preventDefault();
+  form.elements.device_key.value = await newDeviceKey();
+  form.dataset.keyReady = '1';
+  form.submit();
+});
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const box = document.querySelector('[data-device-check]');
+  if (box) {
+    let ok = false;
+    try {
+      ok = deviceKeysSupported() && await proveDevice();
+    } catch {
+      ok = false;
+    }
+    if (ok) {
+      window.location.replace(box.dataset.next || '/');
+      return;
+    }
+    box.querySelector('[data-device-working]').hidden = true;
+    box.querySelector('[data-device-failed]').hidden = false;
+    return;
+  }
+  // Signed-in pages: renew the proof every 5 minutes and when the tab comes back.
+  if (!document.querySelector('meta[name="csrf-token"]')?.content || !deviceKeysSupported()) return;
+  let last = Date.now();
+  const renew = () => {
+    if (document.visibilityState !== 'visible' || Date.now() - last < 60 * 1000) return;
+    last = Date.now();
+    proveDevice().catch(() => {});
+  };
+  setInterval(() => { last = 0; renew(); }, 5 * 60 * 1000);
+  document.addEventListener('visibilitychange', renew);
 });

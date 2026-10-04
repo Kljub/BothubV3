@@ -167,9 +167,16 @@ func (c *Client) Setup(ctx context.Context, in SetupRequest) (Me, Response, erro
 	return me, resp, err
 }
 
-func (c *Client) Login(ctx context.Context, username, password string) (Me, Response, error) {
+// LoginOptions: "stay signed in" and the browser's device key (public key,
+// SPKI base64url; empty when the browser has none).
+type LoginOptions struct {
+	Remember  bool   `json:"remember"`
+	DeviceKey string `json:"deviceKey,omitempty"`
+}
+
+func (c *Client) Login(ctx context.Context, username, password string, opts LoginOptions) (Me, Response, error) {
 	var me Me
-	in := map[string]string{"username": username, "password": password}
+	in := map[string]any{"username": username, "password": password, "remember": opts.Remember, "deviceKey": opts.DeviceKey}
 	resp, err := c.do(ctx, Session{}, http.MethodPost, "/api/v1/auth/login", in, &me)
 	return me, resp, err
 }
@@ -943,6 +950,10 @@ type AccountSession struct {
 	LastSeenAt time.Time `json:"lastSeenAt"`
 	UserAgent  string    `json:"userAgent"`
 	IP         string    `json:"ip"`
+	// Remember: "stay signed in"; DeviceBound: tied to a browser key.
+	Remember    bool      `json:"remember"`
+	DeviceBound bool      `json:"deviceBound"`
+	ExpiresAt   time.Time `json:"expiresAt"`
 }
 
 type SecurityEvent struct {

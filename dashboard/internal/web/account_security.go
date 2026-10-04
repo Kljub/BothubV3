@@ -15,6 +15,9 @@ type sessionRow struct {
 	IP       string
 	LastSeen string
 	Created  string
+	Remember bool
+	Bound    bool
+	Expires  string
 }
 
 type sessionsView struct {
@@ -78,6 +81,7 @@ func (s *Server) renderSessions(w http.ResponseWriter, r *http.Request, p Page, 
 		v.Items = append(v.Items, sessionRow{
 			ID: x.ID, Current: x.Current, Device: deviceLabel(x.UserAgent), IP: x.IP,
 			LastSeen: formatDateTime(x.LastSeenAt, p.Locale), Created: formatDateTime(x.CreatedAt, p.Locale),
+			Remember: x.Remember, Bound: x.DeviceBound, Expires: formatDateTime(x.ExpiresAt, p.Locale),
 		})
 	}
 	s.render(w, http.StatusOK, "error", "sessions_fragment", withData(p, v))

@@ -108,13 +108,13 @@ func (s *store) loginTOTP(w http.ResponseWriter, r *http.Request) {
 	}
 	delete(s.tickets, in.Ticket)
 	s.mu.Unlock()
-	s.startSession(w, r, 200, u.ID)
+	s.startSession(w, r, 200, u.ID, t.opts)
 }
 
 // newTicket is handed out when the password was right but 2FA is on; caller holds s.mu.
-func (s *store) newTicket(userID int64) string {
+func (s *store) newTicket(userID int64, opts sessionOpts) string {
 	t := randomHex(24)
-	s.tickets[t] = loginTicket{userID: userID, expires: time.Now().Add(5 * time.Minute)}
+	s.tickets[t] = loginTicket{userID: userID, expires: time.Now().Add(5 * time.Minute), opts: opts}
 	return t
 }
 
