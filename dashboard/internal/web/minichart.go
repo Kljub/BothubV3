@@ -16,7 +16,13 @@ type miniSeries struct {
 
 type miniLine struct {
 	Key, Color, Path, Area string
-	Dots                   [][2]float64
+	Dots                   []miniDot
+}
+
+// miniDot is one point; hovering it shows its value and time.
+type miniDot struct {
+	X, Y        float64
+	Value, Time string
 }
 
 type miniChart struct {
@@ -44,13 +50,13 @@ func spec(key, icon string, lines ...[3]string) chartSpec {
 
 // overviewCharts: the grid of the overview, in order.
 var overviewCharts = []chartSpec{
-	spec("newMembers", "👥", [3]string{"newMembers", "stats.line.joins", "#22c55e"}, [3]string{"leaves", "stats.line.leaves", "#ef4444"}),
+	spec("newMembers", "👥", [3]string{"newMembers", "stats.line.joins", "#ef4444"}, [3]string{"leaves", "stats.line.leaves", "#f9a8d4"}),
 	spec("activeUsers", "🟢", [3]string{"activeUsers", "stats.metric.activeUsers", "#06b6d4"}),
-	spec("messages", "💬", [3]string{"messages", "stats.metric.messages", "#6366f1"}),
-	spec("voiceMinutes", "🔊", [3]string{"voiceMinutes", "stats.metric.voiceMinutes", "#f59e0b"}),
-	spec("moderation", "🛡️", [3]string{"modCommands", "stats.line.mod_commands", "#3b82f6"}, [3]string{"modAutomod", "stats.line.automod", "#ef4444"}),
-	spec("commands", "⚡", [3]string{"commands", "stats.metric.commands", "#8b5cf6"}),
-	spec("pluginUsages", "🧩", [3]string{"pluginUsages", "stats.metric.pluginUsages", "#ec4899"}),
+	spec("messages", "💬", [3]string{"messages", "stats.metric.messages", "#3b82f6"}),
+	spec("voiceMinutes", "🔊", [3]string{"voiceMinutes", "stats.metric.voiceMinutes", "#eab308"}),
+	spec("moderation", "🛡️", [3]string{"modCommands", "stats.line.mod_commands", "#22c55e"}, [3]string{"modAutomod", "stats.line.automod", "#86efac"}),
+	spec("commands", "⚡", [3]string{"commands", "stats.metric.commands", "#3b82f6"}),
+	spec("pluginUsages", "🧩", [3]string{"pluginUsages", "stats.metric.pluginUsages", "#ef4444"}),
 }
 
 const (
@@ -88,7 +94,7 @@ func buildMiniChart(key, icon string, lines []miniSeries, rng, locale string, fo
 			} else {
 				fmt.Fprintf(&path, " L%.1f %.1f", px, py)
 			}
-			ml.Dots = append(ml.Dots, [2]float64{px, py})
+			ml.Dots = append(ml.Dots, miniDot{X: px, Y: py, Value: format(p.V), Time: formatTime(p.T, rng, locale)})
 		}
 		ml.Path = path.String()
 		ml.Area = fmt.Sprintf("%s L%.1f %.1f L%.1f %.1f Z", ml.Path, c.Right, c.Bot, c.Left, c.Bot)
@@ -97,7 +103,8 @@ func buildMiniChart(key, icon string, lines []miniSeries, rng, locale string, fo
 	for v := 0.0; v <= yMax+step/2; v += step {
 		c.YTicks = append(c.YTicks, chartTick{Pos: round1(y(v)), Label: format(int64(v))})
 	}
-	const ticks = 6
+	// Four date labels: more overlap on a small chart.
+	const ticks = 4
 	for i := 0; i < ticks; i++ {
 		t := t0.Add(time.Duration(float64(i) / float64(ticks-1) * span * float64(time.Second)))
 		c.XTicks = append(c.XTicks, chartTick{Pos: round1(x(t)), Label: formatTime(t, rng, locale)})

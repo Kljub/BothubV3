@@ -8,12 +8,17 @@
 .overview-tile .tile-value { font-size: 22px; font-weight: 700; }
 .overview-tile .tile-label { font-size: 12px; color: var(--muted); }
 .overview-charts { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; }
+/* Grid gap spaces the boxes; .panel + .panel would push all but the first down. */
+.overview-charts > .panel { margin-top: 0; min-width: 0; }
 .mini-chart { padding: 14px 16px; }
 .mini-chart-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; }
 .mini-chart-head h3 { margin: 0; font-size: 14px; }
 .mini-legend { display: flex; gap: 10px; font-size: 11px; color: var(--muted); }
-.mini-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+.mini-swatch { display: inline-block; width: 9px; height: 9px; margin-right: 4px; vertical-align: -1px; }
 .mini-chart svg { width: 100%; height: auto; display: block; }
 .mini-line { fill: none; stroke-width: 1.8; }
 .mini-area { opacity: 0.08; stroke: none; }
-.mini-dot { opacity: 0.9; }
+.mini-dot { opacity: 0.9; pointer-events: none; }
+/* Hover a point: its value and time (title); the dot grows. */
+.mini-hit { fill: transparent; cursor: default; }
+.mini-point:hover .mini-dot { opacity: 1; r: 4; }

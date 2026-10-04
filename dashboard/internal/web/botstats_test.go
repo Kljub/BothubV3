@@ -20,7 +20,7 @@ func TestOverviewMiniCharts(t *testing.T) {
 		return out
 	}
 	c := buildMiniChart("newMembers", "👥", []miniSeries{{Key: "stats.line.joins", Color: "#22c55e", Points: pts(0, 2, 1)}, {Key: "stats.line.leaves", Color: "#ef4444", Points: pts(0, 0, 4)}}, "24h", "en", func(v int64) string { return fmt.Sprint(v) })
-	if c.Empty || len(c.Lines) != 2 || !c.Legend || len(c.Lines[1].Dots) != 3 || len(c.XTicks) != 6 {
+	if c.Empty || len(c.Lines) != 2 || !c.Legend || len(c.Lines[1].Dots) != 3 || len(c.XTicks) != 4 {
 		t.Fatalf("chart: %+v", c)
 	}
 	if empty := buildMiniChart("messages", "💬", []miniSeries{{Points: pts(1)}}, "24h", "en", nil); !empty.Empty {
@@ -36,7 +36,10 @@ func TestOverviewMiniCharts(t *testing.T) {
 		t.Fatal(err)
 	}
 	html := out.String()
-	for _, want := range []string{`value="100000000000000001" selected`, "stats.line.leaves", `class="mini-line"`, "overview.all_servers"} {
+	if strings.Contains(html, "style=") {
+		t.Error("no inline styles: the CSP blocks them (the lines turned black)")
+	}
+	for _, want := range []string{`value="100000000000000001" selected`, "stats.line.leaves", `class="mini-line"`, "overview.all_servers", `stroke="#ef4444"`, `<title>stats.line.leaves: 4 · `} {
 		if !strings.Contains(html, want) {
 			t.Errorf("missing %q", want)
 		}

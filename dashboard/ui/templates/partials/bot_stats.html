@@ -54,19 +54,22 @@
 <article class="panel mini-chart">
   <header class="mini-chart-head">
     <h3>{{.Icon}} {{t (printf "stats.metric.%s" .Key)}}</h3>
-    {{if .Legend}}<span class="mini-legend">{{range .Lines}}<span><i style="background:{{.Color}}"></i>{{t .Key}}</span>{{end}}</span>{{end}}
+    {{if .Legend}}<span class="mini-legend">{{range .Lines}}<span><svg class="mini-swatch" viewBox="0 0 9 9" aria-hidden="true"><rect width="9" height="9" rx="2" fill="{{.Color}}"/></svg>{{t .Key}}</span>{{end}}</span>{{end}}
   </header>
   {{if .Empty}}<p class="muted">{{t "overview.chart.empty"}}</p>{{else}}
   <svg viewBox="0 0 {{.W}} {{.H}}" role="img" aria-label="{{t (printf "stats.metric.%s" .Key)}}">
     <g class="chart-grid">{{range .YTicks}}<line x1="{{$c.Left}}" x2="{{$c.Right}}" y1="{{.Pos}}" y2="{{.Pos}}"/>{{end}}</g>
     <g class="chart-axis" aria-hidden="true">
       {{range .YTicks}}<text x="{{sub $c.Left 6}}" y="{{.Pos}}" text-anchor="end" dominant-baseline="middle">{{.Label}}</text>{{end}}
-      {{range $i, $tick := .XTicks}}<text x="{{$tick.Pos}}" y="{{add $c.Bot 16}}" text-anchor="{{if eq $i 0}}start{{else if eq $i 5}}end{{else}}middle{{end}}">{{$tick.Label}}</text>{{end}}
+      {{range $i, $tick := .XTicks}}<text x="{{$tick.Pos}}" y="{{add $c.Bot 16}}" text-anchor="{{if eq $i 0}}start{{else if eq $i 3}}end{{else}}middle{{end}}">{{$tick.Label}}</text>{{end}}
     </g>
+    {{/* Colors as SVG attributes: the page's CSP allows no inline styles. */}}
     {{range .Lines}}
-    <path class="mini-area" d="{{.Area}}" style="fill:{{.Color}}"/>
-    <path class="mini-line" d="{{.Path}}" style="stroke:{{.Color}}"/>
-    {{$color := .Color}}{{range .Dots}}<circle class="mini-dot" cx="{{index . 0}}" cy="{{index . 1}}" r="2.2" style="fill:{{$color}}"/>{{end}}
+    <path class="mini-area" d="{{.Area}}" fill="{{.Color}}"/>
+    <path class="mini-line" d="{{.Path}}" stroke="{{.Color}}"/>
+    {{end}}
+    {{range .Lines}}{{$color := .Color}}{{$name := t .Key}}
+    {{range .Dots}}<g class="mini-point"><circle class="mini-dot" cx="{{.X}}" cy="{{.Y}}" r="2.2" fill="{{$color}}"/><circle class="mini-hit" cx="{{.X}}" cy="{{.Y}}" r="7"/><title>{{$name}}: {{.Value}} · {{.Time}}</title></g>{{end}}
     {{end}}
   </svg>
   {{end}}
