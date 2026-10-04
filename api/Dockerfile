@@ -1,4 +1,6 @@
 # Build context: repository root
+# The API alone, for its tests (docker build -f api/Dockerfile -t bothub-api .).
+# BotHub itself runs the API inside the app container (deploy/app.Dockerfile).
 FROM dunglas/frankenphp:1-php8.5-alpine
 
 RUN install-php-extensions pdo_sqlite redis pcntl zip

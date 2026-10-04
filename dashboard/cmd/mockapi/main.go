@@ -171,7 +171,7 @@ func main() {
 	envHashed := strings.HasPrefix(envPassword, "$argon2id$")
 	s.envPasswordPlain = envPassword != "" && !envHashed
 	if s.envPasswordPlain {
-		slog.Warn("mockapi: BOTHUB_ADMIN_PASSWORD is plain text; put an Argon2id hash there (app hash-password)")
+		slog.Warn("mockapi: BOTHUB_ADMIN_PASSWORD is plain text; put an Argon2id hash there (docker compose exec app start-app hash-password)")
 	}
 	if len(s.users) == 0 && envUser != "" && envPassword != "" {
 		s.mu.Lock()

@@ -1,10 +1,10 @@
 # Optional: updates from the dashboard (Admin → Server settings → Updates).
 # Turn on with COMPOSE_FILE=docker-compose.yml:docker-compose.update.yml in
-# .env (Windows: ";" instead of ":"). It gives the gateway the Docker socket,
+# .env (Windows: ";" instead of ":"). It gives the app container the Docker socket,
 # which is as strong as root on the host: only admins can start an update.
 
 services:
-  mockapi:
+  app:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     group_add:

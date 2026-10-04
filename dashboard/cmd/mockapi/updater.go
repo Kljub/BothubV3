@@ -235,7 +235,7 @@ func (s *store) runUpdate(w http.ResponseWriter, r *http.Request, _ string) {
 		return
 	}
 	user := s.requestUserName(r)
-	if _, _, err := s.updater.run(r.Context(), updaterName, `echo "Update by `+strings.ReplaceAll(user, `"`, "")+` at $(date -u +%FT%TZ)"; git pull --ff-only && echo "--- rebuilding ---" && docker compose up -d --build && echo "--- done ---"`, false); err != nil {
+	if _, _, err := s.updater.run(r.Context(), updaterName, `echo "Update by `+strings.ReplaceAll(user, `"`, "")+` at $(date -u +%FT%TZ)"; git pull --ff-only && echo "--- rebuilding ---" && docker compose up -d --build --remove-orphans && echo "--- done ---"`, false); err != nil {
 		apiErrorParams(w, 502, "error.update.failed", map[string]any{"reason": truncate(err.Error(), 200)})
 		return
 	}

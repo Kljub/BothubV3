@@ -1,103 +1,43 @@
-# Development stack. Each service is its own container here; later all of them
-# run in one image under a process manager. Services find each other only via
-# ENV, and all persistent data lives in ./data (mounted as /data).
+# BotHub: three containers.
+#   app    dashboard (the only public port), gateway, PHP API, outbox relay
+#   bot    the bot core (all bots, modules, plugin sandbox)
+#   redis  events between API and bot, cache
+# All persistent data lives in ./data (mounted as /data). Optional updates
+# from the dashboard: docker-compose.update.yml.
 
 name: bothub
 
 services:
-  dashboard:
+  app:
     build:
       context: .
-      dockerfile: dashboard/Dockerfile
+      dockerfile: deploy/app.Dockerfile
     ports:
       - "${DASHBOARD_PORT:-8080}:8080"
     environment:
-      LISTEN_ADDR: ":8080"
-      API_URL: "${API_URL:-http://api:9000}"
       TZ: "${TZ:-UTC}"
-      BOTHUB_DEFAULT_LOCALE: "${BOTHUB_DEFAULT_LOCALE:-en}"
-    depends_on:
-      api:
-        condition: service_healthy
-      mockapi:
-        condition: service_healthy
-        required: false
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-    restart: unless-stopped
-
-  # In-memory stand-in for the PHP API until phase 2. Enable with
-  # COMPOSE_PROFILES=mock and API_URL=http://mockapi:9000 in .env.
-  mockapi:
-    profiles: [mock]
-    build:
-      context: .
-      dockerfile: dashboard/Dockerfile
-      args:
-        APP: mockapi
-    environment:
-      LISTEN_ADDR: ":9000"
-      WEBAUTHN_RP_ID: "${WEBAUTHN_RP_ID:-localhost}"
-      WEBAUTHN_ORIGINS: "http://localhost:${DASHBOARD_PORT:-8080}"
-      BOTHUB_ADMIN_USER: "${BOTHUB_ADMIN_USER:-}"
-      BOTHUB_ADMIN_PASSWORD: "${BOTHUB_ADMIN_PASSWORD:-}"
-      # Bots are stored in the PHP API (internal endpoints); empty = in memory.
-      BOTHUB_INTERNAL_KEY: "${BOTHUB_INTERNAL_KEY:-}"
-      PHP_API_URL: "http://api:9000"
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9000/api/health"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-    restart: unless-stopped
-
-  api:
-    build:
-      context: .
-      dockerfile: api/Dockerfile
-    environment:
-      SERVER_NAME: ":9000"
       DATA_DIR: "/data"
       REDIS_URL: "redis://redis:6379"
-      # Shared secret for /internal/* (mockapi -> api). Empty = endpoints off.
+      BOTHUB_DEFAULT_LOCALE: "${BOTHUB_DEFAULT_LOCALE:-en}"
+      # Shared secret between gateway and API (/internal/*), at least 32 characters.
       BOTHUB_INTERNAL_KEY: "${BOTHUB_INTERNAL_KEY:-}"
+      # Optional first admin (plain text or Argon2id hash).
       BOTHUB_ADMIN_USER: "${BOTHUB_ADMIN_USER:-}"
       BOTHUB_ADMIN_PASSWORD: "${BOTHUB_ADMIN_PASSWORD:-}"
+      # Passkeys: the domain and the address the browser uses.
+      WEBAUTHN_RP_ID: "${WEBAUTHN_RP_ID:-localhost}"
+      WEBAUTHN_ORIGINS: "${WEBAUTHN_ORIGINS:-http://localhost:${DASHBOARD_PORT:-8080}}"
     volumes:
       - ./data:/data
     depends_on:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1:9000/api/health') === false ? 1 : 0);"]
+      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1:8080/healthz') === false || @file_get_contents('http://127.0.0.1:9000/api/health') === false ? 1 : 0);"]
       interval: 10s
-      timeout: 3s
-      retries: 5
-      start_period: 5s
-    restart: unless-stopped
-
-  # Outbox relay: outbox -> Redis streams, job results -> job state
-  # (api/bin/relay.php). Same image as the API; the API migrates first.
-  relay:
-    build:
-      context: .
-      dockerfile: api/Dockerfile
-    entrypoint: ["php", "/app/bin/relay.php"]
-    command: []
-    # The image's FrankenPHP health check does not apply to the relay.
-    healthcheck:
-      disable: true
-    environment:
-      DATA_DIR: "/data"
-      REDIS_URL: "redis://redis:6379"
-    volumes:
-      - ./data:/data
-    depends_on:
-      api:
-        condition: service_healthy
+      timeout: 5s
+      retries: 6
+      start_period: 20s
     restart: unless-stopped
 
   bot:
@@ -105,12 +45,13 @@ services:
       context: .
       dockerfile: bot/Dockerfile
     environment:
+      TZ: "${TZ:-UTC}"
       DATA_DIR: "/data"
       REDIS_URL: "redis://redis:6379"
     volumes:
       - ./data:/data
     depends_on:
-      api:
+      app:
         condition: service_healthy
     restart: unless-stopped
 
@@ -120,7 +61,7 @@ services:
     volumes:
       - ./data:/data
     # Bypass the image entrypoint: it drops to the redis user, which cannot
-    # write to a Windows bind mount. The dev stack runs Redis as root.
+    # write to a Windows bind mount. Redis runs as root here.
     entrypoint: ["sh", "-c", "mkdir -p /data/redis && exec \"$$@\"", "--"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
