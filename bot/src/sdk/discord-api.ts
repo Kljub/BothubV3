@@ -487,6 +487,8 @@ function memberJson(m: GuildMember): Record<string, unknown> {
   return {
     id: m.id, name: m.user.username, displayName: m.displayName, bot: m.user.bot, avatar: m.displayAvatarURL(),
     joinedAt: m.joinedAt?.toISOString() ?? null, roles: [...m.roles.cache.keys()].filter((r) => r !== m.guild.id),
+    // The voice channel the member is in now (null when none), e.g. for a soundboard.
+    voiceChannelId: m.voice?.channelId ?? null,
   };
 }
 function roleJson(r: Role): Record<string, unknown> {

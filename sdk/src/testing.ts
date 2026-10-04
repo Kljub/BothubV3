@@ -404,7 +404,10 @@ export function createTestContext(options: TestContextOptions = {}): TestContext
       leave: async (guildId: string) => { voiceGuild(guildId); voice.delete(guildId); },
       play: async (guildId: string, file: string, opts: { volume?: number } = {}) => {
         voiceGuild(guildId);
-        if (typeof file !== 'string' || !SOUND_FILE.test(file) || (options.sounds && !options.sounds.includes(file))) {
+        // A sound of the plugin files (storage.files) or of the plugin folder.
+        const stored = typeof file === 'string' && /^[0-9a-f]{16}\.(mp3|ogg|wav|webm)$/.test(file);
+        if (stored && !permissions.has('storage.files')) throw new SdkCallError('sdk.call.denied');
+        if (stored ? !fileStore.has(file) : typeof file !== 'string' || !SOUND_FILE.test(file) || (options.sounds && !options.sounds.includes(file))) {
           throw new SdkCallError('sdk.voice.bad_file');
         }
         const volume = opts.volume ?? 1;

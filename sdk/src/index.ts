@@ -96,7 +96,8 @@ export interface SecretRequest {
 export interface HttpAnswer { status: number; headers: Record<string, string>; json: Json; text: string; base64?: string }
 /** ctx.http.secret with saveAs 'file' and a 2xx answer. */
 export interface SecretFileAnswer { status: number; headers: Record<string, string>; file: StoredFile }
-export interface MemberInfo { id: Id; name: string; displayName: string; bot: boolean; avatar: string; joinedAt: string | null; roles: Id[] }
+/** voiceChannelId: the voice channel the member is in now, null when none. */
+export interface MemberInfo { id: Id; name: string; displayName: string; bot: boolean; avatar: string; joinedAt: string | null; roles: Id[]; voiceChannelId: Id | null }
 export interface RoleInfo { id: Id; name: string; color: string; position: number; managed: boolean; mentionable: boolean; hoist: boolean; members: number }
 /** nsfw: age-restricted channel (channel.get). */
 export interface ChannelInfo { id: Id; name: string; type: string; parentId: Id | null; position?: number; guildId?: Id; topic?: string | null; nsfw?: boolean }
@@ -412,6 +413,7 @@ export interface PluginContext {
   readonly voice: {
     join(guildId: Id, channelId: Id): Async<void>;
     leave(guildId: Id): Async<void>;
+    /** file: sounds/<name>.ogg|mp3|wav of the plugin folder, or a stored plugin file (mp3, ogg, wav, webm; needs storage.files). */
     play(guildId: Id, file: string, options?: { volume?: number }): Async<void>;
     stop(guildId: Id): Async<void>;
     state(guildId: Id): Async<{ channelId: Id | null; playing: boolean; file: string | null }>;

@@ -1,4 +1,5 @@
 import { test } from 'node:test';
+import type { Readable } from 'node:stream';
 import assert from 'node:assert/strict';
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
@@ -71,11 +72,12 @@ const voiceState = { channelId: null as string | null, playing: false, label: nu
 const fakeVoice = {
   async join(_g: string, c: string) { voiceState.channelId = c; },
   leave() { Object.assign(voiceState, { channelId: null, playing: false, label: null, owner: null }); },
-  play(_g: string, input: string, o: { owner: string; label?: string; volume?: number }) {
+  play(_g: string, input: string | Readable, o: { owner: string; label?: string; volume?: number }) {
     if (!voiceState.channelId) throw Object.assign(new Error('sdk.voice.not_connected'), { key: 'sdk.voice.not_connected' });
     if (voiceState.playing && voiceState.owner !== o.owner) throw Object.assign(new Error('sdk.voice.busy'), { key: 'sdk.voice.busy' });
     Object.assign(voiceState, { playing: true, label: o.label ?? null, owner: o.owner });
-    voiceState.played.push(`${input.replace(/\\/g, '/').split('/').slice(-2).join('/')}@${o.volume}`);
+    const what = typeof input === 'string' ? input.replace(/\\/g, '/').split('/').slice(-2).join('/') : `stream:${o.label}`;
+    voiceState.played.push(`${what}@${o.volume}`);
   },
   stop() { Object.assign(voiceState, { playing: false, label: null, owner: null }); },
   state() { return { channelId: voiceState.channelId, playing: voiceState.playing, label: voiceState.label, owner: voiceState.owner }; },
@@ -902,4 +904,37 @@ test('plugin files: any file type with its name, executables and fake images ref
   assert.equal(fileType(Buffer.from('x'), 'notes')?.ext, 'bin');
   assert.equal(cleanFilename('../../etc/pass<wd>.txt'), 'pass_wd_.txt');
   assert.equal(files.delete(pdf.name), true);
+});
+
+test('voice.play: a stored plugin file (storage.files) streams from the database', async () => {
+  const { db, pluginsDir, manager } = setup();
+  Object.assign(voiceState, { channelId: null, playing: false, label: null, owner: null, played: [] });
+  const id = 'plugin_board';
+  const manifest = { id, name: 'Board', version: '1.0.0', sdk: 1, main: 'index.js', permissions: ['discord.voice', 'storage.files'], blocks: [{ name: 'run', definition: {} }] };
+  const code = `export default { blocks: {
+    async run(ctx) {
+      const r = async (fn) => { try { const v = await fn(); return v == null ? 'ok' : JSON.stringify(v); } catch (e) { return e.message; } };
+      const g = '100000000000000001';
+      const put = await ctx.files.put(Buffer.from('ID3 fake mp3').toString('base64'), 'airhorn.mp3');
+      await ctx.voice.join(g, '200000000000000002');
+      return { results: {
+        '.name': put.name,
+        '.play': await r(() => ctx.voice.play(g, put.name)),
+        '.unknown': await r(() => ctx.voice.play(g, '0000000000000000.mp3')),
+      } };
+    },
+  } };`;
+  install(db, pluginsDir, id, { 'bothub-plugin.json': JSON.stringify(manifest), 'index.js': code });
+  db.prepare("INSERT INTO sdk_policies (permission, enabled) VALUES ('discord.voice.connect', 1), ('discord.voice.speak', 1)").run();
+  try {
+    await manager.startBot(1);
+    const { run, results } = fakeRun({});
+    await manager.blockHandlers(1).get(`plugin.${id}.run`)!(node(`plugin.${id}.run`), run);
+    assert.match(results['.name']!, /^[0-9a-f]{16}\.mp3$/);
+    assert.equal(results['.play'], 'ok');
+    assert.equal(results['.unknown'], 'sdk.voice.bad_file');
+    assert.deepEqual(voiceState.played, ['stream:airhorn.mp3@1']);
+  } finally {
+    manager.stopAll();
+  }
 });

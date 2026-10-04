@@ -22,6 +22,7 @@ import { PluginStorage, type StorageLimits } from './storage.js';
 import { pluginVariables } from './variables.js';
 import { discordAttachmentUrl, FILE_LIMITS, FILE_NAME, PluginFiles } from './files.js';
 import { lookup } from 'node:dns/promises';
+import { Readable } from 'node:stream';
 import { buildComponents, privateAddress, discordApi, interactionEvent, InteractionRegistry, parsePluginCustomId, pluginCode, type DiscordApiDeps, type RawHttp } from './discord-api.js';
 import type { Interaction, RepliableInteraction } from 'discord.js';
 import { denied, type Permissions } from '../discord/commands.js';
@@ -240,7 +241,7 @@ const SOUND_MAX_BYTES = 10 * 1024 * 1024;
 export interface VoiceApi {
   join(guildId: string, channelId: string): Promise<void>;
   leave(guildId: string): void;
-  play(guildId: string, input: string, options: { owner: string; label?: string; volume?: number }): void;
+  play(guildId: string, input: string | Readable, options: { owner: string; label?: string; volume?: number }): void;
   stop(guildId: string, owner?: string): void;
   state(guildId: string): { channelId: string | null; playing: boolean; label: string | null; owner: string | null };
 }
@@ -917,6 +918,16 @@ export class PluginManager {
       'voice.play': (q) => {
         const [g, file, opts] = a(q);
         const guildId = guild(g);
+        const volume = opts && typeof opts === 'object' && 'volume' in opts ? (opts as { volume: unknown }).volume : 1;
+        if (typeof volume !== 'number' || !Number.isFinite(volume) || volume < 0 || volume > 1) throw new SdkError('sdk.voice.bad_volume');
+        // A sound of the plugin files (storage.files), e.g. uploaded by a member: mp3, ogg, wav, webm.
+        if (typeof file === 'string' && /^[0-9a-f]{16}\.(mp3|ogg|wav|webm)$/.test(file)) {
+          if (!allowed.has('storage.files' as Permission)) throw new SdkError('sdk.call.denied');
+          const stored = files.get(file);
+          if (!stored) throw new SdkError('sdk.voice.bad_file');
+          voice().play(guildId, Readable.from(stored.data), { owner, label: stored.filename || file, volume });
+          return;
+        }
         if (typeof file !== 'string' || !SOUND_FILE.test(file)) throw new SdkError('sdk.voice.bad_file');
         let size = -1;
         try {
@@ -926,8 +937,6 @@ export class PluginManager {
           size = -1;
         }
         if (size < 0 || size > SOUND_MAX_BYTES) throw new SdkError('sdk.voice.bad_file');
-        const volume = opts && typeof opts === 'object' && 'volume' in opts ? (opts as { volume: unknown }).volume : 1;
-        if (typeof volume !== 'number' || !Number.isFinite(volume) || volume < 0 || volume > 1) throw new SdkError('sdk.voice.bad_volume');
         voice().play(guildId, join(dir, file), { owner, label: file, volume });
       },
       'voice.stop': (q) => voice().stop(guild(a(q)[0]), owner),
