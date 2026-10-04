@@ -757,6 +757,11 @@ export class BotInstance {
     for (const key of Object.keys(payload)) if (key === 'DEFAULT_SERVER' || key.startsWith('bot.')) delete payload[key];
     if (ctx.user) payload['user.bot'] = ctx.user.bot;
     if (name === 'voiceStateUpdate') payload['voice.action'] = ctx.type.slice(6); // join, leave, switch
+    // Messages: does it mention this bot, which message does it answer (e.g. a chat bot that replies to mentions).
+    if (ctx.message) {
+      payload['message.mentions_bot'] = !!this.client?.user && ctx.message.mentions.users.has(this.client.user.id);
+      payload['message.reply_to'] = ctx.message.reference?.messageId ?? '';
+    }
     plugins.dispatchEvent(this.botId, name, payload);
   }
 

@@ -157,6 +157,15 @@ a malformed list with `sdk.config.bad_options`. Core call, no SDK permission.
 { "key": "libraries", "type": "choices", "dynamic": true, "max": 50, "required": true }
 ```
 
+## Message events
+
+`messageCreate` (permission `discord.events.messages`) carries the builder
+variables of the message plus `message.mentions_bot` (true when it mentions
+this bot) and `message.reply_to` (ID of the message it answers, or empty).
+A plugin can answer mentions or replies to its own messages this way.
+`ctx.http.secret` takes `timeoutMs` (1000-60000, default 10000) for slow
+APIs such as AI chat.
+
 ## Custom variables (data.variables)
 
 With the SDK permission `data.variables` a plugin creates Data Storage

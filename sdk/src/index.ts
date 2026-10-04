@@ -85,6 +85,8 @@ export interface SecretRequest {
    */
   file?: { name: string; field?: string };
   fields?: Record<string, string>;
+  /** How long to wait for the answer: 1000-60000 ms (default 10000), e.g. for AI APIs. */
+  timeoutMs?: number;
   /**
    * "storage.files": 'file' stores a successful answer (an image: PNG, GIF,
    * WEBP or JPEG, max. 2 MB) in the plugin files; the answer is then

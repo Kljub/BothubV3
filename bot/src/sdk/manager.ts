@@ -589,7 +589,9 @@ export class PluginManager {
     if (saveAsFile) needFiles();
     let res: Response;
     try {
-      res = await (this.deps.fetch ?? fetch)(url, { method, headers: { ...headers, ...authHeaders }, body, redirect: 'manual', signal: AbortSignal.timeout(HTTP_TIMEOUT_MS) });
+      // request.timeoutMs: slow APIs (e.g. AI answers) may take up to 60 s; default 10 s.
+      const timeout = Number.isInteger(r.timeoutMs) ? Math.min(60_000, Math.max(1000, r.timeoutMs as number)) : HTTP_TIMEOUT_MS;
+      res = await (this.deps.fetch ?? fetch)(url, { method, headers: { ...headers, ...authHeaders }, body, redirect: 'manual', signal: AbortSignal.timeout(timeout) });
     } catch (err) {
       throw new SdkError((err as Error)?.name === 'TimeoutError' ? 'sdk.http.timeout' : 'sdk.http.failed');
     }
