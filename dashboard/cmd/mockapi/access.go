@@ -65,7 +65,7 @@ type botRule struct {
 // The first matching rule wins; GET needs only access (except logs and data).
 var botRules = []botRule{
 	{regexp.MustCompile(`^/(start|stop|restart)$`), "bot.control"},
-	{regexp.MustCompile(`^/members(/|$)`), "members.manage"},
+	{regexp.MustCompile(`^/(members|cowork)(/|$)`), "members.manage"},
 	{regexp.MustCompile(`^/(profile|presence|status)(/|$)`), "profile.edit"},
 	{regexp.MustCompile(`^/guilds(/|$)|^/guild-access(/|$)`), "servers.manage"},
 	{regexp.MustCompile(`^/(commands|command-groups|templates|custom-commands)(/|$)`), "commands.manage"},
@@ -250,4 +250,127 @@ func (s *store) removeMember(w http.ResponseWriter, r *http.Request, b *bot) {
 		}
 	}
 	w.WriteHeader(204)
+}
+
+// --- Co-Work page ---
+
+// coworkPage: members (gateway) plus invites, saved roles and activity (API).
+func (s *store) coworkPage(w http.ResponseWriter, r *http.Request, b *bot) {
+	s.mu.Lock()
+	me := s.sessUserFromRequest(r)
+	myRole, myPerms, _ := s.botAccess(me, b)
+	members := []memberView{}
+	if o := s.userByID(b.OwnerID); o != nil {
+		members = append(members, memberView{UserID: o.ID, Username: o.Username, Role: "owner", Permissions: botPermissions, Owner: true})
+	}
+	for _, m := range b.Members {
+		if u := s.userByID(m.UserID); u != nil {
+			_, perms, _ := s.botAccess(u, b)
+			members = append(members, memberView{UserID: u.ID, Username: u.Username, Role: m.Role, Permissions: perms})
+		}
+	}
+	s.mu.Unlock()
+	out := map[string]any{"members": members, "invites": []any{}, "roles": []any{}, "activity": []any{},
+		"permissions": botPermissions, "myRole": myRole, "myPermissions": myPerms}
+	if s.php != nil {
+		var extra map[string]any
+		if err := s.php.do(r.Context(), http.MethodGet, fmt.Sprintf("/internal/bots/%d/cowork", b.ID), nil, &extra); err != nil {
+			pe := asPHPError(err)
+			apiError(w, pe.Status, pe.Key)
+			return
+		}
+		for k, v := range extra {
+			out[k] = v
+		}
+	}
+	writeJSON(w, 200, out)
+}
+
+// createInvite: {kind: link|user, username, role, permissions, roleName,
+// expiresIn, maxUses}. Same limits as setMember: no more than one has.
+func (s *store) createInvite(w http.ResponseWriter, r *http.Request, b *bot) {
+	var in struct {
+		Kind        string   `json:"kind"`
+		Username    string   `json:"username"`
+		Role        string   `json:"role"`
+		Permissions []string `json:"permissions"`
+		RoleName    string   `json:"roleName"`
+		ExpiresIn   int      `json:"expiresIn"`
+		MaxUses     int      `json:"maxUses"`
+	}
+	if !readJSON(w, r, &in) {
+		return
+	}
+	s.mu.Lock()
+	myRole, myPerms, _ := s.botAccess(s.sessUserFromRequest(r), b)
+	perms := in.Permissions
+	if in.Role != "custom" {
+		perms = rolePresets[in.Role]
+	}
+	var userID int64
+	if in.Kind == "user" {
+		u := s.userByName(strings.TrimSpace(in.Username))
+		if u == nil {
+			s.mu.Unlock()
+			apiError(w, 404, "error.user.not_found")
+			return
+		}
+		if u.ID == b.OwnerID || slices.ContainsFunc(b.Members, func(m botMember) bool { return m.UserID == u.ID }) {
+			s.mu.Unlock()
+			apiError(w, 409, "error.member.exists")
+			return
+		}
+		userID = u.ID
+	}
+	s.mu.Unlock()
+	if in.Role != "custom" && rolePresets[in.Role] == nil {
+		apiError(w, 422, "error.validation.failed")
+		return
+	}
+	if in.Role == "admin" && myRole != "owner" {
+		apiError(w, 403, "error.access.denied")
+		return
+	}
+	for _, p := range perms {
+		if myRole != "owner" && !slices.Contains(myPerms, p) {
+			apiError(w, 403, "error.access.denied")
+			return
+		}
+	}
+	if s.php == nil {
+		apiError(w, 503, "error.api.unreachable")
+		return
+	}
+	body := map[string]any{"kind": in.Kind, "userId": userID, "role": in.Role, "permissions": perms, "roleName": in.RoleName, "expiresIn": in.ExpiresIn, "maxUses": in.MaxUses}
+	var out map[string]any
+	if err := s.php.do(r.Context(), http.MethodPost, fmt.Sprintf("/internal/bots/%d/cowork/invites", b.ID), body, &out); err != nil {
+		pe := asPHPError(err)
+		apiError(w, pe.Status, pe.Key)
+		return
+	}
+	writeJSON(w, 201, out)
+}
+
+func phpRequiredBot(w http.ResponseWriter, _ *http.Request, _ *bot) {
+	apiError(w, 503, "error.api.unreachable")
+}
+
+// recordActivity: a change by someone on a bot goes into its Co-Work activity.
+func (s *store) recordActivity(r *http.Request, b *bot, status int) {
+	if s.php == nil || status >= 400 || r.Method == http.MethodGet || r.Method == http.MethodHead {
+		return
+	}
+	rest := strings.Trim(botPathRe.ReplaceAllString(r.URL.Path, ""), "/")
+	area, _, _ := strings.Cut(rest, "/")
+	if area == "cowork" || strings.HasSuffix(rest, "/simulate") {
+		return
+	}
+	if area == "" {
+		area = "settings"
+	}
+	u := s.requestUser(r)
+	if u == nil {
+		return
+	}
+	go s.phpSync(http.MethodPost, fmt.Sprintf("/internal/bots/%d/cowork/activity", b.ID), map[string]any{"userId": u.ID, "area": area, "method": r.Method})
 }

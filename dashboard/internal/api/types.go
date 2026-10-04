@@ -28,6 +28,20 @@ type Me struct {
 	Warnings []string `json:"warnings"`
 }
 
+// IsAdmin: an instance admin (admin area, every bot). Without the
+// permission list (older gateways) everyone counts as admin.
+func (m Me) IsAdmin() bool {
+	if m.Permissions == nil {
+		return true
+	}
+	for _, p := range m.Permissions {
+		if p == "admin.access" {
+			return true
+		}
+	}
+	return false
+}
+
 type Settings struct {
 	Locale string `json:"locale,omitempty"`
 	Theme  string `json:"theme,omitempty"`

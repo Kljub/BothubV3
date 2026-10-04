@@ -1,6 +1,20 @@
 {{define "title"}}{{t "overview.title"}}{{end}}
 
 {{define "content"}}
+{{with .Data.Invites}}
+<section class="box cowork-invites">
+  <header class="box-head"><h2>🤝 {{t "cowork.my_invites.title"}}</h2><span class="box-meta">{{len .}}</span></header>
+  <div class="box-body">
+    {{range .}}
+    <div class="settings-row">
+      <span class="settings-row-text"><strong>{{.BotName}}</strong><span class="hint">{{t "cowork.my_invites.from" "name" (derefStr .ByName)}} · {{with .RoleName}}{{.}}{{else}}{{t (printf "cowork.role.%s" .Role)}}{{end}}</span></span>
+      <form hx-post="/invites/{{.ID}}/decline"><button type="submit" class="btn btn-sm">{{t "cowork.my_invites.decline"}}</button></form>
+      <form hx-post="/invites/{{.ID}}/accept"><button type="submit" class="btn btn-sm btn-primary">{{t "cowork.my_invites.accept"}}</button></form>
+    </div>
+    {{end}}
+  </div>
+</section>
+{{end}}
 {{template "overview_tiles" .Data.Tiles}}
 {{template "bot_grid" .Data.Grid}}
 {{end}}

@@ -43,6 +43,20 @@
 <section class="box"><div class="box-body"><p class="muted">{{t "guilds.bot_offline"}}</p></div></section>
 {{end}}
 
+{{else if eq $d.Section "cowork"}}
+{{template "bot_cowork" $d.Cowork}}
+
+{{else if eq $d.Section "cowork_join"}}
+<section class="box cowork-join">
+  <div class="box-body">
+    <h2>🤝 {{t "cowork.join.title"}}</h2>
+    <p class="muted">{{t "cowork.join.text"}}</p>
+    <form hx-post="/cowork/join/{{$d.Token}}">
+      <button type="submit" class="btn btn-primary">{{t "cowork.join.button"}}</button>
+    </form>
+  </div>
+</section>
+
 {{else if eq $d.Section "modules"}}
 {{range $d.Categories}}{{template "module_group" .}}{{end}}
 
@@ -58,4 +72,144 @@
 {{else}}
 <section class="panel"><p class="muted">{{t "admin.placeholder"}}</p></section>
 {{end}}
+{{end}}
+
+{{define "bot_cowork_fragment"}}{{template "bot_cowork" .Data}}{{end}}
+
+{{/* Co-Work (internal/web/cowork.go): members, invites, roles, activity. */}}
+{{define "bot_cowork"}}
+{{$v := .}}
+<div class="cowork" id="cowork">
+  <div id="cowork-error"></div>
+  <div class="cowork-grid">
+    <div class="cowork-col">
+      <section class="box">
+        <header class="box-head"><h2>{{t "cowork.members.title"}}</h2><span class="box-meta">{{len $v.Page.Members}}</span></header>
+        <div class="box-body">
+          <p class="muted">{{t "cowork.members.hint"}}</p>
+          {{range $v.Page.Members}}
+          <div class="settings-row">
+            <span class="settings-row-text"><strong>{{.Username}}{{if eq .Username $v.MyName}} <span class="muted">({{t "cowork.you"}})</span>{{end}}</strong><span class="hint">{{t (printf "cowork.role.%s" .Role)}} · {{len .Permissions}} {{t "cowork.rights"}}</span></span>
+            {{if and $v.CanManage (not .Owner) (ne .Username $v.MyName)}}
+            {{$cur := .Role}}
+            <form class="cowork-inline" hx-post="/bot/{{$v.BotID}}/cowork/members/{{.UserID}}" hx-trigger="change" hx-target="#cowork" hx-swap="outerHTML">
+              <select name="role" class="select-plain" aria-label="{{t "cowork.role.label"}}">
+                {{range $v.Roles}}{{if or (ne . "admin") $v.IsOwner}}<option value="{{.}}" {{if eq . $cur}}selected{{end}}>{{t (printf "cowork.role.%s" .)}}</option>{{end}}{{end}}
+                {{range $v.Page.Roles}}<option value="saved:{{.ID}}">{{.Name}}</option>{{end}}
+                {{if eq $cur "custom"}}<option value="custom" selected>{{t "cowork.role.custom"}}</option>{{end}}
+              </select>
+            </form>
+            <form hx-post="/bot/{{$v.BotID}}/cowork/members/{{.UserID}}/remove" hx-target="#cowork" hx-swap="outerHTML" hx-confirm="{{t "cowork.remove_confirm" "name" .Username}}">
+              <button type="submit" class="btn btn-sm btn-danger-soft">{{t "cowork.remove"}}</button>
+            </form>
+            {{end}}
+          </div>
+          {{end}}
+        </div>
+      </section>
+
+      <section class="box">
+        <header class="box-head"><h2>{{t "cowork.pending.title"}}</h2><span class="box-meta">{{len $v.Page.Invites}}</span></header>
+        <div class="box-body">
+          {{range $v.Page.Invites}}
+          <div class="settings-row">
+            <span class="settings-row-text">
+              <strong>{{if eq .Kind "link"}}🔗 {{t "cowork.pending.link"}}{{else}}👤 {{derefStr .Username}}{{end}}</strong>
+              <span class="hint">{{with .RoleName}}{{.}}{{else}}{{t (printf "cowork.role.%s" .Role)}}{{end}}{{if eq .Kind "link"}} · {{.Uses}}/{{if .MaxUses}}{{.MaxUses}}{{else}}∞{{end}}{{end}}{{with .ExpiresAt}} · {{t "cowork.pending.until"}} {{.}}{{end}}</span>
+            </span>
+            {{if $v.CanManage}}
+            <form hx-post="/bot/{{$v.BotID}}/cowork/invites/{{.ID}}/revoke" hx-target="#cowork" hx-swap="outerHTML">
+              <button type="submit" class="btn btn-sm">{{t "cowork.pending.revoke"}}</button>
+            </form>
+            {{end}}
+          </div>
+          {{else}}<p class="muted">{{t "cowork.pending.none"}}</p>{{end}}
+        </div>
+      </section>
+
+      <section class="box">
+        <header class="box-head"><h2>{{t "cowork.activity.title"}}</h2></header>
+        <div class="box-body">
+          {{range $v.Activities}}
+          <div class="cowork-activity"><span class="muted mono">{{.When}}</span> <strong>{{.Who}}</strong> {{.Text}}</div>
+          {{else}}<p class="muted">{{t "cowork.activity.none"}}</p>{{end}}
+        </div>
+      </section>
+    </div>
+
+    <div class="cowork-col">
+      {{if $v.CanManage}}
+      <section class="box">
+        <header class="box-head"><h2>{{t "cowork.invite.title"}}</h2></header>
+        <div class="box-body">
+          <p class="muted">{{t "cowork.invite.hint"}}</p>
+          {{with $v.NewLink}}
+          <div class="field"><span>{{t "cowork.invite.link_ready"}}</span>
+            <div class="copy-field copy-field-secret"><code>{{.}}</code><button type="button" class="btn btn-sm" data-copy="{{.}}" data-copy-done="{{t "module_page.webhooks.copied"}}">{{t "module_page.webhooks.copy"}}</button></div>
+          </div>
+          {{end}}
+          <form class="form cowork-invite" hx-post="/bot/{{$v.BotID}}/cowork/invites" hx-target="#cowork" hx-swap="outerHTML">
+            <label>{{t "cowork.invite.kind"}}
+              <select name="kind" class="select-plain">
+                <option value="link">🔗 {{t "cowork.invite.kind_link"}}</option>
+                <option value="user">👤 {{t "cowork.invite.kind_user"}}</option>
+              </select>
+            </label>
+            <label>{{t "cowork.invite.username"}}<input name="username" maxlength="32" placeholder="{{t "cowork.invite.username_hint"}}"></label>
+            <label>{{t "cowork.role.label"}}
+              <select name="role" class="select-plain">
+                {{range $v.Roles}}{{if or (ne . "admin") $v.IsOwner}}<option value="{{.}}" {{if eq . "builder"}}selected{{end}}>{{t (printf "cowork.role.%s" .)}}</option>{{end}}{{end}}
+                {{range $v.Page.Roles}}<option value="saved:{{.ID}}">{{.Name}}</option>{{end}}
+                <option value="custom">{{t "cowork.role.custom"}}</option>
+              </select>
+            </label>
+            <fieldset class="cowork-perms"><legend>{{t "cowork.custom_rights"}}</legend>
+              {{range $v.Page.Permissions}}<label class="cowork-perm"><input type="checkbox" name="perm" value="{{.}}"> {{t (printf "cowork.perm.%s" .)}}</label>{{end}}
+            </fieldset>
+            <div class="cowork-row2">
+              <label>{{t "cowork.invite.expires"}}
+                <select name="expires" class="select-plain">{{range $v.Expiry}}<option value="{{.}}">{{t (printf "cowork.expiry.%d" .)}}</option>{{end}}</select>
+              </label>
+              <label>{{t "cowork.invite.uses"}}
+                <select name="uses" class="select-plain">{{range $v.Uses}}<option value="{{.}}">{{if .}}{{.}}{{else}}{{t "cowork.invite.no_limit"}}{{end}}</option>{{end}}</select>
+              </label>
+            </div>
+            <button type="submit" class="btn btn-primary">{{t "cowork.invite.create"}}</button>
+          </form>
+          <p class="hint cowork-trust">⚠️ {{t "cowork.invite.trust"}}</p>
+        </div>
+      </section>
+
+      <section class="box">
+        <header class="box-head"><h2>{{t "cowork.roles.title"}}</h2><span class="box-meta">{{len $v.Page.Roles}}</span></header>
+        <div class="box-body">
+          <p class="muted">{{t "cowork.roles.hint"}}</p>
+          {{range $v.Page.Roles}}
+          <div class="settings-row">
+            <span class="settings-row-text"><strong>{{.Name}}</strong><span class="hint">{{range $i, $p := .Permissions}}{{if $i}}, {{end}}{{t (printf "cowork.perm.%s" $p)}}{{end}}</span></span>
+            <form hx-post="/bot/{{$v.BotID}}/cowork/roles/{{.ID}}/delete" hx-target="#cowork" hx-swap="outerHTML"><button type="submit" class="btn btn-sm btn-danger-soft">{{t "cowork.remove"}}</button></form>
+          </div>
+          {{end}}
+          <form class="form cowork-role-form" hx-post="/bot/{{$v.BotID}}/cowork/roles" hx-target="#cowork" hx-swap="outerHTML">
+            <label>{{t "cowork.roles.name"}}<input name="name" maxlength="40" required></label>
+            <fieldset class="cowork-perms"><legend>{{t "cowork.rights_label"}}</legend>
+              {{range $v.Page.Permissions}}<label class="cowork-perm"><input type="checkbox" name="perm" value="{{.}}"> {{t (printf "cowork.perm.%s" .)}}</label>{{end}}
+            </fieldset>
+            <button type="submit" class="btn btn-sm">{{t "cowork.roles.save"}}</button>
+          </form>
+        </div>
+      </section>
+      {{else}}
+      <section class="box"><div class="box-body"><p class="muted">{{t "cowork.no_manage"}}</p></div></section>
+      {{end}}
+
+      <section class="box">
+        <header class="box-head"><h2>{{t "cowork.roles_explained"}}</h2></header>
+        <div class="box-body">
+          {{range $v.Roles}}<p><strong>{{t (printf "cowork.role.%s" .)}}</strong> — <span class="muted">{{t (printf "cowork.role.%s_hint" .)}}</span></p>{{end}}
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
 {{end}}

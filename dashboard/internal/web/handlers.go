@@ -122,7 +122,7 @@ func (s *Server) handleCreateBot(w http.ResponseWriter, r *http.Request, p Page)
 }
 
 // botSections are the entries of the per-bot sidebar category, in order.
-var botSections = []string{"overview", "settings", "docs", "invite", "status", "server", "logs", "modules", "plugins"}
+var botSections = []string{"overview", "settings", "docs", "invite", "status", "server", "logs", "cowork", "modules", "plugins"}
 
 // botCookie remembers the bot picked on the dashboard, so its sidebar
 // category stays visible on other pages.
@@ -211,6 +211,13 @@ func (s *Server) handleBot(w http.ResponseWriter, r *http.Request, p Page) {
 			return
 		}
 		data["Plugins"] = plugins
+	case "cowork":
+		v, err := s.coworkView(r, p, id, "")
+		if err != nil {
+			s.fail(w, r, p, err)
+			return
+		}
+		data["Cowork"] = v
 	case "logs":
 		logs, err := s.botLogs(r, p, id)
 		if err != nil {

@@ -37,6 +37,7 @@ final class InternalRouter
         private readonly ?StatsStore $stats = null,
         private readonly ?DocsStore $docs = null,
         private readonly ?AccountStore $accounts = null,
+        private readonly ?CoworkStore $cowork = null,
     ) {
     }
 
@@ -137,6 +138,9 @@ final class InternalRouter
             if ($this->plugins !== null && preg_match('#^/internal/bots/(\d+)/plugins(?:/([a-z0-9_-]{2,64})(/config|/commands|/options)?)?$#', $path, $m)) {
                 $this->bots->find((int) $m[1]) ?? throw ApiError::notFound();
                 return $this->botPluginRoute($method, (int) $m[1], $m[2] ?? null, $m[3] ?? '', $body);
+            }
+            if ($this->cowork !== null && preg_match('#^/internal/(?:bots/(\d+)/cowork(/[a-z/0-9-]*)?|invites(/[a-z/0-9-]*)?)$#', $path, $m)) {
+                return $this->coworkRoute($method, (int) ($m[1] ?? 0), ($m[1] ?? '') !== '' ? ($m[2] ?? '') : null, $m[3] ?? '', $body);
             }
             if ($this->accounts !== null && preg_match('#^/internal/accounts(?:/(users|roles|passkeys)/([^/]{1,400}))?$#', $path, $m)) {
                 return $this->accountsRoute($method, $m[1] ?? '', isset($m[2]) ? rawurldecode($m[2]) : '', $body);
@@ -680,5 +684,46 @@ final class InternalRouter
             default => throw new ApiError(405, 'error.method_not_allowed'),
         };
         return [204, null];
+    }
+
+    /**
+     * Co-Work. /internal/bots/{id}/cowork: everything of the page;
+     * /cowork/invites (POST), /cowork/invites/{n} (DELETE), /cowork/roles
+     * (POST), /cowork/roles/{n} (DELETE), /cowork/activity (POST, by the
+     * gateway). /internal/invites: the signed-in user's invites (GET),
+     * /invites/accept (POST {token} or {id}), /invites/{n}/decline (POST).
+     */
+    private function coworkRoute(string $method, int $botId, ?string $rest, string $mine, array $body): array
+    {
+        $c = $this->cowork;
+        if ($rest === null) {
+            return match (true) {
+                $mine === '' && $method === 'GET' => [200, ['items' => $c->userInvites($this->userId)]],
+                $mine === '/accept' && $method === 'POST' => [200, $c->accept($this->userId, $body)],
+                (bool) preg_match('#^/(\d+)/decline$#', $mine, $d) && $method === 'POST' => (function () use ($c, $d): array {
+                    $c->decline($this->userId, (int) $d[1]);
+                    return [204, null];
+                })(),
+                default => throw new ApiError(405, 'error.method_not_allowed'),
+            };
+        }
+        return match (true) {
+            ($rest === '' || $rest === '/') && $method === 'GET' => [200, ['invites' => $c->invites($botId), 'roles' => $c->savedRoles($botId), 'activity' => $c->activity($botId)]],
+            $rest === '/invites' && $method === 'POST' => [201, $c->createInvite($botId, $this->userId, $body)],
+            (bool) preg_match('#^/invites/(\d+)$#', $rest, $d) && $method === 'DELETE' => (function () use ($c, $botId, $d): array {
+                $c->revokeInvite($botId, (int) $d[1]);
+                return [204, null];
+            })(),
+            $rest === '/roles' && $method === 'POST' => [200, ['items' => $c->saveRole($botId, $body)]],
+            (bool) preg_match('#^/roles/(\d+)$#', $rest, $d) && $method === 'DELETE' => (function () use ($c, $botId, $d): array {
+                $c->deleteRole($botId, (int) $d[1]);
+                return [204, null];
+            })(),
+            $rest === '/activity' && $method === 'POST' => (function () use ($c, $botId, $body): array {
+                $c->addActivity($botId, $body);
+                return [204, null];
+            })(),
+            default => throw new ApiError(405, 'error.method_not_allowed'),
+        };
     }
 }

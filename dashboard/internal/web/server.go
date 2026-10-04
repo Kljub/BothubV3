@@ -246,6 +246,16 @@ func (s *Server) routes() http.Handler {
 	mux.Handle("PUT /bot/{id}/plugins/{plugin}/settings/{list}/{idx}", auth(s.handlePluginSettingsItem))
 	mux.Handle("DELETE /bot/{id}/plugins/{plugin}/settings/{list}/{idx}", auth(s.handlePluginSettingsItem))
 	mux.Handle("GET /select-bot/{id}", auth(s.handleOpenBot))
+	// Co-Work: members, invites, saved roles; joining by link or invite.
+	mux.Handle("POST /bot/{id}/cowork/members/{user}", auth(s.handleCoworkMember))
+	mux.Handle("POST /bot/{id}/cowork/members/{user}/remove", auth(s.handleCoworkRemove))
+	mux.Handle("POST /bot/{id}/cowork/invites", auth(s.handleCoworkInvite))
+	mux.Handle("POST /bot/{id}/cowork/invites/{n}/revoke", auth(s.handleCoworkRevoke))
+	mux.Handle("POST /bot/{id}/cowork/roles", auth(s.handleCoworkRoleSave))
+	mux.Handle("POST /bot/{id}/cowork/roles/{n}/delete", auth(s.handleCoworkRoleDelete))
+	mux.Handle("GET /cowork/join/{token}", auth(s.handleCoworkJoinPage))
+	mux.Handle("POST /cowork/join/{token}", auth(s.handleCoworkJoin))
+	mux.Handle("POST /invites/{n}/{answer}", auth(s.handleInviteAnswer))
 	mux.Handle("GET /home", auth(func(w http.ResponseWriter, r *http.Request, p Page) {
 		// Logo: back to the bot selection, nothing selected.
 		http.SetCookie(w, &http.Cookie{Name: botCookie, Path: "/", MaxAge: -1})

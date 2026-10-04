@@ -46,7 +46,13 @@ var baseFuncs = template.FuncMap{
 	"add":   func(a, b float64) float64 { return a + b },
 	"upper": strings.ToUpper,
 	"list":  func(v ...any) []any { return v },
-	"join":  strings.Join,
+	"derefStr": func(p *string) string {
+		if p == nil {
+			return ""
+		}
+		return *p
+	},
+	"join": strings.Join,
 	"deref": func(p *int64) int64 {
 		if p == nil {
 			return 0

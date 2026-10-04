@@ -248,6 +248,15 @@ func main() {
 	mux.HandleFunc("GET /api/v1/bots/{id}/members", s.auth(s.withBot(s.listMembers)))
 	mux.HandleFunc("PUT /api/v1/bots/{id}/members/{user}", s.auth(s.withBot(s.setMember)))
 	mux.HandleFunc("DELETE /api/v1/bots/{id}/members/{user}", s.auth(s.withBot(s.removeMember)))
+	mux.HandleFunc("GET /api/v1/bots/{id}/cowork", s.auth(s.withBot(s.coworkPage)))
+	mux.HandleFunc("POST /api/v1/bots/{id}/cowork/invites", s.auth(s.withBot(s.createInvite)))
+	mux.HandleFunc("DELETE /api/v1/bots/{id}/cowork/invites/{n}", s.auth(s.withBot(s.viaPHP(phpRequiredBot))))
+	mux.HandleFunc("POST /api/v1/bots/{id}/cowork/roles", s.auth(s.withBot(s.viaPHP(phpRequiredBot))))
+	mux.HandleFunc("DELETE /api/v1/bots/{id}/cowork/roles/{n}", s.auth(s.withBot(s.viaPHP(phpRequiredBot))))
+	// The signed-in user's invites; accept by link token or invite ID.
+	mux.HandleFunc("GET /api/v1/invites", s.auth(s.adminViaPHP(noDocs)))
+	mux.HandleFunc("POST /api/v1/invites/accept", s.auth(s.adminViaPHP(adminPHPRequired)))
+	mux.HandleFunc("POST /api/v1/invites/{n}/decline", s.auth(s.adminViaPHP(adminPHPRequired)))
 	mux.HandleFunc("PATCH /api/v1/bots/{id}", s.auth(s.withBot(s.updateBot)))
 	mux.HandleFunc("DELETE /api/v1/bots/{id}", s.auth(s.withBot(s.deleteBot)))
 	mux.HandleFunc("POST /api/v1/bots/{id}/start", s.auth(s.withBot(s.startBot)))
@@ -391,13 +400,20 @@ func (s *store) auth(next authed) http.HandlerFunc {
 		if sess != nil && s.userByID(sess.userID) == nil {
 			sess = nil // the user was deleted
 		}
+		admin := false
 		if sess != nil {
 			touchSession(sess, r)
 			r = r.WithContext(withUser(r.Context(), sess.userID))
+			admin = slices.Contains(s.permissionsOf(s.userByID(sess.userID)), "admin.access")
 		}
 		s.mu.Unlock()
 		if sess == nil {
 			apiError(w, 401, "error.auth.required")
+			return
+		}
+		// The admin area (users, roles, server settings, SDK policies, …) is for instance admins only.
+		if strings.HasPrefix(r.URL.Path, "/api/v1/admin/") && !admin {
+			apiError(w, 403, "error.access.denied")
 			return
 		}
 		if r.Method != http.MethodGet {
@@ -602,7 +618,9 @@ func (s *store) withBot(next botHandler) authed {
 			apiError(w, 403, "error.access.denied")
 			return
 		}
-		next(w, r, b)
+		rec := &statusRecorder{ResponseWriter: w, status: 200}
+		next(rec, r, b)
+		s.recordActivity(r, b, rec.status)
 	}
 }
 

@@ -87,18 +87,20 @@
     <details class="user-menu">
       <summary class="sidebar-user">
         <span class="user-avatar" aria-hidden="true">{{initial .Me.Username}}</span>
-        <span class="user-name">{{.Me.Username}}<span class="user-sub">{{t "user.role"}}</span></span>
+        <span class="user-name">{{.Me.Username}}<span class="user-sub">{{if .Me.IsAdmin}}{{t "user.role"}}{{else}}{{t "user.role_member"}}{{end}}</span></span>
       </summary>
       <div class="menu" role="menu">
         <div class="menu-user">
           <span class="user-avatar" aria-hidden="true">{{initial .Me.Username}}</span>
-          <span class="user-name">{{.Me.Username}}<span class="user-sub">{{t "user.role"}}</span></span>
+          <span class="user-name">{{.Me.Username}}<span class="user-sub">{{if .Me.IsAdmin}}{{t "user.role"}}{{else}}{{t "user.role_member"}}{{end}}</span></span>
         </div>
         <hr>
         <button type="button" class="menu-item" role="menuitem" data-open-dialog="settings-dialog">{{template "icon_gear"}}<span>{{t "admin.nav.settings"}}</span></button>
         <a class="menu-item" role="menuitem" href="/store">{{template "icon_plugin"}}<span>{{t "store.title"}}</span></a>
+{{if .Me.IsAdmin}}
         <button type="button" class="menu-item" role="menuitem" data-open-dialog="admin-dialog"
           hx-get="/admin/overview" hx-target="#admin-panel">{{template "icon_chip"}}<span>{{t "admin.menu"}}</span></button>
+        {{end}}
         <hr>
         <a class="menu-item menu-item-small" role="menuitem" href="/terms" target="_blank" rel="noopener" hx-boost="false"><span>{{t "legal.terms"}}</span></a>
         <a class="menu-item menu-item-small" role="menuitem" href="/privacy" target="_blank" rel="noopener" hx-boost="false"><span>{{t "legal.privacy"}}</span></a>

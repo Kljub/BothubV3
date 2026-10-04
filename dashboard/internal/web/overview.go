@@ -33,9 +33,12 @@ func (s *Server) handleOverview(w http.ResponseWriter, r *http.Request, p Page) 
 		return
 	}
 	p.Nav = "overview"
+	// Co-Work invites to the user (none when the API cannot say).
+	invites, _ := s.api.MyInvites(r.Context(), sess)
 	s.render(w, http.StatusOK, "overview", "layout", withData(p, map[string]any{
-		"Tiles": tiles,
-		"Grid":  botGrid(p.Bots, pageParam(r)),
+		"Tiles":   tiles,
+		"Grid":    botGrid(p.Bots, pageParam(r)),
+		"Invites": invites,
 	}))
 }
 
