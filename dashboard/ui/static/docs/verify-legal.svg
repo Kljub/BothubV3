@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 300" font-family="Segoe UI, Arial, sans-serif">
+  <rect width="960" height="300" rx="14" fill="#141414"/>
+  <text x="30" y="36" fill="#7d7d7d" font-size="12">BotHub → Admin → Server Settings → Legal: Terms and Privacy</text>
+  <rect x="30" y="52" width="470" height="220" rx="10" fill="#1a1a1a" stroke="#2a2a2a"/>
+  <g font-size="12">
+    <text x="50" y="84" fill="#e8e8e8" font-size="15" font-weight="700">Legal: Terms and Privacy</text>
+    <text x="50" y="112" fill="#b5b5b5" font-weight="700">Operator (name or organisation)</text>
+    <rect x="50" y="120" width="430" height="30" rx="6" fill="#222" stroke="#3a3a3a"/>
+    <text x="62" y="140" fill="#e8e8e8">Your name</text>
+    <text x="50" y="174" fill="#b5b5b5" font-weight="700">Contact e-mail</text>
+    <rect x="50" y="182" width="430" height="30" rx="6" fill="#222" stroke="#3a3a3a"/>
+    <text x="62" y="202" fill="#e8e8e8">you@example.com</text>
+    <rect x="390" y="228" width="90" height="28" rx="6" fill="#a78bfa"/>
+    <text x="435" y="247" fill="#111" font-weight="700" text-anchor="middle">Save</text>
+  </g>
+  <g stroke="#a78bfa" stroke-width="2.5" fill="none">
+    <path d="M510 160 C 560 160, 560 110, 610 110"/><path d="M600 104 l10 6 -10 6"/>
+    <path d="M510 160 C 560 160, 560 210, 610 210"/><path d="M600 204 l10 6 -10 6"/>
+  </g>
+  <g font-size="12">
+    <rect x="620" y="86" width="310" height="48" rx="8" fill="#1a1a1a" stroke="#a78bfa"/>
+    <text x="636" y="106" fill="#b5b5b5" font-weight="700">Public page</text>
+    <text x="636" y="124" fill="#e8e8e8">https://your-domain/terms</text>
+    <rect x="620" y="186" width="310" height="48" rx="8" fill="#1a1a1a" stroke="#a78bfa"/>
+    <text x="636" y="206" fill="#b5b5b5" font-weight="700">Public page</text>
+    <text x="636" y="224" fill="#e8e8e8">https://your-domain/privacy</text>
+  </g>
+</svg>

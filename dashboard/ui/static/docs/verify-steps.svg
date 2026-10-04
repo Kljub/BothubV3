@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 250" font-family="Segoe UI, Arial, sans-serif">
+  <rect width="960" height="250" rx="14" fill="#141414"/>
+  <text x="30" y="40" fill="#e8e8e8" font-size="18" font-weight="700">App verification: the path</text>
+  <text x="30" y="62" fill="#7d7d7d" font-size="12">Schematic overview · the checklist in the "App Verification" tab of your app is the source of truth</text>
+  <g font-size="13">
+    <g transform="translate(30,90)">
+      <rect width="160" height="120" rx="12" fill="#1f1f1f" stroke="#3a3a3a"/>
+      <circle cx="28" cy="28" r="16" fill="#a78bfa"/><text x="28" y="33" fill="#111" font-weight="700" text-anchor="middle">1</text>
+      <text x="16" y="70" fill="#e8e8e8" font-weight="700">Team</text>
+      <text x="16" y="90" fill="#b5b5b5" font-size="11">App owned by a</text>
+      <text x="16" y="104" fill="#b5b5b5" font-size="11">developer team</text>
+    </g>
+    <g transform="translate(215,90)">
+      <rect width="160" height="120" rx="12" fill="#1f1f1f" stroke="#3a3a3a"/>
+      <circle cx="28" cy="28" r="16" fill="#a78bfa"/><text x="28" y="33" fill="#111" font-weight="700" text-anchor="middle">2</text>
+      <text x="16" y="70" fill="#e8e8e8" font-weight="700">2FA + identity</text>
+      <text x="16" y="90" fill="#b5b5b5" font-size="11">Team owner verifies</text>
+      <text x="16" y="104" fill="#b5b5b5" font-size="11">the ID with Stripe</text>
+    </g>
+    <g transform="translate(400,90)">
+      <rect width="160" height="120" rx="12" fill="#1f1f1f" stroke="#3a3a3a"/>
+      <circle cx="28" cy="28" r="16" fill="#a78bfa"/><text x="28" y="33" fill="#111" font-weight="700" text-anchor="middle">3</text>
+      <text x="16" y="70" fill="#e8e8e8" font-weight="700">App details</text>
+      <text x="16" y="90" fill="#b5b5b5" font-size="11">Name, icon, description,</text>
+      <text x="16" y="104" fill="#b5b5b5" font-size="11">/terms and /privacy URL</text>
+    </g>
+    <g transform="translate(585,90)">
+      <rect width="160" height="120" rx="12" fill="#1f1f1f" stroke="#3a3a3a"/>
+      <circle cx="28" cy="28" r="16" fill="#a78bfa"/><text x="28" y="33" fill="#111" font-weight="700" text-anchor="middle">4</text>
+      <text x="16" y="70" fill="#e8e8e8" font-weight="700">Intents</text>
+      <text x="16" y="90" fill="#b5b5b5" font-size="11">Request the privileged</text>
+      <text x="16" y="104" fill="#b5b5b5" font-size="11">intents with a reason</text>
+    </g>
+    <g transform="translate(770,90)">
+      <rect width="160" height="120" rx="12" fill="#1f1f1f" stroke="#4ade80"/>
+      <circle cx="28" cy="28" r="16" fill="#4ade80"/><text x="28" y="33" fill="#111" font-weight="700" text-anchor="middle">5</text>
+      <text x="16" y="70" fill="#e8e8e8" font-weight="700">Submit</text>
+      <text x="16" y="90" fill="#b5b5b5" font-size="11">Discord reviews it;</text>
+      <text x="16" y="104" fill="#b5b5b5" font-size="11">then the ✓ badge</text>
+    </g>
+    <g stroke="#7d7d7d" stroke-width="2" fill="none">
+      <path d="M192 150h20M377 150h20M562 150h20M747 150h20"/>
+    </g>
+  </g>
+</svg>

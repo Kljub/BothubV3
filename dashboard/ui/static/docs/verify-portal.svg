@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420" font-family="Segoe UI, Arial, sans-serif">
+  <rect width="960" height="420" rx="14" fill="#141414"/>
+  <text x="30" y="36" fill="#7d7d7d" font-size="12">Schematic · Developer Portal → your application</text>
+  <!-- sidebar -->
+  <rect x="30" y="56" width="220" height="334" rx="10" fill="#1a1a1a" stroke="#2a2a2a"/>
+  <g font-size="13" fill="#b5b5b5">
+    <text x="50" y="88" fill="#7d7d7d" font-size="10" font-weight="700">SETTINGS</text>
+    <rect x="40" y="98" width="200" height="30" rx="6" fill="#2a2440" stroke="#a78bfa"/>
+    <text x="54" y="118" fill="#e8e8e8" font-weight="700">General Information</text>
+    <text x="54" y="152">Installation</text>
+    <text x="54" y="182">OAuth2</text>
+    <text x="54" y="212">Bot</text>
+    <rect x="40" y="226" width="200" height="30" rx="6" fill="#1f2a22" stroke="#4ade80"/>
+    <text x="54" y="246" fill="#e8e8e8" font-weight="700">App Verification</text>
+    <text x="54" y="280">Emojis</text>
+    <text x="54" y="310">Webhooks</text>
+  </g>
+  <!-- content -->
+  <rect x="270" y="56" width="660" height="334" rx="10" fill="#1a1a1a" stroke="#2a2a2a"/>
+  <text x="294" y="92" fill="#e8e8e8" font-size="18" font-weight="700">General Information</text>
+  <g font-size="12">
+    <text x="294" y="126" fill="#b5b5b5" font-weight="700">NAME · DESCRIPTION · APP ICON</text>
+    <rect x="294" y="134" width="612" height="34" rx="6" fill="#222" stroke="#3a3a3a"/>
+    <text x="306" y="156" fill="#7d7d7d">A clear description of what your bot does</text>
+    <text x="294" y="198" fill="#b5b5b5" font-weight="700">TERMS OF SERVICE URL</text>
+    <rect x="294" y="206" width="612" height="34" rx="6" fill="#222" stroke="#a78bfa"/>
+    <text x="306" y="228" fill="#e8e8e8">https://your-bothub-domain/terms</text>
+    <text x="294" y="270" fill="#b5b5b5" font-weight="700">PRIVACY POLICY URL</text>
+    <rect x="294" y="278" width="612" height="34" rx="6" fill="#222" stroke="#a78bfa"/>
+    <text x="306" y="300" fill="#e8e8e8">https://your-bothub-domain/privacy</text>
+    <rect x="786" y="340" width="120" height="32" rx="6" fill="#4ade80"/>
+    <text x="846" y="361" fill="#111" font-weight="700" text-anchor="middle">Save Changes</text>
+  </g>
+  <g fill="#a78bfa" font-size="12" font-weight="700">
+    <circle cx="924" cy="223" r="11"/><text x="924" y="227" fill="#111" text-anchor="middle">A</text>
+    <circle cx="924" cy="295" r="11"/><text x="924" y="299" fill="#111" text-anchor="middle">B</text>
+  </g>
+</svg>
