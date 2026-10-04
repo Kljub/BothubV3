@@ -70,7 +70,7 @@
   <details class="settings-row settings-expand" data-setting>
     <summary>
       <span class="settings-row-text"><strong>{{t "settings.security.authenticator"}}</strong><span class="hint">{{t "settings.security.authenticator_hint"}}</span></span>
-      <span class="settings-action">{{if .TwoFactorEnabled}}<span class="badge-soft badge-soft-running"><span class="badge-dot"></span>{{t "security.twofa.on"}}</span>{{else}}<span class="badge-soft">{{t "security.twofa.off"}}</span>{{end}} ›</span>
+      <span class="settings-action">{{template "twofa_badge" .TwoFactorEnabled}} ›</span>
     </summary>
     <div class="settings-expand-body">{{template "twofa" .}}</div>
   </details>
@@ -196,13 +196,19 @@
   </form>
 </div>
 {{else if .RecoveryCodes}}
+<span id="twofa-badge" hx-swap-oob="true">{{template "twofa_badge_inner" true}}</span>
 <div id="twofa" class="form">
   <div class="alert alert-success">{{t "security.twofa.enabled"}}</div>
   <p class="hint hint-top">{{t "security.twofa.recovery_hint"}}</p>
   <ul class="list mono">{{range .RecoveryCodes}}<li>{{.}}</li>{{end}}</ul>
 </div>
 {{else}}
+<span id="twofa-badge" hx-swap-oob="true">{{template "twofa_badge_inner" .Enabled}}</span>
 {{template "twofa" (twofaState .Enabled)}}
 {{end}}
 {{end}}
 {{end}}
+
+{{/* On/off badge in the head of the 2FA row; htmx answers replace it out of band. Receives a bool. */}}
+{{define "twofa_badge"}}<span id="twofa-badge">{{template "twofa_badge_inner" .}}</span>{{end}}
+{{define "twofa_badge_inner"}}{{if .}}<span class="badge-soft badge-soft-running"><span class="badge-dot"></span>{{t "security.twofa.on"}}</span>{{else}}<span class="badge-soft">{{t "security.twofa.off"}}</span>{{end}}{{end}}
