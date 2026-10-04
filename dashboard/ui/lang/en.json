@@ -3957,5 +3957,19 @@
   "sdk.perm.storage.files": "Plugin files (images)",
   "sdk.perm.storage.files_hint": "Images per bot: uploads of image settings fields, Discord attachments and images from requests with secrets. PNG, GIF, WEBP, JPEG; max. 2 MB each, 100 files, 25 MB.",
   "store.connect.error.save": "Signed in to Plex, but BotHub could not store the token and address as secrets. Please try again; the server log has details.",
-  "admin.plugins.secret_free_slot": "free slot"
+  "admin.plugins.secret_free_slot": "free slot",
+  "legal.terms": "Terms of Service",
+  "legal.privacy": "Privacy Policy",
+  "legal_settings.title": "Legal: Terms and Privacy",
+  "legal_settings.hint": "Shown on the public pages /terms and /privacy (enter both URLs in the Discord Developer Portal). Name and contact are required by the GDPR; an address is needed if you offer the bot to the public on a regular basis (imprint duty in Germany).",
+  "legal_settings.operator": "Operator (name or organisation)",
+  "legal_settings.operator_placeholder": "e.g. Max Mustermann",
+  "legal_settings.address": "Postal address (optional)",
+  "legal_settings.address_hint": "One line per row. Optional for a private, non-commercial bot; add one if you offer the bot to the public on a regular basis.",
+  "legal_settings.email": "Contact e-mail",
+  "legal_settings.email_hint": "Empty: the admin account's e-mail is shown. Deletion requests go here.",
+  "legal_settings.saved": "Legal details saved.",
+  "log.server.legal_saved": "Operator details for Terms and Privacy saved ({actor})",
+  "legal_settings.source": "Source code URL (optional)",
+  "legal_settings.source_hint": "Link to the public repository (https). The pages say BotHub is open source and non-profit; with a link anyone can check the code."
 }

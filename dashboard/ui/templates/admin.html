@@ -17,6 +17,7 @@
   {{template "resources" .Processes}}
 {{else if eq .Section "server_settings"}}
   {{template "server_settings" .Server}}
+  {{template "legal_settings" .Legal}}
 {{else if eq .Section "email"}}
   {{template "email_settings" .}}
 {{else if eq .Section "api_secrets"}}
@@ -152,6 +153,38 @@
   </section>
 
   <div data-save-own><button type="submit" class="btn btn-primary">{{t "action.save"}}</button></div>
+</form>
+{{end}}
+
+{{/* Operator details of the public /terms and /privacy pages. */}}
+{{define "legal_settings"}}
+<div id="legal-flash"></div>
+<form class="form" hx-post="/admin/legal" hx-swap="none">
+  <section class="section">
+    <header class="section-head">
+      <h3>{{t "legal_settings.title"}}</h3>
+      <span class="section-meta"><a href="/terms" target="_blank" rel="noopener">{{t "legal.terms"}}</a> · <a href="/privacy" target="_blank" rel="noopener">{{t "legal.privacy"}}</a></span>
+    </header>
+    <p class="hint">{{t "legal_settings.hint"}}</p>
+    <div class="form">
+      <label class="field">{{t "legal_settings.operator"}}
+        <input name="operator" value="{{.Operator}}" maxlength="120" class="input-wide" placeholder="{{t "legal_settings.operator_placeholder"}}">
+      </label>
+      <label class="field">{{t "legal_settings.address"}}
+        <textarea name="address" rows="3" maxlength="300" class="input-wide">{{.Address}}</textarea>
+        <span class="hint">{{t "legal_settings.address_hint"}}</span>
+      </label>
+      <label class="field">{{t "legal_settings.email"}}
+        <input type="email" name="email" value="{{.Email}}" maxlength="254" class="input-wide" placeholder="{{with .AdminEmail}}{{.}}{{end}}">
+        <span class="hint">{{t "legal_settings.email_hint"}}</span>
+      </label>
+      <label class="field">{{t "legal_settings.source"}}
+        <input type="url" name="source_url" value="{{.SourceURL}}" maxlength="300" pattern="https://.+" class="input-wide" placeholder="https://github.com/...">
+        <span class="hint">{{t "legal_settings.source_hint"}}</span>
+      </label>
+    </div>
+  </section>
+  <div><button type="submit" class="btn btn-primary">{{t "action.save"}}</button></div>
 </form>
 {{end}}
 

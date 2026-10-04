@@ -29,6 +29,7 @@ final class InternalRouter
         private readonly ?PluginStore $plugins = null,
         private readonly ?BotBackup $backups = null,
         private readonly ?LogStore $logs = null,
+        private readonly ?LegalStore $legal = null,
     ) {
     }
 
@@ -75,6 +76,14 @@ final class InternalRouter
             if ($this->data !== null && preg_match('#^/internal/bots/(\d+)/data/(variables|lookup)(?:/(\d+)(/values)?)?$#', $path, $m)) {
                 $this->bots->find((int) $m[1]) ?? throw ApiError::notFound();
                 return $this->dataRoute($method, (int) $m[1], $m[2], isset($m[3]) && $m[3] !== '' ? (int) $m[3] : null, isset($m[4]), $body, array_map(static fn ($v) => is_string($v) ? $v : '', $query));
+            }
+            // Operator details of the public Terms and Privacy pages (GET public in the dashboard, PUT admin).
+            if ($this->legal !== null && in_array($path, ['/internal/legal', '/internal/admin/legal'], true)) {
+                return match (true) {
+                    $method === 'GET' => [200, $this->legal->get()],
+                    $method === 'PUT' && $path === '/internal/admin/legal' => [200, $this->legal->save($body, $this->actor)],
+                    default => throw new ApiError(405, 'error.method_not_allowed'),
+                };
             }
             if ($this->plugins !== null && preg_match('#^/internal/admin/plugins/([a-z0-9_-]{2,64})/secrets$#', $path, $m)) {
                 return $method === 'PUT'

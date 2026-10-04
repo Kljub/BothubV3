@@ -390,6 +390,8 @@ func (s *Server) handleAdminSection(w http.ResponseWriter, r *http.Request, p Pa
 			return
 		}
 		data["Server"] = settings
+		legal, _ := s.api.AdminLegal(r.Context(), session(r)) // optional: an empty form on error
+		data["Legal"] = legal
 	}
 	// The admin popup loads sections via htmx; a direct visit gets a full page.
 	if isHTMX(r) {

@@ -130,6 +130,9 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /setup", s.handleSetupPage)
 	mux.HandleFunc("POST /setup", s.handleSetup)
 	mux.HandleFunc("GET /login", s.handleLoginPage)
+	// Public legal pages (Discord Developer Portal: Terms of Service and Privacy Policy URLs).
+	mux.HandleFunc("GET /terms", s.legalPage("terms"))
+	mux.HandleFunc("GET /privacy", s.legalPage("privacy"))
 	mux.HandleFunc("POST /login", s.handleLogin)
 	mux.HandleFunc("POST /login/totp", s.handleLoginTOTP)
 
@@ -253,6 +256,7 @@ func (s *Server) routes() http.Handler {
 	mux.Handle("GET /admin/{section}", auth(s.handleAdminSection))
 	mux.Handle("POST /settings", auth(s.handleSettings))
 	mux.Handle("POST /admin/server-settings", auth(s.handleServerSettings))
+	mux.Handle("POST /admin/legal", auth(s.handleLegalSave))
 	mux.Handle("GET /admin/sdk-policies", auth(s.handleSdkPolicySearch))
 	mux.Handle("PUT /admin/sdk-policies/{perm}", auth(s.handleSdkPolicy))
 	mux.Handle("GET /admin/resources/table", auth(s.handleResources))

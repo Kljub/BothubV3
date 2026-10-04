@@ -78,6 +78,7 @@ type store struct {
 	logSeq      int64
 
 	srvSettings    serverSettings
+	legal          legalInfo // without the PHP API
 	started        time.Time
 	roles          []*role
 	passkeys       *passkeyStore
@@ -140,6 +141,9 @@ func main() {
 		writeJSON(w, 200, map[string]string{"status": "ok"})
 	})
 	mux.HandleFunc("GET /api/v1/setup", s.setupState)
+	mux.HandleFunc("GET /api/v1/legal", s.getLegal)
+	mux.HandleFunc("GET /api/v1/admin/legal", s.auth(s.getAdminLegal))
+	mux.HandleFunc("PUT /api/v1/admin/legal", s.auth(s.putAdminLegal))
 	mux.HandleFunc("POST /api/v1/setup", s.setup)
 	mux.HandleFunc("POST /api/v1/auth/login", s.audited("login", "login_failed", []string{"error.auth.invalid_credentials"}, s.login))
 	mux.HandleFunc("POST /api/v1/auth/login/totp", s.audited("login", "login_failed", []string{"error.auth.totp_invalid"}, s.loginTOTP))

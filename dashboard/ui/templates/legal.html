@@ -1,0 +1,279 @@
+{{/* Public Terms of Service (/terms) and Privacy Policy (/privacy).
+     Receives a legalView (internal/web/legal.go). Written to match the
+     Discord Developer Terms of Service (sections 1a, 3b, 4, 5, 8c). */}}
+
+{{define "title"}}{{if eq .Data.Kind "terms"}}{{if eq .Data.Lang "de"}}Nutzungsbedingungen{{else}}Terms of Service{{end}}{{else}}{{if eq .Data.Lang "de"}}Datenschutzerklärung{{else}}Privacy Policy{{end}}{{end}}{{end}}
+
+{{define "legal_layout"}}<!doctype html>
+<html lang="{{.Data.Lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{template "title" .}} · BotHub</title>
+<link rel="stylesheet" href="/static/css/bothub.css?v={{.AssetVersion}}">
+</head>
+<body class="legal-page" data-theme="{{.Theme}}">
+<main class="legal">
+  <header class="legal-head">
+    <a class="brand" href="/"><span class="brand-logo">BH</span><span class="brand-name">BotHub</span></a>
+    <nav class="legal-nav">
+      <a href="/terms?lang={{.Data.Lang}}" {{if eq .Data.Kind "terms"}}aria-current="page"{{end}}>{{if eq .Data.Lang "de"}}Nutzungsbedingungen{{else}}Terms of Service{{end}}</a>
+      <a href="/privacy?lang={{.Data.Lang}}" {{if eq .Data.Kind "privacy"}}aria-current="page"{{end}}>{{if eq .Data.Lang "de"}}Datenschutz{{else}}Privacy{{end}}</a>
+      {{if eq .Data.Lang "de"}}<a href="?lang=en" lang="en">English</a>{{else}}<a href="?lang=de" lang="de">Deutsch</a>{{end}}
+    </nav>
+  </header>
+  <article class="legal-body">
+    <h1>{{template "title" .}}</h1>
+    <p class="legal-updated">{{if eq .Data.Lang "de"}}Stand{{else}}Last updated{{end}}: {{.Data.Updated}}</p>
+    {{if eq .Data.Kind "terms"}}{{if eq .Data.Lang "de"}}{{template "terms_de" .Data}}{{else}}{{template "terms_en" .Data}}{{end}}
+    {{else}}{{if eq .Data.Lang "de"}}{{template "privacy_de" .Data}}{{else}}{{template "privacy_en" .Data}}{{end}}{{end}}
+  </article>
+</main>
+</body>
+</html>
+{{end}}
+
+{{define "legal_operator"}}
+{{if or .Operator .Address .Email}}
+<p class="legal-contact">
+  {{if .Operator}}<strong>{{.Operator}}</strong><br>{{end}}
+  {{range .Address}}{{.}}<br>{{end}}
+  {{with .Email}}E-Mail: <a href="mailto:{{.}}">{{.}}</a>{{end}}
+</p>
+{{else}}
+<p class="legal-contact muted">{{if eq .Lang "de"}}Der Betreiber dieser Installation hat seine Kontaktdaten noch nicht hinterlegt.{{else}}The operator of this instance has not entered their contact details yet.{{end}}</p>
+{{end}}
+{{end}}
+
+{{define "legal_open_source_de"}}<p><strong>Open Source, gemeinnützige Absicht:</strong> BotHub ist ein Open-Source-Projekt und wird ohne Gewinnabsicht entwickelt und betrieben.{{with .Source}} Der Quellcode ist öffentlich einsehbar: <a href="{{.}}" rel="noopener">{{.}}</a>. So kann jeder nachprüfen, was mit Daten passiert.{{end}}</p>{{end}}
+{{define "legal_open_source_en"}}<p><strong>Open source, non-profit:</strong> BotHub is an open source project, developed and run without the intention of making a profit.{{with .Source}} The source code is public: <a href="{{.}}" rel="noopener">{{.}}</a>, so anyone can check what happens with data.{{end}}</p>{{end}}
+
+{{/* ===================== Nutzungsbedingungen (DE) ===================== */}}
+{{define "terms_de"}}
+<h2>1. Anbieter und Geltungsbereich</h2>
+<p>Diese Nutzungsbedingungen gelten für die Discord-Bots, die über diese BotHub-Installation{{with .Domain}} ({{.}}){{end}} betrieben werden, und für das zugehörige Dashboard (zusammen „Dienst“). Anbieter ist:</p>
+{{template "legal_operator" .}}
+<p>Der Dienst ist ein privates, nicht kommerzielles Angebot: Er ist kostenlos, enthält keine Werbung und keine Bezahlfunktionen, und der Anbieter verfolgt damit keine Gewinnabsicht. Ein Anspruch auf Nutzung besteht nicht.</p>
+{{template "legal_open_source_de" .}}
+<p>Indem du einen Bot dieses Dienstes zu einem Server hinzufügst, seine Befehle oder Funktionen nutzt oder dich im Dashboard anmeldest, stimmst du diesen Bedingungen zu.</p>
+
+<h2>2. Voraussetzungen</h2>
+<ul>
+  <li>Du brauchst ein Discord-Konto und musst die <a href="https://discord.com/terms" rel="noopener">Nutzungsbedingungen</a> und <a href="https://discord.com/guidelines" rel="noopener">Community-Richtlinien</a> von Discord einhalten. Diese gelten neben diesen Bedingungen; bei Widersprüchen gehen die Bedingungen von Discord vor.</li>
+  <li>Du musst mindestens 13 Jahre alt sein und das Mindestalter erfüllen, das in deinem Land für die Nutzung von Discord gilt.</li>
+</ul>
+
+<h2>3. Erlaubte Nutzung</h2>
+<p>Du darfst den Dienst nur im Rahmen der geltenden Gesetze nutzen. Nicht erlaubt ist insbesondere:</p>
+<ul>
+  <li>rechtswidrige, belästigende, hasserfüllte, sexuelle Inhalte mit Minderjährigen oder sonst verletzende Inhalte zu erzeugen, zu verbreiten oder zu speichern (auch über Bild-, Text- oder andere Generierungsfunktionen);</li>
+  <li>Rechte Dritter zu verletzen, etwa Urheber-, Marken- oder Persönlichkeitsrechte;</li>
+  <li>Spam, automatisierte Massenanfragen oder das Umgehen von Limits, Cooldowns und Berechtigungen;</li>
+  <li>Sicherheitslücken auszunutzen, den Dienst zu stören oder auf Daten anderer zuzugreifen;</li>
+  <li>andere über die Herkunft oder den Zweck des Dienstes zu täuschen.</li>
+</ul>
+
+<h2>4. Server-Administratoren</h2>
+<p>Wer einen Bot auf einem Server einsetzt, entscheidet, welche Module, Befehle und Plugins dort laufen, und ist für deren Einstellungen und Inhalte verantwortlich. Server-Administratoren sorgen dafür, dass die Mitglieder ihres Servers über den Einsatz des Bots informiert sind und dass die Nutzung mit den Discord-Bedingungen und geltendem Recht vereinbar ist.</p>
+
+<h2>5. Inhalte</h2>
+<p>Inhalte, die du über den Dienst einstellst (z. B. Nachrichten, Bilder, Eingaben für Befehle), bleiben deine. Du erlaubst dem Anbieter, sie zu speichern, zu verarbeiten und anzuzeigen, soweit das für die jeweilige Funktion nötig ist. Für deine Inhalte bist du selbst verantwortlich.</p>
+
+<h2>6. Plugins und externe Dienste</h2>
+<p>Einige Funktionen nutzen Dienste Dritter (z. B. Bildgenerierung, Mediendienste, Wetterdaten). Dafür gelten zusätzlich die Bedingungen dieser Anbieter. Der Anbieter dieses Dienstes hat keinen Einfluss auf deren Inhalte und Verfügbarkeit.</p>
+
+<h2>7. Verfügbarkeit und Änderungen</h2>
+<p>Der Dienst wird ohne Gewähr für eine bestimmte Verfügbarkeit bereitgestellt. Funktionen können geändert, eingeschränkt oder eingestellt werden, auch wenn Discord oder ein externer Dienst seine Schnittstellen ändert.</p>
+
+<h2>8. Sperrung und Beendigung</h2>
+<p>Bei Verstößen gegen diese Bedingungen oder die Bedingungen von Discord kann der Anbieter Nutzer oder Server von einzelnen Funktionen oder vom ganzen Dienst ausschließen. Du kannst die Nutzung jederzeit beenden, indem du den Bot von deinem Server entfernst; zur Löschung deiner Daten siehe die <a href="/privacy?lang=de">Datenschutzerklärung</a>.</p>
+
+<h2>9. Haftung</h2>
+<p>Da der Dienst unentgeltlich ist, haftet der Anbieter nur für Vorsatz und grobe Fahrlässigkeit. Unberührt bleibt die Haftung für Schäden aus der Verletzung von Leben, Körper oder Gesundheit sowie nach zwingenden gesetzlichen Vorschriften (z. B. dem Produkthaftungsgesetz). Für Inhalte anderer Nutzer und für externe Dienste haftet der Anbieter nicht.</p>
+
+<h2>10. Keine Verbindung zu Discord</h2>
+<p>Dieser Dienst wird nicht von Discord Inc. betrieben, gesponsert oder empfohlen. „Discord“ ist eine Marke von Discord Inc.</p>
+
+<h2>11. Änderungen dieser Bedingungen</h2>
+<p>Der Anbieter kann diese Bedingungen ändern, etwa wenn sich Funktionen oder Rechtslage ändern. Die jeweils aktuelle Fassung steht auf dieser Seite; das Datum oben zeigt den Stand. Wer den Dienst nach einer Änderung weiter nutzt, stimmt der neuen Fassung zu.</p>
+
+<h2>12. Schlussbestimmungen</h2>
+<p>Es gilt das Recht des Staates, in dem der Anbieter seinen Sitz hat; zwingende Verbraucherschutzvorschriften deines Wohnsitzlandes bleiben unberührt. Ist eine Bestimmung unwirksam, bleiben die übrigen wirksam.</p>
+
+<h2>13. Kontakt</h2>
+<p>Fragen zu diesen Bedingungen: {{with .Email}}<a href="mailto:{{.}}">{{.}}</a>{{else}}über den Betreiber dieser Installation{{end}}.</p>
+{{end}}
+
+{{/* ===================== Datenschutzerklärung (DE) ===================== */}}
+{{define "privacy_de"}}
+<p>Diese Datenschutzerklärung beschreibt, welche Daten die Discord-Bots dieser BotHub-Installation{{with .Domain}} ({{.}}){{end}} und das zugehörige Dashboard verarbeiten, wofür, wie lange und welche Rechte du hast.</p>
+
+<h2>1. Verantwortlicher</h2>
+{{template "legal_operator" .}}
+
+<h2>2. Welche Daten wir verarbeiten</h2>
+<h3>a) Daten aus Discord</h3>
+<p>Wenn ein Bot dieses Dienstes auf einem Server ist, verarbeitet er Daten, die Discord ihm über die Discord-API liefert, und zwar nur für die Funktionen, die die Server-Administratoren eingeschaltet haben:</p>
+<ul>
+  <li>IDs von Servern, Kanälen, Rollen, Nachrichten und Nutzern sowie Nutzer- und Anzeigenamen und Profilbild-Links;</li>
+  <li>Inhalte von Nachrichten, soweit eine Funktion sie braucht (z. B. Automod-Filter, Auto-Responder, Nachrichten-Log, Modmail, Tickets mit Transkripten, Starboard, Zähl-Spiele);</li>
+  <li>Eingaben in Befehle, Buttons und Formulare (z. B. Suchbegriffe, Prompts, hochgeladene Bilder);</li>
+  <li>Daten, die Funktionen selbst erzeugen: Moderationsfälle, Verwarnungen und Notizen, Level und XP, Guthaben, Umfrage-Stimmen, Gewinnspiel-Teilnahmen, Einladungs-Zuordnungen, Vorschläge, Geburtstage (nur wenn du sie selbst einträgst), Sprachkanal-Infos.</li>
+</ul>
+<h3>b) Konten im Dashboard</h3>
+<p>Für Konten im Dashboard: Benutzername, optional E-Mail-Adresse, Passwort nur als Hash (Argon2id), Daten der Zwei-Faktor-Anmeldung (verschlüsselt) bzw. Passkeys (öffentlicher Schlüssel), ein technisch notwendiges Sitzungs-Cookie sowie im Server-Protokoll Zeitpunkt, IP-Adresse und Browser-Kennung von Anmeldungen und Änderungen. Es gibt keine Tracking- oder Werbe-Cookies.</p>
+<h3>c) Plugins und externe Dienste</h3>
+<p>Wenn Server-Administratoren Funktionen nutzen, die externe Dienste einbinden (z. B. Bildgenerierung, Medienserver, Wetterdaten, Liedtexte, Musik), werden genau die dafür nötigen Eingaben an diesen Dienst übermittelt, etwa ein Suchbegriff, ein Prompt oder ein Bild. Dafür gelten zusätzlich die Datenschutzerklärungen dieser Anbieter. Plugins laufen abgeschottet und haben keinen direkten Zugriff auf die Datenbank.</p>
+
+<h2>3. Zwecke und Rechtsgrundlagen</h2>
+<ul>
+  <li>Bereitstellung der Bot- und Dashboard-Funktionen (Art. 6 Abs. 1 lit. b DSGVO, soweit du den Dienst selbst nutzt; sonst lit. f: berechtigtes Interesse der Server-Administratoren am Betrieb ihres Servers);</li>
+  <li>Sicherheit, Missbrauchs- und Spam-Abwehr, Fehlersuche (Art. 6 Abs. 1 lit. f DSGVO);</li>
+  <li>Erfüllung gesetzlicher Pflichten (Art. 6 Abs. 1 lit. c DSGVO).</li>
+</ul>
+<p>Der Dienst ist nicht kommerziell. Wir verkaufen keine Daten, nutzen sie nicht für Werbung, nicht für Profilbildung und nicht zum Training von KI-Modellen.</p>
+{{template "legal_open_source_de" .}}
+
+<h2>4. Weitergabe</h2>
+<p>Daten werden nur weitergegeben</p>
+<ul>
+  <li>an Discord, soweit der Bot über die Discord-API arbeitet (z. B. Nachrichten senden);</li>
+  <li>an externe Dienste, die Server-Administratoren eingeschaltet haben, und nur im nötigen Umfang (siehe 2c);</li>
+  <li>an technische Dienstleister (z. B. Hosting), die nur nach Weisung handeln;</li>
+  <li>wenn ein Gesetz es verlangt oder du es selbst anweist.</li>
+</ul>
+
+<h2>5. Speicherort und Sicherheit</h2>
+<p>Die Daten liegen auf dem Server des Betreibers. Bot-Tokens, API-Schlüssel und Daten der Zwei-Faktor-Anmeldung sind verschlüsselt gespeichert (AES-256-GCM), Passwörter nur als Hash. Zugriff haben nur Administratoren dieser Installation. Bei einer Verletzung des Schutzes deiner Daten informieren wir dich und die zuständigen Stellen, soweit das Gesetz es verlangt.</p>
+
+<h2>6. Speicherdauer</h2>
+<p>Wir speichern Daten nur, solange die jeweilige Funktion sie braucht. Server-Administratoren können Daten ihres Servers (z. B. Level, Moderationsfälle, Tickets) im Dashboard löschen. Daten eines Servers werden gelöscht, wenn der Betreiber den Bot oder die Funktion entfernt, spätestens auf Anfrage. Protokolle bewahren wir nur so lange auf, wie es für Sicherheit und Fehlersuche nötig ist.</p>
+
+<h2>7. Deine Rechte</h2>
+<p>Du hast das Recht auf Auskunft (Art. 15 DSGVO), Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung der Verarbeitung (Art. 18), Datenübertragbarkeit (Art. 20) und Widerspruch gegen Verarbeitungen auf Grundlage berechtigter Interessen (Art. 21). Außerdem kannst du dich bei einer Datenschutz-Aufsichtsbehörde beschweren.</p>
+<p><strong>Löschung oder Änderung beantragen:</strong> Schreib {{with .Email}}an <a href="mailto:{{.}}">{{.}}</a>{{else}}dem Betreiber dieser Installation{{end}} und nenne deine Discord-ID und, wenn es um einen bestimmten Server geht, dessen Namen oder ID. Wir bearbeiten Anfragen innerhalb eines Monats.</p>
+
+<h2>8. Mindestalter</h2>
+<p>Der Dienst richtet sich an Personen, die Discord nutzen dürfen: mindestens 13 Jahre bzw. das in deinem Land geltende Mindestalter.</p>
+
+<h2>9. Discord</h2>
+<p>Für die Verarbeitung durch Discord selbst gilt die <a href="https://discord.com/privacy" rel="noopener">Datenschutzerklärung von Discord</a>. Dieser Dienst wird nicht von Discord Inc. betrieben, gesponsert oder empfohlen.</p>
+
+<h2>10. Änderungen</h2>
+<p>Wir passen diese Erklärung an, wenn sich Funktionen oder Rechtslage ändern. Die aktuelle Fassung steht immer auf dieser Seite.</p>
+{{end}}
+
+{{/* ===================== Terms of Service (EN) ===================== */}}
+{{define "terms_en"}}
+<h2>1. Provider and scope</h2>
+<p>These Terms of Service apply to the Discord bots run through this BotHub instance{{with .Domain}} ({{.}}){{end}} and to its dashboard (together, the "Service"). The provider is:</p>
+{{template "legal_operator" .}}
+<p>The Service is a private, non-commercial offering: it is free of charge, has no advertising and no paid features, and the provider does not seek to make a profit with it. There is no right to use it.</p>
+{{template "legal_open_source_en" .}}
+<p>By adding a bot of this Service to a server, using its commands or features, or signing in to the dashboard, you agree to these Terms.</p>
+
+<h2>2. Requirements</h2>
+<ul>
+  <li>You need a Discord account and must follow Discord's <a href="https://discord.com/terms" rel="noopener">Terms of Service</a> and <a href="https://discord.com/guidelines" rel="noopener">Community Guidelines</a>. They apply in addition to these Terms; where they conflict, Discord's terms prevail.</li>
+  <li>You must be at least 13 years old and meet the minimum age to use Discord in your country.</li>
+</ul>
+
+<h2>3. Acceptable use</h2>
+<p>You may use the Service only within the law. In particular, you must not:</p>
+<ul>
+  <li>create, share or store unlawful, harassing, hateful, sexual content involving minors or otherwise harmful content (including through image, text or other generation features);</li>
+  <li>infringe the rights of others, such as copyright, trademarks or personality rights;</li>
+  <li>spam, send automated mass requests, or bypass limits, cooldowns and permissions;</li>
+  <li>exploit security flaws, disrupt the Service or access other people's data;</li>
+  <li>mislead others about the origin or purpose of the Service.</li>
+</ul>
+
+<h2>4. Server administrators</h2>
+<p>Whoever uses a bot on a server decides which modules, commands and plugins run there and is responsible for their settings and content. Server administrators make sure their members know the bot is used and that this use complies with Discord's terms and applicable law.</p>
+
+<h2>5. Content</h2>
+<p>Content you submit through the Service (for example messages, images, command input) remains yours. You allow the provider to store, process and display it as far as the feature needs. You are responsible for your content.</p>
+
+<h2>6. Plugins and third-party services</h2>
+<p>Some features use third-party services (for example image generation, media services, weather data). Their terms apply in addition. The provider of this Service has no control over their content or availability.</p>
+
+<h2>7. Availability and changes</h2>
+<p>The Service is provided without any guarantee of availability. Features may be changed, limited or discontinued, including when Discord or a third-party service changes its interfaces.</p>
+
+<h2>8. Suspension and termination</h2>
+<p>If these Terms or Discord's terms are violated, the provider may exclude users or servers from single features or from the whole Service. You can stop using the Service at any time by removing the bot from your server; for deleting your data see the <a href="/privacy?lang=en">Privacy Policy</a>.</p>
+
+<h2>9. Liability</h2>
+<p>As the Service is free of charge, the provider is liable only for intent and gross negligence. Liability for injury to life, body or health and under mandatory law (such as product liability law) remains unaffected. The provider is not liable for other users' content or for third-party services.</p>
+
+<h2>10. No affiliation with Discord</h2>
+<p>This Service is not operated, sponsored or endorsed by Discord Inc. "Discord" is a trademark of Discord Inc.</p>
+
+<h2>11. Changes to these Terms</h2>
+<p>The provider may change these Terms, for example when features or the law change. The current version is always on this page; the date above shows when it was last updated. Continuing to use the Service after a change means you accept the new version.</p>
+
+<h2>12. Final provisions</h2>
+<p>The law of the country where the provider is established applies; mandatory consumer protection rules of your country of residence remain unaffected. If a provision is invalid, the rest remain in effect.</p>
+
+<h2>13. Contact</h2>
+<p>Questions about these Terms: {{with .Email}}<a href="mailto:{{.}}">{{.}}</a>{{else}}through the operator of this instance{{end}}.</p>
+{{end}}
+
+{{/* ===================== Privacy Policy (EN) ===================== */}}
+{{define "privacy_en"}}
+<p>This Privacy Policy explains which data the Discord bots of this BotHub instance{{with .Domain}} ({{.}}){{end}} and its dashboard process, why, for how long, and what your rights are.</p>
+
+<h2>1. Controller</h2>
+{{template "legal_operator" .}}
+
+<h2>2. Data we process</h2>
+<h3>a) Data from Discord</h3>
+<p>When a bot of this Service is on a server, it processes data Discord provides through the Discord API, and only for the features the server administrators have turned on:</p>
+<ul>
+  <li>IDs of servers, channels, roles, messages and users, as well as user names, display names and avatar links;</li>
+  <li>message content where a feature needs it (for example automod filters, auto-responder, message log, modmail, tickets with transcripts, starboard, counting games);</li>
+  <li>input to commands, buttons and forms (for example search terms, prompts, uploaded images);</li>
+  <li>data features create themselves: moderation cases, warnings and notes, levels and XP, balances, poll votes, giveaway entries, invite attribution, suggestions, birthdays (only if you enter them), voice channel information.</li>
+</ul>
+<h3>b) Dashboard accounts</h3>
+<p>For dashboard accounts: user name, optional e-mail address, password only as a hash (Argon2id), two-factor sign-in data (encrypted) or passkeys (public key), a strictly necessary session cookie, and in the server log the time, IP address and browser identifier of sign-ins and changes. There are no tracking or advertising cookies.</p>
+<h3>c) Plugins and third-party services</h3>
+<p>When server administrators use features that rely on third-party services (for example image generation, media servers, weather data, lyrics, music), exactly the input needed is sent to that service, such as a search term, a prompt or an image. Their privacy policies apply in addition. Plugins run isolated and have no direct access to the database.</p>
+
+<h2>3. Purposes and legal bases</h2>
+<ul>
+  <li>Providing the bot and dashboard features (Art. 6(1)(b) GDPR where you use the Service yourself; otherwise (f): the server administrators' legitimate interest in running their server);</li>
+  <li>security, abuse and spam prevention, troubleshooting (Art. 6(1)(f) GDPR);</li>
+  <li>legal obligations (Art. 6(1)(c) GDPR).</li>
+</ul>
+<p>The Service is non-commercial. We do not sell data and do not use it for advertising, profiling or training AI models.</p>
+{{template "legal_open_source_en" .}}
+
+<h2>4. Sharing</h2>
+<p>Data is shared only</p>
+<ul>
+  <li>with Discord, as far as the bot works through the Discord API (for example sending messages);</li>
+  <li>with third-party services turned on by server administrators, and only as far as needed (see 2c);</li>
+  <li>with technical service providers (for example hosting) acting only on our instructions;</li>
+  <li>when the law requires it or you instruct us to.</li>
+</ul>
+
+<h2>5. Storage and security</h2>
+<p>Data is stored on the operator's server. Bot tokens, API keys and two-factor data are stored encrypted (AES-256-GCM), passwords only as hashes. Only administrators of this instance have access. If your data is breached, we inform you and the competent authorities as the law requires.</p>
+
+<h2>6. Retention</h2>
+<p>We keep data only as long as the feature needs it. Server administrators can delete their server's data (for example levels, moderation cases, tickets) in the dashboard. A server's data is deleted when the operator removes the bot or the feature, at the latest on request. Logs are kept only as long as needed for security and troubleshooting.</p>
+
+<h2>7. Your rights</h2>
+<p>You have the right of access (Art. 15 GDPR), rectification (Art. 16), erasure (Art. 17), restriction of processing (Art. 18), data portability (Art. 20) and to object to processing based on legitimate interests (Art. 21). You can also lodge a complaint with a data protection authority.</p>
+<p><strong>Request deletion or changes:</strong> write {{with .Email}}to <a href="mailto:{{.}}">{{.}}</a>{{else}}to the operator of this instance{{end}} with your Discord ID and, if it concerns a specific server, its name or ID. We handle requests within one month.</p>
+
+<h2>8. Minimum age</h2>
+<p>The Service is meant for people allowed to use Discord: at least 13 years old or the minimum age in your country.</p>
+
+<h2>9. Discord</h2>
+<p>Processing by Discord itself is covered by <a href="https://discord.com/privacy" rel="noopener">Discord's Privacy Policy</a>. This Service is not operated, sponsored or endorsed by Discord Inc.</p>
+
+<h2>10. Changes</h2>
+<p>We update this policy when features or the law change. The current version is always on this page.</p>
+{{end}}

@@ -96,6 +96,9 @@
         <button type="button" class="menu-item" role="menuitem" data-open-dialog="admin-dialog"
           hx-get="/admin/overview" hx-target="#admin-panel">{{template "icon_chip"}}<span>{{t "admin.menu"}}</span></button>
         <hr>
+        <a class="menu-item menu-item-small" role="menuitem" href="/terms" target="_blank" rel="noopener" hx-boost="false"><span>{{t "legal.terms"}}</span></a>
+        <a class="menu-item menu-item-small" role="menuitem" href="/privacy" target="_blank" rel="noopener" hx-boost="false"><span>{{t "legal.privacy"}}</span></a>
+        <hr>
         <form method="post" action="/logout" hx-boost="false">
           <input type="hidden" name="csrf_token" value="{{.CSRF}}">
           <button type="submit" class="menu-item" role="menuitem">{{template "icon_logout"}}<span>{{t "nav.logout"}}</span></button>

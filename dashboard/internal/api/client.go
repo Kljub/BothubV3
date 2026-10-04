@@ -1008,3 +1008,34 @@ func (c *Client) PluginFileData(ctx context.Context, s Session, botID int64, plu
 	data, err := base64.StdEncoding.DecodeString(out.Data)
 	return out.Mime, data, err
 }
+
+// LegalInfo: operator details of the public Terms and Privacy pages.
+// AdminEmail (read only) is the fallback contact.
+type LegalInfo struct {
+	Operator   string `json:"operator"`
+	Address    string `json:"address"`
+	Email      string `json:"email"`
+	SourceURL  string `json:"sourceUrl"`
+	AdminEmail string `json:"adminEmail,omitempty"`
+}
+
+// Legal reads the operator details without a session (public pages).
+func (c *Client) Legal(ctx context.Context) (LegalInfo, error) {
+	var out LegalInfo
+	_, err := c.do(ctx, Session{}, http.MethodGet, "/api/v1/legal", nil, &out)
+	return out, err
+}
+
+// AdminLegal reads the operator details for the admin form.
+func (c *Client) AdminLegal(ctx context.Context, s Session) (LegalInfo, error) {
+	var out LegalInfo
+	_, err := c.do(ctx, s, http.MethodGet, "/api/v1/admin/legal", nil, &out)
+	return out, err
+}
+
+// SaveLegal stores the operator details.
+func (c *Client) SaveLegal(ctx context.Context, s Session, in LegalInfo) (LegalInfo, error) {
+	var out LegalInfo
+	_, err := c.do(ctx, s, http.MethodPut, "/api/v1/admin/legal", map[string]string{"operator": in.Operator, "address": in.Address, "email": in.Email, "sourceUrl": in.SourceURL}, &out)
+	return out, err
+}
