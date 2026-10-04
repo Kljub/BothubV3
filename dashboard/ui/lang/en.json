@@ -890,6 +890,8 @@
   "builder.cfg.description_hint": "Description of the command (max. 100 characters)",
   "builder.cfg.hide_replies": "Hide replies",
   "builder.cfg.hide_replies_hint": "Hides the reply from other users.",
+  "builder.cfg.visibility_option": "Visibility option",
+  "builder.cfg.visibility_option_hint": "Name of a choice option with \"Public\" and \"Only me\": the member picks per use who sees the reply. Without an answer \"Hide replies\" decides.",
   "builder.cfg.cooldown_type": "Cooldown type",
   "builder.cfg.cooldown_seconds": "Cooldown (seconds)",
   "builder.enum.cooldown.none": "No cooldown",

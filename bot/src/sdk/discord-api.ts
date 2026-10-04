@@ -624,6 +624,22 @@ export function discordApi(
   let open = 0;
   const checks: number[] = [];
   // options.file of interaction.reply / followUp: a plugin file as attachment (storage.files).
+  /** Embeds with image_url / thumbnail_url 'attachment' show the sent file (like message.sendFile). */
+  const attach = (message: unknown, options: unknown): unknown => {
+    const name = options && typeof options === 'object' ? (options as { file?: unknown }).file : undefined;
+    const f = name === undefined ? null : fileOf?.(name);
+    if (!f || !message || typeof message !== 'object' || !Array.isArray((message as { embeds?: unknown }).embeds)) return message;
+    const fileName = f.filename || f.name;
+    return {
+      ...(message as Record<string, unknown>),
+      embeds: ((message as { embeds: unknown[] }).embeds).map((e) => {
+        if (!e || typeof e !== 'object') return e;
+        const embed = { ...(e as Record<string, unknown>) };
+        for (const k of ['image_url', 'thumbnail_url']) if (embed[k] === 'attachment') embed[k] = `attachment://${fileName}`;
+        return embed;
+      }),
+    };
+  };
   const withFile = (options: unknown): { files?: { attachment: Buffer; name: string }[] } => {
     const name = options && typeof options === 'object' ? (options as { file?: unknown }).file : undefined;
     if (name === undefined) return {};
@@ -930,7 +946,7 @@ export function discordApi(
     // --- interactions (handles from blocks, clicks, selects, modals) ---
     'interaction.reply': async (q) => {
       const i = held(a(q)[0]);
-      const p = { ...payload(a(q)[1]), flags: ephemeralFlag(a(q)[2], a(q)[0]), ...withFile(a(q)[2]) };
+      const p = { ...payload(attach(a(q)[1], a(q)[2])), flags: ephemeralFlag(a(q)[2], a(q)[0]), ...withFile(a(q)[2]) };
       if (i.replied || i.deferred) await i.followUp(p as never);
       else await i.reply(p as never);
     },
@@ -946,7 +962,7 @@ export function discordApi(
     'interaction.followUp': async (q) => {
       const i = held(a(q)[0]);
       if (!i.replied && !i.deferred) throw new SdkError('sdk.interaction.not_replied');
-      await i.followUp({ ...payload(a(q)[1]), flags: ephemeralFlag(a(q)[2], a(q)[0]), ...withFile(a(q)[2]) } as never);
+      await i.followUp({ ...payload(attach(a(q)[1], a(q)[2])), flags: ephemeralFlag(a(q)[2], a(q)[0]), ...withFile(a(q)[2]) } as never);
     },
     /** Updates the message of the clicked button/select (component interactions). */
     'interaction.update': async (q) => {

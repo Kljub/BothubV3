@@ -96,3 +96,12 @@ test('economy: give items, stats and cooldowns', async () => {
   assert.notEqual(cd.vars.get('R.daily'), '0');
   assert.match(cd.vars.get('R') ?? '', /Daily bonus: <t:\d+:R>/);
 });
+
+test('visibility option: the member picks per use, else the command setting', async () => {
+  const { hideRepliesOf } = await import('./commands.js');
+  const s = (hide: boolean, opt = 'visibility') => ({ hideReplies: hide, visibilityOption: opt }) as never;
+  assert.equal(hideRepliesOf(s(false), { option_visibility: 'Only me' }), true);
+  assert.equal(hideRepliesOf(s(true), { option_visibility: 'Public' }), false);
+  assert.equal(hideRepliesOf(s(true), { option_visibility: '' }), true, 'no answer: the setting');
+  assert.equal(hideRepliesOf(s(false, ''), { option_visibility: 'Only me' }), false, 'no visibility option');
+});

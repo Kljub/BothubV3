@@ -890,6 +890,8 @@
   "builder.cfg.description_hint": "Beschreibung des Commands (max. 100 Zeichen)",
   "builder.cfg.hide_replies": "Antworten verbergen",
   "builder.cfg.hide_replies_hint": "Verbirgt die Antwort vor anderen Nutzern.",
+  "builder.cfg.visibility_option": "Sichtbarkeits-Option",
+  "builder.cfg.visibility_option_hint": "Name einer Auswahl-Option mit „Public“ und „Only me“: das Mitglied wählt bei jeder Nutzung, wer die Antwort sieht. Ohne Antwort entscheidet „Antworten verbergen“.",
   "builder.cfg.cooldown_type": "Cooldown Typ",
   "builder.cfg.cooldown_seconds": "Cooldown (Sekunden)",
   "builder.enum.cooldown.none": "Kein Cooldown",

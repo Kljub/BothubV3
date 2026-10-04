@@ -32,7 +32,7 @@ import type { PluginManager } from '../sdk/manager.js';
 import type { DiscordApiDeps } from '../sdk/discord-api.js';
 import type { Graph, GraphNode, NodeDefinition } from '../graph/types.js';
 import { endGiveaway } from '../modules/giveaway.js';
-import { buildCommands, denied, settingsOf, type Permissions, type PseudoRoles } from './commands.js';
+import { buildCommands, denied, hideRepliesOf, settingsOf, type Permissions, type PseudoRoles } from './commands.js';
 import { discordHandlers, type DiscordData } from './handlers.js';
 import { buildMessage, hasBody } from './message.js';
 import { VoiceManager } from './voice.js';
@@ -648,12 +648,13 @@ export class BotInstance {
     }
 
     const runKey = randomUUID().slice(0, 12);
-    const d = this.data({ runKey, guild: i.guild, channel, member, user: i.user, interaction: i, hideReplies: s.hideReplies });
+    const hideReplies = hideRepliesOf(s, vars);
+    const d = this.data({ runKey, guild: i.guild, channel, member, user: i.user, interaction: i, hideReplies });
     const run = new Run(cmd.graph, this.engine, d as never, vars);
     // Discord waits 3 seconds for an answer: slow blocks (loading games,
     // finding music) get a "thinking …" first; the reply then fills it.
     const defer = setTimeout(() => {
-      if (!i.replied && !i.deferred) d.deferring = i.deferReply(s.hideReplies ? { flags: MessageFlags.Ephemeral } : {}).catch(() => undefined);
+      if (!i.replied && !i.deferred) d.deferring = i.deferReply(hideReplies ? { flags: MessageFlags.Ephemeral } : {}).catch(() => undefined);
     }, AUTO_DEFER_MS);
     defer.unref();
     const result = await run.start();

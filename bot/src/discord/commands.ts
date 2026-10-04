@@ -24,6 +24,8 @@ export interface TriggerSettings {
   menuName: string;
   description: string;
   hideReplies: boolean;
+  /** Option whose answer picks the visibility per use ("Public" / "Only me"); '' = none. */
+  visibilityOption: string;
   contexts: 'guild' | 'guild_dm';
   cooldownType: 'none' | 'user' | 'server' | 'global';
   cooldownSeconds: number;
@@ -54,11 +56,24 @@ export function settingsOf(cmd: CommandRow): TriggerSettings {
     menuName: s('menu_name') || s('command_name') || cmd.name,
     description: s('description') || cmd.description,
     hideReplies: c.hide_replies === true,
+    visibilityOption: s('visibility_option'),
     contexts: s('contexts') === 'guild_dm' ? 'guild_dm' : 'guild',
     cooldownType: (['user', 'server', 'global'].includes(s('cooldown_type')) ? s('cooldown_type') : 'none') as TriggerSettings['cooldownType'],
     cooldownSeconds: cooldownOf(c.cooldown_seconds),
     permissions: { ...OPEN, ...((c.permissions as Partial<Permissions> | undefined) ?? {}) },
   };
+}
+
+/**
+ * Replies only for the user? The answer of the visibility option decides
+ * ("Only me" / "Public"); without an answer the command's setting.
+ */
+export function hideRepliesOf(s: TriggerSettings, vars: Record<string, string>): boolean {
+  if (!s.visibilityOption) return s.hideReplies;
+  const v = String(vars[`option_${s.visibilityOption}`] ?? '').trim().toLowerCase();
+  if (['only me', 'private', 'privat', 'nur ich', 'true'].includes(v)) return true;
+  if (['public', 'öffentlich', 'false'].includes(v)) return false;
+  return s.hideReplies;
 }
 
 /** "manage_guild" -> PermissionFlagsBits.ManageGuild (case and underscores ignored). */

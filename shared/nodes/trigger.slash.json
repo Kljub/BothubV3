@@ -82,6 +82,18 @@
         "x-labelKey": "builder.cfg.hide_replies",
         "x-hintKey": "builder.cfg.hide_replies_hint"
       },
+      "visibility_option": {
+        "type": "string",
+        "pattern": "^[a-z0-9_-]{0,32}$",
+        "x-labelKey": "builder.cfg.visibility_option",
+        "x-hintKey": "builder.cfg.visibility_option_hint",
+        "x-advanced": true,
+        "x-showIf": {
+          "command_type": [
+            "slash"
+          ]
+        }
+      },
       "cooldown_type": {
         "type": "string",
         "enum": [
