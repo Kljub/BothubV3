@@ -30,6 +30,7 @@ import {
   type Role,
 } from 'discord.js';
 import { SdkError } from './errors.js';
+import { counts, parseBackup, partsOf, restore, snapshot } from './guildbackup.js';
 import type { CaseAction, ModCase } from '../core/repo.js';
 
 type Handler = (q: Record<string, unknown>) => unknown;
@@ -516,6 +517,8 @@ export function discordApi(
   interactions: InteractionRegistry,
   net?: { resolve?: (h: string) => Promise<string[]>; raw?: RawHttp; checkRaw?: RawHttp },
   fileOf?: (name: unknown) => { name: string; filename: string; data: Buffer } | null,
+  // Stores a file of the plugin (guild.snapshot writes the backup JSON); undefined without storage.files.
+  putFile?: (data: Buffer, filename: string) => { name: string; mime: string; size: number; filename: string },
 ): Record<string, Handler> {
   const a = (q: Record<string, unknown>): unknown[] => (Array.isArray(q.args) ? q.args : []);
   const client = (): Client => {
@@ -637,6 +640,27 @@ export function discordApi(
       [...guildOf(a(q)[0]).channels.cache.values()].slice(0, 500).map((c) => ({ id: c.id, name: c.name, type: ChannelType[c.type], parentId: c.parentId, position: 'position' in c ? c.position : 0 })),
     'guild.getRoles': (q) => [...guildOf(a(q)[0]).roles.cache.values()].sort((x, y) => y.position - x.position).map(roleJson),
     'guild.getEmojis': (q) => [...guildOf(a(q)[0]).emojis.cache.values()].map((e) => ({ id: e.id, name: e.name, animated: e.animated, url: e.imageURL() })),
+    // --- server backup (discord.server.backup / discord.server.restore) ---
+    'guild.snapshot': async (q) => {
+      if (!putFile) throw new SdkError('sdk.call.denied');
+      const g = guildOf(a(q)[0]);
+      const o = (a(q)[1] && typeof a(q)[1] === 'object' ? a(q)[1] : {}) as Record<string, unknown>;
+      const backup = await snapshot(g, partsOf(o.parts));
+      const text = JSON.stringify(backup);
+      const day = backup.createdAt.slice(0, 10);
+      const file = putFile(Buffer.from(text, 'utf8'), `backup-${g.id}-${day}.json`);
+      return { file, counts: counts(backup), size: Buffer.byteLength(text), createdAt: backup.createdAt, guild: backup.guild, parts: backup.parts };
+    },
+    'guild.restore': async (q) => {
+      const g = guildOf(a(q)[0]);
+      const f = fileOf?.(a(q)[1]);
+      if (!f) throw new SdkError('sdk.files.unknown');
+      const backup = parseBackup(f.data.toString('utf8'));
+      if (!backup) throw new SdkError('sdk.backup.bad_file');
+      const o = (a(q)[2] && typeof a(q)[2] === 'object' ? a(q)[2] : {}) as Record<string, unknown>;
+      const mode = o.mode === 'replace' ? 'replace' : 'add';
+      return restore(g, backup, mode, partsOf(o.parts));
+    },
     'guild.getMembers': async (q) => {
       const g = guildOf(a(q)[0]);
       const limit = Math.max(1, Math.min(1000, Number((a(q)[1] as { limit?: unknown })?.limit ?? 100) || 100));

@@ -999,7 +999,8 @@ export class PluginManager {
     };
     // Interaction answers may carry a plugin file (options.file) when the plugin has storage.files.
     const fileOf = allowed.has('storage.files' as Permission) ? (name: unknown) => files.get(name) : undefined;
-    Object.assign(handlers, discordApi(botId, manifest.id, manifest.hosts, liveDeps, this.interactions, this.deps.outbound, fileOf));
+    const putFile = allowed.has('storage.files' as Permission) ? (data: Buffer, filename: string) => files.put(data, filename) : undefined;
+    Object.assign(handlers, discordApi(botId, manifest.id, manifest.hosts, liveDeps, this.interactions, this.deps.outbound, fileOf, putFile));
     proc = new PluginProcess(
       botId,
       manifest,

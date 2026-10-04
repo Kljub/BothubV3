@@ -57,10 +57,10 @@ final class PluginFileStore
         if (!preg_match(self::FILE, $name)) {
             return null;
         }
-        $stmt = $this->pdo->prepare('SELECT name, mime, data FROM plugin_files WHERE bot_id = ? AND plugin_id = ? AND name = ?');
+        $stmt = $this->pdo->prepare('SELECT name, mime, filename, data FROM plugin_files WHERE bot_id = ? AND plugin_id = ? AND name = ?');
         $stmt->execute([$botId, $pluginId, $name]);
         $row = $stmt->fetch();
-        return $row ? ['name' => $row['name'], 'mime' => $row['mime'], 'data' => (string) $row['data']] : null;
+        return $row ? ['name' => $row['name'], 'mime' => $row['mime'], 'filename' => $row['filename'], 'data' => (string) $row['data']] : null;
     }
 
     /**

@@ -316,6 +316,21 @@ func (s *Server) handleModuleItem(kind string) authHandler {
 				return
 			}
 			data["PluginCommands"] = pcmds
+			// Files the plugin made for the owner (e.g. server backups): download links.
+			if files, err := s.api.PluginFiles(r.Context(), session(r), bot.ID, key); err == nil {
+				var downloads []pluginDownload
+				for _, f := range files {
+					if downloadable(f.Mime) {
+						name := f.Filename
+						if name == "" {
+							name = f.Name
+						}
+						downloads = append(downloads, pluginDownload{Name: name, Size: humanSize(f.Size), Date: formatDateTime(f.CreatedAt, p.Locale),
+							URL: fmt.Sprintf("/bot/%d/plugins/%s/download/%s", bot.ID, key, f.Name)})
+					}
+				}
+				data["Downloads"] = downloads
+			}
 			settings, err := s.pluginSettingsData(r, bot.ID, found.InstalledPlugin)
 			if err != nil {
 				s.fail(w, r, p, err)
@@ -424,4 +439,24 @@ func (s *Server) moduleAbout(locale, key string) []aboutStep {
 		out = append(out, aboutStep{Title: title, Text: s.i18n.T(locale, k+"_hint")})
 	}
 	return out
+}
+
+// pluginDownload is a file of a plugin the owner can download (not images or sounds).
+type pluginDownload struct{ Name, Size, Date, URL string }
+
+// downloadable: documents a plugin made (backups, attachments), not the
+// images and sounds of its settings.
+func downloadable(mime string) bool {
+	return !strings.HasPrefix(mime, "image/") && !strings.HasPrefix(mime, "audio/")
+}
+
+func humanSize(n int64) string {
+	switch {
+	case n >= 1<<20:
+		return fmt.Sprintf("%.1f MB", float64(n)/(1<<20))
+	case n >= 1<<10:
+		return fmt.Sprintf("%.1f KB", float64(n)/(1<<10))
+	default:
+		return fmt.Sprintf("%d B", n)
+	}
 }

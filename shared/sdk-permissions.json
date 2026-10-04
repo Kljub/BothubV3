@@ -282,6 +282,30 @@
       "implemented": []
     },
     {
+      "key": "discord.server.backup",
+      "group": "server",
+      "risk": "medium",
+      "calls": [
+        "guild.snapshot"
+      ],
+      "implemented": [
+        "guild.snapshot"
+      ],
+      "$comment": "A full copy of a server structure (roles with permissions, channels with overwrites, slowmode, bitrate and user limit, emojis, bans, settings) saved as a JSON plugin file; the plugin gets its name and counts. Needs storage.files."
+    },
+    {
+      "key": "discord.server.restore",
+      "group": "server",
+      "risk": "high",
+      "calls": [
+        "guild.restore"
+      ],
+      "implemented": [
+        "guild.restore"
+      ],
+      "$comment": "Builds a server from a backup file (guild.snapshot): roles, channels with permission overwrites, emojis, settings, optionally bans. mode \"add\" or \"replace\" (deletes channels and the roles the bot may manage first). Never hands out Administrator; managed roles are skipped. Needs storage.files."
+    },
+    {
       "key": "discord.invites.manage",
       "group": "server",
       "risk": "medium",

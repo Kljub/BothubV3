@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"mime"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -94,4 +95,33 @@ func (s *Server) handlePluginFile(w http.ResponseWriter, r *http.Request, p Page
 	// The name is the content hash: the same name is always the same picture.
 	h.Set("Cache-Control", "private, max-age=86400, immutable")
 	_, _ = w.Write(data)
+}
+
+var pluginDownloadName = regexp.MustCompile(`^[0-9a-f]{16}\.[a-z0-9]{1,8}$`)
+
+// handlePluginDownload sends one file of a plugin as a download (backups,
+// documents), never shown inline, under its original name.
+func (s *Server) handlePluginDownload(w http.ResponseWriter, r *http.Request, p Page) {
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	name := r.PathValue("name")
+	if err != nil || id < 1 || !pluginDownloadName.MatchString(name) {
+		http.NotFound(w, r)
+		return
+	}
+	f, err := s.api.PluginFileDownload(r.Context(), session(r), id, r.PathValue("plugin"), name)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	filename := f.Filename
+	if filename == "" {
+		filename = name
+	}
+	h := w.Header()
+	h.Set("Content-Type", "application/octet-stream")
+	h.Set("X-Content-Type-Options", "nosniff")
+	h.Set("Content-Security-Policy", "default-src 'none'")
+	h.Set("Cache-Control", "private, no-store")
+	h.Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": filename}))
+	_, _ = w.Write(f.Data)
 }

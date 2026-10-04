@@ -938,3 +938,63 @@ test('voice.play: a stored plugin file (storage.files) streams from the database
     manager.stopAll();
   }
 });
+
+test('server backup: restore maps roles and categories, never grants Administrator', async () => {
+  const { restore, parseBackup, partsOf, BACKUP_FORMAT } = await import('./guildbackup.js');
+  const { PermissionFlagsBits, ChannelType } = await import('discord.js');
+  const made: { kind: string; opts: Record<string, unknown> }[] = [];
+  let n = 0;
+  const guild = {
+    id: 'NEW', maximumBitrate: 96000,
+    members: { me: { roles: { highest: { position: 50 } } }, cache: new Map() },
+    roles: {
+      everyone: { setPermissions: async (bits: bigint) => made.push({ kind: 'everyone', opts: { bits } }) },
+      cache: new Map(),
+      create: async (opts: Record<string, unknown>) => (made.push({ kind: 'role', opts }), { id: `r${++n}` }),
+    },
+    channels: {
+      cache: new Map(),
+      create: async (opts: Record<string, unknown>) => {
+        if (opts.type === ChannelType.GuildAnnouncement) throw new Error('needs community');
+        made.push({ kind: 'channel', opts });
+        return { id: `c${++n}` };
+      },
+    },
+    emojis: { create: async () => ({}) },
+    bans: { create: async () => ({}) },
+    edit: async () => ({}),
+  };
+  const admin = (PermissionFlagsBits.Administrator | PermissionFlagsBits.SendMessages).toString();
+  const backup = {
+    format: BACKUP_FORMAT, version: 1, createdAt: '2026-10-04T00:00:00Z', guild: { id: 'OLD', name: 'Old' }, parts: ['roles', 'channels'],
+    roles: [
+      { id: 'OLD', name: '@everyone', color: 0, hoist: false, mentionable: false, permissions: admin, position: 0, everyone: true, managed: false },
+      { id: 'mod', name: 'Mod', color: 255, hoist: true, mentionable: false, permissions: admin, position: 1, everyone: false, managed: false },
+      { id: 'botrole', name: 'Some Bot', color: 0, hoist: false, mentionable: false, permissions: '0', position: 2, everyone: false, managed: true },
+    ],
+    channels: [
+      { id: 'cat', type: 'GuildCategory', name: 'Info', parent: null, position: 0, topic: null, nsfw: false, slowmode: 0, bitrate: null, userLimit: null, overwrites: [] },
+      { id: 'news', type: 'GuildAnnouncement', name: 'news', parent: 'cat', position: 1, topic: 'News', nsfw: false, slowmode: 5, bitrate: null, userLimit: null,
+        overwrites: [{ id: 'mod', type: 'role', allow: admin, deny: '0' }, { id: 'OLD', type: 'role', allow: '0', deny: PermissionFlagsBits.SendMessages.toString() }] },
+      { id: 'vc', type: 'GuildVoice', name: 'Talk', parent: 'cat', position: 2, topic: null, nsfw: false, slowmode: 0, bitrate: 384000, userLimit: 5, overwrites: [] },
+    ],
+  };
+  assert.equal(parseBackup(JSON.stringify(backup))?.guild.name, 'Old');
+  assert.equal(parseBackup('{"format":"x"}'), null);
+  assert.deepEqual(partsOf(['roles', 'nope']), ['roles']);
+  const report = await restore(guild as never, parseBackup(JSON.stringify(backup))!, 'add', ['roles', 'channels']);
+  assert.deepEqual(report.created, { roles: 1, channels: 3, emojis: 0, bans: 0 }, 'the managed role is skipped');
+  const everyone = made.find((m) => m.kind === 'everyone')!;
+  assert.equal((everyone.opts.bits as bigint) & PermissionFlagsBits.Administrator, 0n);
+  const role = made.find((m) => m.kind === 'role')!;
+  assert.equal((role.opts.permissions as bigint) & PermissionFlagsBits.Administrator, 0n);
+  const [cat, news, vc] = made.filter((m) => m.kind === 'channel');
+  assert.equal(cat!.opts.name, 'Info');
+  assert.equal(news!.opts.type, ChannelType.GuildText, 'announcement falls back to text');
+  assert.equal(news!.opts.parent, 'c2', 'parent mapped to the new category');
+  const ow = news!.opts.permissionOverwrites as { id: string; allow: bigint }[];
+  assert.deepEqual(ow.map((o) => o.id), ['r1', 'NEW'], 'role IDs and @everyone mapped');
+  assert.equal(ow[0]!.allow & PermissionFlagsBits.Administrator, 0n);
+  assert.equal(vc!.opts.bitrate, 96000, 'bitrate capped to the server');
+  assert.equal(vc!.opts.userLimit, 5);
+});

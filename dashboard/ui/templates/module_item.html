@@ -84,6 +84,22 @@
   {{range .}}{{template "plugin_command_row" .}}{{end}}
 </section>
 {{end}}
+{{with $d.Downloads}}
+<section class="box">
+  <header class="box-head"><h3>{{t "plugins.files.title"}}</h3><span class="box-meta">{{len .}}</span></header>
+  <div class="box-body">
+    <p class="muted">{{t "plugins.files.hint"}}</p>
+    <div class="settings-card">
+      {{range .}}
+      <div class="settings-row">
+        <span class="settings-row-text"><strong class="mono">{{.Name}}</strong><span class="hint">{{.Size}} · {{.Date}}</span></span>
+        <a class="btn btn-sm" href="{{.URL}}" hx-boost="false" download>{{t "plugins.files.download"}}</a>
+      </div>
+      {{end}}
+    </div>
+  </div>
+</section>
+{{end}}
 {{with $d.Webhooks}}
 <section class="box">
   <header class="box-head"><h3>{{t "plugins.webhooks.title"}}</h3></header>

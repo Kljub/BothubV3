@@ -4124,5 +4124,12 @@
   "sdk.perm.http.check_hint": "Fragt beliebige öffentliche Webseiten, ob sie antworten: nur Statuscode und Antwortzeit, nie die Seite selbst. Adressen im Heimnetz bleiben gesperrt.",
   "modset.file.upload": "Sound hochladen",
   "modset.file.replace": "Sound ersetzen",
-  "modset.file.hint": "mp3, ogg, wav oder webm, max. 8 MB."
+  "modset.file.hint": "mp3, ogg, wav oder webm, max. 8 MB.",
+  "sdk.perm.discord.server.backup": "Server-Backups",
+  "sdk.perm.discord.server.backup_hint": "Kopiert die ganze Struktur eines Servers (Rollen mit Rechten, Channels mit Rechten, Emojis, Bans, Einstellungen) in eine Backup-Datei des Plugins.",
+  "sdk.perm.discord.server.restore": "Server wiederherstellen",
+  "sdk.perm.discord.server.restore_hint": "Baut Rollen, Channels, Emojis und Einstellungen aus einer Backup-Datei auf, auch in einem anderen Server; „ersetzen“ löscht vorher Channels und Rollen. Vergibt nie Administrator.",
+  "plugins.files.title": "Dateien",
+  "plugins.files.hint": "Dateien, die das Plugin für diesen Bot speichert, z. B. Server-Backups.",
+  "plugins.files.download": "Herunterladen"
 }

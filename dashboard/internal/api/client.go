@@ -1027,6 +1027,16 @@ type PluginFile struct {
 	Name string `json:"name"`
 	Mime string `json:"mime"`
 	Size int64  `json:"size"`
+	// Filename: the original name (files other than images), CreatedAt from the API.
+	Filename  string    `json:"filename"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+// PluginFiles lists the files a plugin keeps for a bot.
+func (c *Client) PluginFiles(ctx context.Context, s Session, botID int64, pluginID string) ([]PluginFile, error) {
+	var out list[PluginFile]
+	_, err := c.do(ctx, s, http.MethodGet, fmt.Sprintf("/api/v1/bots/%d/plugins/%s/files", botID, url.PathEscape(pluginID)), nil, &out)
+	return out.Items, err
 }
 
 // UploadPluginFile stores an image for the plugin's "image" settings fields.
@@ -1035,6 +1045,25 @@ func (c *Client) UploadPluginFile(ctx context.Context, s Session, botID int64, p
 	var out PluginFile
 	_, err := c.do(ctx, s, http.MethodPost, fmt.Sprintf("/api/v1/bots/%d/plugins/%s/files", botID, url.PathEscape(pluginID)), map[string]string{"data": base64.StdEncoding.EncodeToString(data), "accept": accept, "filename": filename}, &out)
 	return out, err
+}
+
+// PluginDownload is one plugin file with its original name and bytes.
+type PluginDownload struct {
+	Filename string
+	Data     []byte
+}
+
+// PluginFileDownload reads one file of a plugin for a download.
+func (c *Client) PluginFileDownload(ctx context.Context, s Session, botID int64, pluginID, name string) (PluginDownload, error) {
+	var out struct {
+		Filename string `json:"filename"`
+		Data     string `json:"data"`
+	}
+	if _, err := c.do(ctx, s, http.MethodGet, fmt.Sprintf("/api/v1/bots/%d/plugins/%s/files/%s", botID, url.PathEscape(pluginID), url.PathEscape(name)), nil, &out); err != nil {
+		return PluginDownload{}, err
+	}
+	data, err := base64.StdEncoding.DecodeString(out.Data)
+	return PluginDownload{Filename: out.Filename, Data: data}, err
 }
 
 // PluginFileData reads one image of a plugin: its type and its bytes.

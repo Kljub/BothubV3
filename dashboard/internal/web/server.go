@@ -225,6 +225,7 @@ func (s *Server) routes() http.Handler {
 	mux.Handle("PUT /bot/{id}/plugins/{plugin}/settings", auth(s.handlePluginSettingsSave))
 	mux.Handle("POST /bot/{id}/plugins/{plugin}/files", auth(s.handlePluginFileUpload))
 	mux.Handle("GET /bot/{id}/plugins/{plugin}/files/{name}", auth(s.handlePluginFile))
+	mux.Handle("GET /bot/{id}/plugins/{plugin}/download/{name}", auth(s.handlePluginDownload))
 	mux.Handle("PUT /bot/{id}/plugins/{plugin}/commands/{cid}", auth(s.handlePluginCommand))
 	mux.Handle("POST /bot/{id}/plugins/{plugin}/settings/{list}", auth(s.handlePluginSettingsItem))
 	mux.Handle("PUT /bot/{id}/plugins/{plugin}/settings/{list}/{idx}", auth(s.handlePluginSettingsItem))

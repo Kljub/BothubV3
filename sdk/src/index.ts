@@ -247,6 +247,19 @@ export interface PluginContext {
     getEmojis(guildId: Id): Async<Array<{ id: Id; name: string; animated: boolean; url: string }>>;
     /** "discord.members.read" */
     getMembers(guildId: Id, options?: { limit?: number }): Async<MemberInfo[]>;
+    /**
+     * "discord.server.backup" (+ storage.files): copies the server's structure
+     * (parts: settings, roles, channels, emojis, bans; default all but bans)
+     * into a JSON plugin file and answers its name and counts.
+     */
+    snapshot(guildId: Id, options?: { parts?: Array<'settings' | 'roles' | 'channels' | 'emojis' | 'bans'> }): Async<{ file: StoredFile; counts: Record<string, number>; size: number; createdAt: string; guild: { id: Id; name: string }; parts: string[] }>;
+    /**
+     * "discord.server.restore" (+ storage.files): builds a backup file into a
+     * server (also another one the bot is on). mode "add" (default) or
+     * "replace" (deletes channels and the roles the bot may manage first).
+     * Never grants Administrator; managed roles are skipped.
+     */
+    restore(guildId: Id, file: string, options?: { mode?: 'add' | 'replace'; parts?: Array<'settings' | 'roles' | 'channels' | 'emojis' | 'bans'> }): Async<{ mode: string; created: Record<string, number>; deleted: Record<string, number>; failed: string[] }>;
   };
   readonly member: {
     get(guildId: Id, userId: Id): Async<MemberInfo>;
