@@ -1,0 +1,49 @@
+/* bh-tour: the start tour (static/js/tour.js). Positions come from the
+   script; everything else is here. */
+
+.tour-backdrop { position: fixed; inset: 0; z-index: 900; background: transparent; }
+.tour-backdrop-dark { background: rgba(0, 0, 0, 0.6); }
+/* The spotlight dims the rest of the page with its huge shadow. */
+.tour-spot {
+  position: fixed; z-index: 901; pointer-events: none; border-radius: var(--radius);
+  box-shadow: 0 0 0 2px var(--accent), 0 0 0 9999px rgba(0, 0, 0, 0.6);
+  transition: left 0.25s ease, top 0.25s ease, width 0.25s ease, height 0.25s ease;
+}
+.tour-tip {
+  position: fixed; z-index: 903; width: min(340px, calc(100vw - 24px)); padding: 16px 16px 12px;
+  background: var(--surface); color: var(--text); border: 1px solid var(--border-strong); border-radius: var(--radius);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4); transition: left 0.25s ease, top 0.25s ease;
+}
+.tour-title { margin: 0 0 6px; font-size: 15px; }
+.tour-text { margin: 0 0 14px; font-size: 13px; line-height: 1.5; color: var(--text-2); }
+.tour-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.tour-count { font-size: 11px; color: var(--muted); }
+.tour-btns { display: flex; gap: 6px; }
+.tour-skip { background: transparent; border-color: transparent; color: var(--muted); }
+.tour-arrow { position: absolute; width: 14px; height: 14px; background: var(--surface); border: 1px solid var(--border-strong); transform: rotate(45deg); }
+.tour-tip[data-pos="right"] .tour-arrow { left: -8px; border-top: 0; border-right: 0; }
+.tour-tip[data-pos="left"] .tour-arrow { left: auto; right: -8px; border-bottom: 0; border-left: 0; }
+.tour-tip[data-pos="bottom"] .tour-arrow { top: -8px; border-bottom: 0; border-right: 0; }
+.tour-tip[data-pos="top"] .tour-arrow { top: auto; bottom: -8px; border-top: 0; border-left: 0; }
+
+.tour-cursor { position: fixed; z-index: 904; width: 22px; height: 22px; pointer-events: none; transition: left 0.6s ease, top 0.6s ease, transform 0.15s ease; }
+.tour-cursor svg { width: 100%; height: 100%; fill: #fff; stroke: #1a1a1a; stroke-width: 1.4; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.5)); }
+.tour-cursor-jump { transition: none; }
+.tour-cursor-click { transform: scale(0.8); }
+
+/* Demo stage: example data, centered, above the backdrop. */
+.tour-demo { position: fixed; z-index: 902; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(420px, calc(100vw - 24px)); display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+.tour-demo[hidden] { display: none; }
+.tour-demo-badge { align-self: flex-start; font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--accent); color: var(--accent-text); }
+.tour-demo .module-card { transition: opacity 0.2s ease; }
+.tour-demo .module-card-off { opacity: 0.55; }
+.tour-demo-commands { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.tour-demo-count { font-size: 11px; color: var(--muted); }
+.tour-demo-perms { padding: 10px 14px 12px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; font-size: 12px; }
+.tour-demo-perms[hidden] { display: none; }
+.tour-demo-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.tour-demo-row span:first-child { color: var(--muted); }
+.tour-demo-chip { padding: 2px 8px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); }
+.tour-demo-save { display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
+.tour-demo-saved { color: var(--green); }
+.tour-demo-saved[hidden] { display: none; }

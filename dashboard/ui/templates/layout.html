@@ -15,6 +15,7 @@
 <script src="/static/js/var-picker.js?v={{.AssetVersion}}" defer></script>
 <script src="/static/js/builder-message.js?v={{.AssetVersion}}" defer></script>
 <script src="/static/js/message-page.js?v={{.AssetVersion}}" defer></script>
+<script src="/static/js/tour.js?v={{.AssetVersion}}" defer></script>
 <script type="application/json" id="i18n-client">{{clientI18n}}</script>
 {{end}}
 
@@ -112,7 +113,7 @@
     <header class="topbar">
       <h1 class="topbar-title">{{template "title" .}}</h1>
       <div class="topbar-actions">
-        <button type="button" class="topbar-btn">{{template "icon_compass"}}<span>{{t "topbar.start_tour"}}</span></button>
+        <button type="button" class="topbar-btn" data-tour-start>{{template "icon_compass"}}<span>{{t "topbar.start_tour"}}</span></button>
         <details class="lang-switch">
           <summary class="topbar-btn">{{template "icon_globe"}}<span>{{upper .Locale}}</span></summary>
           <div class="lang-menu">
@@ -133,6 +134,7 @@
 {{template "add_bot_dialog" .}}
 {{template "settings_dialog" .}}
 {{template "admin_dialog" .}}
+{{template "tour" .}}
 </div>
 <div id="savebar" class="savebar" role="region" aria-label="{{t "savebar.title"}}" hidden>
   <span class="savebar-icon" aria-hidden="true">{{template "icon_save"}}</span>
@@ -168,3 +170,58 @@
 {{define "flash_success_fragment"}}{{template "flash_success" .Data}}{{end}}
 
 {{define "status_badge"}}<span class="badge badge-{{.}}"><span class="badge-dot" aria-hidden="true"></span>{{t (printf "bot.status.%s" .)}}</span>{{end}}
+
+{{/* Start tour (static/js/tour.js): steps with the element they point at
+     (CSS selector; none = centered; demo = the stage below) and the demo
+     stage with example data, hidden until a demo step. */}}
+{{define "tour"}}
+<script type="application/json" id="tour-config">{
+  "labels": {"next": "{{t "tour.next"}}", "back": "{{t "tour.back"}}", "skip": "{{t "tour.skip"}}", "finish": "{{t "tour.finish"}}", "step_of": "{{t "tour.step_of"}}",
+    "demo_on": "{{t "tour.demo.on"}}", "demo_off": "{{t "tour.demo.off"}}"},
+  "steps": [
+    {"title": "{{t "tour.welcome.title"}}", "text": "{{t "tour.welcome.text"}}"},
+    {"sel": ".bot-switch", "title": "{{t "tour.bots.title"}}", "text": "{{t "tour.bots.text"}}"},
+    {"sel": ".sidebar-search", "title": "{{t "tour.search.title"}}", "text": "{{t "tour.search.text"}}"},
+    {"sel": ".sidebar-nav", "title": "{{t "tour.nav.title"}}", "text": "{{t "tour.nav.text"}}"},
+    {"demo": "module", "title": "{{t "tour.demo_module.title"}}", "text": "{{t "tour.demo_module.text"}}"},
+    {"demo": "command", "title": "{{t "tour.demo_command.title"}}", "text": "{{t "tour.demo_command.text"}}"},
+    {"demo": "perms", "title": "{{t "tour.demo_perms.title"}}", "text": "{{t "tour.demo_perms.text"}}"},
+    {"sel": ".lang-switch", "title": "{{t "tour.lang.title"}}", "text": "{{t "tour.lang.text"}}"},
+    {"sel": ".user-menu", "title": "{{t "tour.user.title"}}", "text": "{{t "tour.user.text"}}"},
+    {"sel": "[data-tour-start]", "title": "{{t "tour.again.title"}}", "text": "{{t "tour.again.text"}}"},
+    {"title": "{{t "tour.done.title"}}", "text": "{{t "tour.done.text"}}"}
+  ]
+}</script>
+<div class="tour-demo" id="tour-demo" hidden inert aria-hidden="true">
+  <span class="tour-demo-badge">{{t "tour.demo.badge"}}</span>
+  <article class="card module-card module-card-on" data-demo="card">
+    <div class="module-card-top">
+      <span class="module-card-icon" aria-hidden="true">🛡️</span>
+      <span class="module-card-toggle"><input type="checkbox" class="toggle toggle-sm" checked tabindex="-1" data-demo="module"></span>
+    </div>
+    <div class="module-card-body">
+      <h3>{{t "module.moderation.name"}}</h3>
+      <p class="muted">{{t "module.moderation.description"}}</p>
+      <span class="tour-demo-count" data-demo="count">{{t "tour.demo.on"}}</span>
+    </div>
+  </article>
+  <div class="tour-demo-commands">
+    <div class="command-row">
+      <div class="command-text">
+        <div class="command-line"><code class="command-usage">/ban</code><span class="command-title">{{t "command.ban.title"}}</span></div>
+        <p class="command-desc">{{t "command.ban.description"}}</p>
+      </div>
+      <div class="command-actions">
+        <span class="icon-btn" data-demo="gear">{{template "icon_gear"}}</span>
+        <input type="checkbox" class="toggle" checked tabindex="-1" data-demo="command">
+      </div>
+    </div>
+    <div class="tour-demo-perms" data-demo="perms" hidden>
+      <div class="tour-demo-row"><span>{{t "tour.demo.allowed"}}</span><span class="tour-demo-chip">@{{t "tour.demo.role1"}}</span></div>
+      <div class="tour-demo-row"><span>{{t "tour.demo.banned"}}</span><span class="tour-demo-chip">@{{t "tour.demo.role2"}}</span></div>
+      <div class="tour-demo-row"><span>{{t "tour.demo.channels"}}</span><span class="tour-demo-chip"># {{t "tour.demo.channel1"}}</span></div>
+      <div class="tour-demo-save"><span class="tour-demo-saved" data-demo="saved" hidden>{{t "tour.demo.saved"}} ✓</span><span class="btn btn-sm btn-primary" data-demo="save">{{t "savebar.save"}}</span></div>
+    </div>
+  </div>
+</div>
+{{end}}

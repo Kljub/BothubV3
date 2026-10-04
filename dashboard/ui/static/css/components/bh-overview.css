@@ -14,7 +14,7 @@
 .mini-chart-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; }
 .mini-chart-head h3 { margin: 0; font-size: 14px; }
 .mini-legend { display: flex; gap: 10px; font-size: 11px; color: var(--muted); }
-.mini-swatch { display: inline-block; width: 9px; height: 9px; margin-right: 4px; vertical-align: -1px; }
+.mini-chart .mini-swatch { display: inline-block; width: 9px; height: 9px; margin-right: 4px; vertical-align: -1px; }
 .mini-chart svg { width: 100%; height: auto; display: block; }
 .mini-line { fill: none; stroke-width: 1.8; }
 .mini-area { opacity: 0.08; stroke: none; }
