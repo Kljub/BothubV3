@@ -410,11 +410,12 @@ func (s *Server) handleAdminSection(w http.ResponseWriter, r *http.Request, p Pa
 			s.fail(w, r, p, err)
 			return
 		}
-		data["Server"] = settings
 		legal, _ := s.api.AdminLegal(r.Context(), session(r)) // optional: an empty form on error
 		data["Legal"] = legal
 		info, _ := s.api.UpdateInfo(r.Context(), session(r)) // optional: "not set up" on error
-		data["Update"] = updateView{Info: info}
+		data["Update"] = updateView{Info: info, Locale: p.Locale}
+		settings.UpdatesReady, settings.DockerDesktop = info.Configured, info.DockerDesktop
+		data["Server"] = settings
 	}
 	if section == "invite_policies" {
 		invite, err := s.api.InviteSettings(r.Context(), session(r))
@@ -490,13 +491,16 @@ func (s *Server) handleServerSettings(w http.ResponseWriter, r *http.Request, p 
 		return v
 	}
 	in := api.ServerSettings{
-		Domain:       strings.TrimSpace(r.PostFormValue("domain")),
-		PublicPort:   num("public_port"),
-		APIPort:      num("api_port"),
-		RedisPort:    num("redis_port"),
-		BehindProxy:  r.PostFormValue("behind_proxy") == "true",
-		SessionHours: num("session_hours"),
-		MaxUploadMB:  num("max_upload_mb"),
+		Domain:         strings.TrimSpace(r.PostFormValue("domain")),
+		PublicPort:     num("public_port"),
+		APIPort:        num("api_port"),
+		RedisPort:      num("redis_port"),
+		BehindProxy:    r.PostFormValue("behind_proxy") == "true",
+		SessionHours:   num("session_hours"),
+		MaxUploadMB:    num("max_upload_mb"),
+		AutoUpdate:     r.PostFormValue("auto_update"),
+		AutoUpdateHour: num("auto_update_hour"),
+		RestartPolicy:  r.PostFormValue("restart_policy"),
 	}
 	saved, err := s.api.UpdateServerSettings(r.Context(), session(r), in)
 	if err != nil {

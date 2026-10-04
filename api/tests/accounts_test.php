@@ -29,7 +29,8 @@ putenv('DATA_DIR=' . $tmp);
 $pdo = Connection::open($tmp . '/bothub.sqlite');
 (new Migrator($pdo, __DIR__ . '/../migrations'))->migrate();
 $box = SecretBox::loadOrCreate($tmp);
-$router = new InternalRouter(new BotStore($pdo, $box), static fn () => throw new \RuntimeException('no jobs'), accounts: new AccountStore($pdo, $box));
+$router = new InternalRouter(new BotStore($pdo, $box), static fn () => throw new \RuntimeException('no jobs'), accounts: new AccountStore($pdo, $box),
+    settings: new \BotHub\Internal\InstanceSettings($pdo));
 $call = fn (string $m, string $p, array $b = []) => $router->handle($m, $p, $b, null, []);
 
 check('role', $call('PUT', '/internal/accounts/roles/3', ['key' => 'banned', 'name' => 'Banned', 'builtin' => true, 'permissions' => []])[0] === 204);
@@ -70,5 +71,11 @@ check('bot list has owner and members', ($b['ownerId'] ?? 0) === 1 && ($b['membe
 check('bad role refused', $call('PUT', '/internal/bots/5/members/2', ['role' => 'king'])[0] === 422);
 check('unknown user refused', $call('PUT', '/internal/bots/5/members/9', ['role' => 'viewer'])[0] === 404);
 check('remove member', $call('DELETE', '/internal/bots/5/members/2')[0] === 204);
+
+// Instance settings of the gateway.
+check('settings empty', $call('GET', '/internal/settings/server')[1]['value'] == new stdClass());
+check('settings save', $call('PUT', '/internal/settings/server', ['sessionHours' => 24, 'autoUpdate' => 'check'])[0] === 204);
+check('settings load', $call('GET', '/internal/settings/server')[1]['value']->autoUpdate === 'check');
+check('unknown settings key', $call('GET', '/internal/settings/smtp')[0] === 404);
 
 exit($failed === 0 ? 0 : 1);

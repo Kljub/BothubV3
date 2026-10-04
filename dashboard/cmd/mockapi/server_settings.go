@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 	"regexp"
+	"slices"
 )
 
 // Instance settings of the mock API. Ports are stored but "active" only after
@@ -17,12 +18,17 @@ type serverSettings struct {
 	SessionHours    int    `json:"sessionHours"`
 	MaxUploadMB     int    `json:"maxUploadMb"`
 	RestartRequired bool   `json:"restartRequired"`
+	// Updates and restarts (autoupdate.go).
+	AutoUpdate     string `json:"autoUpdate"`     // off, check, install
+	AutoUpdateHour int    `json:"autoUpdateHour"` // 0-23, local time
+	RestartPolicy  string `json:"restartPolicy"`  // unless-stopped, always, no
 }
 
 var domainPattern = regexp.MustCompile(`^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$`)
 
 func defaultServerSettings() serverSettings {
-	return serverSettings{PublicPort: 8080, APIPort: 9000, RedisPort: 6379, SessionHours: 168, MaxUploadMB: 10}
+	return serverSettings{PublicPort: 8080, APIPort: 9000, RedisPort: 6379, SessionHours: 168, MaxUploadMB: 10,
+		AutoUpdate: "off", AutoUpdateHour: 4, RestartPolicy: "unless-stopped"}
 }
 
 func (s *store) getServerSettings(w http.ResponseWriter, r *http.Request, _ string) {
@@ -36,6 +42,7 @@ func (s *store) putServerSettings(w http.ResponseWriter, r *http.Request, _ stri
 	if !readJSON(w, r, &in) {
 		return
 	}
+	normalizeServerSettings(&in)
 	validPort := func(p int) bool { return p >= 1 && p <= 65535 }
 	switch {
 	case in.Domain != "" && (len(in.Domain) > 253 || !domainPattern.MatchString(in.Domain)):
@@ -47,14 +54,24 @@ func (s *store) putServerSettings(w http.ResponseWriter, r *http.Request, _ stri
 	case in.PublicPort == in.APIPort || in.PublicPort == in.RedisPort || in.APIPort == in.RedisPort:
 		apiError(w, 422, "error.server_settings.port_conflict")
 		return
-	case in.SessionHours < 1 || in.SessionHours > 720 || in.MaxUploadMB < 1 || in.MaxUploadMB > 100:
+	case in.SessionHours < 1 || in.SessionHours > 720 || in.MaxUploadMB < 1 || in.MaxUploadMB > 100,
+		!slices.Contains([]string{"off", "check", "install"}, in.AutoUpdate), in.AutoUpdateHour < 0 || in.AutoUpdateHour > 23,
+		!slices.Contains(restartPolicies, in.RestartPolicy):
 		apiError(w, 422, "error.validation.failed")
 		return
 	}
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	portsChanged := in.PublicPort != s.activePorts[0] || in.APIPort != s.activePorts[1] || in.RedisPort != s.activePorts[2]
 	in.RestartRequired = portsChanged
+	policyChanged := in.RestartPolicy != s.srvSettings.RestartPolicy
 	s.srvSettings = in
-	writeJSON(w, 200, s.srvSettings)
+	s.persistServerSettings(in)
+	s.mu.Unlock()
+	if policyChanged && s.updater != nil {
+		if err := s.updater.applyRestartPolicy(r.Context(), in.RestartPolicy); err != nil {
+			apiErrorParams(w, 502, "error.update.failed", map[string]any{"reason": truncate(err.Error(), 200)})
+			return
+		}
+	}
+	writeJSON(w, 200, in)
 }

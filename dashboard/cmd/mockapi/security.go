@@ -20,7 +20,7 @@ import (
 const maxSecurityEvents = 200
 
 type securityEvent struct {
-	userID    int64 // whose history (0: unknown user, shown to nobody)
+	userID    int64     // whose history (0: unknown user, shown to nobody)
 	ID        string    `json:"id"`
 	Type      string    `json:"type"`
 	Time      time.Time `json:"time"`

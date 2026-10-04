@@ -85,6 +85,7 @@ type store struct {
 	// envPasswordPlain: BOTHUB_ADMIN_PASSWORD is set as plain text (admins see a warning).
 	envPasswordPlain bool
 	updater          *updater // nil: updates from git are not set up
+	updateState      updateState
 	bots             map[int64]*bot
 	nextID           int64
 	modules          map[string]bool // "<botID>/<key>"
@@ -174,7 +175,9 @@ func main() {
 	s.passkeys = newPasskeyStore()
 	s.cmdStates, s.commandCatalog = map[string]bool{}, loadCommandCatalog()
 	s.loadAccounts()
+	s.loadServerSettings()
 	s.updater = newUpdater()
+	go s.runAutoUpdates()
 	// BOTHUB_ADMIN_PASSWORD may be plain text or an Argon2id hash
 	// ("$argon2id$…", see "app hash-password"). Plain text works, but admins see
 	// a warning until the variable holds a hash.
@@ -587,6 +590,9 @@ func (s *store) meFor(userID int64, csrf string) map[string]any {
 	warnings := []string{}
 	if s.envPasswordPlain && slices.Contains(perms, "admin.access") {
 		warnings = append(warnings, "env_password_plain")
+	}
+	if slices.Contains(perms, "admin.access") && s.updateState.behind > 0 && s.srvSettings.AutoUpdate == "check" {
+		warnings = append(warnings, "update_available")
 	}
 	return map[string]any{"id": u.ID, "username": u.Username, "email": u.Email, "twoFactorEnabled": u.totpSecret != "",
 		"locale": u.localeOr(s.defaultLocale), "theme": u.themeOr(), "roleId": u.RoleID, "permissions": perms, "warnings": warnings, "csrfToken": csrf}

@@ -227,7 +227,21 @@ type ServerSettings struct {
 	SessionHours    int    `json:"sessionHours"`
 	MaxUploadMB     int    `json:"maxUploadMb"`
 	RestartRequired bool   `json:"restartRequired"`
+	// Updates and restarts: AutoUpdate off/check/install at AutoUpdateHour
+	// (local time); RestartPolicy of the containers.
+	AutoUpdate     string `json:"autoUpdate"`
+	AutoUpdateHour int    `json:"autoUpdateHour"`
+	RestartPolicy  string `json:"restartPolicy"`
+	// Set by the dashboard: the Docker socket is there (updates, restart policy).
+	UpdatesReady  bool `json:"-"`
+	DockerDesktop bool `json:"-"`
 }
+
+// Choices of the update and restart settings, in display order.
+var (
+	AutoUpdateModes = []string{"off", "check", "install"}
+	RestartPolicies = []string{"unless-stopped", "always", "no"}
+)
 
 // SMTP security modes, in display order.
 var SMTPSecurityModes = []string{"starttls", "tls", "none"}

@@ -142,6 +142,34 @@
   </section>
 
   <section class="section">
+    <header class="section-head"><h3>{{t "server_settings.auto.title"}}</h3></header>
+    <div class="form">
+      {{if not .UpdatesReady}}<p class="hint">{{t "server_settings.auto.needs_socket"}}</p>{{end}}
+      <label class="field">{{t "server_settings.auto_update"}}
+        <select name="auto_update" {{if not .UpdatesReady}}disabled{{end}}>
+          {{range autoUpdateModes}}<option value="{{.}}" {{if eq . $.AutoUpdate}}selected{{end}}>{{t (printf "server_settings.auto_update.%s" .)}}</option>{{end}}
+        </select>
+        <span class="hint">{{t "server_settings.auto_update_hint"}}</span>
+      </label>
+      <label class="field">{{t "server_settings.auto_update_hour"}}
+        <input type="number" name="auto_update_hour" value="{{.AutoUpdateHour}}" min="0" max="23" required class="input-small" {{if not .UpdatesReady}}disabled{{end}}>
+        <span class="hint">{{t "server_settings.auto_update_hour_hint"}}</span>
+      </label>
+      <label class="field">{{t "server_settings.restart_policy"}}
+        <select name="restart_policy" {{if not .UpdatesReady}}disabled{{end}}>
+          {{range restartPolicies}}<option value="{{.}}" {{if eq . $.RestartPolicy}}selected{{end}}>{{t (printf "server_settings.restart_policy.%s" .)}}</option>{{end}}
+        </select>
+        <span class="hint">{{t "server_settings.restart_policy_hint"}}{{if .DockerDesktop}} {{t "server_settings.restart_policy_desktop"}}{{else}} {{t "server_settings.restart_policy_linux"}}{{end}}</span>
+      </label>
+      {{if not .UpdatesReady}}
+      <input type="hidden" name="auto_update" value="{{.AutoUpdate}}">
+      <input type="hidden" name="auto_update_hour" value="{{.AutoUpdateHour}}">
+      <input type="hidden" name="restart_policy" value="{{.RestartPolicy}}">
+      {{end}}
+    </div>
+  </section>
+
+  <section class="section">
     <header class="section-head"><h3>{{t "server_settings.limits.title"}}</h3></header>
     <div class="form">
       <label class="field">{{t "server_settings.session_hours"}}
@@ -570,7 +598,8 @@
 docker compose up -d --build</pre>
   <p class="hint">{{t "update.how_to_enable"}}</p>
   {{else}}
-  <p class="muted">{{t "update.intro"}} <span class="mono">{{.Info.HostDir}}</span></p>
+  <p class="muted">{{t "update.intro"}} <a href="{{.Info.Repo}}" rel="noopener" class="mono">{{.Info.Repo}}</a> (<span class="mono">{{.Info.Branch}}</span>) → <span class="mono">{{.Info.HostDir}}</span></p>
+  {{with .LastCheck}}<p class="hint">{{t "update.last_check" "date" .}}{{if gt $.Info.LastCheck.Behind 0}} · {{t "update.available" "count" $.Info.LastCheck.Behind}}{{end}}</p>{{end}}
   {{with .Check}}
     {{if .Error}}<div class="alert alert-error">{{t "update.check_failed"}}: {{.Error}}</div>
     {{else if eq .Behind 0}}<div class="alert alert-success">✅ {{t "update.up_to_date"}} <span class="mono">{{.Current}}</span></div>

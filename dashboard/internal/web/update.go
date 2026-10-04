@@ -10,8 +10,17 @@ import (
 // new commits and start the update; the box follows the run until it ends.
 
 type updateView struct {
-	Info  api.UpdateInfo
-	Check *api.UpdateCheck
+	Info   api.UpdateInfo
+	Check  *api.UpdateCheck
+	Locale string
+}
+
+// LastCheck: when the last check ran (empty before the first).
+func (v updateView) LastCheck() string {
+	if v.Info.LastCheck == nil {
+		return ""
+	}
+	return formatDateTime(v.Info.LastCheck.At, v.Locale)
 }
 
 // Running: the update helper still works (the box polls).
@@ -25,7 +34,7 @@ func (s *Server) updateBox(w http.ResponseWriter, r *http.Request, p Page, check
 		s.failTo(w, r, p, err, "#update-error")
 		return
 	}
-	s.render(w, http.StatusOK, "admin", "update_box_fragment", withData(p, updateView{Info: info, Check: check}))
+	s.render(w, http.StatusOK, "admin", "update_box_fragment", withData(p, updateView{Info: info, Check: check, Locale: p.Locale}))
 }
 
 func (s *Server) handleUpdateStatus(w http.ResponseWriter, r *http.Request, p Page) {

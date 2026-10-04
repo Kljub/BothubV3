@@ -91,21 +91,33 @@ git pull
 docker compose up -d --build
 ```
 
-Or with one click: **Admin → Server settings → Updates** checks the git
-repository for new commits and runs the same two steps in a short-lived
-helper container. Turn it on in `.env`:
+Or with one click: **Admin → Server settings → Updates** checks the original
+repository (<https://github.com/Kljub/BothubV3>, branch `main`) for new
+commits and runs the same two steps in a short-lived helper container.
+Turn it on in `.env`:
 
 ```
-COMPOSE_FILE=docker-compose.yml:docker-compose.update.yml   # Windows: ; instead of :
+COMPOSE_PATH_SEPARATOR=;
+COMPOSE_FILE=docker-compose.yml;docker-compose.update.yml
 BOTHUB_HOST_DIR=/opt/bothub        # this folder on the host
 DOCKER_GID=999                     # Linux: getent group docker | cut -d: -f3
-BOTHUB_GIT_TOKEN=                  # only for a private repository
 ```
 
 On Docker Desktop for Windows, `BOTHUB_HOST_DIR` is the folder as Docker
-sees it, e.g. `/run/desktop/mnt/host/d/Work/Projects/Bothub`. The gateway
-then has the Docker socket, which is as strong as root on the host; only
-instance admins can start an update.
+sees it, e.g. `/run/desktop/mnt/host/d/Work/Projects/Bothub`, and
+`DOCKER_GID=0`. The gateway then has the Docker socket, which is as strong
+as root on the host; only instance admins can start an update. A fork that
+ships its own updates sets `BOTHUB_UPDATE_REPO` and `BOTHUB_UPDATE_BRANCH`.
+
+With the socket, **Admin → Server settings → Updates and restarts** also
+offers:
+
+- **Automatic updates**: off, check once a day (admins see a notice), or
+  check and install, at an hour you choose (time zone `TZ`).
+- **Start after a system restart**: the restart policy of all three
+  containers (`unless-stopped`, `always` or `no`). Docker itself has to
+  start with the system: on Linux `sudo systemctl enable docker`, on
+  Docker Desktop "Start Docker Desktop when you sign in".
 
 The API migrates the database on start; the bot starts once the database
 has its schema version. Back up `./data` before larger updates.

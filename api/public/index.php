@@ -26,6 +26,7 @@ use BotHub\Internal\StatsStore;
 use BotHub\Internal\DocsStore;
 use BotHub\Internal\AccountStore;
 use BotHub\Internal\CoworkStore;
+use BotHub\Internal\InstanceSettings;
 use BotHub\Internal\PluginStore;
 use BotHub\Internal\GuildAccessStore;
 use BotHub\Internal\InviteStore;
@@ -204,6 +205,7 @@ if (str_starts_with($path, '/internal/')) {
             new DocsStore($pdo),
             new AccountStore($pdo, SecretBox::loadOrCreate()),
             new CoworkStore($pdo),
+            new InstanceSettings($pdo),
         );
         [$status, $out] = $router->handle($method, $path, $body, $raw === '' ? null : json_decode($raw, false), $_GET);
     } catch (\Throwable $e) {

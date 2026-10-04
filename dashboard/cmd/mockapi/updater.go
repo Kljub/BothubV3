@@ -6,12 +6,14 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -31,6 +33,10 @@ import (
 //	                       file means the same folder). Docker Desktop on
 //	                       Windows: /run/desktop/mnt/host/d/path/to/Bothub
 //	BOTHUB_GIT_TOKEN       optional, for a private GitHub repository
+//
+// Updates always come from the original repository (officialRepo, branch
+// main), not from whatever upstream the local clone has. A fork can point
+// BOTHUB_UPDATE_REPO / BOTHUB_UPDATE_BRANCH somewhere else.
 
 const (
 	dockerSock    = "/var/run/docker.sock"
@@ -38,11 +44,17 @@ const (
 	updaterName   = "bothub-updater"
 	checkerName   = "bothub-update-check"
 	updateTimeout = 2 * time.Minute
+	officialRepo  = "https://github.com/Kljub/BothubV3.git"
+	officialRef   = "main"
 )
+
+var safeRef = regexp.MustCompile(`^[A-Za-z0-9._/-]{1,100}$`)
 
 type updater struct {
 	hostDir string
 	token   string
+	repo    string // https URL of the repository updates come from
+	branch  string
 	http    *http.Client
 }
 
@@ -57,7 +69,14 @@ func newUpdater() *updater {
 	tr := &http.Transport{DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
 		return (&net.Dialer{}).DialContext(ctx, "unix", dockerSock)
 	}}
-	return &updater{hostDir: dir, token: os.Getenv("BOTHUB_GIT_TOKEN"), http: &http.Client{Transport: tr, Timeout: 5 * time.Minute}}
+	repo, branch := officialRepo, officialRef
+	if v := os.Getenv("BOTHUB_UPDATE_REPO"); strings.HasPrefix(v, "https://") && !strings.ContainsAny(v, " '\"`$;&|") {
+		repo = v
+	}
+	if v := os.Getenv("BOTHUB_UPDATE_BRANCH"); safeRef.MatchString(v) {
+		branch = v
+	}
+	return &updater{hostDir: dir, token: os.Getenv("BOTHUB_GIT_TOKEN"), repo: repo, branch: branch, http: &http.Client{Transport: tr, Timeout: 5 * time.Minute}}
 }
 
 // docker calls the Engine API; out (optional) gets the JSON answer.
@@ -96,7 +115,9 @@ func (u *updater) script(commands string) string {
 		basic := base64.StdEncoding.EncodeToString([]byte("x-access-token:" + u.token))
 		auth = fmt.Sprintf(`git config --global http.https://github.com/.extraheader "Authorization: Basic %s" && `, basic)
 	}
-	return "set -e; apk add -q --no-cache git >/dev/null; git config --global --add safe.directory '*'; " + auth + "cd '" + strings.ReplaceAll(u.hostDir, "'", "") + "'; " + commands
+	// SRC/REF: the repository and branch updates come from.
+	return "set -e; apk add -q --no-cache git >/dev/null; git config --global --add safe.directory '*'; " + auth +
+		"cd '" + strings.ReplaceAll(u.hostDir, "'", "") + "'; SRC='" + u.repo + "'; REF='" + u.branch + "'; " + commands
 }
 
 // run starts a helper container; wait: until it ends (answers its output).
@@ -178,7 +199,12 @@ func (s *store) getUpdate(w http.ResponseWriter, r *http.Request, _ string) {
 			Finished string `json:"FinishedAt"`
 		}
 	}
-	out := map[string]any{"configured": true, "hostDir": s.updater.hostDir}
+	out := map[string]any{"configured": true, "hostDir": s.updater.hostDir, "repo": strings.TrimSuffix(s.updater.repo, ".git"), "branch": s.updater.branch, "dockerDesktop": s.updater.dockerDesktop(r.Context())}
+	s.mu.Lock()
+	if !s.updateState.checkedAt.IsZero() {
+		out["lastCheck"] = map[string]any{"at": s.updateState.checkedAt, "behind": s.updateState.behind}
+	}
+	s.mu.Unlock()
 	if code, err := s.updater.docker(r.Context(), http.MethodGet, "/containers/"+updaterName+"/json", nil, &info); err == nil && code == 200 {
 		logs, _ := s.updater.logs(r.Context(), updaterName)
 		out["run"] = map[string]any{"status": info.State.Status, "exitCode": info.State.ExitCode, "finishedAt": info.State.Finished, "log": logs}
@@ -194,8 +220,19 @@ func (s *store) checkUpdate(w http.ResponseWriter, r *http.Request, _ string) {
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), updateTimeout)
 	defer cancel()
+	res := s.checkForUpdates(ctx)
+	if res.Error == "" {
+		s.mu.Lock()
+		s.updateState.checkedAt, s.updateState.behind = time.Now(), res.Behind
+		s.mu.Unlock()
+	}
+	writeJSON(w, 200, res)
+}
+
+// checkForUpdates runs git fetch in a helper and reads the new commits.
+func (s *store) checkForUpdates(ctx context.Context) updateCheck {
 	out, code, err := s.updater.run(ctx, checkerName,
-		`git fetch -q && echo "HEAD=$(git rev-parse --short HEAD)" && echo "REMOTE=$(git rev-parse --short @{u})" && echo "BEHIND=$(git rev-list --count HEAD..@{u})" && git log --format='LOG=%h %s' HEAD..@{u} | head -30`, true)
+		`git fetch -q "$SRC" "$REF" && echo "HEAD=$(git rev-parse --short HEAD)" && echo "REMOTE=$(git rev-parse --short FETCH_HEAD)" && echo "BEHIND=$(git rev-list --count HEAD..FETCH_HEAD)" && git log --format='LOG=%h %s' HEAD..FETCH_HEAD | head -30`, true)
 	res := updateCheck{Configured: true, Commits: []string{}}
 	switch {
 	case err != nil:
@@ -220,7 +257,7 @@ func (s *store) checkUpdate(w http.ResponseWriter, r *http.Request, _ string) {
 			}
 		}
 	}
-	writeJSON(w, 200, res)
+	return res
 }
 
 // runUpdate starts the helper that pulls and rebuilds; it runs on its own.
@@ -229,20 +266,31 @@ func (s *store) runUpdate(w http.ResponseWriter, r *http.Request, _ string) {
 		apiError(w, 409, "error.update.not_configured")
 		return
 	}
-	var info struct{ State struct{ Running bool } }
-	if code, err := s.updater.docker(r.Context(), http.MethodGet, "/containers/"+updaterName+"/json", nil, &info); err == nil && code == 200 && info.State.Running {
+	switch err := s.startUpdate(r.Context(), s.requestUserName(r)); {
+	case errors.Is(err, errUpdateRunning):
 		apiError(w, 409, "error.update.running")
-		return
-	}
-	user := s.requestUserName(r)
-	if _, _, err := s.updater.run(r.Context(), updaterName, `echo "Update by `+strings.ReplaceAll(user, `"`, "")+` at $(date -u +%FT%TZ)"; git pull --ff-only && echo "--- rebuilding ---" && docker compose up -d --build --remove-orphans && echo "--- done ---"`, false); err != nil {
+	case err != nil:
 		apiErrorParams(w, 502, "error.update.failed", map[string]any{"reason": truncate(err.Error(), 200)})
-		return
+	default:
+		writeJSON(w, 202, map[string]any{"started": true})
+	}
+}
+
+var errUpdateRunning = errors.New("an update is already running")
+
+// startUpdate starts the helper that pulls and rebuilds (actor: user name or "auto").
+func (s *store) startUpdate(ctx context.Context, actor string) error {
+	var info struct{ State struct{ Running bool } }
+	if code, err := s.updater.docker(ctx, http.MethodGet, "/containers/"+updaterName+"/json", nil, &info); err == nil && code == 200 && info.State.Running {
+		return errUpdateRunning
+	}
+	if _, _, err := s.updater.run(ctx, updaterName, `echo "Update by `+strings.ReplaceAll(actor, `"`, "")+` at $(date -u +%FT%TZ)"; echo "from $SRC ($REF)"; git pull --ff-only "$SRC" "$REF" && echo "--- rebuilding ---" && docker compose up -d --build --remove-orphans && echo "--- done ---"`, false); err != nil {
+		return err
 	}
 	s.mu.Lock()
-	s.addServerLog(time.Now(), "change", "", "log.server.update_started", "api", user, nil, nil)
+	s.addServerLog(time.Now(), "change", "", "log.server.update_started", "api", actor, nil, nil)
 	s.mu.Unlock()
-	writeJSON(w, 202, map[string]any{"started": true})
+	return nil
 }
 
 func lastLines(s string, n int) string {

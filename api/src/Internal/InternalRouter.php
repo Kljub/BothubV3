@@ -38,6 +38,7 @@ final class InternalRouter
         private readonly ?DocsStore $docs = null,
         private readonly ?AccountStore $accounts = null,
         private readonly ?CoworkStore $cowork = null,
+        private readonly ?InstanceSettings $settings = null,
     ) {
     }
 
@@ -141,6 +142,14 @@ final class InternalRouter
             }
             if ($this->cowork !== null && preg_match('#^/internal/(?:bots/(\d+)/cowork(/[a-z/0-9-]*)?|invites(/[a-z/0-9-]*)?)$#', $path, $m)) {
                 return $this->coworkRoute($method, (int) ($m[1] ?? 0), ($m[1] ?? '') !== '' ? ($m[2] ?? '') : null, $m[3] ?? '', $body);
+            }
+            // Instance settings of the gateway (server settings).
+            if ($this->settings !== null && preg_match('#^/internal/settings/([a-z]{1,32})$#', $path, $m) && InstanceSettings::known($m[1])) {
+                return match ($method) {
+                    'GET' => [200, ['value' => $this->settings->get($m[1])]],
+                    'PUT' => [204, $this->settings->put($m[1], $body)],
+                    default => throw new ApiError(405, 'error.method_not_allowed'),
+                };
             }
             if ($this->accounts !== null && preg_match('#^/internal/accounts(?:/(users|roles|passkeys|sessions)/([^/]{1,400}))?$#', $path, $m)) {
                 return $this->accountsRoute($method, $m[1] ?? '', isset($m[2]) ? rawurldecode($m[2]) : '', $body);

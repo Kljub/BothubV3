@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"net/http"
+	"time"
 )
 
 // Updates from the git repository (gateway updater).
@@ -15,9 +16,16 @@ type UpdateRun struct {
 }
 
 type UpdateInfo struct {
-	Configured bool       `json:"configured"`
-	HostDir    string     `json:"hostDir"`
-	Run        *UpdateRun `json:"run"`
+	Configured    bool       `json:"configured"`
+	HostDir       string     `json:"hostDir"`
+	Repo          string     `json:"repo"`
+	Branch        string     `json:"branch"`
+	DockerDesktop bool       `json:"dockerDesktop"`
+	Run           *UpdateRun `json:"run"`
+	LastCheck     *struct {
+		At     time.Time `json:"at"`
+		Behind int       `json:"behind"`
+	} `json:"lastCheck"`
 }
 
 type UpdateCheck struct {

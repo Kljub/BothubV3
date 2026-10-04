@@ -16,3 +16,7 @@ services:
       BOTHUB_HOST_DIR: "${BOTHUB_HOST_DIR:-}"
       # Only for a private GitHub repository: a token with read access.
       BOTHUB_GIT_TOKEN: "${BOTHUB_GIT_TOKEN:-}"
+      # Updates come from the original repository (main). Only a fork that
+      # ships its own updates sets these.
+      BOTHUB_UPDATE_REPO: "${BOTHUB_UPDATE_REPO:-}"
+      BOTHUB_UPDATE_BRANCH: "${BOTHUB_UPDATE_BRANCH:-}"
