@@ -5232,5 +5232,6 @@
   "builder.emoji.cat.travel": "Travel",
   "builder.emoji.cat.objects": "Objects",
   "builder.emoji.cat.symbols": "Symbols",
-  "builder.emoji.cat.flags": "Flags"
+  "builder.emoji.cat.flags": "Flags",
+  "error.validation.field": "Please check: {field}"
 }

@@ -58,7 +58,10 @@ final class ModuleSettings
             $key = $f['key'];
             try {
                 $out[$key] = self::value($f, array_key_exists($key, $in) ? $in[$key] : null, $path . $key, !array_key_exists($key, $in), $lenient);
-                if (!$lenient && !empty($f['required']) && ($out[$key] === null || $out[$key] === '' || $out[$key] === [])) {
+                // A top-level field left out (saving one list entry before the
+                // rest of the form) is not refused; sent empty, it is.
+                $skipped = $path === '' && !array_key_exists($key, $in);
+                if (!$lenient && !$skipped && !empty($f['required']) && ($out[$key] === null || $out[$key] === '' || $out[$key] === [])) {
                     self::fail($path . $key);
                 }
             } catch (ApiError $e) {

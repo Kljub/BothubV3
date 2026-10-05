@@ -2,6 +2,7 @@ package web
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -35,6 +36,7 @@ type settingsField struct {
 	TitleField   string              `json:"titleField"`
 	Pattern      string              `json:"pattern"`
 	Hint         bool                `json:"hint"`
+	Required     bool                `json:"required"`
 	// permissions: which lists of the block the field shows (default all
 	// four: allowed_roles, banned_roles, required_permissions, banned_channels).
 	Lists []string `json:"lists"`
@@ -553,7 +555,7 @@ func (s *Server) settingsTarget(w http.ResponseWriter, r *http.Request, p Page, 
 
 func (s *Server) saveSettings(w http.ResponseWriter, r *http.Request, p Page, id int64, scope settingsScope, cfg map[string]any) {
 	if err := scope.save(r, cfg); err != nil {
-		s.failTo(w, r, p, err, "#modset-error")
+		s.failTo(w, r, p, fieldError(err, scope, p.Locale, s), "#modset-error")
 		return
 	}
 	v, err := s.scopeData(r, id, scope)
@@ -563,6 +565,32 @@ func (s *Server) saveSettings(w http.ResponseWriter, r *http.Request, p Page, id
 	}
 	w.Header().Set("HX-Trigger", "bothub:saved")
 	s.render(w, http.StatusOK, "module_item", "module_settings_fragment", withData(p, v))
+}
+
+// fieldError names the field of a refused value ("Please check: URL"),
+// e.g. sites.0.url is the URL of the first entry of the list "sites".
+func fieldError(err error, scope settingsScope, locale string, s *Server) error {
+	var ae *api.Error
+	if !errors.As(err, &ae) || ae.Key != "error.validation.failed" {
+		return err
+	}
+	path, _ := ae.Params["field"].(string)
+	parts := strings.Split(path, ".")
+	if path == "" || len(parts) > 3 {
+		return err
+	}
+	name := func(key, fallback string) string {
+		if t := s.i18n.T(locale, scope.LabelPrefix+key); t != scope.LabelPrefix+key {
+			return t
+		}
+		return fallback
+	}
+	label := name(parts[0], parts[0])
+	if len(parts) == 3 {
+		n, _ := strconv.Atoi(parts[1])
+		label = fmt.Sprintf("%s #%d: %s", label, n+1, name(parts[0]+"."+parts[2], parts[2]))
+	}
+	return &api.Error{Status: ae.Status, Key: "error.validation.field", Params: map[string]any{"field": label}}
 }
 
 func listField(sc settingsSchema, key string) (settingsField, bool) {
@@ -630,7 +658,26 @@ func (s *Server) settingsItem(w http.ResponseWriter, r *http.Request, p Page, re
 		items = slices.Delete(items, idx, idx+1)
 	}
 	cfg[lf.Key] = items
+	// Required fields of the top form that are still empty are left out: a
+	// list entry can be saved before the rest of the form is filled in.
+	for _, f := range scope.Schema.Fields {
+		if f.Required && f.Type != "list" && emptyValue(cfg[f.Key]) {
+			delete(cfg, f.Key)
+		}
+	}
 	s.saveSettings(w, r, p, id, scope, cfg)
+}
+
+func emptyValue(v any) bool {
+	switch x := v.(type) {
+	case nil:
+		return true
+	case string:
+		return x == ""
+	case []any:
+		return len(x) == 0
+	}
+	return false
 }
 
 // URL is the form target of a list entry ("" = top-level fields, idx -1 =

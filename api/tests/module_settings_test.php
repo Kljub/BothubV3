@@ -94,6 +94,10 @@ check('honeypot: one trap per channel', rejects2($hp, ['traps' => [['channel' =>
 check('cooldown minimum', rejects($ar, ['responders' => [['cooldown' => 0]]], 'responders.0.cooldown'));
 $tm = ModuleSettings::schema('timed-messages');
 check('required channel', rejects($tm, ['messages' => [['name' => 'x']]], 'messages.0.channel'));
+$req = ['fields' => [['key' => 'channel', 'type' => 'channel', 'required' => true], ['key' => 'sites', 'type' => 'list', 'item' => [['key' => 'url', 'type' => 'text', 'required' => true]]]]];
+check('required top field: sent empty is refused', rejects($req, ['channel' => null, 'sites' => []], 'channel'));
+check('required top field: left out (list entry saved first) passes', ModuleSettings::normalize($req, ['sites' => [['url' => 'https://a.b']]])['channel'] === null);
+check('required list field: still refused', rejects($req, ['sites' => [['url' => '']]], 'sites.0.url'));
 $saved = ModuleSettings::normalize($tm, ['messages' => [['name' => 'x', 'channel' => $ref]]]);
 $id = $saved['messages'][0]['_id'] ?? '';
 check('list entry gets a stable id', preg_match('/^[a-z0-9]{12}$/', $id) === 1);
