@@ -79,6 +79,8 @@ var integrations = []integration{
 	{Key: "github", Name: "GitHub OAuth", Icon: "🐙", Console: "https://github.com/settings/developers", IDKey: "GITHUB_OAUTH_CLIENT_ID", SecretKey: "GITHUB_OAUTH_CLIENT_SECRET",
 		RedirectPath: "/auth/oauth/github/callback"},
 	{Key: "kick", Name: "Kick", Icon: "🟢", Console: "https://kick.com/settings/developer", IDKey: "KICK_CLIENT_ID", SecretKey: "KICK_CLIENT_SECRET"},
+	// Song recognition of the music module (/radio-song), the service behind AHA Music.
+	{Key: "acrcloud", Name: "ACRCloud", Icon: "🎧", Console: "https://console.acrcloud.com/", IDKey: "ACRCLOUD_ACCESS_KEY", SecretKey: "ACRCLOUD_ACCESS_SECRET"},
 }
 
 // integrationRow: the stored client ID and secret (nil when not set).

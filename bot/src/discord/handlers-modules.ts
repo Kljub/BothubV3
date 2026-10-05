@@ -11,6 +11,8 @@ import { snowflake } from '../graph/util.js';
 import { createSuggestion, decideSuggestion, levelFor } from '../modules/community.js';
 import { ModuleContext } from '../modules/context.js';
 import * as eco from '../modules/economy.js';
+import { afkOf, clearAfk, setAfk } from '../modules/afk.js';
+import { giveThanks, thanksOf, thanksRank, thanksTop, ThanksError } from '../modules/thanks.js';
 import type { DiscordData } from './handlers.js';
 
 function guildOf(run: Run): Guild {
@@ -216,6 +218,69 @@ export function moduleHandlers(repo: Repo, botId: number): Map<string, Handler> 
           `INSERT INTO birthdays (bot_id, guild_id, user_id, month, day, year) VALUES (?, ?, ?, ?, ?, ?)
            ON CONFLICT (bot_id, guild_id, user_id) DO UPDATE SET month = excluded.month, day = excluded.day, year = excluded.year, last_announced_year = NULL`,
         ).run(botId, guild.id, userOf(run, node), month, day, year);
+      },
+    ],
+    // --- AFK ---
+    [
+      'action.afk_set',
+      async (node, run) => {
+        const guild = guildOf(run);
+        const member = await guild.members.fetch(userOf(run, node)).catch(() => null);
+        if (!member) throw new GraphError('error.run.member_not_found', { value: userOf(run, node) });
+        const state = await setAfk(ctx, member, run.str(node, 'reason'));
+        run.setResult(node, '', state.reason);
+      },
+    ],
+    [
+      'action.afk_clear',
+      async (node, run) => {
+        const guild = guildOf(run);
+        const member = await guild.members.fetch(userOf(run, node)).catch(() => null);
+        const was = member ? await clearAfk(ctx, member) : null;
+        run.setResult(node, '', was ? 'true' : 'false');
+      },
+    ],
+    [
+      'action.afk_get',
+      (node, run) => {
+        const state = afkOf(ctx, guildOf(run).id, userOf(run, node));
+        run.setResult(node, '', state ? 'true' : 'false');
+        run.setResult(node, '.reason', state?.reason ?? '');
+        run.setResult(node, '.since', state ? `<t:${Math.floor(state.since / 1000)}:R>` : '');
+      },
+    ],
+    // --- Thanks ---
+    [
+      'action.thanks_give',
+      async (node, run) => {
+        const guild = guildOf(run);
+        const member = await guild.members.fetch(userOf(run, node)).catch(() => null);
+        if (!member) throw new GraphError('error.run.member_not_found', { value: userOf(run, node) });
+        try {
+          const n = await giveThanks(ctx, guild, userOf(run, node, 'from_user'), member);
+          run.setResult(node, '', n);
+        } catch (err) {
+          if (err instanceof ThanksError) throw new GraphError('error.run.economy', { message: err.message });
+          throw err;
+        }
+      },
+    ],
+    [
+      'action.thanks_get',
+      (node, run) => {
+        const guild = guildOf(run).id;
+        const user = userOf(run, node);
+        run.setResult(node, '', thanksOf(ctx, guild, user));
+        run.setResult(node, '.rank', thanksRank(ctx, guild, user) || '—');
+        run.setResult(node, '.user', user);
+      },
+    ],
+    [
+      'action.thanks_leaderboard',
+      (node, run) => {
+        const rows = thanksTop(ctx, guildOf(run).id, limitOf(run, node));
+        const medal = ['🥇', '🥈', '🥉'];
+        run.setResult(node, '', rows.map((r, i) => `${medal[i] ?? `**${i + 1}.**`} <@${r.userId}> · ${r.n} 🙏`).join('\n') || 'No thanks yet.');
       },
     ],
     ['action.birthday_remove', (node, run) => void db.prepare('DELETE FROM birthdays WHERE bot_id = ? AND guild_id = ? AND user_id = ?').run(botId, guildOf(run).id, userOf(run, node))],

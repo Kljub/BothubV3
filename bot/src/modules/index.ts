@@ -15,6 +15,8 @@ import { ensurePanels, modmailMessage, onModuleInteraction } from './support.js'
 import { ensureHoneypots, honeypotMessage } from './honeypot.js';
 import { ModuleTimers } from './timers.js';
 import { messageReward, syncCurrencies } from './economy.js';
+import { afkMessage } from './afk.js';
+import { thanksMessage } from './thanks.js';
 import { linkfixMessage } from './linkfix.js';
 
 export { ModuleContext } from './context.js';
@@ -71,6 +73,8 @@ export function bindModules(client: Client, ctx: ModuleContext, timezone: () => 
     guard('automod-media', automodMedia(ctx, msg));
     guard('twitter-linkfix', linkfixMessage(ctx, msg));
     guard('economy-messages', messageReward(ctx, msg));
+    guard('afk', afkMessage(ctx, msg));
+    guard('thanks', thanksMessage(ctx, msg));
   });
   client.on(Events.MessageUpdate, (old, msg) => {
     // Link previews arrive with an edit: the media filter checks them then.

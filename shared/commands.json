@@ -114,6 +114,11 @@
     { "name": "modmail block", "usage": "/modmail block @user", "module": "modmail" },
     { "name": "modmail unblock", "usage": "/modmail unblock @user", "module": "modmail" },
     { "name": "free-games", "usage": "/free-games", "module": "free-games" },
-    { "name": "gamesales", "usage": "/gamesales", "module": "free-games" }
+    { "name": "gamesales", "usage": "/gamesales", "module": "free-games" },
+    { "name": "afk set", "usage": "/afk set", "module": "afk" },
+    { "name": "afk clear", "usage": "/afk clear", "module": "afk" },
+    { "name": "thanks", "usage": "/thanks", "module": "thanks" },
+    { "name": "thanks-check", "usage": "/thanks-check", "module": "thanks" },
+    { "name": "thanks-top", "usage": "/thanks-top", "module": "thanks" }
   ]
 }

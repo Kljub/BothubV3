@@ -17,6 +17,8 @@ export interface Track {
   duration: number;
   author: string;
   requester: string | null;
+  /** A radio stream: the URL plays as it is (no yt-dlp, no seeking). */
+  live?: boolean;
 }
 
 export type LoopMode = 'off' | 'track' | 'queue';
@@ -196,7 +198,7 @@ class GuildMusic {
     const v = this.v();
     this.watch();
     this.cancelLeave();
-    const [streamUrl] = await ytdlp(['-f', 'bestaudio/best', '--get-url', '--no-playlist', track.url]);
+    const [streamUrl] = track.live ? [track.url] : await ytdlp(['-f', 'bestaudio/best', '--get-url', '--no-playlist', track.url]);
     if (!streamUrl) throw new MusicError('The track could not be loaded.');
     this.replacing = true;
     try {
@@ -218,7 +220,7 @@ class GuildMusic {
   private async announce(t: Track): Promise<void> {
     if (!this.textChannel) return;
     const ch = await this.client.channels.fetch(this.textChannel).catch(() => null);
-    if (ch?.isSendable()) await ch.send({ content: `🎶 Now playing: **${t.title}** (${clock(t.duration)})${t.requester ? ` · requested by <@${t.requester}>` : ''}`, allowedMentions: { parse: [] } }).catch(() => undefined);
+    if (ch?.isSendable()) await ch.send({ content: t.live ? `📻 Now playing: **${t.title}**${t.author ? ` · ${t.author}` : ''}${t.requester ? ` · requested by <@${t.requester}>` : ''}` : `🎶 Now playing: **${t.title}** (${clock(t.duration)})${t.requester ? ` · requested by <@${t.requester}>` : ''}`, allowedMentions: { parse: [] } }).catch(() => undefined);
   }
 
   /** After a track: next one (loop modes), or stop and leave later. */
@@ -293,6 +295,7 @@ class GuildMusic {
   }
 
   async seek(mode: 'absolute' | 'relative', seconds: number): Promise<void> {
+    if (this.queue[this.index]?.live) throw new MusicError('A radio stream cannot be seeked.');
     const t = this.current;
     if (!t || !this.playing) throw new MusicError('Nothing is playing.');
     let to = mode === 'relative' ? this.position + seconds : seconds;

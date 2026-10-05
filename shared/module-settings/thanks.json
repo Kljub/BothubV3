@@ -1,0 +1,55 @@
+{
+  "module": "thanks",
+  "fields": [
+    {
+      "key": "cooldown",
+      "type": "number",
+      "min": 0,
+      "max": 10080,
+      "default": 60,
+      "hint": true
+    },
+    {
+      "key": "rewards",
+      "type": "list",
+      "max": 20,
+      "titleField": "count",
+      "hint": true,
+      "item": [
+        {
+          "key": "count",
+          "type": "number",
+          "min": 1,
+          "max": 100000,
+          "default": 10
+        },
+        {
+          "key": "role",
+          "type": "role"
+        }
+      ]
+    },
+    {
+      "key": "detect",
+      "type": "bool",
+      "default": false,
+      "hint": true
+    },
+    {
+      "key": "words",
+      "type": "words",
+      "max": 20,
+      "default": [
+        "thanks",
+        "thank you",
+        "thx",
+        "danke"
+      ],
+      "showIf": {
+        "detect": [
+          "true"
+        ]
+      }
+    }
+  ]
+}

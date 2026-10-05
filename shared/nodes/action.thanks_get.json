@@ -1,0 +1,62 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.thanks_get",
+  "version": 1,
+  "category": "action",
+  "group": "thanks",
+  "order": 2510,
+  "color": "green",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_thanks_get.label",
+  "descriptionKey": "builder.node.action_thanks_get.description",
+  "module": "thanks",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": "",
+      "labelKey": "builder.result.action_thanks_get.0"
+    },
+    {
+      "suffix": ".rank",
+      "labelKey": "builder.result.action_thanks_get.1"
+    },
+    {
+      "suffix": ".user",
+      "labelKey": "builder.result.action_thanks_get.2"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "user": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.user",
+        "x-hintKey": "builder.cfg.ref_hint",
+        "x-ref": "member",
+        "default": "{user.id}"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  }
+}

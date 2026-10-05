@@ -1,0 +1,36 @@
+{
+  "module": "afk",
+  "fields": [
+    {
+      "key": "nickPrefix",
+      "type": "bool",
+      "default": true,
+      "hint": true
+    },
+    {
+      "key": "prefix",
+      "type": "text",
+      "max": 10,
+      "default": "[AFK] ",
+      "showIf": {
+        "nickPrefix": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "endOnMessage",
+      "type": "bool",
+      "default": true,
+      "hint": true
+    },
+    {
+      "key": "deleteAfter",
+      "type": "number",
+      "min": 0,
+      "max": 300,
+      "default": 10,
+      "hint": true
+    }
+  ]
+}

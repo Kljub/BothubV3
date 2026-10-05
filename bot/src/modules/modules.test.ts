@@ -409,3 +409,87 @@ test('game sales: Steam specials, biggest discount first, as a list', async () =
   assert.match(text, /`-70 %` \*\*\[Cyberpunk 2077\]\(https:\/\/store\.steampowered\.com\/app\/1\/\)\*\* ~~59,99.€~~ \*\*17,99.€\*\* · until <t:1791478800:R>/);
   assert.equal(text.split('\n').length, 2);
 });
+
+/** A member stand-in for AFK and Thanks: nickname, roles and the manageable flag. */
+function fakeMember(id: string, name: string, opts: { bot?: boolean; manageable?: boolean } = {}) {
+  const m = {
+    id, nickname: null as string | null, displayName: name, manageable: opts.manageable ?? true,
+    user: { id, bot: opts.bot ?? false, username: name },
+    guild: { id: 'G' },
+    roles: { cache: new Map<string, unknown>(), add: async (ids: string[]) => { for (const r of ids) m.roles.cache.set(r, true); } },
+    setNickname: async (nick: string | null) => { m.nickname = nick; m.displayName = nick ?? name; },
+  };
+  return m;
+}
+
+test('afk: set with a prefix, clear restores the name', async () => {
+  const { setAfk, clearAfk, afkOf } = await import('./afk.js');
+  const ctx = context();
+  const member = fakeMember('5', 'Daniel');
+  const state = await setAfk(ctx, member as never, '  lunch  ', 1_000_000);
+  assert.equal(state.reason, 'lunch');
+  assert.equal(member.displayName, '[AFK] Daniel');
+  assert.equal(afkOf(ctx, 'G', '5')?.since, 1_000_000);
+  await setAfk(ctx, member as never, 'still away');
+  assert.equal(member.displayName, '[AFK] Daniel', 'no double prefix');
+  assert.ok(await clearAfk(ctx, member as never));
+  assert.equal(member.nickname, null, 'old nickname back');
+  assert.equal(afkOf(ctx, 'G', '5'), undefined);
+  assert.equal(await clearAfk(ctx, member as never), null);
+  const owner = fakeMember('6', 'Owner', { manageable: false });
+  await setAfk(ctx, owner as never, '');
+  assert.equal(owner.displayName, 'Owner', 'members above the bot keep their name');
+  assert.equal(afkOf(ctx, 'G', '6')?.reason, 'AFK');
+});
+
+test('thanks: cooldown, no self or bot thanks, ranking and reward roles', async () => {
+  const { giveThanks, thanksOf, thanksTop, thanksRank, ThanksError } = await import('./thanks.js');
+  const ctx = context();
+  ctx.db.prepare("INSERT INTO bot_modules (bot_id, module_key, config) VALUES (1, 'thanks', ?)").run(JSON.stringify({ cooldown: 60, rewards: [{ count: 2, role: { id: 'R2', guild: 'G' } }] }));
+  const guild = { id: 'G', roles: { cache: new Map([['R2', { id: 'R2', managed: false, position: 1 }]]), everyone: { id: 'G' } }, members: { me: { permissions: { has: () => true }, roles: { highest: { position: 9 } } } } };
+  const anna = fakeMember('A', 'Anna');
+  const ben = fakeMember('B', 'Ben');
+  const t0 = 10_000_000;
+  assert.equal(await giveThanks(ctx, guild as never, 'X', anna as never, t0), 1);
+  await assert.rejects(giveThanks(ctx, guild as never, 'X', anna as never, t0 + 60_000), (e: unknown) => e instanceof ThanksError && /again/.test((e as Error).message), 'cooldown');
+  assert.equal(await giveThanks(ctx, guild as never, 'X', anna as never, t0 + 3_600_001), 2);
+  assert.ok(anna.roles.cache.has('R2'), 'reward role at 2 thanks');
+  await assert.rejects(giveThanks(ctx, guild as never, 'A', anna as never, t0), /yourself/);
+  await assert.rejects(giveThanks(ctx, guild as never, 'X', fakeMember('C', 'Bot', { bot: true }) as never, t0), /Bots/);
+  await giveThanks(ctx, guild as never, 'Y', ben as never, t0);
+  assert.equal(thanksOf(ctx, 'G', 'A'), 2);
+  assert.deepEqual(thanksTop(ctx, 'G', 10).map((r) => [r.userId, r.n]), [['A', 2], ['B', 1]]);
+  assert.deepEqual([thanksRank(ctx, 'G', 'A'), thanksRank(ctx, 'G', 'B'), thanksRank(ctx, 'G', 'Z')], [1, 2, 0]);
+});
+
+test('radio: stations from Radio Browser, a station is a live track', async () => {
+  const { stationsOf, stationTrack, stationLines } = await import('../discord/radio.js');
+  const list = stationsOf([
+    { stationuuid: 'u1', name: ' 1LIVE ', url: 'http://x/pls', url_resolved: 'https://wdr.example/1live.mp3', country: 'Germany', countrycode: 'de', tags: 'pop,rock,charts,news,talk', codec: 'MP3', bitrate: 128, lastcheckok: 1 },
+    { stationuuid: 'u2', name: 'Broken', url: 'https://dead.example', lastcheckok: 0 },
+    { stationuuid: 'u3', name: 'No stream', url: 'ftp://x' },
+  ]);
+  assert.deepEqual(list.map((s) => s.name), ['1LIVE'], 'working stations with a stream only');
+  const t = stationTrack(list[0]!, '5');
+  assert.equal(t.live, true);
+  assert.equal(t.url, 'https://wdr.example/1live.mp3', 'resolved stream URL');
+  assert.equal(t.title, '🇩🇪 1LIVE');
+  assert.equal(t.author, 'Germany · pop, rock, charts, news', 'four tags at most');
+  assert.match(stationLines(list), /1\. 🇩🇪 \*\*1LIVE\*\* · Germany · pop, rock, charts, news \(128 kbps MP3\)/);
+});
+
+test('song recognition: ICY titles, ACRCloud signature and answer', async () => {
+  const { splitStreamTitle, parseIcyMeta, acrSignature, acrSong } = await import('../discord/recognize.js');
+  assert.equal(parseIcyMeta("StreamTitle='Daft Punk - One More Time';StreamUrl='';\0\0"), 'Daft Punk - One More Time');
+  assert.deepEqual(splitStreamTitle('  Daft Punk - One More Time '), { artist: 'Daft Punk', title: 'One More Time' });
+  assert.deepEqual(splitStreamTitle('Morning Show'), { artist: '', title: 'Morning Show' });
+  assert.equal(splitStreamTitle(''), null);
+  assert.equal(splitStreamTitle('Werbung'), null, 'ads are no song');
+  // Signature as in ACRCloud's docs: HMAC-SHA1 over the five lines, base64.
+  const { createHmac } = await import('node:crypto');
+  assert.equal(acrSignature('sec', 'key', '1700000000'), createHmac('sha1', 'sec').update('POST\n/v1/identify\nkey\naudio\n1\n1700000000').digest('base64'));
+  const song = acrSong({ status: { code: 0, msg: 'Success' }, metadata: { music: [{ title: 'Blinding Lights', artists: [{ name: 'The Weeknd' }], album: { name: 'After Hours' }, external_metadata: { spotify: { track: { id: '0VjIjW4GlUZAMYd2vXMi3b' } } } }] } });
+  assert.deepEqual(song, { title: 'Blinding Lights', artist: 'The Weeknd', album: 'After Hours', link: 'https://open.spotify.com/track/0VjIjW4GlUZAMYd2vXMi3b', source: 'acrcloud' });
+  assert.equal(acrSong({ status: { code: 1001, msg: 'No result' } }), null);
+  assert.throws(() => acrSong({ status: { code: 3001, msg: 'Missing/Invalid Access Key' } }), /Invalid Access Key/);
+});

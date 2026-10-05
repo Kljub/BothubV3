@@ -24,6 +24,8 @@ import { ModuleContext } from '../modules/context.js';
 import { clock, findTracks, musicOf, MusicError, type LoopMode } from './music.js';
 import { lyricsOf } from './lyrics.js';
 import { createTicket, finishTicket, modmailBlock, modmailClose, modmailReply, reopenTicket, ticketCounts, ticketMember, ticketPanelIndex, ticketPanelPayload, type TicketConfig } from '../modules/support.js';
+import { countClick, findStations, stationLines, stationTrack } from './radio.js';
+import { acrIdentify, icyTitle, RecognizeError, recordSample, splitStreamTitle, type Song } from './recognize.js';
 import { freeGames, freeGamesText, gameEmbed, gameSales, gameSalesText, platformsOf, type FreeGamesConfig } from '../modules/freegames.js';
 import { deleteGiveaway, endGiveaway, giveawayPayload, listGiveaways, loadGiveaway, saveGiveaway, type Giveaway } from '../modules/giveaway.js';
 
@@ -309,7 +311,7 @@ async function music<T>(run: Run, fn: () => Promise<T> | T): Promise<T> {
   }
 }
 
-function musicHandlers(): [string, Handler][] {
+function musicHandlers(secret: (key: string) => string | null): [string, Handler][] {
   const player = async (run: Run, node: GraphNode) => {
     const guild = await guildOf(run, node);
     return { guild, m: musicOf(data(run).client).get(guild.id) };
@@ -356,6 +358,76 @@ function musicHandlers(): [string, Handler][] {
         run.setResult(node, '.list', tracks.map((t, i) => `${i + 1}. [${t.title}](${t.url}) (${clock(t.duration)})`).join('\n'));
         run.setResult(node, '[0].title', tracks[0]?.title ?? '');
         run.setResult(node, '[0].url', tracks[0]?.url ?? '');
+      },
+    ],
+    [
+      'action.music_radio',
+      async (node, run) => {
+        const { m } = await player(run, node);
+        run.countDiscordCall();
+        const wish = { name: run.str(node, 'station'), tag: run.str(node, 'genre'), country: run.str(node, 'country') };
+        const random = run.bool(node, 'random') || (!wish.name.trim() && !wish.tag.trim() && !wish.country.trim());
+        const found = await music(run, () => findStations({ ...wish, random }, 6));
+        const station = found[0];
+        if (!station) throw new GraphError('error.run.music', { message: 'No radio station found. Try another name, genre or country.' });
+        await music(run, async () => {
+          if (run.str(node, 'mode') !== 'queue') m.stop();
+          m.add([stationTrack(station, data(run).user?.id ?? null)], 'end');
+          await m.play();
+        });
+        countClick(station.uuid);
+        run.setResult(node, '', station.name);
+        run.setResult(node, '.country', station.country);
+        run.setResult(node, '.tags', station.tags);
+        run.setResult(node, '.homepage', station.homepage);
+        run.setResult(node, '.more', stationLines(found.slice(1)));
+      },
+    ],
+    [
+      'action.music_recognize',
+      async (node, run) => {
+        const { m } = await player(run, node);
+        const track = m.current;
+        if (!track || !m.playing) throw new GraphError('error.run.music', { message: 'Nothing is playing.' });
+        run.countDiscordCall();
+        const mode = run.str(node, 'mode') || 'auto';
+        let song: Song | null = null;
+        if (!track.live) song = { title: track.title, artist: track.author, album: '', link: track.url, source: 'radio' };
+        if (!song && mode !== 'audio') {
+          const parts = splitStreamTitle((await icyTitle(track.url)) ?? '');
+          if (parts) song = { ...parts, album: '', link: '', source: 'radio' };
+        }
+        if (!song && mode !== 'radio') {
+          const key = secret('ACRCLOUD_ACCESS_KEY');
+          const sec = secret('ACRCLOUD_ACCESS_SECRET');
+          if (key && sec) {
+            try {
+              song = await acrIdentify(await recordSample(track.url), { host: run.str(node, 'acr_host') || 'identify-eu-west-1.acrcloud.com', key, secret: sec });
+            } catch (err) {
+              if (err instanceof RecognizeError) throw new GraphError('error.run.music', { message: err.message });
+              throw err;
+            }
+          } else if (mode === 'audio') {
+            throw new GraphError('error.run.music', { message: 'Song recognition is not set up: an admin enters the ACRCloud keys under Admin → API / Secrets.' });
+          }
+        }
+        if (!song) throw new GraphError('error.run.music', { message: 'The song could not be recognized (the station sends no title and no recognition is set up, or nothing matched).' });
+        run.setResult(node, '', song.artist ? `${song.artist} – ${song.title}` : song.title);
+        run.setResult(node, '.title', song.title);
+        run.setResult(node, '.artist', song.artist);
+        run.setResult(node, '.album', song.album);
+        run.setResult(node, '.link', song.link);
+        run.setResult(node, '.source', song.source);
+        run.setResult(node, '.station', track.title);
+      },
+    ],
+    [
+      'action.radio_search',
+      async (node, run) => {
+        run.countDiscordCall();
+        const list = await music(run, () => findStations({ name: run.str(node, 'station'), tag: run.str(node, 'genre'), country: run.str(node, 'country') }, Math.max(1, Math.min(25, Math.trunc(run.num(node, 'limit') || 10)))));
+        run.setResult(node, '', stationLines(list) || 'No stations found.');
+        run.setResult(node, '.count', list.length);
       },
     ],
     simple('action.music_play', (m) => m.play()),
@@ -433,7 +505,7 @@ function musicHandlers(): [string, Handler][] {
   ];
 }
 
-export function discordHandlers(repo: Repo, mod?: Moderation): Map<string, Handler> {
+export function discordHandlers(repo: Repo, mod?: Moderation, secret: (key: string) => string | null = () => null): Map<string, Handler> {
   /** Module helpers report problems as text: a run error with that text. */
   const check = (problem: string | null): void => {
     if (problem) throw new GraphError('error.run.module_failed', { message: problem });
@@ -786,7 +858,7 @@ export function discordHandlers(repo: Repo, mod?: Moderation): Map<string, Handl
         run.setResult(node, '.count', list.length);
       },
     ],
-    ...musicHandlers(),
+    ...musicHandlers(secret),
     [
       'action.ticket_panel',
       async (node, run) => {

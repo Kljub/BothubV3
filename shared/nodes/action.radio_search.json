@@ -1,0 +1,72 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.radio_search",
+  "version": 1,
+  "category": "action",
+  "group": "music",
+  "order": 176,
+  "color": "teal",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_radio_search.label",
+  "descriptionKey": "builder.node.action_radio_search.description",
+  "module": "music",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": "",
+      "labelKey": "builder.result.action_radio_search.0"
+    },
+    {
+      "suffix": ".count",
+      "labelKey": "builder.result.action_radio_search.1"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "station": {
+        "type": "string",
+        "maxLength": 100,
+        "x-labelKey": "builder.cfg.radio_station"
+      },
+      "genre": {
+        "type": "string",
+        "maxLength": 50,
+        "x-labelKey": "builder.cfg.radio_genre"
+      },
+      "country": {
+        "type": "string",
+        "maxLength": 2,
+        "x-labelKey": "builder.cfg.radio_country"
+      },
+      "limit": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 25,
+        "default": 10,
+        "x-labelKey": "builder.cfg.radio_limit"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  }
+}

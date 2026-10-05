@@ -1,0 +1,53 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.thanks_leaderboard",
+  "version": 1,
+  "category": "action",
+  "group": "thanks",
+  "order": 2520,
+  "color": "green",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_thanks_leaderboard.label",
+  "descriptionKey": "builder.node.action_thanks_leaderboard.description",
+  "module": "thanks",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": "",
+      "labelKey": "builder.result.action_thanks_leaderboard.0"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "limit": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 50,
+        "default": 10,
+        "x-labelKey": "builder.cfg.thanks_limit"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  }
+}

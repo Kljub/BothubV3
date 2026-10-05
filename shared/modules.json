@@ -68,6 +68,11 @@
       "icon": "📄"
     },
     {
+      "key": "afk",
+      "category": "utility",
+      "icon": "💤"
+    },
+    {
       "key": "automod",
       "category": "security",
       "icon": "🤖"
@@ -220,6 +225,11 @@
       "key": "economy",
       "category": "fun",
       "icon": "💰"
+    },
+    {
+      "key": "thanks",
+      "category": "fun",
+      "icon": "🙏"
     },
     {
       "key": "ticket",
