@@ -69,3 +69,23 @@
 .bot-card-app { position: relative; z-index: 1; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0; font: inherit; font-size: 12px; text-align: left; color: var(--muted); background: none; border: 0; cursor: copy; filter: blur(4px); transition: filter 0.15s; }
 .bot-card-app:hover, .bot-card-app:focus-visible, .bot-card-app.is-copied { filter: none; }
 .bot-card-app.is-copied { color: var(--green); }
+
+/* Compact sizes (the user's design, 2026-10-05): low banner, smaller avatar,
+   text and buttons, so the full name fits. */
+.bot-card-banner { height: 44px; }
+.bot-card-body { gap: 6px; padding: 0 12px 10px; }
+.bot-card-header { gap: 8px; margin-top: -20px; }
+.bot-card-avatar .avatar { width: 48px; height: 48px; border-width: 2px; }
+.bot-card-name .card-title { font-size: 12.5px; }
+.bot-card-app { font-size: 10.5px; }
+.bot-card-badge .badge { padding: 2px 8px; font-size: 10.5px; }
+.bot-card-badge { padding-bottom: 4px; }
+.bot-card .status-text { font-size: 11px; }
+.bot-card-footer { padding: 7px 10px; }
+.bot-card-footer .icon-btn { width: 26px; height: 26px; }
+.bot-card-footer .icon-btn .icon { width: 14px; height: 14px; }
+.bot-card .card-title::after { inset: 0 0 42px 0; }
+.bot-presence { right: -3px; bottom: -2px; width: 15px; height: 15px; border-width: 3px; }
+.bot-presence-idle::after { top: -2px; left: -2px; width: 6px; height: 6px; }
+.bot-presence-dnd::after { left: 1px; right: 1px; top: 3px; height: 3px; }
+.bot-presence-invisible::after, .bot-presence-offline::after { inset: 2px; }
