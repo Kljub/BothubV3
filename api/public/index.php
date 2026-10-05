@@ -16,6 +16,7 @@ use BotHub\Internal\CommandStore;
 use BotHub\Internal\InternalRouter;
 use BotHub\Internal\ProcessStatus;
 use BotHub\Internal\TemplateStore;
+use BotHub\Internal\CardStore;
 use BotHub\Internal\DataStore;
 use BotHub\Internal\BotBackup;
 use BotHub\Internal\SdkPolicyStore;
@@ -206,6 +207,7 @@ if (str_starts_with($path, '/internal/')) {
             new AccountStore($pdo, SecretBox::loadOrCreate()),
             new CoworkStore($pdo),
             new InstanceSettings($pdo, SecretBox::loadOrCreate()),
+            new CardStore($pdo),
         );
         [$status, $out] = $router->handle($method, $path, $body, $raw === '' ? null : json_decode($raw, false), $_GET);
     } catch (\Throwable $e) {

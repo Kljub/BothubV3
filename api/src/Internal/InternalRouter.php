@@ -39,6 +39,7 @@ final class InternalRouter
         private readonly ?AccountStore $accounts = null,
         private readonly ?CoworkStore $cowork = null,
         private readonly ?InstanceSettings $settings = null,
+        private readonly ?CardStore $cards = null,
     ) {
     }
 
@@ -174,6 +175,10 @@ final class InternalRouter
             if ($this->templates !== null && preg_match('#^/internal/bots/(\d+)/message-templates(?:/(\d+)(/send)?)?$#', $path, $m)) {
                 $this->bots->find((int) $m[1]) ?? throw ApiError::notFound();
                 return $this->templateRoute($method, (int) $m[1], isset($m[2]) && $m[2] !== '' ? (int) $m[2] : null, isset($m[3]), $body, $bodyObject);
+            }
+            if ($this->cards !== null && preg_match('#^/internal/bots/(\d+)/cards(?:/(\d+))?$#', $path, $m)) {
+                $this->bots->find((int) $m[1]) ?? throw ApiError::notFound();
+                return $this->cardRoute($method, (int) $m[1], isset($m[2]) ? (int) $m[2] : null, $bodyObject);
             }
             if ($this->timed !== null && preg_match('#^/internal/bots/(\d+)/(timed-events|timed-settings)(?:/(\d+))?$#', $path, $m)) {
                 $this->bots->find((int) $m[1]) ?? throw ApiError::notFound();
@@ -425,6 +430,29 @@ final class InternalRouter
     }
 
     /** Message Builder: saved messages and sending them. */
+    private function cardRoute(string $method, int $botId, ?int $id, mixed $bodyObject): array
+    {
+        $c = $this->cards;
+        $obj = is_object($bodyObject) ? $bodyObject : new \stdClass();
+        $methodNotAllowed = static fn () => throw new ApiError(405, 'error.method_not_allowed');
+        if ($id === null) {
+            return match ($method) {
+                'GET' => [200, ['items' => $c->list($botId)]],
+                'POST' => [201, $c->create($botId, $obj)],
+                default => $methodNotAllowed(),
+            };
+        }
+        return match ($method) {
+            'GET' => [200, $c->get($botId, $id)],
+            'PUT', 'PATCH' => [200, $c->update($botId, $id, $obj)],
+            'DELETE' => (function () use ($c, $botId, $id) {
+                $c->delete($botId, $id);
+                return [204, null];
+            })(),
+            default => $methodNotAllowed(),
+        };
+    }
+
     private function templateRoute(string $method, int $botId, ?int $id, bool $send, array $body, mixed $bodyObject): array
     {
         $t = $this->templates;

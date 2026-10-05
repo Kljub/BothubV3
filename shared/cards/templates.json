@@ -1,0 +1,73 @@
+{
+  "$comment": "Starting designs of the Card Designer, one per kind. Layers are drawn first to last; texts use the placeholders of shared/cards/render.mjs (SAMPLE_VARS).",
+  "kinds": ["welcome", "welcome-back", "goodbye", "boost", "milestone", "rank", "custom"],
+  "templates": {
+    "welcome": {
+      "width": 1024, "height": 500,
+      "background": { "type": "gradient", "color": "#1e1b4b", "color2": "#5865f2", "angle": 135, "dim": 0, "radius": 24 },
+      "layers": [
+        { "id": "glow", "type": "shape", "name": "Glow", "shape": "circle", "x": 362, "y": 30, "w": 300, "h": 300, "fill": "rgba(255,255,255,0.08)" },
+        { "id": "avatar", "type": "avatar", "name": "Avatar", "x": 432, "y": 60, "w": 160, "h": 160, "shape": "circle", "borderWidth": 6, "borderColor": "#ffffff" },
+        { "id": "title", "type": "text", "name": "Title", "text": "Welcome, {user.display}!", "x": 112, "y": 250, "w": 800, "h": 80, "font": "Poppins", "weight": 800, "size": 60, "color": "#ffffff", "align": "center", "shadow": true },
+        { "id": "subtitle", "type": "text", "name": "Subtitle", "text": "You are our {member.ordinal} member on {server}", "x": 112, "y": 335, "w": 800, "h": 50, "font": "Poppins", "weight": 500, "size": 30, "color": "#e0e7ff", "align": "center" },
+        { "id": "badge", "type": "badge", "name": "Badge", "text": "NEW MEMBER", "x": 422, "y": 410, "w": 180, "h": 44, "fill": "#eb459e", "color": "#ffffff", "font": "Poppins", "weight": 700, "size": 18 }
+      ]
+    },
+    "welcome-back": {
+      "width": 1024, "height": 500,
+      "background": { "type": "gradient", "color": "#052e16", "color2": "#16a34a", "angle": 135, "radius": 24 },
+      "layers": [
+        { "id": "avatar", "type": "avatar", "name": "Avatar", "x": 432, "y": 60, "w": 160, "h": 160, "shape": "circle", "borderWidth": 6, "borderColor": "#ffffff" },
+        { "id": "title", "type": "text", "name": "Title", "text": "Welcome back, {user.display}!", "x": 112, "y": 250, "w": 800, "h": 80, "font": "Poppins", "weight": 800, "size": 60, "color": "#ffffff", "align": "center", "shadow": true },
+        { "id": "subtitle", "type": "text", "name": "Subtitle", "text": "Good to see you again on {server}", "x": 112, "y": 335, "w": 800, "h": 50, "font": "Poppins", "weight": 500, "size": 30, "color": "#dcfce7", "align": "center" }
+      ]
+    },
+    "goodbye": {
+      "width": 1024, "height": 500,
+      "background": { "type": "color", "color": "#2b2d31", "radius": 24 },
+      "layers": [
+        { "id": "avatar", "type": "avatar", "name": "Avatar", "x": 432, "y": 60, "w": 160, "h": 160, "shape": "circle", "borderWidth": 4, "borderColor": "#80848e" },
+        { "id": "title", "type": "text", "name": "Title", "text": "Goodbye, {user.display}", "x": 112, "y": 250, "w": 800, "h": 80, "font": "Poppins", "weight": 700, "size": 58, "color": "#ffffff", "align": "center" },
+        { "id": "subtitle", "type": "text", "name": "Subtitle", "text": "Thanks for being part of {server}", "x": 112, "y": 335, "w": 800, "h": 50, "font": "Poppins", "weight": 500, "size": 30, "color": "#b5bac1", "align": "center" }
+      ]
+    },
+    "boost": {
+      "width": 1024, "height": 500,
+      "background": { "type": "gradient", "color": "#4c1d95", "color2": "#f472b6", "angle": 120, "radius": 24 },
+      "layers": [
+        { "id": "star", "type": "shape", "name": "Star", "shape": "star", "x": 80, "y": 60, "w": 90, "h": 90, "fill": "rgba(255,255,255,0.25)" },
+        { "id": "avatar", "type": "avatar", "name": "Avatar", "x": 432, "y": 60, "w": 160, "h": 160, "shape": "circle", "borderWidth": 6, "borderColor": "#f9a8d4" },
+        { "id": "title", "type": "text", "name": "Title", "text": "Thank you for boosting, {user.display}!", "x": 62, "y": 250, "w": 900, "h": 80, "font": "Poppins", "weight": 800, "size": 54, "color": "#ffffff", "align": "center", "shadow": true },
+        { "id": "subtitle", "type": "text", "name": "Subtitle", "text": "{server} now has {boosts} boosts", "x": 112, "y": 335, "w": 800, "h": 50, "font": "Poppins", "weight": 600, "size": 30, "color": "#fce7f3", "align": "center" }
+      ]
+    },
+    "milestone": {
+      "width": 1024, "height": 500,
+      "background": { "type": "gradient", "color": "#78350f", "color2": "#facc15", "angle": 135, "radius": 24 },
+      "layers": [
+        { "id": "number", "type": "text", "name": "Number", "text": "{milestone|commas}", "x": 112, "y": 90, "w": 800, "h": 170, "font": "Bebas Neue", "weight": 400, "size": 180, "color": "#ffffff", "align": "center", "shadow": true },
+        { "id": "title", "type": "text", "name": "Title", "text": "members on {server}!", "x": 112, "y": 280, "w": 800, "h": 70, "font": "Poppins", "weight": 800, "size": 48, "color": "#fffbeb", "align": "center" },
+        { "id": "subtitle", "type": "text", "name": "Subtitle", "text": "{user.display} made it happen", "x": 112, "y": 360, "w": 800, "h": 50, "font": "Poppins", "weight": 500, "size": 28, "color": "#fef3c7", "align": "center" }
+      ]
+    },
+    "rank": {
+      "width": 934, "height": 282,
+      "background": { "type": "color", "color": "#18191c", "radius": 20 },
+      "layers": [
+        { "id": "panel", "type": "shape", "name": "Panel", "shape": "rect", "x": 20, "y": 20, "w": 894, "h": 242, "radius": 16, "fill": "#2b2d31" },
+        { "id": "avatar", "type": "avatar", "name": "Avatar", "x": 50, "y": 61, "w": 160, "h": 160, "shape": "circle", "borderWidth": 0 },
+        { "id": "name", "type": "text", "name": "Name", "text": "{user.display}", "x": 240, "y": 70, "w": 400, "h": 50, "font": "Poppins", "weight": 700, "size": 36, "color": "#ffffff", "align": "left" },
+        { "id": "level", "type": "text", "name": "Level", "text": "LEVEL {level}  ·  RANK #{rank}", "x": 600, "y": 70, "w": 280, "h": 50, "font": "Poppins", "weight": 700, "size": 22, "color": "#a78bfa", "align": "right" },
+        { "id": "xp", "type": "text", "name": "XP", "text": "{xp|short} / {xp.next|short} XP", "x": 600, "y": 130, "w": 280, "h": 36, "font": "Poppins", "weight": 500, "size": 20, "color": "#b5bac1", "align": "right" },
+        { "id": "bar", "type": "bar", "name": "Progress", "value": "{level.progress}", "x": 240, "y": 175, "w": 640, "h": 34, "fill": "#a78bfa", "track": "#4e5058" }
+      ]
+    },
+    "custom": {
+      "width": 1024, "height": 500,
+      "background": { "type": "color", "color": "#23272a", "radius": 0 },
+      "layers": [
+        { "id": "title", "type": "text", "name": "Text", "text": "Hello {user.display}", "x": 112, "y": 210, "w": 800, "h": 80, "font": "Poppins", "weight": 700, "size": 56, "color": "#ffffff", "align": "center" }
+      ]
+    }
+  }
+}

@@ -37,7 +37,7 @@ $pdo = Connection::open($tmp . '/bothub.sqlite');
 (new Migrator($pdo, __DIR__ . '/../migrations'))->migrate();
 $botStore = new BotStore($pdo, new SecretBox(random_bytes(32)));
 $router = new InternalRouter($botStore, static fn () => throw new \RedisException('no redis in test'), new CommandStore($pdo), new TimedStore($pdo), new WebhookStore($pdo), new TemplateStore($pdo), new DataStore($pdo), new SdkPolicyStore($pdo, __DIR__ . '/../../shared/sdk-permissions.json'),
-    backups: new BotBackup($pdo, $botStore, __DIR__ . '/../../shared'), logs: new \BotHub\Internal\LogStore($pdo));
+    backups: new BotBackup($pdo, $botStore, __DIR__ . '/../../shared'), logs: new \BotHub\Internal\LogStore($pdo), cards: new \BotHub\Internal\CardStore($pdo));
 
 /** Sends like index.php: body as arrays and as objects. */
 function call(string $method, string $path, ?string $json = null, array $query = []): array
@@ -252,6 +252,17 @@ call('PATCH', "{$b}/webhooks/{$wh['id']}", '{"enabled":true}');
 check('webhook without key requirement', $recv(null) === 'ok' && call('GET', "{$b}/webhooks/{$wh['id']}")[1]['calls'] === 3);
 check('webhook test counts', call('POST', "{$b}/webhooks/{$wh['id']}/test", '{"variables":{"x":"y"}}')[0] === 202 && call('GET', "{$b}/webhooks/{$wh['id']}")[1]['calls'] === 4);
 check('webhook delete', call('DELETE', "{$b}/webhooks/{$wh['id']}")[0] === 204 && $recv(null) === 'error.webhook.unknown');
+
+// card designer: image cards
+$design = '{"width":1024,"height":500,"background":{"type":"color","color":"#000000"},"layers":[{"id":"t","type":"text","text":"Hi {user.name}","x":10,"y":10,"w":500,"h":80}]}';
+[$s, $card] = call('POST', "{$b}/cards", '{"name":"Welcome","kind":"welcome","design":' . $design . '}');
+check('card created', $s === 201 && $card['kind'] === 'welcome' && $card['design']['layers'][0]['text'] === 'Hi {user.name}');
+[$s, $card2] = call('PUT', "{$b}/cards/{$card['id']}", '{"name":"Hello"}');
+check('card renamed, design kept', $s === 200 && $card2['name'] === 'Hello' && $card2['design']['width'] === 1024);
+check('card checks', call('POST', "{$b}/cards", '{"name":"x","kind":"nope","design":' . $design . '}')[0] === 422
+    && call('POST', "{$b}/cards", '{"name":"x","kind":"custom","design":{"width":5000,"height":500,"layers":[]}}')[0] === 422
+    && call('POST', "{$b}/cards", '{"name":"x","kind":"custom","design":{"width":500,"height":500,"layers":' . json_encode(array_fill(0, 41, ['type' => 'text'])) . '}}')[0] === 422);
+check('card list and delete', count(call('GET', "{$b}/cards")[1]['items']) === 1 && call('DELETE', "{$b}/cards/{$card['id']}")[0] === 204 && call('GET', "{$b}/cards/{$card['id']}")[0] === 404);
 
 // message builder: saved messages
 [$s, $tpl] = call('POST', "{$b}/message-templates", '{"name":"Welcome","message":{"mode":"normal","content":"Hi","embeds":[{}]}}');

@@ -336,6 +336,12 @@ func main() {
 	mux.HandleFunc("PATCH /api/v1/bots/{id}/commands/{cid}", s.auth(s.withBot(s.viaPHP(s.patchCommand))))
 	mux.HandleFunc("PUT /api/v1/bots/{id}/commands/{cid}", s.auth(s.withBot(s.viaPHP(s.saveCommand))))
 	mux.HandleFunc("POST /api/v1/bots/{id}/commands/{cid}/simulate", s.auth(s.withBot(s.simulateCommand)))
+	// Card Designer: image cards (PHP API only).
+	mux.HandleFunc("GET /api/v1/bots/{id}/cards", s.auth(s.withBot(s.viaPHP(phpRequired))))
+	mux.HandleFunc("POST /api/v1/bots/{id}/cards", s.auth(s.withBot(s.viaPHP(phpRequired))))
+	mux.HandleFunc("GET /api/v1/bots/{id}/cards/{cid}", s.auth(s.withBot(s.viaPHP(phpRequired))))
+	mux.HandleFunc("PUT /api/v1/bots/{id}/cards/{cid}", s.auth(s.withBot(s.viaPHP(phpRequired))))
+	mux.HandleFunc("DELETE /api/v1/bots/{id}/cards/{cid}", s.auth(s.withBot(s.viaPHP(phpRequired))))
 	mux.HandleFunc("GET /api/v1/bots/{id}/message-templates", s.auth(s.withBot(s.viaPHP(s.listTemplates))))
 	mux.HandleFunc("GET /api/v1/bots/{id}/message-templates/{tid}", s.auth(s.withBot(s.viaPHP(s.getTemplate))))
 	mux.HandleFunc("GET /api/v1/jobs/{jid}", s.auth(s.jobStatus))
