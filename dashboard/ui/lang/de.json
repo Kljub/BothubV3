@@ -5065,5 +5065,16 @@
   "overview.storage.other": "Sonstiges",
   "bots.menu.reorder": "Neu anordnen",
   "bots.reorder.hint": "Zieh die Kacheln in deine Reihenfolge. Die Bot-Auswahl in der Sidebar übernimmt sie.",
-  "bots.reorder.done": "Fertig"
+  "bots.reorder.done": "Fertig",
+  "builder.node.action_make_card.label": "Bildkarte erstellen",
+  "builder.node.action_make_card.description": "Zeichnet eine Karte aus dem Card Designer; {card} in einer Nachricht postet sie.",
+  "builder.cfg.card": "Karte",
+  "builder.cfg.card_hint": "Karten gestaltest du unter Module → Card Designer.",
+  "builder.cfg.card_user": "Für Mitglied",
+  "builder.cfg.card_user_hint": "Leer: das Mitglied, das es ausgelöst hat.",
+  "builder.cfg.card_variable_hint": "{card} (oder dieser Name) in einem Nachrichtentext oder als Embed-Bild sendet die Karte.",
+  "builder.result.make_card.0": "Die Karte (für eine Nachricht)",
+  "builder.card.pick": "— Karte wählen —",
+  "builder.card.none": "Noch keine Karten: erstelle eine im Card Designer.",
+  "error.card.too_many_in_run": "Ein Lauf kann höchstens {max} Karten erstellen."
 }

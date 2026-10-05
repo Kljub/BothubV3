@@ -5065,5 +5065,16 @@
   "overview.storage.other": "Other",
   "bots.menu.reorder": "Repositioning",
   "bots.reorder.hint": "Drag the tiles into your order. The bot switch in the sidebar follows it.",
-  "bots.reorder.done": "Done"
+  "bots.reorder.done": "Done",
+  "builder.node.action_make_card.label": "Make an image card",
+  "builder.node.action_make_card.description": "Draws a card of the Card Designer; put {card} in a message to post it.",
+  "builder.cfg.card": "Card",
+  "builder.cfg.card_hint": "Design cards under Modules → Card Designer.",
+  "builder.cfg.card_user": "For member",
+  "builder.cfg.card_user_hint": "Empty: the member who started it.",
+  "builder.cfg.card_variable_hint": "Put {card} (or this name) in a message text or as an embed image to send the card.",
+  "builder.result.make_card.0": "The card (for a message)",
+  "builder.card.pick": "— pick a card —",
+  "builder.card.none": "No cards yet: create one in the Card Designer.",
+  "error.card.too_many_in_run": "A run can make at most {max} cards."
 }

@@ -19,6 +19,7 @@ import type { GraphNode } from '../graph/types.js';
 import { parseDuration, snowflake, snowflakes } from '../graph/util.js';
 import type { CaseAction, ModCase, Repo } from '../core/repo.js';
 import { buildMessage, hasBody } from './message.js';
+import { cardVars, renderCard } from '../cards/cards.js';
 import { actionName, type CaseHandle, type Moderation } from './moderation.js';
 import { ModuleContext } from '../modules/context.js';
 import { clock, findTracks, musicOf, MusicError, type LoopMode } from './music.js';
@@ -58,6 +59,8 @@ export interface DiscordData {
   customId(component: GraphNode): string;
   /** Messages sent by this run, by block variable ({Var1}). */
   messages: Map<string, Message>;
+  /** Image cards made by this run (Make Image Card), by file name; sent with the next message that names them. */
+  files?: Map<string, Buffer>;
 }
 
 export function data(run: Run): DiscordData {
@@ -142,10 +145,28 @@ async function discord<T>(run: Run, call: () => Promise<T>): Promise<T> {
   }
 }
 
+/**
+ * Cards of Make Image Card: a message naming "attachment://card-…png" (in
+ * its text or an embed) gets that file; the name in the text is removed, so
+ * {card} alone in a message just posts the image.
+ */
+export function attachCards(payload: Record<string, unknown>, files: Map<string, Buffer> | undefined): void {
+  if (!files?.size) return;
+  const json = JSON.stringify(payload);
+  const attach: { attachment: Buffer; name: string }[] = [];
+  for (const [name, png] of files) if (json.includes(`attachment://${name}`)) attach.push({ attachment: png, name });
+  if (!attach.length) return;
+  if (typeof payload.content === 'string') {
+    payload.content = payload.content.replace(/attachment:\/\/card-[a-z0-9]+\.png/g, '').trim();
+  }
+  payload.files = [...((payload.files as unknown[]) ?? []), ...attach];
+}
+
 async function sendMessage(node: GraphNode, run: Run): Promise<void> {
   const d = data(run);
   const payload = buildMessage(run, node, d.customId) as Record<string, unknown> & { flags?: number };
-  if (!hasBody(payload)) throw new GraphError('error.run.empty_message');
+  attachCards(payload, d.files);
+  if (!hasBody(payload) && !(payload.files as unknown[] | undefined)?.length) throw new GraphError('error.run.empty_message');
   if (run.bool(node, 'silent')) payload.flags = (payload.flags ?? 0) | MessageFlags.SuppressNotifications;
   const mentions = String(run.raw(node, 'mentions') ?? 'all');
   if (mentions !== 'all') payload.allowedMentions = mentions === 'none' ? { parse: [] } : { parse: ['users'] };
@@ -609,6 +630,34 @@ export function discordHandlers(repo: Repo, mod?: Moderation, secret: (key: stri
 
   return new Map<string, Handler>([
     ['action.send_message', sendMessage],
+    [
+      // Make Image Card: draws a card of the Card Designer for a member; {card}
+      // in a later message (text or embed image) posts it.
+      'action.make_card',
+      async (node, run) => {
+        const d = data(run);
+        const cardId = Number(run.str(node, 'card'));
+        if (!Number.isInteger(cardId) || cardId < 1) throw new GraphError('error.card.unknown');
+        const member = run.str(node, 'user').trim() ? await memberOf(run, node, 'user') : d.member;
+        const user = member?.user ?? d.user;
+        const guild = member?.guild ?? d.guild;
+        const vars: Record<string, string> = { ...Object.fromEntries(run.vars) };
+        if (user) {
+          Object.assign(vars, cardVars({
+            guildName: guild?.name ?? '', guildId: guild?.id ?? '', members: guild?.memberCount ?? 0, userId: user.id, userName: user.username,
+            display: member?.displayName ?? user.globalName ?? user.username, avatar: user.displayAvatarURL({ extension: 'png', size: 256 }),
+            createdAt: user.createdTimestamp, joinedAt: member?.joinedTimestamp ?? null,
+          }));
+        }
+        const png = await renderCard(repo.db, d.botId, cardId, vars);
+        if (!png) throw new GraphError('error.card.unknown');
+        d.files ??= new Map();
+        if (d.files.size >= 5) throw new GraphError('error.card.too_many_in_run', { max: 5 });
+        const name = `card-${d.files.size + 1}.png`;
+        d.files.set(name, png);
+        run.setResult(node, '', `attachment://${name}`);
+      },
+    ],
     [
       'action.delete_message',
       async (node, run) => {

@@ -129,6 +129,7 @@ func (s *Server) handleBuilderPage(w http.ResponseWriter, r *http.Request, p Pag
 			"templatesUrl":   fmt.Sprintf("/api/v1/bots/%d/message-templates", bot.ID),
 			"timedEventsUrl": fmt.Sprintf("/api/v1/bots/%d/timed-events", bot.ID),
 			"webhooksUrl":    fmt.Sprintf("/api/v1/bots/%d/webhooks", bot.ID),
+			"cardsUrl":       fmt.Sprintf("/api/v1/bots/%d/cards", bot.ID),
 			"dataVarsUrl":    fmt.Sprintf("/api/v1/bots/%d/data/variables", bot.ID),
 			"versionsUrl":    base + "/versions",
 			"updatedAt":      cmd.UpdatedAt,

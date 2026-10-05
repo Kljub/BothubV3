@@ -1,0 +1,64 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.make_card",
+  "version": 1,
+  "category": "action",
+  "group": "advanced_messages",
+  "order": 31,
+  "color": "blue",
+  "icon": "🖼",
+  "labelKey": "builder.node.action_make_card.label",
+  "descriptionKey": "builder.node.action_make_card.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": "",
+      "labelKey": "builder.result.make_card.0"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "card"
+    ],
+    "properties": {
+      "card": {
+        "type": "string",
+        "pattern": "^[0-9]{1,10}$",
+        "x-widget": "card",
+        "x-labelKey": "builder.cfg.card",
+        "x-hintKey": "builder.cfg.card_hint"
+      },
+      "user": {
+        "type": "string",
+        "maxLength": 100,
+        "x-ref": "member",
+        "x-advanced": true,
+        "x-labelKey": "builder.cfg.card_user",
+        "x-hintKey": "builder.cfg.card_user_hint"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "default": "card",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.card_variable_hint"
+      }
+    }
+  }
+}

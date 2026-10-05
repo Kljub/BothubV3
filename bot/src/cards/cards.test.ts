@@ -33,3 +33,16 @@ test('cards: member placeholders and uploaded pictures', async () => {
   assert.equal(asked, 7);
   assert.equal(out.subarray(1, 4).toString(), 'PNG');
 });
+
+test('cards: {card} in a message attaches the made card; the name leaves the text', async () => {
+  const { attachCards } = await import('../discord/handlers.js');
+  const png = Buffer.from('x');
+  const files = new Map([['card-1.png', png], ['card-2.png', png]]);
+  const p: Record<string, unknown> = { content: 'Welcome! attachment://card-1.png', embeds: [{ image: { url: 'attachment://card-2.png' } }] };
+  attachCards(p, files);
+  assert.equal(p.content, 'Welcome!');
+  assert.deepEqual((p.files as { name: string }[]).map((f) => f.name), ['card-1.png', 'card-2.png']);
+  const q: Record<string, unknown> = { content: 'no card here' };
+  attachCards(q, files);
+  assert.equal(q.files, undefined);
+});

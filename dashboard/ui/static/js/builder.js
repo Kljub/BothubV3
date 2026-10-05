@@ -773,6 +773,7 @@
       if (schema['x-widget'] === 'eventType') { form.append(eventTypeWidget(node, key, schema)); continue; }
       if (schema['x-widget'] === 'timedEvent') { form.append(timedEventWidget(node, key, schema)); continue; }
       if (schema['x-widget'] === 'webhook') { form.append(webhookWidget(node, key, schema)); continue; }
+      if (schema['x-widget'] === 'card') { form.append(cardWidget(node, key, schema)); continue; }
       if (schema['x-widget'] === 'message') { form.append(messageWidget(node, key, schema)); continue; }
       if (schema['x-widget'] === 'destination') { form.append(destinationWidget(node, key, schema)); continue; }
       if (schema['x-widget'] === 'undo') { form.append(undoWidget(node, key, schema)); continue; }
@@ -1568,6 +1569,35 @@
         if (String(te.id) === String(node.config[key] ?? '')) o.selected = true;
         input.append(o);
       }
+    }).catch(() => label.append(el('span', 'bfield-hint', t('builder.pick.load_failed'))));
+    return label;
+  }
+
+  // Make Image Card: one of the bot's cards (Card Designer).
+  function cardWidget(node, key, schema) {
+    const label = el('label', 'bfield');
+    label.dataset.field = key;
+    label.append(el('span', 'bfield-label', t(schema['x-labelKey'])));
+    const input = el('select');
+    const none = el('option', '', t('builder.card.pick'));
+    none.value = '';
+    input.append(none);
+    input.addEventListener('change', () => {
+      if (input.value) node.config[key] = input.value;
+      else delete node.config[key];
+      refreshNode(node);
+      refreshMissing();
+      commit();
+    });
+    label.append(input, el('span', 'bfield-hint', t(schema['x-hintKey'])));
+    load(meta.cardsUrl).then((items) => {
+      for (const c of items) {
+        const o = el('option', '', `${c.name} (#${c.id})`);
+        o.value = String(c.id);
+        if (String(c.id) === String(node.config[key] ?? '')) o.selected = true;
+        input.append(o);
+      }
+      if (!items.length) label.append(el('span', 'bfield-hint', t('builder.card.none')));
     }).catch(() => label.append(el('span', 'bfield-hint', t('builder.pick.load_failed'))));
     return label;
   }
