@@ -158,6 +158,10 @@ final class InternalRouter
             if ($this->docs !== null && preg_match('#^/internal/docs(?:/categories(?:/([a-z0-9-]{1,60}))?|/(\d+))?$#', $path, $m)) {
                 return $this->docsRoute($method, $path, $m, $body);
             }
+            if ($this->stats !== null && preg_match('#^/internal/bots/(\d+)/member-stats$#', $path, $m)) {
+                $this->bots->find((int) $m[1]) ?? throw ApiError::notFound();
+                return $method === 'GET' ? [200, $this->stats->paths((int) $m[1], $query)] : throw new ApiError(405, 'error.method_not_allowed');
+            }
             if ($this->stats !== null && preg_match('#^/internal/bots/(\d+)/stats$#', $path, $m)) {
                 $this->bots->find((int) $m[1]) ?? throw ApiError::notFound();
                 return $method === 'GET' ? [200, $this->stats->bot((int) $m[1], $query)] : throw new ApiError(405, 'error.method_not_allowed');

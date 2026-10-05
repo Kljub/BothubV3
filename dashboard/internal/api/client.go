@@ -322,6 +322,23 @@ func (c *Client) UpdatePresence(ctx context.Context, s Session, botID int64, in 
 	return out, err
 }
 
+// MemberStats: the Stats module numbers (Welcomer, Leaver and Boost paths).
+type MemberStats struct {
+	Days   int                         `json:"days"`
+	Counts map[string]map[string]int64 `json:"counts"`
+	Series map[string][]struct {
+		T string `json:"t"`
+		V int64  `json:"v"`
+	} `json:"series"`
+}
+
+// MemberStats returns the paths of the last days (7, 30 or 90).
+func (c *Client) MemberStats(ctx context.Context, s Session, botID int64, days int) (MemberStats, error) {
+	var out MemberStats
+	_, err := c.do(ctx, s, http.MethodGet, fmt.Sprintf("/api/v1/bots/%d/member-stats?days=%d", botID, days), nil, &out)
+	return out, err
+}
+
 // BotStatsBetween returns the stats of a bot for a custom time range.
 func (c *Client) BotStatsBetween(ctx context.Context, s Session, botID int64, from, to time.Time, guild string) (BotStats, error) {
 	var out BotStats

@@ -53,4 +53,14 @@ try {
 } catch (\BotHub\Internal\ApiError) {
     check('short custom range refused', true);
 }
+// Stats module: member module paths per day.
+$add->execute([$g2, '2026-10-04T09', 'path:welcome:normal', 3]);
+$add->execute([$g2, '2026-10-03T20', 'path:welcome:returning', 1]);
+$add->execute([$g2, '2026-10-04T10', 'path:leave:kicked', 2]);
+$add->execute([$g2, '2026-08-01T10', 'path:leave:left', 9]);
+$add->execute([$g2, '2026-10-04T10', 'path:nonsense:x', 5]);
+$mp = (new StatsStore($pdo))->paths(1, ['days' => '7'], $now);
+check('paths: 7 daily points, today last', count($mp['series']['welcome']) === 7 && end($mp['series']['welcome'])['t'] === '2026-10-04T00:00:00Z' && end($mp['series']['welcome'])['v'] === 3);
+check('paths: counts per path, old rows left out', $mp['counts']['welcome']['normal'] === 3 && $mp['counts']['welcome']['returning'] === 1 && $mp['counts']['leave']['kicked'] === 2 && $mp['counts']['leave']['left'] === 0);
+check('paths: unknown days fall back to 30', (new StatsStore($pdo))->paths(1, ['days' => '5'], $now)['days'] === 30);
 exit($failed === 0 ? 0 : 1);

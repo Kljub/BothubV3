@@ -23,8 +23,56 @@ final class StatsStore
     private const RANGES = ['24h' => [86400, 3600], '7d' => [604800, 21600], '30d' => [2592000, 86400]];
     private const TOP = ['commands' => 'cmd:', 'plugins' => 'plugin:', 'modActions' => 'mod:'];
 
+    /** Paths of the member modules (bot: "path:<group>:<path>"), Stats module. */
+    public const PATHS = [
+        'welcome' => ['normal', 'returning', 'milestone', 'invite', 'bot', 'raid', 'suspicious', 'spam'],
+        'leave' => ['left', 'kicked', 'banned', 'pruned', 'bot'],
+        'boost' => ['first', 'again', 'stop'],
+    ];
+
     public function __construct(private readonly PDO $pdo)
     {
+    }
+
+    /**
+     * Stats module: the member module paths of the last 7, 30 or 90 days
+     * (UTC days, today included): count per path and a daily series per group.
+     *
+     * @param array<string, string> $query days (7|30|90), guild
+     */
+    public function paths(int $botId, array $query, ?int $now = null): array
+    {
+        $now ??= time();
+        $days = in_array((int) ($query['days'] ?? 30), [7, 30, 90], true) ? (int) $query['days'] : 30;
+        $guild = preg_match('/^\d{17,20}$/', (string) ($query['guild'] ?? '')) ? (string) $query['guild'] : null;
+        $first = $now - $now % 86400 - ($days - 1) * 86400;
+        $sql = "SELECT hour, metric, SUM(value) AS v FROM bot_stats WHERE bot_id = ? AND metric LIKE 'path:%' AND hour >= ?"
+            . ($guild !== null ? ' AND guild_id = ?' : '') . ' GROUP BY hour, metric';
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($guild !== null ? [$botId, gmdate('Y-m-d\TH', $first), $guild] : [$botId, gmdate('Y-m-d\TH', $first)]);
+        $counts = [];
+        $series = [];
+        foreach (self::PATHS as $group => $paths) {
+            $counts[$group] = array_fill_keys($paths, 0);
+            $series[$group] = array_fill(0, $days, 0);
+        }
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $parts = explode(':', (string) $r['metric']);
+            if (count($parts) !== 3 || !isset($counts[$parts[1]][$parts[2]])) {
+                continue;
+            }
+            $day = intdiv((int) strtotime($r['hour'] . ':00:00Z') - $first, 86400);
+            if ($day < 0 || $day >= $days) {
+                continue;
+            }
+            $counts[$parts[1]][$parts[2]] += (int) $r['v'];
+            $series[$parts[1]][$day] += (int) $r['v'];
+        }
+        $out = [];
+        foreach ($series as $group => $values) {
+            $out[$group] = array_map(static fn (int $i, int $v) => ['t' => gmdate('Y-m-d\TH:i:s\Z', $first + $i * 86400), 'v' => $v], array_keys($values), $values);
+        }
+        return ['days' => $days, 'counts' => $counts, 'series' => $out];
     }
 
     /** @param array<string, string> $query range (24h|7d|30d|custom), from, to (custom, ISO), guild */

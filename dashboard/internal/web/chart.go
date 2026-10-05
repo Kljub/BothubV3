@@ -170,6 +170,12 @@ func formatTime(t time.Time, rng, locale string) string {
 	if rng == "1h" || rng == "24h" {
 		return t.Format("15:04")
 	}
+	if rng == "days" { // one point per day: the date only
+		if locale == "de" {
+			return t.UTC().Format("02.01.")
+		}
+		return t.UTC().Format("Jan 2")
+	}
 	if locale == "de" {
 		return t.Format("02.01. 15:04")
 	}

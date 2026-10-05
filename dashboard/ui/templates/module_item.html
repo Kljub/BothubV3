@@ -18,6 +18,9 @@
   {{else if $d.MsgBuilder}}
   {{template "module_header_static" $d.Header}}
   {{template "message_builder" $d.MsgBuilder}}
+  {{else if $d.MemberStats}}
+  {{template "module_header" $d.Header}}
+  {{template "member_stats" $d.MemberStats}}
   {{else if $d.Cards}}
   {{template "module_header" $d.Header}}
   {{template "card_designer" $d.Cards}}

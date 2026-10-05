@@ -1,0 +1,146 @@
+{
+  "module": "boost",
+  "fields": [
+    {
+      "key": "s_message",
+      "type": "section"
+    },
+    {
+      "key": "channel",
+      "type": "channel",
+      "channelTypes": [
+        "text",
+        "announcement"
+      ],
+      "hint": true
+    },
+    {
+      "key": "firstMessage",
+      "type": "message",
+      "vars": [
+        "user",
+        "user.mention",
+        "user.name",
+        "user.id",
+        "user.avatar",
+        "user.created",
+        "user.created.ago",
+        "member.joined",
+        "member.joined.ago",
+        "member.days",
+        "server",
+        "server.id",
+        "members",
+        "boost_count",
+        "boost_level",
+        "times_boosted"
+      ],
+      "default": {
+        "mode": "embed",
+        "title": "🚀 Thank you for boosting!",
+        "description": "{user.mention} just boosted **{server}**! We now have {boost_count} boosts.",
+        "color": "#f472b6"
+      }
+    },
+    {
+      "key": "againMessage",
+      "type": "message",
+      "vars": [
+        "user",
+        "user.mention",
+        "user.name",
+        "user.id",
+        "user.avatar",
+        "user.created",
+        "user.created.ago",
+        "member.joined",
+        "member.joined.ago",
+        "member.days",
+        "server",
+        "server.id",
+        "members",
+        "boost_count",
+        "boost_level",
+        "times_boosted"
+      ],
+      "default": {
+        "mode": "text",
+        "content": "💜 {user.mention} boosted again! That is boost number {times_boosted} from them."
+      }
+    },
+    {
+      "key": "stopMessage",
+      "type": "message",
+      "vars": [
+        "user",
+        "user.mention",
+        "user.name",
+        "user.id",
+        "user.avatar",
+        "user.created",
+        "user.created.ago",
+        "member.joined",
+        "member.joined.ago",
+        "member.days",
+        "server",
+        "server.id",
+        "members",
+        "boost_count",
+        "boost_level",
+        "times_boosted"
+      ],
+      "hint": true
+    },
+    {
+      "key": "card",
+      "type": "card",
+      "hint": true
+    },
+    {
+      "key": "s_reward",
+      "type": "section"
+    },
+    {
+      "key": "roles",
+      "type": "roles",
+      "max": 10,
+      "hint": true
+    },
+    {
+      "key": "dm",
+      "type": "bool",
+      "default": false
+    },
+    {
+      "key": "dmMessage",
+      "type": "message",
+      "vars": [
+        "user",
+        "user.mention",
+        "user.name",
+        "user.id",
+        "user.avatar",
+        "user.created",
+        "user.created.ago",
+        "member.joined",
+        "member.joined.ago",
+        "member.days",
+        "server",
+        "server.id",
+        "members",
+        "boost_count",
+        "boost_level",
+        "times_boosted"
+      ],
+      "showIf": {
+        "dm": [
+          "true"
+        ]
+      },
+      "default": {
+        "mode": "text",
+        "content": "Thank you for boosting {server}, {user.name}! 💜"
+      }
+    }
+  ]
+}

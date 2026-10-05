@@ -16,6 +16,7 @@ import { ensureHoneypots, honeypotMessage } from './honeypot.js';
 import { ModuleTimers } from './timers.js';
 import { messageReward, syncCurrencies } from './economy.js';
 import { afkMessage } from './afk.js';
+import { boostChange, boostMessage } from './boost.js';
 import { rolePrefix } from './server-auto.js';
 import { thanksMessage } from './thanks.js';
 import { linkfixMessage } from './linkfix.js';
@@ -80,6 +81,7 @@ export function bindModules(client: Client, ctx: ModuleContext, timezone: () => 
     guard('afk', afkMessage(ctx, msg));
     guard('thanks', thanksMessage(ctx, msg));
     guard('welcome-first', welcomeFirstMessage(ctx, msg));
+    guard('boost', boostMessage(ctx, msg));
   });
   client.on(Events.MessageUpdate, (old, msg) => {
     // Link previews arrive with an edit: the media filter checks them then.
@@ -91,6 +93,7 @@ export function bindModules(client: Client, ctx: ModuleContext, timezone: () => 
   });
   client.on(Events.GuildMemberUpdate, (before, after) => {
     guard('welcome-rules', onMemberUpdate(ctx, before, after));
+    guard('boost', boostChange(ctx, before, after));
     // Role Prefix: roles or name changed.
     if (before.partial || before.roles.cache.size !== after.roles.cache.size || before.displayName !== after.displayName || ![...before.roles.cache.keys()].every((r) => after.roles.cache.has(r))) {
       guard('role-prefix', rolePrefix(ctx, after));

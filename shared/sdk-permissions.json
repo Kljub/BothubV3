@@ -1443,6 +1443,50 @@
       "category": "messages"
     },
     {
+      "key": "modules.boost.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "boost",
+      "scope": "module",
+      "category": "messages"
+    },
+    {
+      "key": "modules.member-stats.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "member-stats",
+      "scope": "module",
+      "category": "statistics"
+    },
+    {
       "key": "modules.leavemer.read",
       "group": "modules",
       "risk": "medium",

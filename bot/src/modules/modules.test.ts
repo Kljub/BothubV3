@@ -618,3 +618,11 @@ test('leaver: message by reason, quick, timeout and long-timer', async () => {
   assert.equal(pick({ stayMs: 400 * 86_400_000 }), 'long');
   assert.equal(pick({ stayMs: null }), 'left');
 });
+
+test('boost: a boost seen twice (system message and "boosting since") counts once', async () => {
+  const { seenBoost } = await import('./boost.js');
+  assert.equal(seenBoost('b:g:u', 1_000), false);
+  assert.equal(seenBoost('b:g:u', 30_000), true);
+  assert.equal(seenBoost('b:g:other', 30_000), false);
+  assert.equal(seenBoost('b:g:u', 200_000), false); // two minutes later: a new boost
+});

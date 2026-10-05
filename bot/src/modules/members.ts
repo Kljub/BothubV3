@@ -6,6 +6,7 @@ import {
 } from 'discord.js';
 import { log } from '../core/log.js';
 import { cardVars, renderCard } from '../cards/cards.js';
+import { stats } from '../core/stats.js';
 import { baseVars, buildMessage, fill, timeVars, idIn, idsIn, reactionOf, type MessageConfig, type ModuleContext } from './context.js';
 import { allow, assignable, send, warn } from './guard.js';
 
@@ -71,14 +72,24 @@ export interface JoinInfo {
   code: string | null;
 }
 
-/** Which message welcomes this member: invite, milestone, returning or the normal one. */
-export function pickWelcome(cfg: Partial<WelcomeConfig>, j: { code: string | null; members: number; timesJoined: number }): MessageConfig | undefined {
+/** Which welcome a member gets (the "path", also counted for the Stats module). */
+export function welcomeKind(cfg: Partial<WelcomeConfig>, j: { code: string | null; members: number; timesJoined: number }): { kind: 'invite' | 'milestone' | 'returning' | 'normal'; message: MessageConfig | undefined } {
   const hasBody = (m: MessageConfig | undefined) => !!m && !!buildMessage(m, {});
   const invite = j.code ? (cfg.inviteWelcomes ?? []).find((w) => w.code.toLowerCase() === j.code!.toLowerCase()) : undefined;
-  if (invite && hasBody(invite.message)) return invite.message;
-  if ((cfg.milestoneEvery ?? 0) > 0 && j.members % cfg.milestoneEvery! === 0 && hasBody(cfg.milestoneMessage)) return cfg.milestoneMessage;
-  if (cfg.returningEnabled && j.timesJoined > 1 && hasBody(cfg.returningMessage)) return cfg.returningMessage;
-  return cfg.message;
+  if (invite && hasBody(invite.message)) return { kind: 'invite', message: invite.message };
+  if ((cfg.milestoneEvery ?? 0) > 0 && j.members % cfg.milestoneEvery! === 0 && hasBody(cfg.milestoneMessage)) return { kind: 'milestone', message: cfg.milestoneMessage };
+  if (cfg.returningEnabled && j.timesJoined > 1 && hasBody(cfg.returningMessage)) return { kind: 'returning', message: cfg.returningMessage };
+  return { kind: 'normal', message: cfg.message };
+}
+
+/** Which message welcomes this member: invite, milestone, returning or the normal one. */
+export function pickWelcome(cfg: Partial<WelcomeConfig>, j: { code: string | null; members: number; timesJoined: number }): MessageConfig | undefined {
+  return welcomeKind(cfg, j).message;
+}
+
+/** Counts a path of a member module for the Stats module (kept 95 days). */
+function countPath(ctx: ModuleContext, guildId: string, path: string): void {
+  stats(ctx.db).add(ctx.botId, guildId, `path:${path}`);
 }
 
 /** Joins in the last raidSeconds per server: more than raidJoins is a raid. */
@@ -103,7 +114,7 @@ function joinsOf(ctx: ModuleContext, guildId: string, userId: string): { total: 
 }
 
 /** A card of the Card Designer for a user, as a file of the message. */
-async function addCard(ctx: ModuleContext, cardId: string | undefined, guild: Guild, user: User, member: GuildMember | null, vars: Record<string, string>, payload: MessageCreateOptions | null): Promise<MessageCreateOptions | null> {
+export async function addCard(ctx: ModuleContext, cardId: string | undefined, guild: Guild, user: User, member: GuildMember | null, vars: Record<string, string>, payload: MessageCreateOptions | null): Promise<MessageCreateOptions | null> {
   const id = Number(cardId);
   if (!cardId || !Number.isInteger(id) || id < 1) return payload;
   const png = await renderCard(ctx.db, ctx.botId, id, {
@@ -145,11 +156,12 @@ async function welcome(ctx: ModuleContext, member: GuildMember, vars: Record<str
   const cfg = ctx.config<WelcomeConfig>('welcommer');
   const guild = member.guild;
   const state = ctx.getState<WelcomeState>('welcommer', guild.id, `m:${member.id}`);
+  const path = welcomeKind(cfg, { code, members: guild.memberCount, timesJoined: Number(vars.times_joined ?? 1) });
+  countPath(ctx, guild.id, `welcome:${path.kind}`);
   const channelId = idIn(cfg.channel, guild.id);
   if (cfg.channelEnabled !== false && channelId) {
     const channel = guild.channels.cache.get(channelId);
-    const chosen = pickWelcome(cfg, { code, members: guild.memberCount, timesJoined: Number(vars.times_joined ?? 1) });
-    let payload = await addCard(ctx, cfg.card, guild, member.user, member, vars, buildMessage(chosen, vars));
+    let payload = await addCard(ctx, cfg.card, guild, member.user, member, vars, buildMessage(path.message, vars));
     const row = buttonsRow(ctx, cfg, guild, member.id);
     if (payload && row) payload = { ...payload, components: [row] };
     if (channel?.isSendable() && payload) {
@@ -217,6 +229,7 @@ async function welcomeJoin(ctx: ModuleContext, member: GuildMember, info: JoinIn
 
   if (member.user.bot) {
     if (cfg.botEnabled) {
+      countPath(ctx, guild.id, 'welcome:bot');
       const channel = guild.channels.cache.get(idIn(cfg.channel, guild.id) ?? '');
       const payload = buildMessage(cfg.botMessage, vars);
       if (channel?.isSendable() && payload) await send(ctx, 'welcommer', channel, payload);
@@ -228,14 +241,14 @@ async function welcomeJoin(ctx: ModuleContext, member: GuildMember, info: JoinIn
   // Protection: many joins at once, new accounts, join/leave spam.
   const raid = raidCheck(`${ctx.botId}:${guild.id}`, cfg.raidJoins ?? 0, cfg.raidSeconds || 10);
   if (raid.first) await tellMods(ctx, 'welcommer', guild, cfg.modChannel, `⚠️ ${cfg.raidJoins! + 1}+ members joined within ${cfg.raidSeconds || 10} seconds: welcome messages are paused until it calms down.`, vars);
-  if (raid.raid) return;
+  if (raid.raid) return countPath(ctx, guild.id, 'welcome:raid');
   const minDays = cfg.minAccountDays ?? 0;
   if (minDays > 0 && Date.now() - member.user.createdTimestamp < minDays * 86_400_000) {
     const action = cfg.suspiciousAction ?? 'notify';
     if (action !== 'skip') await tellMods(ctx, 'welcommer', guild, cfg.modChannel, `⚠️ New account joined: {user.mention} ({user.name}), created {user.created.ago}.`, vars);
-    if (action !== 'notify') return;
+    if (action !== 'notify') return countPath(ctx, guild.id, 'welcome:suspicious');
   }
-  if ((cfg.rejoinLimit ?? 0) > 0 && joinsOf(ctx, guild.id, member.id).today > cfg.rejoinLimit!) return;
+  if ((cfg.rejoinLimit ?? 0) > 0 && joinsOf(ctx, guild.id, member.id).today > cfg.rejoinLimit!) return countPath(ctx, guild.id, 'welcome:spam');
 
   // Later actions keep a small state per member.
   const accepted = !member.pending;
@@ -436,6 +449,7 @@ async function leave(ctx: ModuleContext, member: GuildMember | PartialGuildMembe
   const bot = user.bot;
   if (bot && cfg.ignoreBots !== false && !buildMessage(cfg.botMessage, {})) return;
   const reason = await leaveReason(member);
+  countPath(ctx, guild.id, `leave:${bot ? 'bot' : reason}`);
   const joinedAt = member.joinedTimestamp ?? null;
   const vars = {
     ...(member.partial

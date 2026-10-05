@@ -155,6 +155,11 @@
       "icon": "🚪"
     },
     {
+      "key": "boost",
+      "category": "messages",
+      "icon": "🚀"
+    },
+    {
       "key": "sticky-messages",
       "category": "messages",
       "icon": "📌"
@@ -340,6 +345,11 @@
       "key": "statistic-channels",
       "category": "statistics",
       "icon": "📊"
+    },
+    {
+      "key": "member-stats",
+      "category": "statistics",
+      "icon": "📈"
     }
   ]
 }

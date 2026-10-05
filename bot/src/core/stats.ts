@@ -6,6 +6,8 @@ import { write, type Db } from './db.js';
 import { log } from './log.js';
 
 const KEEP_DAYS = 35;
+/** Paths of the member modules ("path:…", Stats module) are kept longer: 90 days are shown. */
+const KEEP_PATH_DAYS = 95;
 
 export const hourOf = (t = Date.now()): string => new Date(t).toISOString().slice(0, 13);
 
@@ -62,7 +64,8 @@ export class StatsCollector {
         }
         if (now - this.lastPurge > 3_600_000) {
           const cut = hourOf(now - KEEP_DAYS * 86_400_000);
-          this.db.prepare('DELETE FROM bot_stats WHERE hour < ?').run(cut);
+          this.db.prepare("DELETE FROM bot_stats WHERE hour < ? AND metric NOT LIKE 'path:%'").run(cut);
+          this.db.prepare('DELETE FROM bot_stats WHERE hour < ?').run(hourOf(now - KEEP_PATH_DAYS * 86_400_000));
           this.db.prepare('DELETE FROM bot_stat_users WHERE hour < ?').run(cut);
           this.lastPurge = now;
         }

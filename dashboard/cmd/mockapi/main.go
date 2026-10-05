@@ -403,6 +403,8 @@ func main() {
 	mux.HandleFunc("GET /api/v1/bots/{id}/presence", s.auth(s.withBot(s.viaPHP(s.getPresence))))
 	mux.HandleFunc("PATCH /api/v1/bots/{id}/presence", s.auth(s.withBot(s.viaPHP(s.patchPresence))))
 	mux.HandleFunc("GET /api/v1/bots/{id}/stats", s.auth(s.withBot(s.viaPHP(s.botStats))))
+	// Stats module: paths of Welcomer, Leaver and Boost (PHP API only).
+	mux.HandleFunc("GET /api/v1/bots/{id}/member-stats", s.auth(s.withBot(s.viaPHP(phpRequired))))
 	mux.HandleFunc("GET /api/v1/bots/{id}/logs", s.auth(s.withBot(s.viaPHP(s.listLogs))))
 	mux.HandleFunc("DELETE /api/v1/bots/{id}/logs", s.auth(s.withBot(s.viaPHP(s.clearLogs))))
 	mux.HandleFunc("GET /api/v1/bots/{id}/plugins", s.auth(s.withBot(s.viaPHP(s.listPlugins))))
