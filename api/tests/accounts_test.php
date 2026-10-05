@@ -30,7 +30,7 @@ $pdo = Connection::open($tmp . '/bothub.sqlite');
 (new Migrator($pdo, __DIR__ . '/../migrations'))->migrate();
 $box = SecretBox::loadOrCreate($tmp);
 $router = new InternalRouter(new BotStore($pdo, $box), static fn () => throw new \RuntimeException('no jobs'), accounts: new AccountStore($pdo, $box),
-    settings: new \BotHub\Internal\InstanceSettings($pdo));
+    settings: new \BotHub\Internal\InstanceSettings($pdo, $box));
 $call = fn (string $m, string $p, array $b = []) => $router->handle($m, $p, $b, null, []);
 
 check('role', $call('PUT', '/internal/accounts/roles/3', ['key' => 'banned', 'name' => 'Banned', 'builtin' => true, 'permissions' => []])[0] === 204);
@@ -76,6 +76,14 @@ check('remove member', $call('DELETE', '/internal/bots/5/members/2')[0] === 204)
 check('settings empty', $call('GET', '/internal/settings/server')[1]['value'] == new stdClass());
 check('settings save', $call('PUT', '/internal/settings/server', ['sessionHours' => 24, 'autoUpdate' => 'check'])[0] === 204);
 check('settings load', $call('GET', '/internal/settings/server')[1]['value']->autoUpdate === 'check');
-check('unknown settings key', $call('GET', '/internal/settings/smtp')[0] === 404);
+check('unknown settings key', $call('GET', '/internal/settings/mail')[0] === 404);
+// SMTP: the password is encrypted and kept when a save leaves it out.
+$call('PUT', '/internal/settings/smtp', ['enabled' => true, 'host' => 'mail.example.org', 'password' => 's3cret']);
+check('smtp password encrypted', !str_contains((string) $pdo->query("SELECT value || hex(secret_enc) FROM settings WHERE key = 'smtp'")->fetchColumn(), 's3cret'));
+$call('PUT', '/internal/settings/smtp', ['enabled' => true, 'host' => 'smtp.example.org']);
+$smtp = $call('GET', '/internal/settings/smtp')[1]['value'];
+check('smtp password kept', $smtp->password === 's3cret' && $smtp->host === 'smtp.example.org');
+$call('PUT', '/internal/settings/smtp', ['enabled' => false, 'password' => '']);
+check('smtp password removed', $call('GET', '/internal/settings/smtp')[1]['value']->password === '');
 
 exit($failed === 0 ? 0 : 1);

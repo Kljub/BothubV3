@@ -205,7 +205,7 @@ if (str_starts_with($path, '/internal/')) {
             new DocsStore($pdo),
             new AccountStore($pdo, SecretBox::loadOrCreate()),
             new CoworkStore($pdo),
-            new InstanceSettings($pdo),
+            new InstanceSettings($pdo, SecretBox::loadOrCreate()),
         );
         [$status, $out] = $router->handle($method, $path, $body, $raw === '' ? null : json_decode($raw, false), $_GET);
     } catch (\Throwable $e) {

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha1"
@@ -300,10 +301,11 @@ func (s *store) putSMTP(w http.ResponseWriter, r *http.Request, _ string) {
 	}
 	s.smtp = in.smtpData
 	s.smtp.password, s.smtp.PasswordSet = pw, pw != ""
+	s.persistSMTP(in.Password)
 	writeJSON(w, 200, s.smtp)
 }
 
-// testSMTP pretends to send; hosts containing "fail" simulate a server error.
+// testSMTP sends a test mail with the saved settings.
 func (s *store) testSMTP(w http.ResponseWriter, r *http.Request, _ string) {
 	var in struct{ To string }
 	if !readJSON(w, r, &in) {
@@ -312,14 +314,18 @@ func (s *store) testSMTP(w http.ResponseWriter, r *http.Request, _ string) {
 	s.mu.Lock()
 	cfg := s.smtp
 	s.mu.Unlock()
-	switch {
-	case !cfg.Enabled || cfg.Host == "":
+	if !cfg.Enabled || cfg.Host == "" {
 		apiError(w, 409, "error.smtp.not_configured")
-	case strings.Contains(cfg.Host, "fail"):
-		apiErrorParams(w, 502, "error.smtp.failed", map[string]any{"reason": "535 Authentication failed"})
-	default:
-		w.WriteHeader(204)
+		return
 	}
+	ctx, cancel := context.WithTimeout(r.Context(), smtpTimeout)
+	defer cancel()
+	body := "This is a test mail from BotHub.\n\nIf you can read it, the mail server settings work."
+	if err := sendMail(ctx, cfg, strings.TrimSpace(in.To), "BotHub test mail", body); err != nil {
+		apiErrorParams(w, 502, "error.smtp.failed", map[string]any{"reason": truncate(err.Error(), 200)})
+		return
+	}
+	w.WriteHeader(204)
 }
 
 func apiErrorParams(w http.ResponseWriter, status int, key string, params map[string]any) {

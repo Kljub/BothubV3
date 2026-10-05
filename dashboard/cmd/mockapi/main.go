@@ -179,6 +179,7 @@ func main() {
 	s.loadAccounts()
 	s.loadServerSettings()
 	s.loadRegistration()
+	s.loadSMTP()
 	s.updater = newUpdater()
 	go s.runAutoUpdates()
 	// BOTHUB_ADMIN_PASSWORD may be plain text or an Argon2id hash
