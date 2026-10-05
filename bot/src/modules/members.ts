@@ -2,7 +2,7 @@
 
 import { AuditLogEvent, PermissionFlagsBits, type GuildBan, type GuildMember, type PartialGuildMember } from 'discord.js';
 import { log } from '../core/log.js';
-import { baseVars, buildMessage, idIn, idsIn, reactionOf, type MessageConfig, type ModuleContext } from './context.js';
+import { baseVars, buildMessage, timeVars, idIn, idsIn, reactionOf, type MessageConfig, type ModuleContext } from './context.js';
 import { allow, assignable, send, warn } from './guard.js';
 
 /** Roles a rejoining member gets back. */
@@ -69,7 +69,7 @@ export async function onMemberRemove(ctx: ModuleContext, member: GuildMember | P
     if (channelId && user && !(cfg.ignoreBots !== false && user.bot)) {
       const channel = guild.channels.cache.get(channelId);
       const vars = member.partial
-        ? { ...baseVars(guild, null), user: user.globalName ?? user.username, 'user.id': user.id, 'user.name': user.username, 'user.mention': `<@${user.id}>`, 'user.avatar': user.displayAvatarURL() }
+        ? { ...baseVars(guild, null), user: user.globalName ?? user.username, 'user.id': user.id, 'user.name': user.username, 'user.mention': `<@${user.id}>`, 'user.avatar': user.displayAvatarURL(), ...timeVars(user, member.joinedTimestamp ?? null) }
         : baseVars(guild, member);
       const payload = buildMessage(cfg.message, vars);
       if (channel?.isSendable() && payload) await send(ctx, 'leavemer', channel, payload);

@@ -3923,7 +3923,7 @@
   "modset.free-games.epic": "Epic Games: the weekly free games",
   "modset.free-games.steam": "Steam: current giveaways of games to keep",
   "modset.free-games.schedule": "Post at a set time",
-  "modset.free-games.schedule_hint": "Off: new free games are posted as soon as the bot finds them (checked every 30 minutes). On: new games are collected and posted at the time below.",
+  "modset.free-games.schedule_hint": "Off: new free games are posted as soon as the bot finds them (checked every 30 minutes). On: at the time below the list of all current free games is posted, even when none is new.",
   "modset.free-games.time": "Time (HH:MM)",
   "modset.free-games.time_hint": "In the bot's time zone (Timed Events settings).",
   "modset.free-games.mon": "Monday",
@@ -4063,6 +4063,11 @@
   "modset.var.user.name": "User name",
   "modset.var.user.id": "User ID",
   "modset.var.user.avatar": "Avatar link",
+  "modset.var.user.created": "Account created on (date)",
+  "modset.var.user.created.ago": "Account created (e.g. \"3 years ago\")",
+  "modset.var.member.joined": "On the server since (date)",
+  "modset.var.member.joined.ago": "On the server since (e.g. \"2 months ago\")",
+  "modset.var.member.days": "Days on the server until today",
   "modset.var.channel": "Channel name",
   "modset.var.channel.mention": "Mention of the channel",
   "modset.var.channel.id": "Channel ID",
@@ -4513,5 +4518,7 @@
   "warning.update_available": "A BotHub update is available: Admin → Server settings → Updates.",
   "log.server.update_available": "{count} new commit(s) available ({actor})",
   "log.server.update_check_failed": "Update check failed: {reason}",
-  "error.auth.totp_clock": "The code is right, but the server clock is off by about {seconds} seconds. Turn on time sync on the server (Linux: sudo timedatectl set-ntp true), then try again."
+  "error.auth.totp_clock": "The code is right, but the server clock is off by about {seconds} seconds. Turn on time sync on the server (Linux: sudo timedatectl set-ntp true), then try again.",
+  "modset.free-games.editLast": "Edit the last message instead of posting a new one",
+  "modset.free-games.editLast_hint": "The bot keeps one message with all current free games up to date and edits it when the list changes or the time comes. If it was deleted or is in another channel, it posts a new one. Discord does not ping the role on an edit."
 }

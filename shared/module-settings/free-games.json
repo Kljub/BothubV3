@@ -24,6 +24,12 @@
       "default": true
     },
     {
+      "key": "editLast",
+      "type": "bool",
+      "default": false,
+      "hint": true
+    },
+    {
       "key": "schedule",
       "type": "bool",
       "default": false,

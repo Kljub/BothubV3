@@ -40,6 +40,11 @@
         "user.name",
         "user.id",
         "user.avatar",
+        "user.created",
+        "user.created.ago",
+        "member.joined",
+        "member.joined.ago",
+        "member.days",
         "server",
         "server.id",
         "members"
@@ -79,6 +84,11 @@
         "user.name",
         "user.id",
         "user.avatar",
+        "user.created",
+        "user.created.ago",
+        "member.joined",
+        "member.joined.ago",
+        "member.days",
         "server",
         "server.id",
         "members"

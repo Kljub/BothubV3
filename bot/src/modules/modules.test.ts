@@ -330,6 +330,14 @@ test('free games: new games and schedule', async () => {
   assert.equal(scheduleDue({ time: '19:00' }, local, undefined), false, 'not yet');
   assert.equal(scheduleDue({ time: '18:00', sat: false }, local, undefined), false, 'day not chosen');
   assert.deepEqual(platformsOf({}), { epic: true, steam: true });
+  const { listPayload, listSignature } = await import('./freegames.js');
+  const many = Array.from({ length: 12 }, (_, i) => ({ ...a, title: `G${i}` }));
+  const p = listPayload(many, '7');
+  assert.equal(p.embeds.length, 10, 'max. 10 embeds');
+  assert.match(p.content, /^<@&7> 🎮 \*\*12 free games right now\*\*/);
+  assert.match(p.content, /G10/, 'the rest as lines');
+  assert.equal(listSignature([a, b]), listSignature([b, a]), 'order does not matter');
+  assert.notEqual(listSignature([a, b]), listSignature([a]));
   assert.deepEqual(platformsOf({ steam: false }), { epic: true, steam: false });
 });
 
@@ -376,4 +384,17 @@ test('twitter link fix', async () => {
   const r = fixLinks('look https://x.com/ann/status/123?s=20 and <https://twitter.com/b/status/9> https://x.com/home', 'vxtwitter');
   assert.deepEqual(r.links, ['https://vxtwitter.com/ann/status/123']);
   assert.equal(r.text, 'look https://vxtwitter.com/ann/status/123 and <https://twitter.com/b/status/9> https://x.com/home');
+});
+
+test('welcome and leave: account age and membership placeholders', async () => {
+  const { timeVars } = await import('./context.js');
+  const now = Date.parse('2026-10-05T12:00:00Z');
+  const v = timeVars({ createdTimestamp: Date.parse('2020-01-01T00:00:00Z') }, Date.parse('2026-07-07T12:00:00Z'), now);
+  assert.equal(v['user.created'], `<t:${Date.parse('2020-01-01T00:00:00Z') / 1000}:D>`);
+  assert.match(v['user.created.ago']!, /^<t:\d+:R>$/);
+  assert.match(v['member.joined']!, /^<t:\d+:D>$/);
+  assert.equal(v['member.days'], '90');
+  const left = timeVars({ createdTimestamp: now }, null, now);
+  assert.equal(left['member.joined'], '?', 'unknown join time of an uncached member');
+  assert.equal(left['member.days'], '?');
 });

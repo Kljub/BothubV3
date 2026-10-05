@@ -1,7 +1,9 @@
 // Free Games (module "free-games", block Free Games): Epic Games' free
-// promotions and free Steam games (GamerPower API). The module posts new free
-// games to its channel: as soon as they are found, or collected at a set time
-// on chosen weekdays (bot time zone). Answers are cached for 30 minutes.
+// promotions and free Steam games (GamerPower API). The module posts to its
+// channel: new free games as soon as they are found, or the current list at a
+// set time on chosen weekdays (bot time zone). With "edit the last message"
+// it keeps one message up to date instead of posting new ones. Answers are
+// cached for 30 minutes.
 
 import { EmbedBuilder, type Guild } from 'discord.js';
 import type { localTime } from '../core/timed.js';
@@ -11,7 +13,7 @@ import { send, warn } from './guard.js';
 export interface FreeGame { title: string; store: 'Epic Games' | 'Steam'; url: string; until: string | null; image: string | null; description: string }
 
 export interface FreeGamesConfig {
-  channel: unknown; pingRole: unknown; epic: boolean; steam: boolean; schedule: boolean; time: string;
+  channel: unknown; pingRole: unknown; epic: boolean; steam: boolean; schedule: boolean; time: string; editLast: boolean;
   mon: boolean; tue: boolean; wed: boolean; thu: boolean; fri: boolean; sat: boolean; sun: boolean;
 }
 
@@ -121,7 +123,21 @@ export function gameEmbed(g: FreeGame): EmbedBuilder {
   return e;
 }
 
-/** Posts the free games of the module to one server (timer, every 30 minutes and at the set time). */
+/** The whole current list as one message: an embed per game (max. 10), the rest as lines. */
+export function listPayload(games: FreeGame[], role: string | null): { content: string; embeds: EmbedBuilder[]; allowedMentions: { roles: string[] } } {
+  const head = `${role ? `<@&${role}> ` : ''}🎮 **${games.length === 1 ? 'Free game right now' : `${games.length} free games right now`}**`;
+  const rest = games.length > 10 ? `\n${freeGamesText(games.slice(10))}` : '';
+  return { content: `${head}${rest}`.slice(0, 2000), embeds: games.slice(0, 10).map(gameEmbed), allowedMentions: { roles: role ? [role] : [] } };
+}
+
+/** Signature of a list: changes when a game comes or goes. */
+export const listSignature = (games: FreeGame[]): string => games.map(gameKey).sort().join('|');
+
+/** After a failed store request: no new try for 5 minutes (per server). */
+const failedAt = new Map<string, number>();
+const RETRY_MS = 5 * 60_000;
+
+/** Posts the free games of the module to one server (timer, every 30 seconds; checks every 30 minutes and at the set time). */
 export async function postFreeGames(ctx: ModuleContext, guild: Guild, local: ReturnType<typeof localTime>, check: boolean): Promise<void> {
   const cfg = ctx.config<FreeGamesConfig>('free-games');
   const channelId = idIn(cfg.channel, guild.id);
@@ -133,17 +149,48 @@ export async function postFreeGames(ctx: ModuleContext, guild: Guild, local: Ret
     warn(ctx, 'WAR-2008', { module: 'free-games', problem: 'the channel is missing or the bot cannot write there' });
     return;
   }
+  const failKey = `${ctx.botId}:${guild.id}`;
+  if (Date.now() - (failedAt.get(failKey) ?? 0) < RETRY_MS) return;
   let games: FreeGame[];
   try {
     games = await freeGames(platformsOf(cfg));
   } catch {
-    return; // the stores are not reachable: next try in 30 minutes
+    failedAt.set(failKey, Date.now()); // the stores are not reachable: try again in 5 minutes
+    return;
   }
+  failedAt.delete(failKey);
   if (cfg.schedule) ctx.setState('free-games', guild.id, 'day', local.date);
   const posted = ctx.getState<string[]>('free-games', guild.id, 'posted') ?? [];
+  const role = idIn(cfg.pingRole, guild.id);
+
+  // At the set time, or when one message is kept up to date: the whole current list.
+  if (cfg.schedule || cfg.editLast) {
+    if (!games.length) return;
+    const sig = listSignature(games);
+    if (!cfg.schedule && ctx.getState<string>('free-games', guild.id, 'sig') === sig) return; // nothing changed
+    const payload = listPayload(games, role);
+    const remember = (id: string): void => {
+      ctx.setState('free-games', guild.id, 'sig', sig);
+      ctx.setState('free-games', guild.id, 'last', { channel: channelId, id });
+      ctx.setState('free-games', guild.id, 'posted', [...new Set([...posted, ...games.map(gameKey)])].slice(-300));
+    };
+    if (cfg.editLast) {
+      const last = ctx.getState<{ channel: string; id: string }>('free-games', guild.id, 'last');
+      if (last?.channel === channelId) {
+        const msg = await channel.messages.fetch(last.id).catch(() => null);
+        if (msg?.editable && (await msg.edit(payload).then(() => true, () => false))) {
+          remember(msg.id);
+          return;
+        }
+      }
+    }
+    const sent = await send(ctx, 'free-games', channel, payload);
+    if (sent) remember(sent.id);
+    return;
+  }
+
   const fresh = newGames(games, posted);
   if (!fresh.length) return;
-  const role = idIn(cfg.pingRole, guild.id);
   for (let i = 0; i < fresh.length; i += 10) {
     const part = fresh.slice(i, i + 10);
     const sent = await send(ctx, 'free-games', channel, {

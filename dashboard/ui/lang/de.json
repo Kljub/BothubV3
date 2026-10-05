@@ -3923,7 +3923,7 @@
   "modset.free-games.epic": "Epic Games: die wöchentlichen Gratis-Spiele",
   "modset.free-games.steam": "Steam: aktuelle Giveaways von Spielen zum Behalten",
   "modset.free-games.schedule": "Zu einer festen Zeit posten",
-  "modset.free-games.schedule_hint": "Aus: neue Gratis-Spiele werden gepostet, sobald der Bot sie findet (Prüfung alle 30 Minuten). An: neue Spiele werden gesammelt und zur Uhrzeit unten gepostet.",
+  "modset.free-games.schedule_hint": "Aus: neue Gratis-Spiele werden gepostet, sobald der Bot sie findet (Prüfung alle 30 Minuten). An: zur Uhrzeit unten kommt die Liste aller aktuellen Gratis-Spiele, auch wenn keines neu ist.",
   "modset.free-games.time": "Uhrzeit (HH:MM)",
   "modset.free-games.time_hint": "In der Zeitzone des Bots (Einstellungen von Timed Events).",
   "modset.free-games.mon": "Montag",
@@ -4063,6 +4063,11 @@
   "modset.var.user.name": "Benutzername",
   "modset.var.user.id": "Benutzer-ID",
   "modset.var.user.avatar": "Avatar-Link",
+  "modset.var.user.created": "Account erstellt am (Datum)",
+  "modset.var.user.created.ago": "Account erstellt vor (z. B. „vor 3 Jahren“)",
+  "modset.var.member.joined": "Auf dem Server seit (Datum)",
+  "modset.var.member.joined.ago": "Auf dem Server seit (z. B. „vor 2 Monaten“)",
+  "modset.var.member.days": "Tage auf dem Server bis heute",
   "modset.var.channel": "Kanalname",
   "modset.var.channel.mention": "Erwähnung des Kanals",
   "modset.var.channel.id": "Kanal-ID",
@@ -4513,5 +4518,7 @@
   "warning.update_available": "Ein BotHub-Update ist verfügbar: Admin → Server-Einstellungen → Updates.",
   "log.server.update_available": "{count} neue(r) Commit(s) verfügbar ({actor})",
   "log.server.update_check_failed": "Update-Prüfung fehlgeschlagen: {reason}",
-  "error.auth.totp_clock": "Der Code stimmt, aber die Uhr des Servers weicht um etwa {seconds} Sekunden ab. Schalte auf dem Server die Zeitsynchronisierung ein (Linux: sudo timedatectl set-ntp true) und versuche es dann erneut."
+  "error.auth.totp_clock": "Der Code stimmt, aber die Uhr des Servers weicht um etwa {seconds} Sekunden ab. Schalte auf dem Server die Zeitsynchronisierung ein (Linux: sudo timedatectl set-ntp true) und versuche es dann erneut.",
+  "modset.free-games.editLast": "Letzte Nachricht bearbeiten statt neu posten",
+  "modset.free-games.editLast_hint": "Der Bot hält eine Nachricht mit allen aktuellen Gratis-Spielen aktuell und bearbeitet sie, wenn sich die Liste ändert oder die Uhrzeit kommt. Ist sie gelöscht oder liegt sie in einem anderen Channel, postet er eine neue. Beim Bearbeiten pingt Discord die Rolle nicht."
 }

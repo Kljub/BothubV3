@@ -149,6 +149,24 @@ export function buildMessage(m: MessageConfig | undefined, vars: Record<string, 
 }
 
 /** Placeholders every module message understands. */
+/**
+ * Account age and server membership as Discord timestamps (each reader sees
+ * them in their own language and time zone): user.created (date),
+ * user.created.ago ("5 years ago"), member.joined, member.joined.ago and
+ * member.days (whole days on the server until now). Unknown join time: "?".
+ */
+export function timeVars(user: { createdTimestamp: number }, joinedAt: number | null, now = Date.now()): Record<string, string> {
+  const ts = (ms: number, style: string): string => `<t:${Math.floor(ms / 1000)}:${style}>`;
+  const known = joinedAt !== null && joinedAt > 0;
+  return {
+    'user.created': ts(user.createdTimestamp, 'D'),
+    'user.created.ago': ts(user.createdTimestamp, 'R'),
+    'member.joined': known ? ts(joinedAt, 'D') : '?',
+    'member.joined.ago': known ? ts(joinedAt, 'R') : '?',
+    'member.days': known ? String(Math.max(0, Math.floor((now - joinedAt) / 86_400_000))) : '?',
+  };
+}
+
 export function baseVars(guild: Guild | null, member: GuildMember | null, extra: Record<string, string> = {}): Record<string, string> {
   const user = member?.user;
   const vars: Record<string, string> = {};
@@ -160,6 +178,7 @@ export function baseVars(guild: Guild | null, member: GuildMember | null, extra:
       'user.name': user.username,
       'user.mention': `<@${user.id}>`,
       'user.avatar': member?.displayAvatarURL() ?? user.displayAvatarURL(),
+      ...timeVars(user, member?.joinedTimestamp ?? null),
     });
   }
   return Object.assign(vars, extra);
