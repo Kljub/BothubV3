@@ -24,7 +24,7 @@ func TestLoginLimiter(t *testing.T) {
 	if l.blocked("1.2.3.4", "ann") != 0 {
 		t.Fatal("a success clears the counts")
 	}
-	for i := 0; i < loginMaxPerUser; i++ {
+	for i := 0; i < 2*loginMaxPerIP; i++ {
 		l.failed("10.0.0."+string(rune('a'+i)), "carl")
 	}
 	if l.blocked("9.9.9.9", "carl") == 0 {
@@ -58,5 +58,42 @@ func TestRoleLimits(t *testing.T) {
 	bad := -1
 	if (roleLimits{MaxBots: &bad}).clean().MaxBots != nil {
 		t.Fatal("negative limits mean no limit")
+	}
+}
+
+func TestSecurityPolicy(t *testing.T) {
+	p, bad := securityPolicy{IPBlocklist: []string{" 203.0.113.7 ", "198.51.100.9/24", "nope", "203.0.113.7"}}.normalize()
+	if len(bad) != 1 || bad[0] != "nope" || len(p.IPBlocklist) != 2 || p.IPBlocklist[1] != "198.51.100.0/24" {
+		t.Fatalf("normalize: %v %v", p.IPBlocklist, bad)
+	}
+	if p.LoginMaxFailures != loginMaxPerIP || p.LoginLockMinutes != 15 {
+		t.Fatal("defaults for the sign-in lock")
+	}
+	if !ipBlocked(p.IPBlocklist, "198.51.100.200") || ipBlocked(p.IPBlocklist, "198.51.101.1") || ipBlocked([]string{"127.0.0.0/8"}, "127.0.0.1") {
+		t.Fatal("blocklist matching")
+	}
+	s := &store{bots: map[int64]*bot{}}
+	s.seedUsers()
+	adm := &mockUser{ID: 1, Username: "root", RoleID: 1}
+	usr := &mockUser{ID: 2, Username: "ann", RoleID: 2}
+	s.users = []*mockUser{adm, usr}
+	s.security = securityPolicy{Require2FAAdmins: true}
+	if !s.needs2FA(adm) || s.needs2FA(usr) {
+		t.Fatal("2FA for admins only")
+	}
+	adm.totpSecret = "X"
+	if s.needs2FA(adm) {
+		t.Fatal("an admin with 2FA is fine")
+	}
+	s.security.Require2FAAll = true
+	if !s.needs2FA(usr) {
+		t.Fatal("2FA for everyone")
+	}
+	get := httptest.NewRequest("GET", "/api/v1/bots", nil)
+	post := httptest.NewRequest("POST", "/api/v1/bots/1/start", nil)
+	setup := httptest.NewRequest("POST", "/api/v1/auth/2fa/setup", nil)
+	admin := httptest.NewRequest("GET", "/api/v1/admin/users", nil)
+	if !allowedWithout2FA(get) || allowedWithout2FA(post) || !allowedWithout2FA(setup) || allowedWithout2FA(admin) {
+		t.Fatal("without 2FA: read and set up only")
 	}
 }

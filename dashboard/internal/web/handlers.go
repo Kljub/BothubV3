@@ -340,7 +340,7 @@ func (s *Server) handleLeaveGuild(w http.ResponseWriter, r *http.Request, p Page
 var themes = []string{"system", "light", "dark"}
 
 // adminSections are the entries of the admin dialog's sidebar, in order.
-var adminSections = []string{"overview", "resources", "users_roles", "logs", "sdk_policies", "server_settings", "invite_policies", "email", "api_secrets"}
+var adminSections = []string{"overview", "resources", "users_roles", "logs", "sdk_policies", "server_settings", "invite_policies", "security_policies", "email", "api_secrets"}
 
 func (s *Server) handleAdminSection(w http.ResponseWriter, r *http.Request, p Page) {
 	section := r.PathValue("section")
@@ -432,6 +432,14 @@ func (s *Server) handleAdminSection(w http.ResponseWriter, r *http.Request, p Pa
 			return
 		}
 		data["Registration"] = registrationView{Registration: reg, URL: baseURL(r) + "/register"}
+	}
+	if section == "security_policies" {
+		sec, err := s.api.Security(r.Context(), session(r))
+		if err != nil {
+			s.fail(w, r, p, err)
+			return
+		}
+		data["Security"] = sec
 	}
 	// The admin popup loads sections via htmx; a direct visit gets a full page.
 	if isHTMX(r) {

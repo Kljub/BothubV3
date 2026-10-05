@@ -22,6 +22,8 @@
 {{else if eq .Section "invite_policies"}}
   {{template "invite_settings" .Invite}}
   {{template "registration_settings" .Registration}}
+{{else if eq .Section "security_policies"}}
+  {{template "security_policies" .Security}}
 {{else if eq .Section "email"}}
   {{template "email_settings" .}}
 {{else if eq .Section "api_secrets"}}
@@ -358,15 +360,15 @@
 {{define "role_limits"}}
 <fieldset class="role-limits">
   <legend>{{t "roles.limits.title"}}</legend>
-  <div class="secret-grid">
+  <div class="limit-grid">
     <label class="field">{{t "roles.limits.max_bots"}}
-      <input type="number" name="max_bots" min="0" max="10000" class="input-small" placeholder="∞" value="{{with .MaxBots}}{{.}}{{end}}">
+      <input type="number" name="max_bots" min="0" max="10000" class="input-small" placeholder="∞" value="{{if .MaxBots}}{{.Bots}}{{end}}">
     </label>
     <label class="field">{{t "roles.limits.max_running"}}
-      <input type="number" name="max_running" min="0" max="10000" class="input-small" placeholder="∞" value="{{with .MaxRunning}}{{.}}{{end}}">
+      <input type="number" name="max_running" min="0" max="10000" class="input-small" placeholder="∞" value="{{if .MaxRunning}}{{.Running}}{{end}}">
     </label>
     <label class="field">{{t "roles.limits.idle_stop_hours"}}
-      <input type="number" name="idle_stop_hours" min="0" max="10000" class="input-small" placeholder="∞" value="{{with .IdleStopHours}}{{.}}{{end}}">
+      <input type="number" name="idle_stop_hours" min="0" max="10000" class="input-small" placeholder="∞" value="{{if .IdleStopHours}}{{.Idle}}{{end}}">
     </label>
   </div>
   <p class="hint">{{t "roles.limits.hint"}}</p>
@@ -375,105 +377,112 @@
 
 {{define "users_roles"}}
 {{$v := .View}}
-<div id="users-roles">
+<div id="users-roles" class="users-roles">
   <div id="admin-flash">{{with .Flash}}<div class="alert alert-success">{{t .}}</div>{{end}}</div>
 
-  <section class="section">
-    <header class="section-head">
-      <h3>{{t "roles.title"}}</h3>
-      <input type="search" class="input-medium" placeholder="{{t "roles.search"}}" aria-label="{{t "roles.search"}}" data-card-filter="role-list">
-    </header>
-    <ul class="list" id="role-list">
-      {{range $v.Roles}}
-      {{$role := .}}
-      <li data-filter-text="{{.Name}}">
-        <details class="role-details">
-          <summary class="inline-form">
-            <strong>{{.Name}}</strong>
-            {{if .Builtin}}<span class="badge-soft">{{t "roles.builtin"}}</span>{{end}}
-            <span class="muted">{{t "roles.summary" "permissions" (len .Permissions) "users" .UserCount}}</span>
-          </summary>
-          <form class="form" hx-post="/admin/roles/{{.ID}}" hx-target="#users-roles" hx-swap="outerHTML">
-            <input type="hidden" name="name" value="{{.Name}}">
-            <div class="chips">
-              {{range $v.Permissions}}
-              <label class="chip"><input type="checkbox" name="permissions" value="{{.}}" {{if index $role.Has .}}checked{{end}} {{if eq $role.Key "admin"}}disabled{{end}}>{{t (printf "permission.%s" .)}}</label>
-              {{end}}
-            </div>
-            {{if eq .Key "admin"}}<p class="hint">{{t "roles.admin_locked"}} {{t "roles.limits.admin"}}</p>
-            {{else if eq .Key "banned"}}<p class="hint">{{t "roles.banned_hint"}}</p>
-            {{else}}{{template "role_limits" .Limits}}{{end}}
-            <div class="inline-form">
-              {{if ne .Key "admin"}}<button type="submit" class="btn btn-primary btn-sm">{{t "action.save"}}</button>{{end}}
-              {{if not .Builtin}}<button type="button" class="btn btn-danger-soft btn-sm" hx-delete="/admin/roles/{{.ID}}" hx-target="#users-roles" hx-swap="outerHTML" hx-confirm="{{t "roles.delete_confirm" "name" .Name}}">{{t "roles.delete"}}</button>{{end}}
-            </div>
-          </form>
-        </details>
-      </li>
-      {{end}}
-    </ul>
-    <details class="role-details">
-      <summary class="btn btn-sm">+ {{t "roles.create"}}</summary>
-      <form class="form" hx-post="/admin/roles" hx-target="#users-roles" hx-swap="outerHTML">
+  <header class="section-head">
+    <h3 class="settings-group">{{t "roles.title"}}</h3>
+    <input type="search" class="input-medium" placeholder="{{t "roles.search"}}" aria-label="{{t "roles.search"}}" data-card-filter="role-list">
+  </header>
+  <div class="settings-card" id="role-list">
+    {{range $v.Roles}}
+    {{$role := .}}
+    <details class="settings-row settings-expand role-row" data-filter-text="{{.Name}}">
+      <summary>
+        <span class="role-badge role-badge-{{.Key}}" aria-hidden="true">{{if eq .Key "admin"}}👑{{else if eq .Key "banned"}}⛔{{else if eq .Key "guest"}}👁️{{else}}👤{{end}}</span>
+        <span class="settings-row-text">
+          <strong>{{.Name}}{{if .Builtin}} <span class="badge-soft">{{t "roles.builtin"}}</span>{{end}}</strong>
+          <span class="hint">{{t "roles.summary" "permissions" (len .Permissions) "users" .UserCount}}{{if ne .Key "admin"}}{{if .Limits.MaxBots}} · {{t "roles.limits.short_bots" "n" .Limits.Bots}}{{end}}{{if .Limits.MaxRunning}} · {{t "roles.limits.short_running" "n" .Limits.Running}}{{end}}{{if .Limits.IdleStopHours}} · {{t "roles.limits.short_idle" "n" .Limits.Idle}}{{end}}{{end}}</span>
+        </span>
+        <span class="settings-action">{{if eq .Key "admin"}}{{t "roles.view"}}{{else}}{{t "settings.change"}}{{end}} ›</span>
+      </summary>
+      <form class="form settings-expand-body" hx-post="/admin/roles/{{.ID}}" hx-target="#users-roles" hx-swap="outerHTML">
+        <input type="hidden" name="name" value="{{.Name}}">
+        <fieldset class="role-limits">
+          <legend>{{t "roles.permissions"}}</legend>
+          <div class="chips">
+            {{range $v.Permissions}}
+            <label class="chip"><input type="checkbox" name="permissions" value="{{.}}" {{if index $role.Has .}}checked{{end}} {{if eq $role.Key "admin"}}disabled{{end}}>{{t (printf "permission.%s" .)}}</label>
+            {{end}}
+          </div>
+        </fieldset>
+        {{if eq .Key "admin"}}<p class="hint">{{t "roles.admin_locked"}} {{t "roles.limits.admin"}}</p>
+        {{else if eq .Key "banned"}}<p class="hint">{{t "roles.banned_hint"}}</p>
+        {{else}}{{template "role_limits" .Limits}}{{end}}
+        {{if ne .Key "admin"}}
+        <div class="secret-actions">
+          {{if not .Builtin}}<button type="button" class="btn btn-sm btn-danger-soft" hx-delete="/admin/roles/{{.ID}}" hx-target="#users-roles" hx-swap="outerHTML" hx-confirm="{{t "roles.delete_confirm" "name" .Name}}">{{t "roles.delete"}}</button>{{end}}
+          <button type="submit" class="btn btn-primary btn-sm">{{t "action.save"}}</button>
+        </div>
+        {{end}}
+      </form>
+    </details>
+    {{end}}
+    <details class="settings-row settings-expand secret-add">
+      <summary>
+        <span class="role-badge" aria-hidden="true">＋</span>
+        <span class="settings-row-text"><strong>{{t "roles.create"}}</strong><span class="hint">{{t "roles.create_hint"}}</span></span>
+        <span class="settings-action">{{t "settings.add"}} ›</span>
+      </summary>
+      <form class="form settings-expand-body" hx-post="/admin/roles" hx-target="#users-roles" hx-swap="outerHTML">
         <label class="field">{{t "roles.name"}}
           <input name="name" required maxlength="32" class="input-medium">
         </label>
-        <div class="chips">
-          {{range $v.Permissions}}<label class="chip"><input type="checkbox" name="permissions" value="{{.}}">{{t (printf "permission.%s" .)}}</label>{{end}}
-        </div>
+        <fieldset class="role-limits">
+          <legend>{{t "roles.permissions"}}</legend>
+          <div class="chips">
+            {{range $v.Permissions}}<label class="chip"><input type="checkbox" name="permissions" value="{{.}}">{{t (printf "permission.%s" .)}}</label>{{end}}
+          </div>
+        </fieldset>
         {{template "role_limits" $v.NoLimits}}
-        <div><button type="submit" class="btn btn-primary btn-sm">{{t "roles.create"}}</button></div>
+        <div class="secret-actions"><button type="submit" class="btn btn-primary btn-sm">{{t "roles.create"}}</button></div>
       </form>
     </details>
-  </section>
+  </div>
 
-  <section class="section">
-    <header class="section-head">
-      <h3>{{t "users.title"}}</h3>
-      <input type="search" class="input-medium" placeholder="{{t "users.search"}}" aria-label="{{t "users.search"}}" data-card-filter="user-list">
-    </header>
-    <table class="table">
-      <thead>
-        <tr>
-          <th>{{t "users.col.name"}}</th>
-          <th>{{t "users.col.role"}}</th>
-          <th>{{t "users.col.twofa"}}</th>
-          <th>{{t "users.col.last_login"}}</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody id="user-list">
-        {{range $v.Users}}
-        {{$user := .}}
-        <tr data-filter-text="{{.Username}} {{with .Email}}{{.}}{{end}}">
-          <td><strong>{{.Username}}</strong>{{if .Self}} <span class="muted">({{t "users.you"}})</span>{{end}}<br><span class="muted">{{with .Email}}{{.}}{{else}}–{{end}}</span></td>
-          <td>
-            <form hx-post="/admin/users/{{.ID}}/role" hx-trigger="change" hx-target="#users-roles" hx-swap="outerHTML">
-              <select name="role_id" aria-label="{{t "users.col.role"}}" {{if .Self}}disabled{{end}}>
-                {{range $v.Roles}}<option value="{{.ID}}" {{if eq .ID $user.RoleID}}selected{{end}}>{{.Name}}</option>{{end}}
-              </select>
-            </form>
-          </td>
-          <td>{{if .TwoFactorEnabled}}<span class="badge-soft badge-soft-running">{{t "security.twofa.on"}}</span>{{else}}<span class="badge-soft">{{t "security.twofa.off"}}</span>{{end}}</td>
-          <td class="muted">{{with .LastLoginAt}}{{.Local.Format "02.01.2006 15:04"}}{{else}}–{{end}}</td>
-          <td class="num">{{if not .Self}}<button type="button" class="icon-btn icon-btn-plain" hx-delete="/admin/users/{{.ID}}" hx-target="#users-roles" hx-swap="outerHTML" hx-confirm="{{t "users.delete_confirm" "name" .Username}}" title="{{t "users.delete"}}" aria-label="{{t "users.delete"}}">×</button>{{end}}</td>
-        </tr>
-        {{end}}
-      </tbody>
-    </table>
-    <details class="role-details section-gap-sm">
-      <summary class="btn btn-sm">+ {{t "users.create"}}</summary>
-      <form class="form" hx-post="/admin/users" hx-target="#users-roles" hx-swap="outerHTML">
-        <label class="field">{{t "field.username"}}<input name="username" required minlength="3" maxlength="32" autocomplete="off" class="input-medium"></label>
-        <label class="field">{{t "security.email.new"}}<input type="email" name="email" maxlength="254" autocomplete="off" class="input-medium"></label>
-        <label class="field">{{t "field.password"}}<input type="password" name="password" required minlength="12" autocomplete="new-password" class="input-medium"><span class="hint">{{t "security.password.hint"}}</span></label>
-        <label class="field">{{t "users.col.role"}}
-          <select name="role_id" class="input-medium">{{range $v.Roles}}<option value="{{.ID}}" {{if eq .Key "user"}}selected{{end}}>{{.Name}}</option>{{end}}</select>
-        </label>
-        <div><button type="submit" class="btn btn-primary btn-sm">{{t "users.create"}}</button></div>
+  <header class="section-head section-gap">
+    <h3 class="settings-group">{{t "users.title"}}</h3>
+    <input type="search" class="input-medium" placeholder="{{t "users.search"}}" aria-label="{{t "users.search"}}" data-card-filter="user-list">
+  </header>
+  <div class="settings-card" id="user-list">
+    {{range $v.Users}}
+    {{$user := .}}
+    <div class="settings-row user-row" data-filter-text="{{.Username}} {{with .Email}}{{.}}{{end}} {{.RoleName}}">
+      <span class="user-avatar" aria-hidden="true">{{slice .Username 0 1}}</span>
+      <span class="settings-row-text">
+        <strong>{{.Username}}{{if .Self}} <span class="muted">({{t "users.you"}})</span>{{end}}
+          {{if .TwoFactorEnabled}}<span class="badge-soft badge-soft-running">2FA</span>{{else}}<span class="badge-soft">{{t "users.no_2fa"}}</span>{{end}}</strong>
+        <span class="hint">{{with .Email}}{{.}} · {{end}}{{t "users.col.last_login"}}: {{with .LastLoginAt}}{{.Local.Format "02.01.2006 15:04"}}{{else}}{{t "users.never"}}{{end}}</span>
+      </span>
+      <span class="settings-action">
+        <form hx-post="/admin/users/{{.ID}}/role" hx-trigger="change" hx-target="#users-roles" hx-swap="outerHTML">
+          <select name="role_id" aria-label="{{t "users.col.role"}}" {{if .Self}}disabled{{end}}>
+            {{range $v.Roles}}<option value="{{.ID}}" {{if eq .ID $user.RoleID}}selected{{end}}>{{.Name}}</option>{{end}}
+          </select>
+        </form>
+        {{if not .Self}}<button type="button" class="icon-btn icon-btn-plain" hx-delete="/admin/users/{{.ID}}" hx-target="#users-roles" hx-swap="outerHTML" hx-confirm="{{t "users.delete_confirm" "name" .Username}}" title="{{t "users.delete"}}" aria-label="{{t "users.delete"}}">×</button>{{end}}
+      </span>
+    </div>
+    {{end}}
+    <details class="settings-row settings-expand secret-add">
+      <summary>
+        <span class="user-avatar" aria-hidden="true">＋</span>
+        <span class="settings-row-text"><strong>{{t "users.create"}}</strong><span class="hint">{{t "users.create_hint"}}</span></span>
+        <span class="settings-action">{{t "settings.add"}} ›</span>
+      </summary>
+      <form class="form settings-expand-body" hx-post="/admin/users" hx-target="#users-roles" hx-swap="outerHTML">
+        <div class="secret-grid">
+          <label class="field">{{t "field.username"}}<input name="username" required minlength="3" maxlength="32" autocomplete="off"></label>
+          <label class="field">{{t "security.email.new"}}<input type="email" name="email" maxlength="254" autocomplete="off"></label>
+          <label class="field">{{t "field.password"}}<input type="password" name="password" required minlength="12" autocomplete="new-password"><span class="hint">{{t "security.password.hint"}}</span></label>
+          <label class="field">{{t "users.col.role"}}
+            <select name="role_id">{{range $v.Roles}}<option value="{{.ID}}" {{if eq .Key "user"}}selected{{end}}>{{.Name}}</option>{{end}}</select>
+          </label>
+        </div>
+        <div class="secret-actions"><button type="submit" class="btn btn-primary btn-sm">{{t "users.create"}}</button></div>
       </form>
     </details>
-  </section>
+  </div>
 </div>
 {{end}}
 
@@ -646,6 +655,47 @@ docker compose up -d --build</pre>
   <p class="hint">{{t "update.hint"}}</p>
   {{end}}
 </section>
+{{end}}
+
+{{/* Security Policies: IP blocklist, 2FA requirement, sign-in lock (auto save). */}}
+{{define "security_policies"}}
+<div id="security-flash"></div>
+<form class="form" hx-post="/admin/security" hx-swap="none" data-autosave>
+  <section class="section">
+    <header class="section-head"><h3>{{t "security_policies.twofa"}}</h3></header>
+    <div class="form">
+      <label class="toggle-row">
+        <span><strong>{{t "security_policies.require_2fa_admins"}}</strong><span class="hint">{{t "security_policies.require_2fa_admins_hint"}}</span></span>
+        <input type="checkbox" class="toggle" name="require_2fa_admins" value="true" {{if .Policy.Require2FAAdmins}}checked{{end}}>
+      </label>
+      <label class="toggle-row">
+        <span><strong>{{t "security_policies.require_2fa_all"}}</strong><span class="hint">{{t "security_policies.require_2fa_all_hint"}}</span></span>
+        <input type="checkbox" class="toggle" name="require_2fa_all" value="true" {{if .Policy.Require2FAAll}}checked{{end}}>
+      </label>
+    </div>
+  </section>
+  <section class="section">
+    <header class="section-head"><h3>{{t "security_policies.login"}}</h3></header>
+    <div class="limit-grid">
+      <label class="field">{{t "security_policies.login_max_failures"}}
+        <input type="number" name="login_max_failures" min="3" max="100" class="input-small" value="{{.Policy.LoginMaxFailures}}">
+      </label>
+      <label class="field">{{t "security_policies.login_lock_minutes"}}
+        <input type="number" name="login_lock_minutes" min="1" max="1440" class="input-small" value="{{.Policy.LoginLockMinutes}}">
+      </label>
+    </div>
+    <p class="hint">{{t "security_policies.login_hint"}}</p>
+  </section>
+  <section class="section">
+    <header class="section-head"><h3>{{t "security_policies.blocklist"}}</h3></header>
+    <label class="field">{{t "security_policies.blocklist_field"}}
+      <textarea name="ip_blocklist" rows="6" class="mono" spellcheck="false" placeholder="203.0.113.7&#10;198.51.100.0/24&#10;2001:db8::/32">{{range .Policy.IPBlocklist}}{{.}}
+{{end}}</textarea>
+      <span class="hint">{{t "security_policies.blocklist_hint" "ip" .YourIP}}</span>
+    </label>
+  </section>
+  <div class="autosave-fallback"><button type="submit" class="btn btn-primary">{{t "action.save"}}</button></div>
+</form>
 {{end}}
 
 {{/* Self-registration: anyone can create an account with the chosen role. */}}

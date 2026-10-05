@@ -200,6 +200,8 @@ type discordUser struct {
 	Avatar     *string `json:"avatar"`
 	Banner     *string `json:"banner"`
 	Bot        bool    `json:"bot"`
+	// Discriminator: "1234" for bots ("0" for users with the new names).
+	Discriminator string `json:"discriminator"`
 }
 
 type discordApplication struct {

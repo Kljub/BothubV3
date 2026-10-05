@@ -129,3 +129,25 @@ a.settings-row:hover .settings-action { color: var(--text); }
 /* App Store: what an installed plugin still needs (secrets, sign-in). */
 .store-setup ul { margin: 6px 0 10px; padding-left: 18px; }
 .store-setup li { margin: 2px 0; }
+
+/* Admin settings: a big popup (the later .settings-dialog size above must not win). */
+.settings-dialog.admin-dialog { width: min(1400px, calc(100vw - 48px)); height: min(920px, calc(100vh - 48px)); }
+
+/* Users & Roles: rows like the Security tab. */
+.users-roles .section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.users-roles .section-head .settings-group { margin: 0; }
+.users-roles .section-gap { margin-top: 24px; }
+.role-row > summary > .settings-row-text, .user-row > .settings-row-text { flex: 1; }
+.role-badge, .user-avatar { display: inline-grid; place-items: center; flex: none; width: 32px; height: 32px; border-radius: 50%; background: var(--surface-2); border: 1px solid var(--border); font-size: 15px; }
+.user-avatar { font-weight: 600; text-transform: uppercase; color: var(--text-2); }
+.role-badge-admin { background: rgb(234 179 8 / 0.12); border-color: rgb(234 179 8 / 0.35); }
+.role-badge-banned { background: rgb(239 68 68 / 0.12); border-color: rgb(239 68 68 / 0.35); }
+.user-row .settings-action select { min-width: 140px; }
+.user-row .settings-row-text strong .badge-soft, .role-row .settings-row-text strong .badge-soft { margin-left: 6px; vertical-align: 1px; }
+.role-limits { border: 0; padding: 0; margin: 0 0 12px; }
+.role-limits legend { padding: 0; margin-bottom: 8px; font-size: 12px; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.04em; }
+.limit-grid, .users-roles .secret-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.users-roles .secret-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 720px) { .limit-grid, .users-roles .secret-grid { grid-template-columns: 1fr; } }
+.limit-grid .field, .users-roles .secret-grid .field { min-width: 0; text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 500; color: var(--text); }
+.limit-grid .field input, .users-roles .secret-grid .field input, .users-roles .secret-grid .field select { width: 100%; max-width: none; }

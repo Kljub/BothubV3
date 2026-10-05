@@ -69,6 +69,8 @@ type Bot struct {
 	CreatedAt      time.Time `json:"createdAt"`
 	// StartedAt is when the bot went online; nil while it is not running.
 	StartedAt *time.Time `json:"startedAt"`
+	// Discriminator of the bot user ("1234"); empty when unknown.
+	Discriminator string `json:"discriminator,omitempty"`
 }
 
 // Transitioning reports whether the bot is between two stable states.
@@ -319,6 +321,18 @@ type RoleLimits struct {
 	MaxRunning    *int `json:"maxRunning,omitempty"`
 	IdleStopHours *int `json:"idleStopHours,omitempty"`
 }
+
+// N returns a limit's value for templates (0 when there is none).
+func N(p *int) int {
+	if p == nil {
+		return 0
+	}
+	return *p
+}
+
+func (l RoleLimits) Bots() int    { return N(l.MaxBots) }
+func (l RoleLimits) Running() int { return N(l.MaxRunning) }
+func (l RoleLimits) Idle() int    { return N(l.IdleStopHours) }
 
 type RoleWrite struct {
 	Name        string      `json:"name"`

@@ -35,11 +35,33 @@ type passkeyStore struct {
 	wa         *webauthn.WebAuthn
 	keys       []*passkey
 	ceremonies map[string]*ceremony // pending register/login ceremonies
+	// owners: passkeys per user, behind its own lock that never waits for
+	// another one, so code holding the store lock may ask has().
+	ownersMu sync.Mutex
+	owners   map[int64]int
 }
 
 type ceremony struct {
 	data    webauthn.SessionData
 	expires time.Time
+}
+
+// has: the user has at least one passkey.
+func (p *passkeyStore) has(userID int64) bool {
+	p.ownersMu.Lock()
+	defer p.ownersMu.Unlock()
+	return p.owners[userID] > 0
+}
+
+// reindex recounts owners after a change of keys; caller holds p.mu.
+func (p *passkeyStore) reindex() {
+	m := map[int64]int{}
+	for _, k := range p.keys {
+		m[k.userID]++
+	}
+	p.ownersMu.Lock()
+	p.owners = m
+	p.ownersMu.Unlock()
 }
 
 // userHandle is the WebAuthn user handle of a user (stable, not the name).
@@ -129,6 +151,7 @@ func (s *store) deletePasskey(w http.ResponseWriter, r *http.Request, sid string
 	for i, k := range s.passkeys.keys {
 		if k.ID == id && k.userID == uid {
 			s.passkeys.keys = append(s.passkeys.keys[:i], s.passkeys.keys[i+1:]...)
+			s.passkeys.reindex()
 			s.phpDelete("/internal/accounts/passkeys/" + id)
 			w.WriteHeader(204)
 			return
@@ -182,6 +205,7 @@ func (s *store) registerPasskeyFinish(w http.ResponseWriter, r *http.Request, si
 	}
 	pk := &passkey{ID: base64.RawURLEncoding.EncodeToString(cred.ID), Name: name, CreatedAt: time.Now().UTC(), cred: *cred, userID: uid}
 	s.passkeys.keys = append(s.passkeys.keys, pk)
+	s.passkeys.reindex()
 	s.persistPasskey(pk)
 	writeJSON(w, 201, pk)
 }

@@ -320,6 +320,7 @@ func (s *store) loadAccounts() {
 			}
 		}
 		s.passkeys.keys = append(s.passkeys.keys, pk)
+		s.passkeys.reindex()
 	}
 	s.passkeys.mu.Unlock()
 	// Sessions: device-bound ones need a fresh proof first (provenAt is zero).

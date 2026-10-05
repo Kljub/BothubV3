@@ -19,7 +19,7 @@ use PDO;
  */
 final class InstanceSettings
 {
-    private const KEYS = ['server', 'registration', 'smtp'];
+    private const KEYS = ['server', 'registration', 'smtp', 'security'];
     /** Keys whose "password" field goes into secret_enc. */
     private const SECRET = ['smtp'];
 

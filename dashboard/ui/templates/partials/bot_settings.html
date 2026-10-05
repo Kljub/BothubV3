@@ -38,6 +38,7 @@
         <input name="name" required maxlength="64" value="{{.Name}}" class="input-name" aria-label="{{t "field.bot_name"}}">
         <button type="submit" class="btn btn-sm" data-save-own>{{t "action.save"}}</button>
       </form>
+      {{with .Discriminator}}<span class="badge-soft mono" title="{{t "bot.discriminator"}}">#{{.}}</span>{{end}}
       <span class="badge-soft badge-soft-{{.Status}}"><span class="badge-dot" aria-hidden="true"></span>{{t (printf "bot.status.%s" .Status)}}</span>
     </div>
   </div>

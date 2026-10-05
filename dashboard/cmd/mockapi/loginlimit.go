@@ -12,18 +12,28 @@ import (
 // the right password, so guessing stays slow. A success clears the counts of
 // that IP and account.
 const (
-	loginWindow     = 15 * time.Minute
-	loginMaxPerIP   = 10 // failures per IP and window
-	loginMaxPerUser = 20 // failures per account and window (several IPs)
-	ticketMaxTries  = 5  // wrong 2FA codes per login ticket
+	loginWindow    = 15 * time.Minute
+	loginMaxPerIP  = 10 // failures per IP and window (default; per account: twice as many)
+	ticketMaxTries = 5  // wrong 2FA codes per login ticket
 )
 
 type loginLimiter struct {
-	mu   sync.Mutex
-	fail map[string][]time.Time
+	mu     sync.Mutex
+	fail   map[string][]time.Time
+	maxIP  int           // failures per IP (Security Policies)
+	window time.Duration // lock time (Security Policies)
 }
 
-func newLoginLimiter() *loginLimiter { return &loginLimiter{fail: map[string][]time.Time{}} }
+func newLoginLimiter() *loginLimiter {
+	return &loginLimiter{fail: map[string][]time.Time{}, maxIP: loginMaxPerIP, window: loginWindow}
+}
+
+// configure sets the failures per IP and the window; per account it is twice as many.
+func (l *loginLimiter) configure(maxIP int, window time.Duration) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.maxIP, l.window = maxIP, window
+}
 
 // logins: the one limiter of the process (password and 2FA step share it).
 var logins = newLoginLimiter()
@@ -36,7 +46,7 @@ func limitKeys(ip, user string) []string {
 func (l *loginLimiter) recent(key string, now time.Time) []time.Time {
 	list := l.fail[key]
 	i := 0
-	for i < len(list) && now.Sub(list[i]) >= loginWindow {
+	for i < len(list) && now.Sub(list[i]) >= l.window {
 		i++
 	}
 	list = list[i:]
@@ -55,12 +65,12 @@ func (l *loginLimiter) blocked(ip, user string) int {
 	now := time.Now()
 	wait := time.Duration(0)
 	for i, key := range limitKeys(ip, user) {
-		max := loginMaxPerIP
+		max := l.maxIP
 		if i == 1 {
-			max = loginMaxPerUser
+			max = 2 * l.maxIP
 		}
 		if list := l.recent(key, now); len(list) >= max {
-			wait = max64(wait, loginWindow-now.Sub(list[len(list)-max]))
+			wait = max64(wait, l.window-now.Sub(list[len(list)-max]))
 		}
 	}
 	if wait <= 0 {

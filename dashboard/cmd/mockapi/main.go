@@ -40,7 +40,9 @@ type bot struct {
 	// For the signed-in user: "owner" or the member role, and their rights.
 	Access      string   `json:"access,omitempty"`
 	Permissions []string `json:"permissions,omitempty"`
-	token       string
+	// Discriminator of the bot user ("#1234"), from Discord on demand.
+	Discriminator string `json:"discriminator,omitempty"`
+	token         string
 }
 
 type guild struct {
@@ -87,7 +89,9 @@ type store struct {
 	envPasswordPlain bool
 	updater          *updater // nil: updates from git are not set up
 	updateState      updateState
-	registration     registration // self-registration (registration.go)
+	registration     registration     // self-registration (registration.go)
+	security         securityPolicy   // Security Policies (policies.go)
+	discrims         map[int64]string // bot ID -> discriminator of the bot user
 	registerLimit    registerLimiter
 	bots             map[int64]*bot
 	nextID           int64
@@ -180,6 +184,7 @@ func main() {
 	s.loadAccounts()
 	s.loadServerSettings()
 	s.loadRegistration()
+	s.loadSecurity()
 	s.loadSMTP()
 	s.updater = newUpdater()
 	go s.runAutoUpdates()
@@ -217,6 +222,8 @@ func main() {
 	mux.HandleFunc("GET /api/v1/auth/registration", s.registrationOpen)
 	mux.HandleFunc("POST /api/v1/auth/register", s.audited("registered", "", nil, s.register))
 	mux.HandleFunc("GET /api/v1/admin/registration", s.auth(s.getRegistration))
+	mux.HandleFunc("GET /api/v1/admin/security", s.auth(s.getSecurity))
+	mux.HandleFunc("PUT /api/v1/admin/security", s.auth(s.putSecurity))
 	mux.HandleFunc("PUT /api/v1/admin/registration", s.auth(s.putRegistration))
 	mux.HandleFunc("POST /api/v1/auth/login", s.audited("login", "login_failed", []string{"error.auth.invalid_credentials"}, s.login))
 	mux.HandleFunc("POST /api/v1/auth/login/totp", s.audited("login", "login_failed", []string{"error.auth.totp_invalid", "error.auth.totp_clock"}, s.loginTOTP))
@@ -407,7 +414,7 @@ func main() {
 
 	addr := envOr("LISTEN_ADDR", ":9000")
 	slog.Info("mockapi listening", "addr", addr)
-	if err := http.ListenAndServe(addr, mux); err != nil {
+	if err := http.ListenAndServe(addr, s.blocklistMiddleware(mux)); err != nil {
 		slog.Error("mockapi stopped", "err", err)
 		os.Exit(1)
 	}
@@ -434,11 +441,12 @@ func (s *store) auth(next authed) http.HandlerFunc {
 			sess = nil
 		}
 		proof := sess != nil && needsDeviceProof(sess, r.URL.Path)
-		admin := false
+		admin, twoFA := false, false
 		if sess != nil && !proof {
 			s.touchSession(key, sess, r)
 			r = r.WithContext(withUser(r.Context(), sess.userID))
 			admin = slices.Contains(s.permissionsOf(s.userByID(sess.userID)), "admin.access")
+			twoFA = s.needs2FA(s.userByID(sess.userID))
 		}
 		s.mu.Unlock()
 		if sess == nil {
@@ -447,6 +455,11 @@ func (s *store) auth(next authed) http.HandlerFunc {
 		}
 		if proof {
 			apiError(w, 401, "error.auth.device_proof")
+			return
+		}
+		// Security Policies: without the required 2FA only reading and the own sign-in settings.
+		if twoFA && !allowedWithout2FA(r) {
+			apiError(w, 403, "error.security.2fa_required")
 			return
 		}
 		// The admin area (users, roles, server settings, SDK policies, …) is for instance admins only.
@@ -606,6 +619,9 @@ func (s *store) meFor(userID int64, csrf string) map[string]any {
 	warnings := []string{}
 	if s.envPasswordPlain && slices.Contains(perms, "admin.access") {
 		warnings = append(warnings, "env_password_plain")
+	}
+	if s.needs2FA(u) {
+		warnings = append(warnings, "twofa_required")
 	}
 	if slices.Contains(perms, "admin.access") && s.updateState.behind > 0 && s.srvSettings.AutoUpdate == "check" {
 		warnings = append(warnings, "update_available")
@@ -846,7 +862,22 @@ func (s *store) getBot(w http.ResponseWriter, r *http.Request, b *bot) {
 	s.mu.Lock()
 	out := *b
 	out.Access, out.Permissions, _ = s.botAccess(s.sessUserFromRequest(r), b)
+	d, known := s.discrims[b.ID]
 	s.mu.Unlock()
+	// The discriminator is asked once per bot (the bot list from the API does not keep it).
+	if !known {
+		// An error is kept too (empty): a new token asks again.
+		if u, err := s.discord.me(r.Context(), s.botToken(b)); err == nil && u.Discriminator != "0" {
+			d = u.Discriminator
+		}
+		s.mu.Lock()
+		if s.discrims == nil {
+			s.discrims = map[int64]string{}
+		}
+		s.discrims[b.ID] = d
+		s.mu.Unlock()
+	}
+	out.Discriminator = d
 	writeJSON(w, 200, out)
 }
 
@@ -865,6 +896,7 @@ func (s *store) updateBot(w http.ResponseWriter, r *http.Request, b *bot) {
 		b.Name = *in.Name
 	}
 	if in.Token != nil && *in.Token != "" {
+		delete(s.discrims, b.ID) // another bot user: ask Discord again
 		// A new token must be valid and belong to the same Discord application.
 		s.mu.Unlock()
 		id, err := s.discord.checkToken(r.Context(), *in.Token)
