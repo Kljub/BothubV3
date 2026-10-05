@@ -332,10 +332,10 @@ export async function drawCard(ctx, design, opts = {}) {
 
 /** Sample values for previews and test sends. */
 export const SAMPLE_VARS = {
-  user: 'Tom', 'user.name': 'tom', 'user.display': 'Tom', 'user.id': '200000000000000001', 'user.mention': '@Tom', 'user.avatar': '',
+  user: 'kljub', 'user.name': 'kljub', 'user.display': 'kljub', 'user.id': '200000000000000001', 'user.mention': '@kljub', 'user.avatar': '',
   server: 'My Server', 'server.id': '100000000000000001', members: '1204', 'member.number': '1204', 'member.ordinal': '1204th',
   'user.created.ago': '3 years ago', 'account.days': '1100', 'member.days': '0',
   'second.name': 'Anna', 'second.avatar': '', level: '12', xp: '3400', 'xp.next': '5000', 'level.progress': '68', rank: '4',
   boosts: '7', milestone: '1200', balance: '15420', amount: '250', prize: 'Discord Nitro', score: '2048', online: '312',
-  leaderboard: '#1 | Anna | 12,400\n#2 | Tom | 9,800\n#3 | Max | 7,150',
+  leaderboard: '#1 | Anna | 12,400\n#2 | kljub | 9,800\n#3 | Max | 7,150',
 };

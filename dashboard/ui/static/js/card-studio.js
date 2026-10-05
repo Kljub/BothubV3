@@ -61,17 +61,17 @@
   }
 
   const PREVIEWS = {
-    tom: { 'user.avatar': 'https://cdn.discordapp.com/embed/avatars/1.png', 'second.avatar': 'https://cdn.discordapp.com/embed/avatars/3.png' },
+    kljub: { 'user.avatar': 'https://cdn.discordapp.com/embed/avatars/1.png', 'second.avatar': 'https://cdn.discordapp.com/embed/avatars/3.png' },
     long: { user: 'Maximilian Sonnenschein', 'user.name': 'maximilian.sonnenschein', 'user.display': 'Maximilian Sonnenschein', 'user.avatar': 'https://cdn.discordapp.com/embed/avatars/4.png', 'member.ordinal': '12,345th', members: '12345' },
   };
-  const varsFor = (r, key) => ({ ...r.SAMPLE_VARS, ...PREVIEWS.tom, ...(PREVIEWS[key] || {}) });
+  const varsFor = (r, key) => ({ ...r.SAMPLE_VARS, ...PREVIEWS.kljub, ...(PREVIEWS[key] || {}) });
 
   async function draw(canvas, design, vars) {
     const r = await load();
     const d = r.normalize(design);
     if (canvas.width !== d.width) canvas.width = d.width;
     if (canvas.height !== d.height) canvas.height = d.height;
-    await r.drawCard(canvas.getContext('2d'), design, { vars: vars || varsFor(r, 'tom'), loadImage });
+    await r.drawCard(canvas.getContext('2d'), design, { vars: vars || varsFor(r, 'kljub'), loadImage });
   }
 
   // ---------- card list ----------
@@ -134,7 +134,7 @@
     const status = root.querySelector('[data-cs-status]');
     let design = JSON.parse(root.dataset.design || '{}');
     let selected = null;
-    let preview = 'tom';
+    let preview = 'kljub';
     let dirty = false;
     let snap = true;
     const past = [];
