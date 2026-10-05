@@ -66,6 +66,18 @@ export interface InteractionEvent {
   fields?: Record<string, string>;
 }
 
+/** One song for ctx.music.enqueue (max. 100 per call). */
+export interface MusicItem {
+  title: string;
+  author?: string;
+  /** Seconds. */
+  duration?: number;
+  /** A public https page of the song (shown in /queue); never the stream. */
+  link?: string;
+  /** Where the audio comes from: url (address secret or https host), path, query, auth. */
+  source: Pick<SecretRequest, 'url' | 'path' | 'query' | 'auth'>;
+}
+
 /** A request of ctx.http.secret. */
 export interface SecretRequest {
   /** Name of the secret with the address (e.g. 'PLEX_URL'), or an https URL of a host in services.hosts. */
@@ -384,6 +396,22 @@ export interface PluginContext {
     bank(guildId: Id, userId: Id): Async<number>;
     /** "modules.economy.bank.write": bank money of one member into the wallet of another; sdk.economy.not_enough when too little. */
     bankTransfer(guildId: Id, fromUserId: Id, toUserId: Id, amount: number): Async<void>;
+  };
+  /**
+   * "modules.music.queue": songs into the music queue of the Music module (the
+   * same queue as /play: skip, queue, volume and loop work). source is a
+   * secret request like ctx.http.secret (an address secret plus path, auth
+   * with a secret): the bot builds the stream address and the plugin never
+   * sees it. joinUser: join that member's voice channel when the bot is in
+   * none (sdk.music.no_voice when they are not in one). Errors:
+   * sdk.music.bad_items, sdk.music.unavailable, sdk.music.failed.
+   */
+  readonly music: {
+    enqueue(
+      guildId: Id,
+      items: MusicItem | MusicItem[],
+      options?: { joinUser?: Id; textChannelId?: Id; requester?: Id; position?: 'end' | 'next'; play?: boolean },
+    ): Async<{ position: number; added: number; queue: number }>;
   };
   readonly commands: {
     register(definition: Record<string, Json>): Async<Id>;

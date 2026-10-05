@@ -4666,5 +4666,7 @@
   "command.thanks-check.title": "Danke-Anzahl",
   "command.thanks-check.description": "Zeigt, wie viele Danke ein Mitglied hat",
   "command.thanks-top.title": "Danke-Rangliste",
-  "command.thanks-top.description": "Die Mitglieder mit den meisten Danke"
+  "command.thanks-top.description": "Die Mitglieder mit den meisten Danke",
+  "sdk.perm.modules.music.queue": "Songs in die Musik-Warteschlange legen",
+  "sdk.perm.modules.music.queue_hint": "Legt Songs in die Warteschlange des Musik-Moduls (z. B. aus Plex) und betritt den Voice-Kanal des Mitglieds. Die Stream-Adressen entstehen aus den Secrets des Admins; das Plugin sieht sie nie."
 }

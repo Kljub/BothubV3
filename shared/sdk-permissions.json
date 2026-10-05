@@ -487,6 +487,18 @@
       "implemented": []
     },
     {
+      "key": "modules.music.queue",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "music.enqueue"
+      ],
+      "implemented": [
+        "music.enqueue"
+      ],
+      "module": "music"
+    },
+    {
       "key": "modules.economy.balance.read",
       "group": "modules",
       "risk": "low",

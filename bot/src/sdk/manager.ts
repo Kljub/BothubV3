@@ -27,6 +27,7 @@ import { Readable } from 'node:stream';
 import { buildComponents, privateAddress, discordApi, interactionEvent, InteractionRegistry, parsePluginCustomId, pluginCode, type DiscordApiDeps, type RawHttp } from './discord-api.js';
 import type { Interaction, RepliableInteraction } from 'discord.js';
 import { denied, type Permissions } from '../discord/commands.js';
+import { MusicError, musicOrNull, type Track } from '../discord/music.js';
 
 /** What the manager needs from the bot for Discord and the log. */
 export interface PluginDeps {
@@ -528,12 +529,13 @@ export class PluginManager {
    * plugin file as base64 into request.json at path (e.g. "init_images.0").
    * auth.format 'basic' sends the secret "user:password" as HTTP Basic.
    */
-  private async callSecret(request: unknown, secretOf: (name: unknown) => string | null, hosts: string[], files: PluginFiles | null = null): Promise<unknown> {
-    const r = (request && typeof request === 'object' && !Array.isArray(request) ? request : {}) as Record<string, unknown>;
+  /**
+   * The address of a secret request (an address secret plus path, or an https
+   * URL of services.hosts) with its query and the auth secret (as query
+   * parameter or header). Shared by http.secret and music.enqueue.
+   */
+  private async secretTarget(r: Record<string, unknown>, secretOf: (name: unknown) => string | null, hosts: string[]): Promise<{ url: URL; authHeaders: Record<string, string>; hide: string[] }> {
     const hide: string[] = [];
-    const method = typeof r.method === 'string' ? r.method.toUpperCase() : 'GET';
-    if (!HTTP_METHODS.includes(method)) throw new SdkError('sdk.http.bad_method');
-
     let url: URL;
     if (typeof r.url === 'string' && SECRET_NAME.test(r.url)) {
       const address = secretOf(r.url);
@@ -596,6 +598,15 @@ export class PluginManager {
       }
     }
 
+    return { url, authHeaders, hide };
+  }
+
+  private async callSecret(request: unknown, secretOf: (name: unknown) => string | null, hosts: string[], files: PluginFiles | null = null): Promise<unknown> {
+    const r = (request && typeof request === 'object' && !Array.isArray(request) ? request : {}) as Record<string, unknown>;
+    const method = typeof r.method === 'string' ? r.method.toUpperCase() : 'GET';
+    if (!HTTP_METHODS.includes(method)) throw new SdkError('sdk.http.bad_method');
+
+    const { url, authHeaders, hide } = await this.secretTarget(r, secretOf, hosts);
     const headers: Record<string, string> = {};
     if (r.headers !== undefined) {
       if (!r.headers || typeof r.headers !== 'object' || Object.keys(r.headers).length > 30) throw new SdkError('sdk.http.bad_header');
@@ -989,6 +1000,54 @@ export class PluginManager {
       },
       'guild.list': () => this.deps.guildList(botId),
       'http.secret': (q) => this.callSecret(a(q)[0], secretOf, manifest.hosts, allowed.has('storage.files' as Permission) ? files : null),
+      // Music: songs of the plugin (e.g. Plex) into the music queue of the Music module.
+      // The stream address is built here with the admin's secrets; the plugin never sees it.
+      'music.enqueue': async (q) => {
+        const [guildId, items, options] = a(q);
+        if (typeof guildId !== 'string' || !SNOWFLAKE.test(guildId)) throw new SdkError('sdk.discord.bad_guild');
+        const list = Array.isArray(items) ? items : [items];
+        if (!list.length || list.length > 100) throw new SdkError('sdk.music.bad_items', { max: 100 });
+        const o = (options && typeof options === 'object' && !Array.isArray(options) ? options : {}) as Record<string, unknown>;
+        const tracks: Track[] = [];
+        for (const raw of list) {
+          const it = (raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {}) as Record<string, unknown>;
+          const title = typeof it.title === 'string' ? it.title.trim().slice(0, 200) : '';
+          if (!title || !it.source || typeof it.source !== 'object') throw new SdkError('sdk.music.bad_items', { max: 100 });
+          const source = { ...(it.source as Record<string, unknown>) };
+          delete source.method; // a stream is read with GET
+          const target = await this.secretTarget(source, secretOf, manifest.hosts);
+          const duration = Number(it.duration);
+          tracks.push({
+            title,
+            url: typeof it.link === 'string' && /^https:\/\//.test(it.link) ? it.link.slice(0, 500) : '',
+            duration: Number.isFinite(duration) && duration > 0 ? Math.min(86_400, Math.round(duration)) : 0,
+            author: typeof it.author === 'string' ? it.author.slice(0, 100) : '',
+            requester: typeof o.requester === 'string' && SNOWFLAKE.test(o.requester) ? o.requester : null,
+            stream: { url: target.url.toString(), headers: target.authHeaders },
+          });
+        }
+        const client = live().client();
+        const music = client ? musicOrNull(client) : undefined;
+        if (!client || !music) throw new SdkError('sdk.music.unavailable');
+        const m = music.get(guildId);
+        // Join the voice channel of a member (e.g. who ran the command) when the bot is not in one.
+        if (typeof o.joinUser === 'string' && SNOWFLAKE.test(o.joinUser) && !m.connected) {
+          const member = await client.guilds.cache.get(guildId)?.members.fetch(o.joinUser).catch(() => null);
+          const channel = member?.voice.channelId;
+          if (!channel) throw new SdkError('sdk.music.no_voice');
+          const text = typeof o.textChannelId === 'string' && SNOWFLAKE.test(o.textChannelId) ? o.textChannelId : null;
+          await music.join(guildId, channel, text);
+        }
+        let position: number;
+        try {
+          position = m.add(tracks, o.position === 'next' ? 'next' : 'end');
+          if (o.play !== false) await m.play();
+        } catch (err) {
+          if (err instanceof MusicError) throw new SdkError('sdk.music.failed', { reason: err.message });
+          throw err;
+        }
+        return { position, added: tracks.length, queue: m.queue.length };
+      },
       'secrets.get': (q) => secretOf(a(q)[0]),
       'secrets.has': (q) => secretOf(a(q)[0]) !== null,
       // Voice: files of the plugin folder only; another owner's play is not replaced.

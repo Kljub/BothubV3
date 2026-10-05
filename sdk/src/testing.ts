@@ -68,7 +68,7 @@ const CALLS: Record<string, string | null> = {
   'emoji.create': 'discord.emojis.manage', 'emoji.delete': 'discord.emojis.manage',
   'interaction.reply': 'discord.interactions.reply', 'interaction.editReply': 'discord.interactions.reply', 'interaction.deferReply': 'discord.interactions.reply',
   'interaction.followUp': 'discord.interactions.reply', 'interaction.update': 'discord.interactions.reply', 'interaction.showModal': 'discord.modals',
-  'economy.currencies': 'modules.economy.balance.read', 'economy.get': 'modules.economy.balance.read', 'economy.add': 'modules.economy.balance.write', 'economy.remove': 'modules.economy.balance.write', 'economy.transfer': 'modules.economy.balance.write', 'economy.leaderboard': 'modules.economy.balance.read', 'economy.bank': 'modules.economy.balance.read', 'economy.bankTransfer': 'modules.economy.bank.write',
+  'music.enqueue': 'modules.music.queue', 'economy.currencies': 'modules.economy.balance.read', 'economy.get': 'modules.economy.balance.read', 'economy.add': 'modules.economy.balance.write', 'economy.remove': 'modules.economy.balance.write', 'economy.transfer': 'modules.economy.balance.write', 'economy.leaderboard': 'modules.economy.balance.read', 'economy.bank': 'modules.economy.balance.read', 'economy.bankTransfer': 'modules.economy.bank.write',
 };
 
 // Old coarse permission keys and their finer replacements (shared/sdk-permissions.json "replaced"):
@@ -248,6 +248,10 @@ export interface TestContext {
   readonly actions: Array<{ call: string; args: unknown[] }>;
   /** Answers to commands and clicks (ctx.interaction.*), in order. */
   readonly answers: InteractionAnswer[];
+  /** Songs of ctx.music.enqueue (guildId plus the item as given). */
+  readonly queued: Json[];
+  /** Members whose voice channel music.enqueue joined (options.joinUser). */
+  readonly joined: string[];
   /** Economy balances: "<guildId>:<userId>" -> coins. */
   readonly balances: Map<string, number>;
   /** Economy bank amounts: "<guildId>:<userId>" -> coins. */
@@ -292,6 +296,8 @@ export function createTestContext(options: TestContextOptions = {}): TestContext
   const webRequests: WebRequest[] = [];
   const actions: Array<{ call: string; args: unknown[] }> = [];
   const answers: InteractionAnswer[] = [];
+  const queued: Json[] = [];
+  const joined: string[] = [];
   const balances = new Map(Object.entries(options.balances ?? {}));
   const banks = new Map(Object.entries(options.banks ?? {}));
   const fileStore = new Map(Object.entries(options.files ?? {}));
@@ -698,6 +704,17 @@ export function createTestContext(options: TestContextOptions = {}): TestContext
         ...(opts?.file !== undefined && (kind === 'reply' || kind === 'followUp') ? { file: opts.file } : {}),
       });
     }])),
+    // music.enqueue: the songs land in ctx.queued (with the source as given; the
+    // test kit has no stream addresses), joinUser in ctx.joined.
+    music: {
+      enqueue: async (g: string, items: unknown, options: Record<string, unknown> = {}) => {
+        const list = (Array.isArray(items) ? items : [items]) as Array<Record<string, unknown>>;
+        if (!list.length || list.length > 100 || list.some((x) => !x || typeof x.title !== 'string' || !x.title || !x.source)) throw new SdkCallError('sdk.music.bad_items');
+        for (const x of list) queued.push({ guildId: g, ...structuredClone(x) } as Json);
+        if (typeof options.joinUser === 'string') joined.push(options.joinUser);
+        return { position: queued.length - list.length + 1, added: list.length, queue: queued.length };
+      },
+    },
     economy: {
       // The test kit knows the default currency "coins" and any other well-formed key.
       currencies: async () => [{ key: 'coins', name: 'Coins', emoji: '🪙', default: true }],
@@ -897,7 +914,7 @@ export function createTestContext(options: TestContextOptions = {}): TestContext
     return areas.get(name);
   };
 
-  return new Proxy({ botId, sent, logs, store, globalStore, calls, played, requests, web: webRequests, actions, answers, balances, banks, fileStore, settingsNow: config, fieldOptions, variableDefs, variableValues } as TestContext, {
+  return new Proxy({ botId, sent, logs, store, globalStore, calls, played, requests, web: webRequests, actions, answers, queued, joined, balances, banks, fileStore, settingsNow: config, fieldOptions, variableDefs, variableValues } as TestContext, {
     get: (target, prop) => {
       if (typeof prop !== 'string') return undefined;
       if (prop in target) return target[prop];

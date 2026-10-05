@@ -4666,5 +4666,7 @@
   "command.thanks-check.title": "Thanks count",
   "command.thanks-check.description": "Shows how many thanks a member has",
   "command.thanks-top.title": "Thanks ranking",
-  "command.thanks-top.description": "The members with the most thanks"
+  "command.thanks-top.description": "The members with the most thanks",
+  "sdk.perm.modules.music.queue": "Add songs to the music queue",
+  "sdk.perm.modules.music.queue_hint": "Puts songs into the Music module's queue (e.g. from Plex) and joins the member's voice channel. Stream addresses are built from the admin's secrets; the plugin never sees them."
 }

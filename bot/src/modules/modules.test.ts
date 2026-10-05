@@ -493,3 +493,24 @@ test('song recognition: ICY titles, ACRCloud signature and answer', async () => 
   assert.equal(acrSong({ status: { code: 1001, msg: 'No result' } }), null);
   assert.throws(() => acrSong({ status: { code: 3001, msg: 'Missing/Invalid Access Key' } }), /Invalid Access Key/);
 });
+
+test('spotify links: parsed, played from a YouTube search', async () => {
+  const { parseSpotify, songTrack } = await import('../discord/spotify.js');
+  assert.deepEqual(parseSpotify('https://open.spotify.com/intl-de/track/4cOdK2wGLETKBW3PvgPWqT?si=abc'), { type: 'track', id: '4cOdK2wGLETKBW3PvgPWqT' });
+  assert.deepEqual(parseSpotify('https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M'), { type: 'playlist', id: '37i9dQZF1DXcBWIGoYBM5M' });
+  assert.deepEqual(parseSpotify('spotify:album:1DFixLWuPkv3KT3TnV35m3'), { type: 'album', id: '1DFixLWuPkv3KT3TnV35m3' });
+  assert.equal(parseSpotify('https://www.youtube.com/watch?v=x'), null);
+  const t = songTrack({ name: 'Never Gonna Give You Up', artists: ['Rick Astley'], durationMs: 213573 }, '5');
+  assert.deepEqual(t, { title: 'Rick Astley - Never Gonna Give You Up', url: 'ytsearch1:Rick Astley - Never Gonna Give You Up audio', duration: 214, author: 'Rick Astley', requester: '5' });
+});
+
+test('music: plugin streams carry their secret headers and are never shown', async () => {
+  const { ffmpegArgs, trackLink } = await import('../discord/music.js');
+  const args = ffmpegArgs('http://plex.local:32400/library/parts/1/file.flac', 0, [], { 'X-Plex-Token': 'secret' });
+  assert.deepEqual(args.slice(0, 2), ['-headers', 'X-Plex-Token: secret\r\n']);
+  assert.equal(ffmpegArgs('https://x', 0, []).includes('-headers'), false);
+  const base = { title: 'Daft Punk - Get Lucky', duration: 369, author: 'Daft Punk', requester: null };
+  assert.equal(trackLink({ ...base, url: '', stream: { url: 'http://plex.local/library/parts/1?X-Plex-Token=secret', headers: {} } }), '**Daft Punk - Get Lucky**');
+  assert.equal(trackLink({ ...base, url: 'ytsearch1:Daft Punk - Get Lucky audio' }), '**Daft Punk - Get Lucky**', 'search terms are no links');
+  assert.equal(trackLink({ ...base, url: 'https://youtu.be/x' }), '[Daft Punk - Get Lucky](https://youtu.be/x)');
+});

@@ -25,6 +25,7 @@ import { clock, findTracks, musicOf, MusicError, type LoopMode } from './music.j
 import { lyricsOf } from './lyrics.js';
 import { createTicket, finishTicket, modmailBlock, modmailClose, modmailReply, reopenTicket, ticketCounts, ticketMember, ticketPanelIndex, ticketPanelPayload, type TicketConfig } from '../modules/support.js';
 import { countClick, findStations, stationLines, stationTrack } from './radio.js';
+import { trackLink } from './music.js';
 import { acrIdentify, icyTitle, RecognizeError, recordSample, splitStreamTitle, type Song } from './recognize.js';
 import { freeGames, freeGamesText, gameEmbed, gameSales, gameSalesText, platformsOf, type FreeGamesConfig } from '../modules/freegames.js';
 import { deleteGiveaway, endGiveaway, giveawayPayload, listGiveaways, loadGiveaway, saveGiveaway, type Giveaway } from '../modules/giveaway.js';
@@ -312,6 +313,7 @@ async function music<T>(run: Run, fn: () => Promise<T> | T): Promise<T> {
 }
 
 function musicHandlers(secret: (key: string) => string | null): [string, Handler][] {
+  const spotifyKeys = () => ({ id: secret('SPOTIFY_CLIENT_ID'), secret: secret('SPOTIFY_CLIENT_SECRET') });
   const player = async (run: Run, node: GraphNode) => {
     const guild = await guildOf(run, node);
     return { guild, m: musicOf(data(run).client).get(guild.id) };
@@ -340,8 +342,8 @@ function musicHandlers(secret: (key: string) => string | null): [string, Handler
       async (node, run) => {
         const { m } = await player(run, node);
         run.countDiscordCall();
-        const tracks = await music(run, () => findTracks(run.str(node, 'query'), 1, data(run).user?.id ?? null));
-        const isLink = /^https?:\/\//i.test(run.str(node, 'query').trim());
+        const tracks = await music(run, () => findTracks(run.str(node, 'query'), 1, data(run).user?.id ?? null, spotifyKeys()));
+        const isLink = /^(https?:\/\/|spotify:)/i.test(run.str(node, 'query').trim());
         const list = isLink ? tracks : tracks.slice(0, 1);
         const pos = await music(run, () => m.add(list, run.str(node, 'queue_position') === 'next' ? 'next' : 'end'));
         run.setResult(node, '', list.length === 1 ? list[0]!.title : `${list.length} tracks`);
@@ -353,7 +355,7 @@ function musicHandlers(secret: (key: string) => string | null): [string, Handler
       'action.music_search',
       async (node, run) => {
         run.countDiscordCall();
-        const tracks = await music(run, () => findTracks(run.str(node, 'query'), Math.max(1, Math.min(50, Math.trunc(run.num(node, 'limit') || 10))), data(run).user?.id ?? null));
+        const tracks = await music(run, () => findTracks(run.str(node, 'query'), Math.max(1, Math.min(50, Math.trunc(run.num(node, 'limit') || 10))), data(run).user?.id ?? null, spotifyKeys()));
         run.setResult(node, '.count', tracks.length);
         run.setResult(node, '.list', tracks.map((t, i) => `${i + 1}. [${t.title}](${t.url}) (${clock(t.duration)})`).join('\n'));
         run.setResult(node, '[0].title', tracks[0]?.title ?? '');
@@ -392,7 +394,7 @@ function musicHandlers(secret: (key: string) => string | null): [string, Handler
         run.countDiscordCall();
         const mode = run.str(node, 'mode') || 'auto';
         let song: Song | null = null;
-        if (!track.live) song = { title: track.title, artist: track.author, album: '', link: track.url, source: 'radio' };
+        if (!track.live) song = { title: track.title, artist: track.author, album: '', link: track.stream ? '' : track.url, source: 'radio' };
         if (!song && mode !== 'audio') {
           const parts = splitStreamTitle((await icyTitle(track.url)) ?? '');
           if (parts) song = { ...parts, album: '', link: '', source: 'radio' };
@@ -457,7 +459,7 @@ function musicHandlers(secret: (key: string) => string | null): [string, Handler
       'action.music_queue',
       async (node, run) => {
         const { m } = await player(run, node);
-        const lines = m.queue.slice(0, 20).map((t, i) => `${i === m.index ? '▶' : `${i + 1}.`} [${t.title}](${t.url}) (${clock(t.duration)})`);
+        const lines = m.queue.slice(0, 20).map((t, i) => `${i === m.index ? '▶' : `${i + 1}.`} ${trackLink(t)} (${clock(t.duration)})`);
         if (m.queue.length > 20) lines.push(`… and ${m.queue.length - 20} more`);
         run.setResult(node, '', lines.join('\n') || 'The queue is empty.');
         run.setResult(node, '.count', m.queue.length);
@@ -474,9 +476,9 @@ function musicHandlers(secret: (key: string) => string | null): [string, Handler
           const at = Math.round((Math.min(pos, len) / len) * 15);
           return `${'▬'.repeat(at)}🔘${'▬'.repeat(15 - at)} ${clock(pos)} / ${clock(len)}`;
         };
-        run.setResult(node, '', t ? `**[${t.title}](${t.url})**${m.paused ? ' (paused)' : ''}\n${bar(m.position, t.duration)}` : 'Nothing is playing.');
+        run.setResult(node, '', t ? `${trackLink(t)}${m.paused ? ' (paused)' : ''}\n${bar(m.position, t.duration)}` : 'Nothing is playing.');
         run.setResult(node, '.title', t?.title ?? '');
-        run.setResult(node, '.url', t?.url ?? '');
+        run.setResult(node, '.url', t && !t.stream ? t.url : '');
         run.setResult(node, '.author', t?.author ?? '');
         run.setResult(node, '.position', t ? clock(m.position) : '');
         run.setResult(node, '.duration', t ? clock(t.duration) : '');

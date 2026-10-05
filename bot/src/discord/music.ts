@@ -9,6 +9,7 @@ import { StreamType, type AudioResource } from '@discordjs/voice';
 import type { Client } from 'discord.js';
 import { log } from '../core/log.js';
 import type { VoiceManager } from './voice.js';
+import { parseSpotify, spotifyTracks, type SpotifyKeys } from './spotify.js';
 
 export interface Track {
   title: string;
@@ -19,6 +20,16 @@ export interface Track {
   requester: string | null;
   /** A radio stream: the URL plays as it is (no yt-dlp, no seeking). */
   live?: boolean;
+  /**
+   * A plugin's stream (music.enqueue, e.g. Plex): address and headers with the
+   * admin's secret. Never shown anywhere; url is then empty or a public link.
+   */
+  stream?: { url: string; headers: Record<string, string> };
+}
+
+/** "[Title](link)" when the track has a public web link, else "**Title**". */
+export function trackLink(t: Track): string {
+  return /^https?:\/\//.test(t.url) && !t.stream ? `[${t.title}](${t.url})` : `**${t.title}**`;
 }
 
 export type LoopMode = 'off' | 'track' | 'queue';
@@ -95,10 +106,12 @@ export function trackOf(line: string, requester: string | null): Track | null {
   };
 }
 
-/** A link, or a search on YouTube. */
-export async function findTracks(query: string, limit: number, requester: string | null): Promise<Track[]> {
+/** A link, or a search on YouTube. Spotify links play from a YouTube search (spotify.ts). */
+export async function findTracks(query: string, limit: number, requester: string | null, spotify: SpotifyKeys = { id: null, secret: null }): Promise<Track[]> {
   const q = query.trim();
   if (!q) throw new MusicError('Give a song name or a link.');
+  const ref = parseSpotify(q);
+  if (ref) return spotifyTracks(ref, spotify, requester, Math.min(MAX_QUEUE, 100));
   const target = /^https?:\/\//i.test(q) ? q : `ytsearch${Math.max(1, Math.min(50, limit))}:${q}`;
   const lines = await ytdlp(['--dump-json', '--flat-playlist', '--playlist-end', String(Math.min(MAX_QUEUE, 100)), target]);
   const tracks = lines.map((l) => trackOf(l, requester)).filter((t): t is Track => t !== null);
@@ -116,9 +129,11 @@ export function clock(seconds: number): string {
 }
 
 /** The ffmpeg arguments: stream URL from the start position, filters, raw PCM out. */
-export function ffmpegArgs(streamUrl: string, seek: number, filters: string[]): string[] {
+export function ffmpegArgs(streamUrl: string, seek: number, filters: string[], headers: Record<string, string> = {}): string[] {
   const af = filters.map((f) => FILTERS[f]).filter(Boolean);
+  const head = Object.entries(headers).map(([k, v]) => `${k}: ${v}\r\n`).join('');
   return [
+    ...(head ? ['-headers', head] : []),
     '-reconnect', '1', '-reconnect_streamed', '1', '-reconnect_delay_max', '5',
     ...(seek > 0 ? ['-ss', String(seek)] : []),
     '-i', streamUrl,
@@ -167,6 +182,11 @@ class GuildMusic {
     return this.seekBase + Math.floor((this.resource?.playbackDuration ?? 0) / 1000);
   }
 
+  /** The bot is in a voice channel of this server. */
+  get connected(): boolean {
+    return Boolean(this.voice()?.state(this.guildId).channelId);
+  }
+
   get playing(): boolean {
     return this.voice()?.state(this.guildId).owner === OWNER;
   }
@@ -198,12 +218,12 @@ class GuildMusic {
     const v = this.v();
     this.watch();
     this.cancelLeave();
-    const [streamUrl] = track.live ? [track.url] : await ytdlp(['-f', 'bestaudio/best', '--get-url', '--no-playlist', track.url]);
+    const [streamUrl] = track.stream ? [track.stream.url] : track.live ? [track.url] : await ytdlp(['-f', 'bestaudio/best', '--get-url', '--no-playlist', track.url]);
     if (!streamUrl) throw new MusicError('The track could not be loaded.');
     this.replacing = true;
     try {
       this.killProc();
-      const proc = spawn('ffmpeg', ffmpegArgs(streamUrl, seek, this.filters), { stdio: ['ignore', 'pipe', 'ignore'] });
+      const proc = spawn('ffmpeg', ffmpegArgs(streamUrl, seek, this.filters, track.stream?.headers), { stdio: ['ignore', 'pipe', 'ignore'] });
       proc.on('error', (e) => log.warn('ffmpeg failed', { guildId: this.guildId, err: String(e) }));
       this.proc = proc;
       this.index = index;
