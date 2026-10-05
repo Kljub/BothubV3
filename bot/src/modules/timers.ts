@@ -8,7 +8,7 @@ import { log } from '../core/log.js';
 import { baseVars, buildMessage, fill, idIn, idsIn, reactionOf, type MessageConfig, type ModuleContext } from './context.js';
 import { allow, assignable, send, warn } from './guard.js';
 import { pollFeeds } from './feeds.js';
-import { lotteryDraw } from './economy.js';
+import { lotteryDraw, payroll } from './economy.js';
 import { postFreeGames } from './freegames.js';
 import { autoPurge, dayNight } from './server-auto.js';
 
@@ -98,6 +98,7 @@ export class ModuleTimers {
       await this.birthdays(guilds, local);
       await this.qotd(guilds, local);
       await lotteryDraw(this.ctx, guilds, local);
+      await payroll(this.ctx, guilds, local);
       await dayNight(this.ctx, guilds, local);
       if (Math.floor(now / 300_000) !== Math.floor((now - 30_000) / 300_000)) await autoPurge(this.ctx, guilds, now);
       if (this.ctx.enabled('free-games')) {

@@ -555,3 +555,16 @@ test('auto purge, role prefix, day and night, bookmarks: the rules', async () =>
   assert.deepEqual([phaseAt('23:00:00', '22:00', '06:00'), phaseAt('03:00:00', '22:00', '06:00'), phaseAt('12:00:00', '22:00', '06:00')], ['day', 'day', 'night'], 'over midnight');
   assert.match(bookmarkLines([{ url: 'https://discord.com/channels/1/2/3', author: 'Ann', text: 'Hello', at: 1_700_000_000_000 }]), /^\*\*1\.\*\* Ann: Hello · \[open\]\(https:\/\/discord\.com\/channels\/1\/2\/3\) · <t:1700000000:R>$/);
 });
+
+test('payroll: per currency, roles added up or the highest only', async () => {
+  const { payFor } = await import('./economy.js');
+  const entries = [
+    { role: 'a', amount: 100, currency: '' },
+    { role: 'b', amount: 300, currency: '' },
+    { role: 'b', amount: 5, currency: 'gems' },
+    { role: 'c', amount: 999, currency: '' },
+  ];
+  assert.deepEqual([...payFor(['a', 'b'], entries, 'sum')], [['', 400], ['gems', 5]]);
+  assert.deepEqual([...payFor(['a', 'b'], entries, 'highest')], [['', 300], ['gems', 5]]);
+  assert.equal(payFor(['x'], entries, 'sum').size, 0);
+});

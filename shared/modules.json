@@ -73,11 +73,6 @@
       "icon": "🔖"
     },
     {
-      "key": "auto-purge",
-      "category": "utility",
-      "icon": "🧹"
-    },
-    {
       "key": "role-prefix",
       "category": "utility",
       "icon": "🏷️"
@@ -126,6 +121,11 @@
       "key": "dm-commands",
       "category": "security",
       "icon": "📩"
+    },
+    {
+      "key": "auto-purge",
+      "category": "security",
+      "icon": "🧹"
     },
     {
       "key": "reaction-roles",

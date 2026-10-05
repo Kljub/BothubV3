@@ -29,11 +29,18 @@ export interface EconomyConfig {
   alertColor: string;
   shop: ShopItem[];
   roles: { amount: number; role: unknown }[];
+  // Weekly payroll: money per role on one weekday at a time (bot time zone).
+  payroll: { role: unknown; amount: number; currency: string }[];
+  payrollDay: string;
+  payrollTime: string;
+  payrollMode: 'sum' | 'highest';
+  payrollChannel: unknown;
 }
 
 const DEFAULTS: EconomyConfig = {
   currencies: [], dailyBonus: 100, bankInterest: 1, messageRewards: false, messageCooldown: 1, messageAmount: 5,
   lotteryChannel: null, lotteryPrice: 100, lotteryTime: '20:00', successColor: '#22c55e', mainColor: '#5865f2', alertColor: '#f59e0b', shop: [], roles: [],
+  payroll: [], payrollDay: 'mon', payrollTime: '12:00', payrollMode: 'sum', payrollChannel: null,
 };
 
 /** Error text a command shows ("❌ {error}"). */
@@ -316,6 +323,55 @@ export async function lotteryDraw(ctx: ModuleContext, guilds: Guild[], local: { 
     if (channel?.isSendable()) {
       const tickets = Object.values(l.tickets).reduce((s, n) => s + n, 0);
       await send(ctx, 'economy', channel, { embeds: [{ color: parseInt(c.successColor.slice(1), 16) || 0x22c55e, title: '🎟️ Lottery', description: `<@${winner}> wins the pot of **${money(ctx, l.pot)}**! (${tickets} tickets)` }], allowedMentions: { users: [winner] } });
+    }
+  }
+}
+
+// ---------- weekly payroll ----------
+
+const WEEKDAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+
+/** What a member gets: per currency, all matching roles added up ("sum") or the best one ("highest"). */
+export function payFor(roleIds: string[], entries: { role: string | null; amount: number; currency: string }[], mode: 'sum' | 'highest'): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const e of entries) {
+    if (!e.role || !roleIds.includes(e.role) || !(e.amount > 0)) continue;
+    const cur = e.currency || '';
+    out.set(cur, mode === 'highest' ? Math.max(out.get(cur) ?? 0, e.amount) : (out.get(cur) ?? 0) + e.amount);
+  }
+  return out;
+}
+
+/** Pays the weekly payroll once on its weekday after its time. */
+export async function payroll(ctx: ModuleContext, guilds: Guild[], local: { date: string; hms: string; weekday: number }): Promise<void> {
+  if (!ctx.enabled('economy')) return;
+  const c = config(ctx);
+  if (!c.payroll?.length || WEEKDAYS[local.weekday] !== (c.payrollDay || 'mon') || local.hms.slice(0, 5) < (c.payrollTime || '12:00')) return;
+  for (const guild of guilds) {
+    if (ctx.getState<string>('economy', guild.id, 'payroll_day') === local.date) continue;
+    ctx.setState('economy', guild.id, 'payroll_day', local.date);
+    const entries = c.payroll.map((p) => ({ role: idIn(p.role, guild.id), amount: Math.floor(Number(p.amount) || 0), currency: String(p.currency ?? '') }));
+    const members = await guild.members.fetch().catch(() => guild.members.cache);
+    let paid = 0;
+    const totals = new Map<string, number>();
+    for (const m of members.values()) {
+      if (m.user.bot) continue;
+      const pay = payFor([...m.roles.cache.keys()], entries, c.payrollMode === 'highest' ? 'highest' : 'sum');
+      if (!pay.size) continue;
+      for (const [cur, n] of pay) {
+        try {
+          ctx.repo.changeBalance(ctx.botId, guild.id, m.id, n, 'add', cur || null);
+          totals.set(cur, (totals.get(cur) ?? 0) + n);
+        } catch {
+          // unknown currency key: skipped
+        }
+      }
+      paid++;
+    }
+    const channel = guild.channels.cache.get(idIn(c.payrollChannel, guild.id) ?? '');
+    if (paid && channel?.isSendable()) {
+      const sum = [...totals].map(([cur, n]) => money(ctx, n, cur || undefined)).join(' + ');
+      await send(ctx, 'economy', channel, { embeds: [{ color: parseInt((c.successColor || '#22c55e').slice(1), 16) || 0x22c55e, title: '💼 Weekly payroll', description: `**${paid}** members got paid: ${sum}.` }] });
     }
   }
 }
