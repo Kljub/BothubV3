@@ -174,3 +174,9 @@
   <span class="gauge-value">{{.Label}}</span>
 </span>
 {{end}}
+
+{{/* Role icons (Users & Roles): name -> line icon. */}}
+{{define "role_icon"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">{{if eq . "crown"}}<path d="M3 7l4 4 5-7 5 7 4-4-2 12H5z"/>{{else if eq . "shield"}}<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>{{else if eq . "headset"}}<path d="M4 14v-2a8 8 0 0 1 16 0v2"/><path d="M4 14h3v6H5a1 1 0 0 1-1-1zM20 14h-3v6h2a1 1 0 0 0 1-1z"/>{{else if eq . "code"}}<path d="M8 6l-6 6 6 6M16 6l6 6-6 6M14 4l-4 16"/>{{else if eq . "users"}}<circle cx="9" cy="8" r="3.5"/><path d="M2 20c0-3.5 3-6 7-6s7 2.5 7 6"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14c2.4.6 4 2.8 4 6"/>{{else if eq . "star"}}<path d="M12 3l2.8 5.8 6.2.9-4.5 4.4 1 6.2L12 17.4 6.5 20.3l1-6.2L3 9.7l6.2-.9z"/>{{else if eq . "ban"}}<circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/>{{else if eq . "eye"}}<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>{{else if eq . "wrench"}}<path d="M14.7 6.3a4 4 0 0 0 5 5L22 14l-8 8-2.3-2.3a4 4 0 0 0-5-5L2 10l8-8z"/>{{else if eq . "heart"}}<path d="M12 21s-8-5.2-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 5.8-8 11-8 11z"/>{{else if eq . "gamepad"}}<rect x="2" y="7" width="20" height="11" rx="5"/><path d="M7 11v3M5.5 12.5h3M15.5 12h.01M18 13.5h.01"/>{{else}}<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/>{{end}}</svg>{{end}}
+{{define "icon_pencil"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16zM14 6l4 4"/></svg>{{end}}
+{{define "icon_plus"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{end}}
+{{define "icon_search"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>{{end}}

@@ -23,6 +23,22 @@ type role struct {
 	Permissions []string   `json:"permissions"`
 	UserCount   int        `json:"userCount"`
 	Limits      roleLimits `json:"limits"`
+	Color       string     `json:"color"` // roleColors key; empty = default of the role
+	Icon        string     `json:"icon"`  // roleIcons key; empty = default of the role
+}
+
+// Looks of roles (Users & Roles): fixed lists, so the page needs no inline styles.
+var (
+	roleColors = []string{"purple", "blue", "green", "yellow", "orange", "red", "pink", "teal", "gray", "white"}
+	roleIcons  = []string{"crown", "shield", "headset", "code", "user", "users", "star", "ban", "eye", "wrench", "heart", "gamepad"}
+)
+
+// styleOr: v when it is in the list, else "".
+func styleOr(v string, list []string) string {
+	if slices.Contains(list, v) {
+		return v
+	}
+	return ""
 }
 
 type mockUser struct {
@@ -32,6 +48,7 @@ type mockUser struct {
 	RoleID           int64      `json:"roleId"`
 	TwoFactorEnabled bool       `json:"twoFactorEnabled"`
 	Self             bool       `json:"self"`
+	Online           bool       `json:"online"` // a session was used in the last 5 minutes
 	CreatedAt        time.Time  `json:"createdAt"`
 	LastLoginAt      *time.Time `json:"lastLoginAt"`
 	passwordHash     string     // Argon2id (PHC string)
@@ -67,10 +84,10 @@ var allPermissions = []string{"admin.access", "users.manage", "bots.create", "bo
 
 func (s *store) seedUsers() {
 	s.roles = []*role{
-		{ID: 1, Key: "admin", Name: "Admin", Builtin: true, Permissions: allPermissions},
-		{ID: 2, Key: "user", Name: "User", Builtin: true, Permissions: []string{"bots.view", "bots.manage", "modules.manage", "logs.view"}},
-		{ID: 3, Key: "banned", Name: "Banned", Builtin: true, Permissions: []string{}},
-		{ID: 4, Key: "guest", Name: "Guest", Builtin: true, Permissions: []string{"bots.view"}},
+		{ID: 1, Key: "admin", Name: "Admin", Builtin: true, Permissions: allPermissions, Color: "purple", Icon: "crown"},
+		{ID: 2, Key: "user", Name: "User", Builtin: true, Permissions: []string{"bots.view", "bots.manage", "modules.manage", "logs.view"}, Color: "gray", Icon: "user"},
+		{ID: 3, Key: "banned", Name: "Banned", Builtin: true, Permissions: []string{}, Color: "red", Icon: "ban"},
+		{ID: 4, Key: "guest", Name: "Guest", Builtin: true, Permissions: []string{"bots.view"}, Color: "white", Icon: "eye"},
 	}
 	s.roleSeq = 4
 	// No users yet: the setup wizard (or ENV) creates the first admin; further
@@ -119,6 +136,8 @@ func (s *store) createRole(w http.ResponseWriter, r *http.Request, _ string) {
 		Name        string     `json:"name"`
 		Permissions []string   `json:"permissions"`
 		Limits      roleLimits `json:"limits"`
+		Color       string     `json:"color"`
+		Icon        string     `json:"icon"`
 	}
 	if !readJSON(w, r, &in) {
 		return
@@ -137,15 +156,20 @@ func (s *store) createRole(w http.ResponseWriter, r *http.Request, _ string) {
 		}
 	}
 	s.roleSeq++
-	nr := &role{ID: s.roleSeq, Key: fmt.Sprintf("custom%d", s.roleSeq), Name: in.Name, Permissions: validPermissions(in.Permissions), Limits: in.Limits.clean()}
+	nr := &role{ID: s.roleSeq, Key: fmt.Sprintf("custom%d", s.roleSeq), Name: in.Name, Permissions: validPermissions(in.Permissions), Limits: in.Limits.clean(),
+		Color: styleOr(in.Color, roleColors), Icon: styleOr(in.Icon, roleIcons)}
 	s.roles = append(s.roles, nr)
 	s.persistRole(nr)
 	writeJSON(w, 201, nr)
 }
 
 func (s *store) updateRole(w http.ResponseWriter, r *http.Request, _ string) {
+	// Every field is optional: each tab of the role editor sends its own.
 	var in struct {
-		Permissions []string    `json:"permissions"`
+		Name        *string     `json:"name"`
+		Color       *string     `json:"color"`
+		Icon        *string     `json:"icon"`
+		Permissions *[]string   `json:"permissions"`
 		Limits      *roleLimits `json:"limits"`
 	}
 	if !readJSON(w, r, &in) {
@@ -159,13 +183,35 @@ func (s *store) updateRole(w http.ResponseWriter, r *http.Request, _ string) {
 		apiError(w, 404, "error.role.not_found")
 		return
 	}
+	if in.Name != nil && !ro.Builtin {
+		name := strings.TrimSpace(*in.Name)
+		if name == "" || len(name) > 32 {
+			apiError(w, 422, "error.field.required")
+			return
+		}
+		for _, o := range s.roles {
+			if o.ID != ro.ID && strings.EqualFold(o.Name, name) {
+				apiError(w, 409, "error.role.name_taken")
+				return
+			}
+		}
+		ro.Name = name
+	}
+	if in.Color != nil {
+		ro.Color = styleOr(*in.Color, roleColors)
+	}
+	if in.Icon != nil {
+		ro.Icon = styleOr(*in.Icon, roleIcons)
+	}
 	if ro.Key != "admin" { // admin keeps every permission and has no limits
-		ro.Permissions = validPermissions(in.Permissions)
+		if in.Permissions != nil {
+			ro.Permissions = validPermissions(*in.Permissions)
+		}
 		if in.Limits != nil {
 			ro.Limits = in.Limits.clean()
 		}
-		s.persistRole(ro)
 	}
+	s.persistRole(ro)
 	writeJSON(w, 200, ro)
 }
 
@@ -197,9 +243,16 @@ func (s *store) listUsers(w http.ResponseWriter, r *http.Request, sid string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	me := s.sessUser(sid)
+	online := map[int64]bool{}
+	for _, sess := range s.sessions {
+		if time.Since(sess.lastSeen) < 5*time.Minute {
+			online[sess.userID] = true
+		}
+	}
 	for _, u := range s.users {
 		u.Self = me != nil && u.ID == me.ID
 		u.TwoFactorEnabled = u.totpSecret != ""
+		u.Online = online[u.ID]
 	}
 	writeJSON(w, 200, map[string]any{"items": s.users})
 }
@@ -243,26 +296,61 @@ func (s *store) createUser(w http.ResponseWriter, r *http.Request, _ string) {
 }
 
 func (s *store) patchUser(w http.ResponseWriter, r *http.Request, sid string) {
+	// All optional: roleId (0 = keep), email ("" removes it), password (a new one, set by the admin).
 	var in struct {
-		RoleID int64 `json:"roleId"`
+		RoleID   int64   `json:"roleId"`
+		Email    *string `json:"email"`
+		Password *string `json:"password"`
 	}
 	if !readJSON(w, r, &in) {
 		return
 	}
 	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	hash := ""
+	if in.Password != nil && *in.Password != "" {
+		if len([]rune(*in.Password)) < minPassword {
+			apiErrorParams(w, 422, "error.password.too_short", map[string]any{"min": minPassword})
+			return
+		}
+		hash = hashPassword(*in.Password) // outside the lock: Argon2id takes a moment
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if me := s.sessUser(sid); me != nil && me.ID == id {
+	if me := s.sessUser(sid); me != nil && me.ID == id && in.RoleID != 0 && in.RoleID != me.RoleID {
 		apiError(w, 409, "error.user.self")
 		return
 	}
-	if s.roleByID(in.RoleID) == nil {
+	if in.RoleID != 0 && s.roleByID(in.RoleID) == nil {
 		apiError(w, 422, "error.role.not_found")
 		return
 	}
+	if in.Email != nil {
+		if e := strings.TrimSpace(*in.Email); len(e) > 254 || (e != "" && !strings.Contains(e, "@")) {
+			apiError(w, 422, "error.registration.email")
+			return
+		}
+	}
 	for _, u := range s.users {
 		if u.ID == id {
-			u.RoleID = in.RoleID
+			if in.RoleID != 0 {
+				u.RoleID = in.RoleID
+			}
+			if in.Email != nil {
+				if e := strings.TrimSpace(*in.Email); e == "" {
+					u.Email = nil
+				} else {
+					u.Email = &e
+				}
+			}
+			if hash != "" {
+				u.passwordHash = hash
+				// A password set by the admin signs the account out everywhere else.
+				for key, sess := range s.sessions {
+					if sess.userID == u.ID && key != sid {
+						s.dropSession(key)
+					}
+				}
+			}
 			s.persistUser(u)
 			writeJSON(w, 200, u)
 			return

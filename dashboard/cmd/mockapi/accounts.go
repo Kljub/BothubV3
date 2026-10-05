@@ -186,7 +186,7 @@ func (s *store) persistRole(ro *role) {
 	if s.php == nil || ro == nil {
 		return
 	}
-	body := map[string]any{"key": ro.Key, "name": ro.Name, "builtin": ro.Builtin, "permissions": append([]string{}, ro.Permissions...), "limits": ro.Limits}
+	body := map[string]any{"key": ro.Key, "name": ro.Name, "builtin": ro.Builtin, "permissions": append([]string{}, ro.Permissions...), "limits": ro.Limits, "color": ro.Color, "icon": ro.Icon}
 	go s.phpSync(http.MethodPut, "/internal/accounts/roles/"+strconv.FormatInt(ro.ID, 10), body)
 }
 

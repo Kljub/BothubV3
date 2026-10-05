@@ -460,6 +460,12 @@ func (c *Client) CreateUser(ctx context.Context, s Session, in UserCreate) (User
 	return out, err
 }
 
+func (c *Client) UpdateUser(ctx context.Context, s Session, id int64, in UserPatch) (User, error) {
+	var out User
+	_, err := c.do(ctx, s, http.MethodPatch, fmt.Sprintf("/api/v1/admin/users/%d", id), in, &out)
+	return out, err
+}
+
 func (c *Client) SetUserRole(ctx context.Context, s Session, id, roleID int64) (User, error) {
 	var out User
 	_, err := c.do(ctx, s, http.MethodPatch, fmt.Sprintf("/api/v1/admin/users/%d", id), map[string]int64{"roleId": roleID}, &out)

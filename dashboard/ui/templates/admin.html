@@ -6,7 +6,8 @@
 {{define "admin_panel_fragment"}}{{template "admin_panel" .Data}}{{end}}
 
 {{define "admin_panel"}}
-<h2>{{t (printf "admin.nav.%s" .Section)}}</h2>
+{{/* Users & Roles brings its own header (icon, title, subtitle). */}}
+{{if ne .Section "users_roles"}}<h2>{{t (printf "admin.nav.%s" .Section)}}</h2>{{end}}
 {{if eq .Section "overview"}}
   {{template "memory_panel" .Memory}}
 {{else if eq .Section "users_roles"}}
@@ -377,113 +378,190 @@
 
 {{define "users_roles"}}
 {{$v := .View}}
-<div id="users-roles" class="users-roles">
+<div id="users-roles" class="ur" data-users-roles>
+  <header class="ur-head">
+    <span class="ur-head-icon">{{template "icon_users"}}</span>
+    <div><h3>{{t "users_roles.title"}}</h3><p class="hint">{{t "users_roles.subtitle"}}</p></div>
+  </header>
   <div id="admin-flash">{{with .Flash}}<div class="alert alert-success">{{t .}}</div>{{end}}</div>
 
-  <header class="section-head">
-    <h3 class="settings-group">{{t "roles.title"}}</h3>
-    <input type="search" class="input-medium" placeholder="{{t "roles.search"}}" aria-label="{{t "roles.search"}}" data-card-filter="role-list">
-  </header>
-  <div class="settings-card" id="role-list">
-    {{range $v.Roles}}
-    {{$role := .}}
-    <details class="settings-row settings-expand role-row" data-filter-text="{{.Name}}">
-      <summary>
-        <span class="role-badge role-badge-{{.Key}}" aria-hidden="true">{{if eq .Key "admin"}}👑{{else if eq .Key "banned"}}⛔{{else if eq .Key "guest"}}👁️{{else}}👤{{end}}</span>
-        <span class="settings-row-text">
-          <strong>{{.Name}}{{if .Builtin}} <span class="badge-soft">{{t "roles.builtin"}}</span>{{end}}</strong>
-          <span class="hint">{{t "roles.summary" "permissions" (len .Permissions) "users" .UserCount}}{{if ne .Key "admin"}}{{if .Limits.MaxBots}} · {{t "roles.limits.short_bots" "n" .Limits.Bots}}{{end}}{{if .Limits.MaxRunning}} · {{t "roles.limits.short_running" "n" .Limits.Running}}{{end}}{{if .Limits.IdleStopHours}} · {{t "roles.limits.short_idle" "n" .Limits.Idle}}{{end}}{{end}}</span>
-        </span>
-        <span class="settings-action">{{if eq .Key "admin"}}{{t "roles.view"}}{{else}}{{t "settings.change"}}{{end}} ›</span>
-      </summary>
-      <form class="form settings-expand-body" hx-post="/admin/roles/{{.ID}}" hx-target="#users-roles" hx-swap="outerHTML">
-        <input type="hidden" name="name" value="{{.Name}}">
-        <fieldset class="role-limits">
-          <legend>{{t "roles.permissions"}}</legend>
-          <div class="chips">
-            {{range $v.Permissions}}
-            <label class="chip"><input type="checkbox" name="permissions" value="{{.}}" {{if index $role.Has .}}checked{{end}} {{if eq $role.Key "admin"}}disabled{{end}}>{{t (printf "permission.%s" .)}}</label>
-            {{end}}
-          </div>
-        </fieldset>
-        {{if eq .Key "admin"}}<p class="hint">{{t "roles.admin_locked"}} {{t "roles.limits.admin"}}</p>
-        {{else if eq .Key "banned"}}<p class="hint">{{t "roles.banned_hint"}}</p>
-        {{else}}{{template "role_limits" .Limits}}{{end}}
-        {{if ne .Key "admin"}}
-        <div class="secret-actions">
-          {{if not .Builtin}}<button type="button" class="btn btn-sm btn-danger-soft" hx-delete="/admin/roles/{{.ID}}" hx-target="#users-roles" hx-swap="outerHTML" hx-confirm="{{t "roles.delete_confirm" "name" .Name}}">{{t "roles.delete"}}</button>{{end}}
-          <button type="submit" class="btn btn-primary btn-sm">{{t "action.save"}}</button>
-        </div>
-        {{end}}
-      </form>
-    </details>
-    {{end}}
-    <details class="settings-row settings-expand secret-add">
-      <summary>
-        <span class="role-badge" aria-hidden="true">＋</span>
-        <span class="settings-row-text"><strong>{{t "roles.create"}}</strong><span class="hint">{{t "roles.create_hint"}}</span></span>
-        <span class="settings-action">{{t "settings.add"}} ›</span>
-      </summary>
-      <form class="form settings-expand-body" hx-post="/admin/roles" hx-target="#users-roles" hx-swap="outerHTML">
-        <label class="field">{{t "roles.name"}}
-          <input name="name" required maxlength="32" class="input-medium">
-        </label>
-        <fieldset class="role-limits">
-          <legend>{{t "roles.permissions"}}</legend>
-          <div class="chips">
-            {{range $v.Permissions}}<label class="chip"><input type="checkbox" name="permissions" value="{{.}}">{{t (printf "permission.%s" .)}}</label>{{end}}
-          </div>
-        </fieldset>
-        {{template "role_limits" $v.NoLimits}}
-        <div class="secret-actions"><button type="submit" class="btn btn-primary btn-sm">{{t "roles.create"}}</button></div>
-      </form>
-    </details>
+  <div class="ur-stats">
+    <div class="ur-stat ur-tone-purple"><span class="ur-stat-icon">{{template "role_icon" "user"}}</span><span><strong>{{$v.Stats.Total}}</strong><span class="hint">{{t "users_roles.stat_total"}}</span></span></div>
+    <div class="ur-stat ur-tone-yellow"><span class="ur-stat-icon">{{template "role_icon" "crown"}}</span><span><strong>{{$v.Stats.Admins}}</strong><span class="hint">{{t "users_roles.stat_admins"}}</span></span></div>
+    <div class="ur-stat ur-tone-gray"><span class="ur-stat-icon">{{template "role_icon" "users"}}</span><span><strong>{{$v.Stats.Normal}}</strong><span class="hint">{{t "users_roles.stat_normal"}}</span></span></div>
+    <div class="ur-stat ur-tone-red"><span class="ur-stat-icon">{{template "role_icon" "ban"}}</span><span><strong>{{$v.Stats.Banned}}</strong><span class="hint">{{t "users_roles.stat_banned"}}</span></span></div>
   </div>
 
-  <header class="section-head section-gap">
-    <h3 class="settings-group">{{t "users.title"}}</h3>
-    <input type="search" class="input-medium" placeholder="{{t "users.search"}}" aria-label="{{t "users.search"}}" data-card-filter="user-list">
-  </header>
-  <div class="settings-card" id="user-list">
-    {{range $v.Users}}
-    {{$user := .}}
-    <div class="settings-row user-row" data-filter-text="{{.Username}} {{with .Email}}{{.}}{{end}} {{.RoleName}}">
-      <span class="user-avatar" aria-hidden="true">{{slice .Username 0 1}}</span>
-      <span class="settings-row-text">
-        <strong>{{.Username}}{{if .Self}} <span class="muted">({{t "users.you"}})</span>{{end}}
-          {{if .TwoFactorEnabled}}<span class="badge-soft badge-soft-running">2FA</span>{{else}}<span class="badge-soft">{{t "users.no_2fa"}}</span>{{end}}</strong>
-        <span class="hint">{{with .Email}}{{.}} · {{end}}{{t "users.col.last_login"}}: {{with .LastLoginAt}}{{.Local.Format "02.01.2006 15:04"}}{{else}}{{t "users.never"}}{{end}}</span>
-      </span>
-      <span class="settings-action">
-        <form hx-post="/admin/users/{{.ID}}/role" hx-trigger="change" hx-target="#users-roles" hx-swap="outerHTML">
-          <select name="role_id" aria-label="{{t "users.col.role"}}" {{if .Self}}disabled{{end}}>
-            {{range $v.Roles}}<option value="{{.ID}}" {{if eq .ID $user.RoleID}}selected{{end}}>{{.Name}}</option>{{end}}
-          </select>
-        </form>
-        {{if not .Self}}<button type="button" class="icon-btn icon-btn-plain" hx-delete="/admin/users/{{.ID}}" hx-target="#users-roles" hx-swap="outerHTML" hx-confirm="{{t "users.delete_confirm" "name" .Username}}" title="{{t "users.delete"}}" aria-label="{{t "users.delete"}}">×</button>{{end}}
-      </span>
-    </div>
-    {{end}}
-    <details class="settings-row settings-expand secret-add">
-      <summary>
-        <span class="user-avatar" aria-hidden="true">＋</span>
-        <span class="settings-row-text"><strong>{{t "users.create"}}</strong><span class="hint">{{t "users.create_hint"}}</span></span>
-        <span class="settings-action">{{t "settings.add"}} ›</span>
-      </summary>
-      <form class="form settings-expand-body" hx-post="/admin/users" hx-target="#users-roles" hx-swap="outerHTML">
-        <div class="secret-grid">
+  <div class="ur-grid">
+    {{/* ---------- users ---------- */}}
+    <section class="ur-panel">
+      <header class="ur-panel-head">
+        <span class="ur-head-icon">{{template "role_icon" "user"}}</span>
+        <div class="ur-panel-title"><strong>{{t "users.manage"}}</strong><span class="hint">{{t "users.manage_hint"}}</span></div>
+        <button type="button" class="btn btn-primary btn-sm" data-ur-toggle="#ur-new-user">{{template "icon_plus"}} {{t "users.create"}}</button>
+      </header>
+      <form id="ur-new-user" class="ur-inline-form" hidden hx-post="/admin/users" hx-target="#users-roles" hx-swap="outerHTML">
+        <div class="ur-form-grid">
           <label class="field">{{t "field.username"}}<input name="username" required minlength="3" maxlength="32" autocomplete="off"></label>
           <label class="field">{{t "security.email.new"}}<input type="email" name="email" maxlength="254" autocomplete="off"></label>
-          <label class="field">{{t "field.password"}}<input type="password" name="password" required minlength="12" autocomplete="new-password"><span class="hint">{{t "security.password.hint"}}</span></label>
+          <label class="field">{{t "field.password"}}<input type="password" name="password" required minlength="12" autocomplete="new-password"></label>
           <label class="field">{{t "users.col.role"}}
-            <select name="role_id">{{range $v.Roles}}<option value="{{.ID}}" {{if eq .Key "user"}}selected{{end}}>{{.Name}}</option>{{end}}</select>
+            <select name="role_id">{{range $v.Roles}}<option value="{{.ID}}" {{if or (eq .Key "user") (eq .Key "member")}}selected{{end}}>{{.Name}}</option>{{end}}</select>
           </label>
         </div>
-        <div class="secret-actions"><button type="submit" class="btn btn-primary btn-sm">{{t "users.create"}}</button></div>
+        <p class="hint">{{t "security.password.hint"}}</p>
+        <div class="ur-actions"><button type="button" class="btn btn-sm" data-ur-toggle="#ur-new-user">{{t "action.cancel"}}</button><button type="submit" class="btn btn-primary btn-sm">{{t "users.create"}}</button></div>
       </form>
-    </details>
+      <div class="ur-tools">
+        <label class="ur-search">{{template "icon_search"}}<input type="search" placeholder="{{t "users.search"}}" aria-label="{{t "users.search"}}" data-ur-search="users"></label>
+        <select aria-label="{{t "users.col.role"}}" data-ur-role-filter="users">
+          <option value="">{{t "users.all_roles"}}</option>
+          {{range $v.Roles}}<option value="{{.ID}}">{{.Name}}</option>{{end}}
+        </select>
+      </div>
+      <table class="table ur-table" data-ur-table="users" data-ur-page-size="8">
+        <thead><tr><th>{{t "users.col.name"}}</th><th>{{t "users.col.role"}}</th><th>{{t "users.col.status"}}</th><th>{{t "users.col.last_login"}}</th><th class="num">{{t "users.col.actions"}}</th></tr></thead>
+        <tbody>
+          {{range $v.Users}}
+          {{$user := .}}
+          <tr data-ur-row data-filter-text="{{.Username}} {{with .Email}}{{.}}{{end}} {{.RoleName}}" data-role="{{.RoleID}}">
+            <td>
+              <div class="ur-user">
+                <span class="ur-avatar ur-tone-{{with .Role}}{{.ColorKey}}{{else}}gray{{end}}">{{slice .Username 0 1}}</span>
+                <span class="ur-user-text"><strong>{{.Username}}{{if .Self}} <span class="muted">({{t "users.you"}})</span>{{end}}{{if .TwoFactorEnabled}} <span class="ur-2fa" title="2FA">{{template "icon_shield"}}</span>{{end}}</strong><span class="hint">{{with .Email}}{{.}}{{else}}–{{end}}</span></span>
+              </div>
+            </td>
+            <td>{{with .Role}}<span class="ur-role-badge ur-tone-{{.ColorKey}}">{{template "role_icon" .IconKey}}{{.Name}}</span>{{end}}</td>
+            <td>{{if .Online}}<span class="ur-status ur-status-on">{{t "users.online"}}</span>{{else}}<span class="ur-status">{{t "users.offline"}}</span>{{end}}</td>
+            <td class="muted">{{with .LastLoginAt}}{{.Local.Format "02.01.2006 15:04"}}{{else}}{{t "users.never"}}{{end}}</td>
+            <td class="num">
+              <span class="ur-row-actions">
+                <button type="button" class="ur-icon-btn" data-ur-toggle="#ur-edit-{{.ID}}" title="{{t "users.edit"}}" aria-label="{{t "users.edit"}}">{{template "icon_pencil"}}</button>
+                {{if not .Self}}<button type="button" class="ur-icon-btn ur-danger" hx-delete="/admin/users/{{.ID}}" hx-target="#users-roles" hx-swap="outerHTML" hx-confirm="{{t "users.delete_confirm" "name" .Username}}" title="{{t "users.delete"}}" aria-label="{{t "users.delete"}}">{{template "icon_trash"}}</button>{{end}}
+              </span>
+            </td>
+          </tr>
+          <tr id="ur-edit-{{.ID}}" class="ur-edit-row" hidden data-ur-follow>
+            <td colspan="5">
+              <form class="ur-inline-form" hx-post="/admin/users/{{.ID}}" hx-target="#users-roles" hx-swap="outerHTML">
+                <div class="ur-form-grid">
+                  <label class="field">{{t "users.col.role"}}
+                    <select name="role_id" {{if .Self}}disabled{{end}}>{{range $v.Roles}}<option value="{{.ID}}" {{if eq .ID $user.RoleID}}selected{{end}}>{{.Name}}</option>{{end}}</select>
+                  </label>
+                  <label class="field">{{t "security.email.new"}}<input type="email" name="email" maxlength="254" value="{{with .Email}}{{.}}{{end}}" autocomplete="off"></label>
+                  <label class="field">{{t "users.new_password"}}<input type="password" name="password" minlength="12" autocomplete="new-password" placeholder="{{t "users.new_password_keep"}}"></label>
+                </div>
+                <div class="ur-actions"><button type="button" class="btn btn-sm" data-ur-toggle="#ur-edit-{{.ID}}">{{t "action.cancel"}}</button><button type="submit" class="btn btn-primary btn-sm">{{t "action.save"}}</button></div>
+              </form>
+            </td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+      <footer class="ur-foot" data-ur-pager="users" data-text="{{t "users.pager"}}"></footer>
+    </section>
+
+    {{/* ---------- roles ---------- */}}
+    <div class="ur-side">
+      <section class="ur-panel">
+        <header class="ur-panel-head">
+          <span class="ur-head-icon">{{template "icon_shield"}}</span>
+          <div class="ur-panel-title"><strong>{{t "roles.manage"}}</strong><span class="hint">{{t "roles.manage_hint"}}</span></div>
+          <button type="button" class="btn btn-primary btn-sm" data-ur-toggle="#ur-new-role">{{template "icon_plus"}} {{t "roles.create"}}</button>
+        </header>
+        <form id="ur-new-role" class="ur-inline-form" hidden hx-post="/admin/roles" hx-target="#users-roles" hx-swap="outerHTML">
+          <div class="ur-form-grid">
+            <label class="field">{{t "roles.name"}}<input name="name" required maxlength="32"></label>
+            <label class="field">{{t "roles.color"}}
+              <select name="color">{{range $v.Colors}}<option value="{{.}}" {{if eq . "blue"}}selected{{end}}>{{t (printf "roles.color.%s" .)}}</option>{{end}}</select>
+            </label>
+          </div>
+          <div class="ur-actions"><button type="button" class="btn btn-sm" data-ur-toggle="#ur-new-role">{{t "action.cancel"}}</button><button type="submit" class="btn btn-primary btn-sm">{{t "roles.create"}}</button></div>
+        </form>
+        <div class="ur-tools">
+          <label class="ur-search">{{template "icon_search"}}<input type="search" placeholder="{{t "roles.search"}}" aria-label="{{t "roles.search"}}" data-ur-search="roles"></label>
+          <select aria-label="{{t "roles.sort"}}" data-ur-sort="roles">
+            <option value="position">{{t "roles.sort.position"}}</option>
+            <option value="name">{{t "roles.sort.name"}}</option>
+            <option value="users">{{t "roles.sort.users"}}</option>
+          </select>
+        </div>
+        <table class="table ur-table" data-ur-table="roles">
+          <thead><tr><th>{{t "roles.col.role"}}</th><th>{{t "roles.col.users"}}</th><th>{{t "roles.col.color"}}</th><th>{{t "roles.col.permissions"}}</th><th class="num">{{t "users.col.actions"}}</th></tr></thead>
+          <tbody>
+            {{range $i, $r := $v.Roles}}
+            <tr data-ur-row data-filter-text="{{.Name}}" data-pos="{{$i}}" data-name="{{.Name}}" data-users="{{.UserCount}}"{{if eq .ID $v.Editor.Role.ID}} class="ur-selected"{{end}}>
+              <td><span class="ur-role-name ur-text-{{.ColorKey}}">{{template "role_icon" .IconKey}}{{.Name}}</span></td>
+              <td>{{.UserCount}}</td>
+              <td><span class="ur-swatch ur-tone-{{.ColorKey}}" title="{{t (printf "roles.color.%s" .ColorKey)}}"></span></td>
+              <td class="muted">{{if .AllPerm}}{{t "roles.perm_all"}}{{else if .Permissions}}{{t "roles.perm_count" "n" (len .Permissions)}}{{else}}{{t "roles.perm_none"}}{{end}}</td>
+              <td class="num">
+                <span class="ur-row-actions">
+                  <button type="button" class="ur-icon-btn" hx-get="/admin/roles/editor?role={{.ID}}&amp;tab={{$v.Editor.Tab}}" hx-target="#users-roles" hx-swap="outerHTML" title="{{t "roles.edit"}}" aria-label="{{t "roles.edit"}}">{{template "icon_pencil"}}</button>
+                  {{if not .Builtin}}<button type="button" class="ur-icon-btn ur-danger" hx-delete="/admin/roles/{{.ID}}" hx-target="#users-roles" hx-swap="outerHTML" hx-confirm="{{t "roles.delete_confirm" "name" .Name}}" title="{{t "roles.delete"}}" aria-label="{{t "roles.delete"}}">{{template "icon_trash"}}</button>{{end}}
+                </span>
+              </td>
+            </tr>
+            {{end}}
+          </tbody>
+        </table>
+        <footer class="ur-foot" data-ur-pager="roles" data-text="{{t "roles.pager"}}"></footer>
+      </section>
+
+      {{if $v.Editor.Role}}{{template "role_editor" $v}}{{end}}
+    </div>
   </div>
 </div>
+{{end}}
+
+{{/* The editor below the roles: tabs general, permissions, members, more settings. Receives usersRolesView. */}}
+{{define "role_editor"}}
+{{$v := .}}{{$r := .Editor.Role}}{{$tab := .Editor.Tab}}
+<section class="ur-panel ur-editor">
+  <header class="ur-panel-head">
+    <span class="ur-head-icon ur-text-{{$r.ColorKey}}">{{template "role_icon" $r.IconKey}}</span>
+    <div class="ur-panel-title"><strong>{{t "roles.edit_title" "name" $r.Name}}</strong>{{if $r.Builtin}}<span class="hint">{{t "roles.builtin"}}</span>{{end}}</div>
+  </header>
+  <nav class="ur-tabs" role="tablist">
+    {{range $name := $v.Tabs}}
+    <button type="button" role="tab" class="ur-tab" aria-selected="{{if eq $name $tab}}true{{else}}false{{end}}" hx-get="/admin/roles/editor?role={{$r.ID}}&amp;tab={{$name}}" hx-target="#users-roles" hx-swap="outerHTML">{{t (printf "roles.tab.%s" $name)}}</button>
+    {{end}}
+  </nav>
+  <form class="ur-editor-body" hx-post="/admin/roles/{{$r.ID}}" hx-target="#users-roles" hx-swap="outerHTML">
+    <input type="hidden" name="edit_role" value="{{$r.ID}}">
+    <input type="hidden" name="tab" value="{{$tab}}">
+    {{if eq $tab "general"}}
+      <div class="ur-form-grid">
+        <label class="field">{{t "roles.name"}}<input name="name" maxlength="32" value="{{$r.Name}}" {{if $r.Builtin}}disabled{{end}}>{{if $r.Builtin}}<span class="hint">{{t "roles.builtin_name"}}</span>{{end}}</label>
+      </div>
+      <fieldset class="ur-picker">
+        <legend>{{t "roles.color"}}</legend>
+        {{range $v.Colors}}<label class="ur-swatch-pick" title="{{t (printf "roles.color.%s" .)}}"><input type="radio" name="color" value="{{.}}" {{if eq . $r.ColorKey}}checked{{end}}><span class="ur-swatch ur-tone-{{.}}"></span></label>{{end}}
+      </fieldset>
+      <fieldset class="ur-picker">
+        <legend>{{t "roles.icon"}}</legend>
+        {{range $v.Icons}}<label class="ur-icon-pick"><input type="radio" name="icon" value="{{.}}" {{if eq . $r.IconKey}}checked{{end}}><span>{{template "role_icon" .}}</span></label>{{end}}
+      </fieldset>
+    {{else if eq $tab "permissions"}}
+      {{if eq $r.Key "admin"}}<p class="hint">{{t "roles.admin_locked"}}</p>{{end}}
+      <div class="chips">
+        {{range $v.Permissions}}<label class="chip"><input type="checkbox" name="permissions" value="{{.}}" {{if index $r.Has .}}checked{{end}} {{if eq $r.Key "admin"}}disabled{{end}}>{{t (printf "permission.%s" .)}}</label>{{end}}
+      </div>
+      {{if eq $r.Key "banned"}}<p class="hint">{{t "roles.banned_hint"}}</p>{{end}}
+    {{else if eq $tab "members"}}
+      {{if $r.Members}}
+      <ul class="ur-members">
+        {{range $r.Members}}<li><span class="ur-avatar ur-tone-{{$r.ColorKey}}">{{slice .Username 0 1}}</span><span class="ur-user-text"><strong>{{.Username}}</strong><span class="hint">{{with .Email}}{{.}}{{else}}–{{end}}</span></span>{{if .Online}}<span class="ur-status ur-status-on">{{t "users.online"}}</span>{{end}}</li>{{end}}
+      </ul>
+      {{else}}<p class="hint">{{t "roles.no_members"}}</p>{{end}}
+    {{else}}
+      {{if eq $r.Key "admin"}}<p class="hint">{{t "roles.limits.admin"}}</p>{{else}}{{template "role_limits" $r.Limits}}{{end}}
+    {{end}}
+    {{if or (eq $tab "general") (and (ne $tab "members") (ne $r.Key "admin"))}}
+    <div class="ur-actions"><button type="submit" class="btn btn-primary btn-sm">{{t "action.save"}}</button></div>
+    {{end}}
+  </form>
+</section>
 {{end}}
 
 {{define "api_secrets_fragment"}}{{template "api_secrets" .Data}}{{end}}

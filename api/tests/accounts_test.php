@@ -57,9 +57,10 @@ check('bad session refused', $call('PUT', '/internal/accounts/sessions/xyz', $se
 $call('PUT', '/internal/accounts/sessions/' . hash('sha256', 'old'), ['id' => 'beef0000', 'expiresAt' => '2020-01-01T00:00:00Z'] + $sess);
 check('expired session dropped', count($call('GET', '/internal/accounts')[1]['sessions']) === 1);
 check('delete session', $call('DELETE', '/internal/accounts/sessions/' . $hash)[0] === 204 && $call('GET', '/internal/accounts')[1]['sessions'] === []);
-$call('PUT', '/internal/accounts/roles/7', ['key' => 'custom7', 'name' => 'Free', 'permissions' => [], 'limits' => ['maxBots' => 2, 'maxRunning' => -1, 'idleStopHours' => 12, 'junk' => 5]]);
+$call('PUT', '/internal/accounts/roles/7', ['key' => 'custom7', 'name' => 'Free', 'permissions' => [], 'color' => 'blue', 'icon' => 'BAD!', 'limits' => ['maxBots' => 2, 'maxRunning' => -1, 'idleStopHours' => 12, 'junk' => 5]]);
 $free = array_values(array_filter($call('GET', '/internal/accounts')[1]['roles'], static fn ($r) => $r['id'] === 7))[0] ?? null;
 check('role limits kept, bad ones dropped', $free !== null && (array) $free['limits'] === ['maxBots' => 2, 'idleStopHours' => 12]);
+check('role color kept, bad icon dropped', $free['color'] === 'blue' && $free['icon'] === '');
 check('role in use stays', $call('DELETE', '/internal/accounts/roles/1')[0] === 409);
 check('delete user', $call('DELETE', '/internal/accounts/users/1')[0] === 204 && $call('GET', '/internal/accounts')[1]['users'] === []);
 check('bad user refused', $call('PUT', '/internal/accounts/users/2', ['username' => 'x'])[0] === 422);

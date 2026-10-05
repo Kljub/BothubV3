@@ -313,6 +313,50 @@ type Role struct {
 	Permissions []string   `json:"permissions"`
 	UserCount   int        `json:"userCount"`
 	Limits      RoleLimits `json:"limits"`
+	Color       string     `json:"color"`
+	Icon        string     `json:"icon"`
+}
+
+// RoleColors and RoleIcons: what a role may look like (the gateway checks the same lists).
+var (
+	RoleColors = []string{"purple", "blue", "green", "yellow", "orange", "red", "pink", "teal", "gray", "white"}
+	RoleIcons  = []string{"crown", "shield", "headset", "code", "user", "users", "star", "ban", "eye", "wrench", "heart", "gamepad"}
+)
+
+// ColorKey: the role's color, or the default of its kind.
+func (r Role) ColorKey() string {
+	if r.Color != "" {
+		return r.Color
+	}
+	switch r.Key {
+	case "admin":
+		return "purple"
+	case "banned":
+		return "red"
+	case "guest":
+		return "white"
+	case "user", "member":
+		return "gray"
+	}
+	return "blue"
+}
+
+// IconKey: the role's icon, or the default of its kind.
+func (r Role) IconKey() string {
+	if r.Icon != "" {
+		return r.Icon
+	}
+	switch r.Key {
+	case "admin":
+		return "crown"
+	case "banned":
+		return "ban"
+	case "guest":
+		return "eye"
+	case "user", "member":
+		return "user"
+	}
+	return "shield"
 }
 
 // RoleLimits: bot limits of a role; nil = no limit (admins never have any).
@@ -334,10 +378,20 @@ func (l RoleLimits) Bots() int    { return N(l.MaxBots) }
 func (l RoleLimits) Running() int { return N(l.MaxRunning) }
 func (l RoleLimits) Idle() int    { return N(l.IdleStopHours) }
 
+// RoleWrite: on update only the set fields change (each editor tab sends its own).
 type RoleWrite struct {
-	Name        string      `json:"name"`
-	Permissions []string    `json:"permissions"`
+	Name        string      `json:"name,omitempty"`
+	Color       string      `json:"color,omitempty"`
+	Icon        string      `json:"icon,omitempty"`
+	Permissions *[]string   `json:"permissions,omitempty"`
 	Limits      *RoleLimits `json:"limits,omitempty"`
+}
+
+// UserPatch: role (0 = keep), e-mail ("" removes it), a new password.
+type UserPatch struct {
+	RoleID   int64   `json:"roleId,omitempty"`
+	Email    *string `json:"email,omitempty"`
+	Password string  `json:"password,omitempty"`
 }
 
 type User struct {
@@ -347,6 +401,7 @@ type User struct {
 	RoleID           int64      `json:"roleId"`
 	TwoFactorEnabled bool       `json:"twoFactorEnabled"`
 	Self             bool       `json:"self"`
+	Online           bool       `json:"online"`
 	CreatedAt        time.Time  `json:"createdAt"`
 	LastLoginAt      *time.Time `json:"lastLoginAt"`
 }
