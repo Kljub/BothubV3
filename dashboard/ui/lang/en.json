@@ -4650,5 +4650,21 @@
   "builder.enum.recognize_mode.radio": "Only the station title (free)",
   "builder.enum.recognize_mode.audio": "Always audio recognition (ACRCloud)",
   "builder.cfg.acr_host": "ACRCloud host",
-  "builder.cfg.acr_host_hint": "The host of your ACRCloud project (its region), e.g. identify-eu-west-1.acrcloud.com."
+  "builder.cfg.acr_host_hint": "The host of your ACRCloud project (its region), e.g. identify-eu-west-1.acrcloud.com.",
+  "command.music-radio.title": "Radio",
+  "command.music-radio.description": "Plays a radio station from anywhere in the world",
+  "command.music-radio-random.title": "Random radio",
+  "command.music-radio-random.description": "Plays a random radio station",
+  "command.music-radio-song.title": "Which song?",
+  "command.music-radio-song.description": "Shows which song the radio is playing",
+  "command.afk set.title": "AFK",
+  "command.afk set.description": "Marks you as AFK with a reason",
+  "command.afk clear.title": "Back from AFK",
+  "command.afk clear.description": "Ends your AFK status",
+  "command.thanks.title": "Thanks",
+  "command.thanks.description": "Thanks a member for their help",
+  "command.thanks-check.title": "Thanks count",
+  "command.thanks-check.description": "Shows how many thanks a member has",
+  "command.thanks-top.title": "Thanks ranking",
+  "command.thanks-top.description": "The members with the most thanks"
 }

@@ -4650,5 +4650,21 @@
   "builder.enum.recognize_mode.radio": "Nur der Titel des Senders (kostenlos)",
   "builder.enum.recognize_mode.audio": "Immer Audio-Erkennung (ACRCloud)",
   "builder.cfg.acr_host": "ACRCloud-Host",
-  "builder.cfg.acr_host_hint": "Der Host deines ACRCloud-Projekts (Region), z. B. identify-eu-west-1.acrcloud.com."
+  "builder.cfg.acr_host_hint": "Der Host deines ACRCloud-Projekts (Region), z. B. identify-eu-west-1.acrcloud.com.",
+  "command.music-radio.title": "Radio",
+  "command.music-radio.description": "Spielt einen Radiosender aus aller Welt",
+  "command.music-radio-random.title": "Zufallsradio",
+  "command.music-radio-random.description": "Spielt einen zufälligen Radiosender",
+  "command.music-radio-song.title": "Welcher Song?",
+  "command.music-radio-song.description": "Zeigt, welcher Song im Radio läuft",
+  "command.afk set.title": "AFK",
+  "command.afk set.description": "Markiert dich mit Grund als AFK",
+  "command.afk clear.title": "Zurück von AFK",
+  "command.afk clear.description": "Beendet deinen AFK-Status",
+  "command.thanks.title": "Danke",
+  "command.thanks.description": "Bedankt dich bei einem Mitglied für seine Hilfe",
+  "command.thanks-check.title": "Danke-Anzahl",
+  "command.thanks-check.description": "Zeigt, wie viele Danke ein Mitglied hat",
+  "command.thanks-top.title": "Danke-Rangliste",
+  "command.thanks-top.description": "Die Mitglieder mit den meisten Danke"
 }

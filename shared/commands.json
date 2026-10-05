@@ -85,6 +85,9 @@
     { "name": "music-loop", "usage": "/loop [modus]", "module": "music" },
     { "name": "music-volume", "usage": "/volume [0-100]", "module": "music" },
     { "name": "music-lyrics", "usage": "/lyrics [song]", "module": "music" },
+    { "name": "music-radio", "usage": "/radio [station] [genre] [country]", "module": "music" },
+    { "name": "music-radio-random", "usage": "/radio-random [genre] [country]", "module": "music" },
+    { "name": "music-radio-song", "usage": "/radio-song", "module": "music" },
 
     { "name": "poll-create", "usage": "/poll-create [frage]", "module": "polls" },
     { "name": "poll-list", "usage": "/poll-list", "module": "polls" },
