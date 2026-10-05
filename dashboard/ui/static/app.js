@@ -899,6 +899,13 @@ document.addEventListener('click', (e) => {
 document.addEventListener('toggle', (e) => {
   if (!(e.target instanceof HTMLElement) || !e.target.matches('[data-bot-menu]') || !e.target.open) return;
   for (const m of document.querySelectorAll('[data-bot-menu][open]')) if (m !== e.target) m.open = false;
+  // Keep the menu on screen: open it upwards or to the right when there is no room.
+  const list = e.target.querySelector('.bot-card-menu-list');
+  if (!list) return;
+  list.classList.remove('menu-up', 'menu-right');
+  const r = list.getBoundingClientRect();
+  if (r.bottom > window.innerHeight - 8 && r.top - 40 > window.innerHeight - r.top) list.classList.add('menu-up');
+  if (r.left < 8) list.classList.add('menu-right');
 }, true);
 document.addEventListener('htmx:beforeRequest', (e) => {
   if (e.detail.elt?.id === 'bot-grid' && document.querySelector('[data-bot-menu][open]')) e.preventDefault();

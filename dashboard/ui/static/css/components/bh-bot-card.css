@@ -121,3 +121,10 @@
 .bot-grid.is-reordering .bot-card.is-dragging { opacity: 0.4; animation: none; }
 @keyframes tile-wiggle { from { transform: rotate(-0.4deg); } to { transform: rotate(0.4deg); } }
 @media (prefers-reduced-motion: reduce) { .bot-grid.is-reordering .bot-card { animation: none; } }
+/* Presence dot centred on the avatar ring at the bottom right (45°):
+   50% + cos 45° × radius; +1px for the 2px ring outside the avatar. */
+.bot-card-avatar { display: flex; }
+.bot-presence { right: auto; bottom: auto; left: calc(85.36% + 1px); top: calc(85.36% + 1px); transform: translate(-50%, -50%); }
+/* Tile menu stays on screen (app.js picks the side). */
+.bot-card-menu-list.menu-up { top: auto; bottom: 34px; }
+.bot-card-menu-list.menu-right { right: auto; left: 0; }
