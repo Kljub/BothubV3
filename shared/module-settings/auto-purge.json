@@ -1,0 +1,47 @@
+{
+  "module": "auto-purge",
+  "fields": [
+    {
+      "key": "channels",
+      "type": "list",
+      "max": 20,
+      "titleField": "channel",
+      "hint": true,
+      "item": [
+        {
+          "key": "channel",
+          "type": "channel",
+          "channelTypes": [
+            "text",
+            "announcement"
+          ],
+          "required": true
+        },
+        {
+          "key": "olderThan",
+          "type": "number",
+          "min": 1,
+          "max": 8760,
+          "default": 24,
+          "hint": true
+        },
+        {
+          "key": "every",
+          "type": "number",
+          "min": 1,
+          "max": 168,
+          "default": 24,
+          "hint": true
+        },
+        {
+          "key": "keepPinned",
+          "type": "bool",
+          "default": true
+        }
+      ],
+      "unique": [
+        "channel"
+      ]
+    }
+  ]
+}

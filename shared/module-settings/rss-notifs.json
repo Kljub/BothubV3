@@ -1,0 +1,63 @@
+{
+  "module": "rss-notifs",
+  "fields": [
+    {
+      "key": "feeds",
+      "type": "list",
+      "max": 25,
+      "titleField": "url",
+      "hint": true,
+      "item": [
+        {
+          "key": "url",
+          "type": "text",
+          "max": 500,
+          "pattern": "^https?://\\S+$",
+          "required": true,
+          "hint": true
+        },
+        {
+          "key": "channel",
+          "type": "channel",
+          "channelTypes": [
+            "text",
+            "announcement"
+          ],
+          "required": true
+        },
+        {
+          "key": "mentionRoles",
+          "type": "roles",
+          "max": 5
+        },
+        {
+          "key": "message",
+          "type": "message",
+          "default": {
+            "mode": "embed",
+            "title": "{title}",
+            "description": "{summary}\n\n{url}",
+            "color": "#f97316",
+            "image": "{image}",
+            "footer": "{feed} · {author}"
+          },
+          "vars": [
+            "server",
+            "server.id",
+            "members",
+            "feed",
+            "title",
+            "url",
+            "author",
+            "summary",
+            "image"
+          ]
+        }
+      ],
+      "unique": [
+        "url",
+        "channel"
+      ]
+    }
+  ]
+}

@@ -122,6 +122,9 @@
     { "name": "afk clear", "usage": "/afk clear", "module": "afk" },
     { "name": "thanks", "usage": "/thanks", "module": "thanks" },
     { "name": "thanks-check", "usage": "/thanks-check", "module": "thanks" },
-    { "name": "thanks-top", "usage": "/thanks-top", "module": "thanks" }
+    { "name": "thanks-top", "usage": "/thanks-top", "module": "thanks" },
+    { "name": "bookmark", "usage": "Right-click a message → Apps → Bookmark", "module": "bookmarks" },
+    { "name": "bookmarks", "usage": "/bookmarks", "module": "bookmarks" },
+    { "name": "bookmark-remove", "usage": "/bookmark-remove [number]", "module": "bookmarks" }
   ]
 }

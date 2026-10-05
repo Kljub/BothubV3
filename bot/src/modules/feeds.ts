@@ -1,4 +1,5 @@
-// Social notifications: Twitch, Kick, YouTube, Reddit and GitHub. ModuleTimers
+// Social notifications: Twitch, Kick, YouTube, Reddit and GitHub (RSS and
+// Bluesky: feeds-extra.ts). ModuleTimers
 // calls pollFeeds() every 30 seconds; each platform has its own interval and
 // a request budget per round. Every list entry keeps what it announced last
 // in module_state, so a stream, video, post or event is posted once.
@@ -7,6 +8,7 @@ import type { Guild, MessageCreateOptions, SendableChannels } from 'discord.js';
 import { log } from '../core/log.js';
 import { baseVars, buildMessage, idIn, idsIn, type MessageConfig, type ModuleContext } from './context.js';
 import { send, warn } from './guard.js';
+import { bluesky, rss } from './feeds-extra.js';
 
 const UA = 'BotHub (Discord bot; +https://github.com/Kljub/BotHub)';
 const TIMEOUT = 10_000;
@@ -187,7 +189,7 @@ interface Target {
   roles: string[];
 }
 
-function target(guilds: Guild[], channelRef: unknown, roleRefs: unknown): Target | null {
+export function target(guilds: Guild[], channelRef: unknown, roleRefs: unknown): Target | null {
   const guild = guilds.find((g) => idIn(channelRef, g.id));
   const channel = guild?.channels.cache.get(idIn(channelRef, guild.id) ?? '');
   if (!guild || !channel?.isSendable()) return null;
@@ -202,7 +204,7 @@ async function getJson(url: string, init: RequestInit = {}): Promise<{ status: n
 }
 
 /** Failed requests back off per source (5 min doubling, at most 6 h) and warn after 3 in a row. */
-function failed(ctx: ModuleContext, module: string, guildId: string, source: string, status: string): void {
+export function failed(ctx: ModuleContext, module: string, guildId: string, source: string, status: string): void {
   const key = `fail:${source}`;
   const fail = ctx.getState<{ count: number; until: number }>(module, guildId, key);
   const count = (fail?.count ?? 0) + 1;
@@ -210,12 +212,12 @@ function failed(ctx: ModuleContext, module: string, guildId: string, source: str
   if (count >= 3) warn(ctx, 'WAR-2008', { module, problem: `${source} cannot be read (${status})` });
 }
 
-function waiting(ctx: ModuleContext, module: string, guildId: string, source: string): boolean {
+export function waiting(ctx: ModuleContext, module: string, guildId: string, source: string): boolean {
   const fail = ctx.getState<{ count: number; until: number }>(module, guildId, `fail:${source}`);
   return !!fail && Date.now() < fail.until;
 }
 
-function recovered(ctx: ModuleContext, module: string, guildId: string, source: string): void {
+export function recovered(ctx: ModuleContext, module: string, guildId: string, source: string): void {
   if (ctx.getState(module, guildId, `fail:${source}`)) ctx.deleteState(module, guildId, `fail:${source}`);
 }
 
@@ -251,6 +253,8 @@ export async function pollFeeds(ctx: ModuleContext, guilds: Guild[], now: number
     if (ctx.enabled('youtube-notifs')) await run('youtube-notifs', () => youtube(ctx, guilds));
     if (ctx.enabled('reddit-notifs')) await run('reddit-notifs', () => reddit(ctx, guilds));
     if (ctx.enabled('github-notifs')) await run('github-notifs', () => github(ctx, guilds));
+    if (ctx.enabled('rss-notifs')) await run('rss-notifs', () => rss(ctx, guilds));
+    if (ctx.enabled('bluesky-notifs')) await run('bluesky-notifs', () => bluesky(ctx, guilds));
   }
 }
 

@@ -1,0 +1,69 @@
+{
+  "module": "bluesky-notifs",
+  "fields": [
+    {
+      "key": "accounts",
+      "type": "list",
+      "max": 25,
+      "titleField": "handle",
+      "hint": true,
+      "item": [
+        {
+          "key": "handle",
+          "type": "text",
+          "max": 253,
+          "pattern": "^@?[A-Za-z0-9.-]{3,253}$",
+          "required": true,
+          "hint": true
+        },
+        {
+          "key": "channel",
+          "type": "channel",
+          "channelTypes": [
+            "text",
+            "announcement"
+          ],
+          "required": true
+        },
+        {
+          "key": "mentionRoles",
+          "type": "roles",
+          "max": 5
+        },
+        {
+          "key": "reposts",
+          "type": "bool",
+          "default": false
+        },
+        {
+          "key": "message",
+          "type": "message",
+          "default": {
+            "mode": "embed",
+            "title": "{name} (@{handle})",
+            "description": "{text}\n\n{url}",
+            "color": "#1185fe",
+            "image": "{image}",
+            "footer": "Bluesky"
+          },
+          "vars": [
+            "server",
+            "server.id",
+            "members",
+            "handle",
+            "name",
+            "text",
+            "url",
+            "image",
+            "avatar",
+            "repost"
+          ]
+        }
+      ],
+      "unique": [
+        "handle",
+        "channel"
+      ]
+    }
+  ]
+}

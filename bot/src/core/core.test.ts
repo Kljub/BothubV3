@@ -96,6 +96,11 @@ test('every command preset becomes a valid application command', () => {
   const names = body.map((c) => c.name as string);
   assert.equal(new Set(names).size, names.length, 'top-level names are unique');
   for (const c of body) {
+    // Context menu commands (type 2, 3) have a free name of 1-32 characters and no description.
+    if (c.type === 2 || c.type === 3) {
+      assert.ok((c.name as string).length >= 1 && (c.name as string).length <= 32);
+      continue;
+    }
     assert.match(c.name as string, /^[a-z0-9_-]{1,32}$/);
     assert.ok((c.description as string).length >= 1 && (c.description as string).length <= 100);
     const opts = (c.options ?? []) as { required?: boolean; type: number }[];

@@ -16,6 +16,7 @@ import { ensureHoneypots, honeypotMessage } from './honeypot.js';
 import { ModuleTimers } from './timers.js';
 import { messageReward, syncCurrencies } from './economy.js';
 import { afkMessage } from './afk.js';
+import { rolePrefix } from './server-auto.js';
 import { thanksMessage } from './thanks.js';
 import { linkfixMessage } from './linkfix.js';
 
@@ -83,6 +84,12 @@ export function bindModules(client: Client, ctx: ModuleContext, timezone: () => 
     }
     // Media channels also check edited messages (text added later).
     if (!msg.partial && ctx.enabled('media-channels')) guard('message-edit', onMessage(ctx, msg, true));
+  });
+  client.on(Events.GuildMemberUpdate, (before, after) => {
+    // Role Prefix: roles or name changed.
+    if (before.partial || before.roles.cache.size !== after.roles.cache.size || before.displayName !== after.displayName || ![...before.roles.cache.keys()].every((r) => after.roles.cache.has(r))) {
+      guard('role-prefix', rolePrefix(ctx, after));
+    }
   });
   client.on(Events.GuildMemberAdd, (m) => {
     guard('member-add', onMemberAdd(ctx, m));

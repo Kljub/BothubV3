@@ -1,0 +1,29 @@
+{
+  "module": "role-prefix",
+  "fields": [
+    {
+      "key": "prefixes",
+      "type": "list",
+      "max": 25,
+      "titleField": "prefix",
+      "hint": true,
+      "item": [
+        {
+          "key": "role",
+          "type": "role",
+          "required": true
+        },
+        {
+          "key": "prefix",
+          "type": "text",
+          "max": 12,
+          "required": true,
+          "hint": true
+        }
+      ],
+      "unique": [
+        "role"
+      ]
+    }
+  ]
+}

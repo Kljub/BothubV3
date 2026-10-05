@@ -17710,6 +17710,381 @@
           }
         ]
       }
+    },
+    {
+      "module": "bookmarks",
+      "group": "Bookmarks",
+      "name": "bookmark",
+      "title": "Bookmark",
+      "description": "Saves a message for you (right-click a message → Apps)",
+      "graph": {
+        "schemaVersion": 1,
+        "nodes": [
+          {
+            "id": "trigger",
+            "type": "trigger.slash",
+            "typeVersion": 1,
+            "config": {
+              "command_name": "bookmark",
+              "command_type": "message",
+              "menu_name": "Bookmark"
+            },
+            "position": {
+              "x": 120,
+              "y": 240
+            }
+          },
+          {
+            "id": "step1",
+            "type": "action.bookmark_message",
+            "typeVersion": 1,
+            "config": {
+              "message": "{message.id}",
+              "variable": "bm"
+            },
+            "position": {
+              "x": 440,
+              "y": 240
+            }
+          },
+          {
+            "id": "step2",
+            "type": "action.send_message",
+            "typeVersion": 1,
+            "config": {
+              "message": {
+                "mode": "normal",
+                "content": "🔖 Saved. You have {bm} bookmarks (/bookmarks)."
+              },
+              "target": "reply",
+              "ephemeral": true
+            },
+            "position": {
+              "x": 760,
+              "y": 240
+            }
+          },
+          {
+            "id": "error",
+            "type": "utility.error_handler",
+            "typeVersion": 1,
+            "config": {
+              "variable": "error"
+            },
+            "position": {
+              "x": 120,
+              "y": 520
+            }
+          },
+          {
+            "id": "error_reply",
+            "type": "action.send_message",
+            "typeVersion": 1,
+            "config": {
+              "message": {
+                "mode": "normal",
+                "content": "❌ {error}"
+              },
+              "target": "reply",
+              "ephemeral": true
+            },
+            "position": {
+              "x": 440,
+              "y": 520
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": {
+              "node": "trigger",
+              "port": "next"
+            },
+            "to": {
+              "node": "step1",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "step1",
+              "port": "next"
+            },
+            "to": {
+              "node": "step2",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "error",
+              "port": "next"
+            },
+            "to": {
+              "node": "error_reply",
+              "port": "in"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "module": "bookmarks",
+      "group": "Bookmarks",
+      "name": "bookmarks",
+      "title": "Bookmarks",
+      "description": "Shows your saved messages",
+      "graph": {
+        "schemaVersion": 1,
+        "nodes": [
+          {
+            "id": "trigger",
+            "type": "trigger.slash",
+            "typeVersion": 1,
+            "config": {
+              "command_name": "bookmarks",
+              "description": "Shows your saved messages"
+            },
+            "position": {
+              "x": 120,
+              "y": 240
+            }
+          },
+          {
+            "id": "step1",
+            "type": "action.bookmark_list",
+            "typeVersion": 1,
+            "config": {
+              "user": "{user.id}",
+              "limit": 10,
+              "variable": "list"
+            },
+            "position": {
+              "x": 440,
+              "y": 240
+            }
+          },
+          {
+            "id": "step2",
+            "type": "action.send_message",
+            "typeVersion": 1,
+            "config": {
+              "message": {
+                "mode": "normal",
+                "content": "🔖 **Your bookmarks** ({list.count})\n{list}"
+              },
+              "target": "reply",
+              "ephemeral": true
+            },
+            "position": {
+              "x": 760,
+              "y": 240
+            }
+          },
+          {
+            "id": "error",
+            "type": "utility.error_handler",
+            "typeVersion": 1,
+            "config": {
+              "variable": "error"
+            },
+            "position": {
+              "x": 120,
+              "y": 520
+            }
+          },
+          {
+            "id": "error_reply",
+            "type": "action.send_message",
+            "typeVersion": 1,
+            "config": {
+              "message": {
+                "mode": "normal",
+                "content": "❌ {error}"
+              },
+              "target": "reply",
+              "ephemeral": true
+            },
+            "position": {
+              "x": 440,
+              "y": 520
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": {
+              "node": "trigger",
+              "port": "next"
+            },
+            "to": {
+              "node": "step1",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "step1",
+              "port": "next"
+            },
+            "to": {
+              "node": "step2",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "error",
+              "port": "next"
+            },
+            "to": {
+              "node": "error_reply",
+              "port": "in"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "module": "bookmarks",
+      "group": "Bookmarks",
+      "name": "bookmark-remove",
+      "title": "Remove bookmark",
+      "description": "Removes one of your bookmarks",
+      "graph": {
+        "schemaVersion": 1,
+        "nodes": [
+          {
+            "id": "trigger",
+            "type": "trigger.slash",
+            "typeVersion": 1,
+            "config": {
+              "command_name": "bookmark-remove",
+              "description": "Removes one of your bookmarks"
+            },
+            "position": {
+              "x": 120,
+              "y": 240
+            }
+          },
+          {
+            "id": "option_number",
+            "type": "option.number",
+            "typeVersion": 1,
+            "config": {
+              "name": "number",
+              "description": "Number from /bookmarks",
+              "required": true,
+              "variable": "number"
+            },
+            "position": {
+              "x": 120,
+              "y": 110
+            }
+          },
+          {
+            "id": "step1",
+            "type": "action.bookmark_remove",
+            "typeVersion": 1,
+            "config": {
+              "user": "{user.id}",
+              "number": "{option_number}"
+            },
+            "position": {
+              "x": 440,
+              "y": 240
+            }
+          },
+          {
+            "id": "step2",
+            "type": "action.send_message",
+            "typeVersion": 1,
+            "config": {
+              "message": {
+                "mode": "normal",
+                "content": "🗑️ Bookmark {option_number} removed."
+              },
+              "target": "reply",
+              "ephemeral": true
+            },
+            "position": {
+              "x": 760,
+              "y": 240
+            }
+          },
+          {
+            "id": "error",
+            "type": "utility.error_handler",
+            "typeVersion": 1,
+            "config": {
+              "variable": "error"
+            },
+            "position": {
+              "x": 120,
+              "y": 520
+            }
+          },
+          {
+            "id": "error_reply",
+            "type": "action.send_message",
+            "typeVersion": 1,
+            "config": {
+              "message": {
+                "mode": "normal",
+                "content": "❌ {error}"
+              },
+              "target": "reply",
+              "ephemeral": true
+            },
+            "position": {
+              "x": 440,
+              "y": 520
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": {
+              "node": "option_number",
+              "port": "option"
+            },
+            "to": {
+              "node": "trigger",
+              "port": "options"
+            }
+          },
+          {
+            "from": {
+              "node": "trigger",
+              "port": "next"
+            },
+            "to": {
+              "node": "step1",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "step1",
+              "port": "next"
+            },
+            "to": {
+              "node": "step2",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "error",
+              "port": "next"
+            },
+            "to": {
+              "node": "error_reply",
+              "port": "in"
+            }
+          }
+        ]
+      }
     }
   ]
 }

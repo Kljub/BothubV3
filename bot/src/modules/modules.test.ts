@@ -514,3 +514,44 @@ test('music: plugin streams carry their secret headers and are never shown', asy
   assert.equal(trackLink({ ...base, url: 'ytsearch1:Daft Punk - Get Lucky audio' }), '**Daft Punk - Get Lucky**', 'search terms are no links');
   assert.equal(trackLink({ ...base, url: 'https://youtu.be/x' }), '[Daft Punk - Get Lucky](https://youtu.be/x)');
 });
+
+test('rss and bluesky: feeds parsed, only unseen entries', async () => {
+  const { parseRss, unseen, parseBluesky, plain } = await import('./feeds-extra.js');
+  const rss = `<?xml version="1.0"?><rss><channel><title>News &amp; More</title>
+    <item><title><![CDATA[Second <b>post</b>]]></title><link>https://ex.org/2</link><guid>g2</guid><pubDate>Tue, 06 Oct 2026 10:00:00 GMT</pubDate>
+      <description>&lt;p&gt;Hello &lt;img src="https://ex.org/a.png"&gt; world&lt;/p&gt;</description><dc:creator>Ann</dc:creator></item>
+    <item><title>First</title><link>https://ex.org/1</link><guid>g1</guid><pubDate>Mon, 05 Oct 2026 10:00:00 GMT</pubDate></item>
+  </channel></rss>`;
+  const f = parseRss(rss);
+  assert.equal(f.title, 'News & More');
+  assert.deepEqual(f.items.map((i) => i.id), ['g2', 'g1'], 'newest first');
+  assert.deepEqual([f.items[0]!.title, f.items[0]!.url, f.items[0]!.author, f.items[0]!.summary, f.items[0]!.image], ['Second post', 'https://ex.org/2', 'Ann', 'Hello world', 'https://ex.org/a.png']);
+  const atom = parseRss('<feed xmlns="http://www.w3.org/2005/Atom"><title>Blog</title><entry><id>tag:1</id><title>Hi</title><link rel="alternate" href="https://b.org/hi"/><updated>2026-10-05T10:00:00Z</updated><summary>Short</summary><author><name>Bo</name></author></entry></feed>');
+  assert.deepEqual([atom.title, atom.items[0]!.id, atom.items[0]!.url, atom.items[0]!.author], ['Blog', 'tag:1', 'https://b.org/hi', 'Bo']);
+  assert.equal(unseen(f.items, undefined), null, 'first round: remember only');
+  assert.deepEqual(unseen(f.items, ['g1'])!.map((i) => i.id), ['g2']);
+  assert.equal(plain('a'.repeat(10), 5), 'aaaa…');
+  const posts = parseBluesky({ feed: [
+    { post: { uri: 'at://did:plc:x/app.bsky.feed.post/3abc', author: { handle: 'ann.bsky.social', displayName: 'Ann' }, record: { text: 'Hello Bluesky' }, embed: { images: [{ fullsize: 'https://cdn.bsky.app/i.jpg' }] } } },
+    { post: { uri: 'at://did:plc:y/app.bsky.feed.post/3def', author: { handle: 'bo.bsky.social' }, record: { text: 'Shared' } }, reason: { $type: 'app.bsky.feed.defs#reasonRepost' } },
+  ] }, 'ann.bsky.social');
+  assert.deepEqual(posts.map((p) => [p.url, p.repost, p.image]), [['https://bsky.app/profile/ann.bsky.social/post/3abc', false, 'https://cdn.bsky.app/i.jpg'], ['https://bsky.app/profile/bo.bsky.social/post/3def', true, '']]);
+});
+
+test('auto purge, role prefix, day and night, bookmarks: the rules', async () => {
+  const { purgeable, prefixedName, basename, phaseAt } = await import('./server-auto.js');
+  const { bookmarkLines } = await import('./bookmarks.js');
+  const now = 1_000_000_000;
+  const msgs = [{ createdTimestamp: now - 10, pinned: false }, { createdTimestamp: now - 5000, pinned: false }, { createdTimestamp: now - 5000, pinned: true }];
+  assert.equal(purgeable(msgs, now - 1000, true).length, 1, 'old, not pinned');
+  assert.equal(purgeable(msgs, now - 1000, false).length, 2);
+  const entries = [{ role: 'mod', prefix: '[Mod]' }, { role: 'vip', prefix: '⭐' }];
+  assert.equal(prefixedName('Ann', ['vip', 'mod'], entries), '[Mod] Ann', 'first entry wins');
+  assert.equal(prefixedName('[Mod] Ann', ['vip'], entries), '⭐ Ann', 'old prefix replaced');
+  assert.equal(prefixedName('⭐ Ann', [], entries), 'Ann', 'no role: no prefix');
+  assert.equal(basename('[Mod] ⭐ Ann', ['[Mod]', '⭐']), 'Ann');
+  assert.equal(prefixedName('A'.repeat(40), ['mod'], entries).length, 32);
+  assert.deepEqual([phaseAt('06:59:00', '07:00', '20:00'), phaseAt('07:00:00', '07:00', '20:00'), phaseAt('20:00:00', '07:00', '20:00')], ['night', 'day', 'night']);
+  assert.deepEqual([phaseAt('23:00:00', '22:00', '06:00'), phaseAt('03:00:00', '22:00', '06:00'), phaseAt('12:00:00', '22:00', '06:00')], ['day', 'day', 'night'], 'over midnight');
+  assert.match(bookmarkLines([{ url: 'https://discord.com/channels/1/2/3', author: 'Ann', text: 'Hello', at: 1_700_000_000_000 }]), /^\*\*1\.\*\* Ann: Hello · \[open\]\(https:\/\/discord\.com\/channels\/1\/2\/3\) · <t:1700000000:R>$/);
+});

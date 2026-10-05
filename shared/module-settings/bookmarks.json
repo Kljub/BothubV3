@@ -1,0 +1,11 @@
+{
+  "module": "bookmarks",
+  "fields": [
+    {
+      "key": "dm",
+      "type": "bool",
+      "default": true,
+      "hint": true
+    }
+  ]
+}

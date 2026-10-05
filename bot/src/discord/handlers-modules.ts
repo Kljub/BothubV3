@@ -12,6 +12,7 @@ import { createSuggestion, decideSuggestion, levelFor } from '../modules/communi
 import { ModuleContext } from '../modules/context.js';
 import * as eco from '../modules/economy.js';
 import { afkOf, clearAfk, setAfk } from '../modules/afk.js';
+import { bookmark, bookmarkLines, bookmarksOf, removeBookmark } from '../modules/bookmarks.js';
 import { giveThanks, thanksOf, thanksRank, thanksTop, ThanksError } from '../modules/thanks.js';
 import type { DiscordData } from './handlers.js';
 
@@ -218,6 +219,35 @@ export function moduleHandlers(repo: Repo, botId: number): Map<string, Handler> 
           `INSERT INTO birthdays (bot_id, guild_id, user_id, month, day, year) VALUES (?, ?, ?, ?, ?, ?)
            ON CONFLICT (bot_id, guild_id, user_id) DO UPDATE SET month = excluded.month, day = excluded.day, year = excluded.year, last_announced_year = NULL`,
         ).run(botId, guild.id, userOf(run, node), month, day, year);
+      },
+    ],
+    // --- Bookmarks ---
+    [
+      'action.bookmark_message',
+      async (node, run) => {
+        const d = run.data as unknown as DiscordData;
+        const id = snowflake(run.str(node, 'message') || (run.vars.get('message.id') ?? ''), 'message');
+        const channel = d.channel;
+        if (!channel || !('messages' in channel) || !d.user) throw new GraphError('error.run.no_server');
+        const msg = await channel.messages.fetch(id).catch(() => null);
+        if (!msg) throw new GraphError('error.run.message_not_found', { value: id });
+        const r = await bookmark(ctx, msg, d.user);
+        run.setResult(node, '', r.count);
+        run.setResult(node, '.dm', r.dm ? 'true' : 'false');
+      },
+    ],
+    [
+      'action.bookmark_list',
+      (node, run) => {
+        const list = bookmarksOf(ctx, guildOf(run).id, userOf(run, node));
+        run.setResult(node, '', bookmarkLines(list, limitOf(run, node)) || 'No bookmarks yet. Right-click a message → Apps → Bookmark.');
+        run.setResult(node, '.count', list.length);
+      },
+    ],
+    [
+      'action.bookmark_remove',
+      (node, run) => {
+        if (!removeBookmark(ctx, guildOf(run).id, userOf(run, node), Math.trunc(Number(run.str(node, 'number')) || 0))) throw new GraphError('error.run.economy', { message: 'There is no bookmark with this number. See /bookmarks.' });
       },
     ],
     // --- AFK ---

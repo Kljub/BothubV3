@@ -10,6 +10,7 @@ import { allow, assignable, send, warn } from './guard.js';
 import { pollFeeds } from './feeds.js';
 import { lotteryDraw } from './economy.js';
 import { postFreeGames } from './freegames.js';
+import { autoPurge, dayNight } from './server-auto.js';
 
 // ---------- pure helpers ----------
 
@@ -97,6 +98,8 @@ export class ModuleTimers {
       await this.birthdays(guilds, local);
       await this.qotd(guilds, local);
       await lotteryDraw(this.ctx, guilds, local);
+      await dayNight(this.ctx, guilds, local);
+      if (Math.floor(now / 300_000) !== Math.floor((now - 30_000) / 300_000)) await autoPurge(this.ctx, guilds, now);
       if (this.ctx.enabled('free-games')) {
         const check = Math.floor(now / 1_800_000) !== Math.floor((now - 30_000) / 1_800_000);
         for (const g of guilds) await postFreeGames(this.ctx, g, local, check);

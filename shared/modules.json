@@ -68,6 +68,26 @@
       "icon": "📄"
     },
     {
+      "key": "bookmarks",
+      "category": "utility",
+      "icon": "🔖"
+    },
+    {
+      "key": "auto-purge",
+      "category": "utility",
+      "icon": "🧹"
+    },
+    {
+      "key": "role-prefix",
+      "category": "utility",
+      "icon": "🏷️"
+    },
+    {
+      "key": "day-night",
+      "category": "utility",
+      "icon": "🌗"
+    },
+    {
       "key": "automod",
       "category": "security",
       "icon": "🤖"
@@ -267,6 +287,16 @@
       "key": "reddit-notifs",
       "category": "social",
       "icon": "🟠"
+    },
+    {
+      "key": "bluesky-notifs",
+      "category": "social",
+      "icon": "🦋"
+    },
+    {
+      "key": "rss-notifs",
+      "category": "social",
+      "icon": "📰"
     },
     {
       "key": "kick-notifs",

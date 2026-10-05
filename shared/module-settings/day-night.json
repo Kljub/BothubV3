@@ -1,0 +1,49 @@
+{
+  "module": "day-night",
+  "fields": [
+    {
+      "key": "dayTime",
+      "type": "text",
+      "max": 5,
+      "default": "07:00",
+      "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+      "hint": true
+    },
+    {
+      "key": "nightTime",
+      "type": "text",
+      "max": 5,
+      "default": "20:00",
+      "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+      "hint": true
+    },
+    {
+      "key": "dayIcon",
+      "type": "text",
+      "max": 500,
+      "pattern": "^(https://\\S+)?$",
+      "hint": true
+    },
+    {
+      "key": "nightIcon",
+      "type": "text",
+      "max": 500,
+      "pattern": "^(https://\\S+)?$",
+      "hint": true
+    },
+    {
+      "key": "dayBanner",
+      "type": "text",
+      "max": 500,
+      "pattern": "^(https://\\S+)?$",
+      "hint": true
+    },
+    {
+      "key": "nightBanner",
+      "type": "text",
+      "max": 500,
+      "pattern": "^(https://\\S+)?$",
+      "hint": true
+    }
+  ]
+}
