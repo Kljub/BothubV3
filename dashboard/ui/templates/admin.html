@@ -531,12 +531,12 @@
     </summary>
     <form class="form settings-expand-body secret-form" hx-post="{{$.Integ}}/{{.Key}}" hx-target="{{$.Target}}" hx-swap="innerHTML">
       <div class="secret-grid">
-        <label class="field">Client ID
+        <label class="field">{{or .IDLabel "Client ID"}}
           <input type="password" name="client_id" autocomplete="off" maxlength="255" class="mono" spellcheck="false" {{if .ID}}placeholder="{{t "admin.secrets.keep_value"}}"{{else}}required{{end}}>
           <span class="hint mono">{{.IDKey}}</span>
         </label>
-        <label class="field">Client Secret
-          <input type="password" name="client_secret" autocomplete="new-password" maxlength="255" class="mono" spellcheck="false" {{if .Secret}}placeholder="{{t "admin.secrets.keep_value"}}"{{else}}required{{end}}>
+        <label class="field">{{or .SecretLabel "Client Secret"}}
+          <input type="password" name="client_secret" autocomplete="new-password" maxlength="2048" class="mono" spellcheck="false" {{if .Secret}}placeholder="{{t "admin.secrets.keep_value"}}"{{else}}required{{end}}>
           <span class="hint mono">{{.SecretKey}}</span>
         </label>
         {{with .RedirectURI}}

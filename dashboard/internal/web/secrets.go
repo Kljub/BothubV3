@@ -1,6 +1,7 @@
 package web
 
 import (
+	"cmp"
 	"encoding/json"
 	"net/http"
 	"slices"
@@ -69,6 +70,9 @@ type integration struct {
 	// RedirectPath: OAuth callback of this BotHub (shown as full URL to copy
 	// into the provider's console); empty when the API needs none.
 	RedirectPath string
+	// IDLabel, SecretLabel: field names when they are not "Client ID" and
+	// "Client Secret" (e.g. account ID and access token).
+	IDLabel, SecretLabel string
 }
 
 var integrations = []integration{
@@ -80,7 +84,11 @@ var integrations = []integration{
 		RedirectPath: "/auth/oauth/github/callback"},
 	{Key: "kick", Name: "Kick", Icon: "🟢", Console: "https://kick.com/settings/developer", IDKey: "KICK_CLIENT_ID", SecretKey: "KICK_CLIENT_SECRET"},
 	// Song recognition of the music module (/radio-song), the service behind AHA Music.
-	{Key: "acrcloud", Name: "ACRCloud", Icon: "🎧", Console: "https://console.acrcloud.com/", IDKey: "ACRCLOUD_ACCESS_KEY", SecretKey: "ACRCLOUD_ACCESS_SECRET"},
+	{Key: "acrcloud", Name: "ACRCloud", Icon: "🎧", Console: "https://console.acrcloud.com/", IDKey: "ACRCLOUD_ACCESS_KEY", SecretKey: "ACRCLOUD_ACCESS_SECRET",
+		IDLabel: "Access Key", SecretLabel: "Access Secret"},
+	// Instagram notifications (Graph API, Business Discovery): the own Business account reads other public accounts.
+	{Key: "instagram", Name: "Instagram", Icon: "📸", Console: "https://developers.facebook.com/apps/", IDKey: "INSTAGRAM_ACCOUNT_ID", SecretKey: "INSTAGRAM_ACCESS_TOKEN",
+		IDLabel: "Instagram Account ID", SecretLabel: "Access Token"},
 }
 
 // integrationRow: the stored client ID and secret (nil when not set).
@@ -240,8 +248,8 @@ func (s *Server) handleIntegrationSave(w http.ResponseWriter, r *http.Request, p
 		return
 	}
 	for _, f := range []struct{ form, key, desc string }{
-		{"client_id", in.IDKey, in.Name + " Client ID"},
-		{"client_secret", in.SecretKey, in.Name + " Client Secret"},
+		{"client_id", in.IDKey, in.Name + " " + cmp.Or(in.IDLabel, "Client ID")},
+		{"client_secret", in.SecretKey, in.Name + " " + cmp.Or(in.SecretLabel, "Client Secret")},
 	} {
 		var value *string
 		if v := strings.TrimSpace(r.PostFormValue(f.form)); v != "" {

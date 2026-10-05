@@ -1,0 +1,64 @@
+{
+  "module": "instagram-notifs",
+  "fields": [
+    {
+      "key": "accounts",
+      "type": "list",
+      "max": 25,
+      "titleField": "username",
+      "hint": true,
+      "item": [
+        {
+          "key": "username",
+          "type": "text",
+          "max": 31,
+          "pattern": "^@?[A-Za-z0-9._]{1,30}$",
+          "required": true,
+          "hint": true
+        },
+        {
+          "key": "channel",
+          "type": "channel",
+          "channelTypes": [
+            "text",
+            "announcement"
+          ],
+          "required": true
+        },
+        {
+          "key": "mentionRoles",
+          "type": "roles",
+          "max": 5
+        },
+        {
+          "key": "message",
+          "type": "message",
+          "default": {
+            "mode": "embed",
+            "title": "{name} (@{username})",
+            "description": "{caption}\n\n{url}",
+            "color": "#e1306c",
+            "image": "{image}",
+            "footer": "Instagram"
+          },
+          "vars": [
+            "server",
+            "server.id",
+            "members",
+            "username",
+            "name",
+            "caption",
+            "url",
+            "image",
+            "type",
+            "avatar"
+          ]
+        }
+      ],
+      "unique": [
+        "username",
+        "channel"
+      ]
+    }
+  ]
+}

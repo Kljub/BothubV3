@@ -568,3 +568,16 @@ test('payroll: per currency, roles added up or the highest only', async () => {
   assert.deepEqual([...payFor(['a', 'b'], entries, 'highest')], [['', 300], ['gems', 5]]);
   assert.equal(payFor(['x'], entries, 'sum').size, 0);
 });
+
+test('instagram: business discovery posts parsed, video uses the thumbnail', async () => {
+  const { parseInstagram } = await import('./feeds-extra.js');
+  const posts = parseInstagram({ business_discovery: { username: 'nasa', name: 'NASA', profile_picture_url: 'https://cdn/p.jpg', media: { data: [
+    { id: '2', caption: 'Moon', media_type: 'VIDEO', media_url: 'https://cdn/v.mp4', thumbnail_url: 'https://cdn/t.jpg', permalink: 'https://www.instagram.com/p/B/' },
+    { id: '1', media_type: 'CAROUSEL_ALBUM', media_url: 'https://cdn/a.jpg', permalink: 'https://www.instagram.com/p/A/' },
+    { id: '0', media_type: 'IMAGE' },
+  ] } } });
+  assert.equal(posts.length, 2);
+  assert.deepEqual(posts[0], { id: '2', username: 'nasa', name: 'NASA', caption: 'Moon', url: 'https://www.instagram.com/p/B/', image: 'https://cdn/t.jpg', type: 'video', avatar: 'https://cdn/p.jpg' });
+  assert.equal(posts[1]!.type, 'album');
+  assert.deepEqual(parseInstagram({ error: { code: 190 } }), []);
+});

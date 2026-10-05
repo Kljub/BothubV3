@@ -4769,5 +4769,19 @@
   "modset.economy.payrollMode.sum": "Pay all of them",
   "modset.economy.payrollMode.highest": "Pay the highest only",
   "modset.economy.payrollChannel": "Announce in channel (optional)",
-  "modset.economy.payrollChannel_hint": "A short summary after each payday."
+  "modset.economy.payrollChannel_hint": "A short summary after each payday.",
+  "module.instagram-notifs.name": "Instagram",
+  "module.instagram-notifs.description": "Posts new Instagram posts of Business and Creator accounts",
+  "modset.instagram-notifs.accounts": "Accounts",
+  "modset.instagram-notifs.accounts_hint": "Checked every 15 minutes through the official Instagram Graph API. Needs the Instagram integration (Admin → API / Secrets). Only Business and Creator accounts; stories and personal accounts are not available.",
+  "modset.instagram-notifs.accounts.username": "Instagram username",
+  "modset.instagram-notifs.accounts.username_hint": "e.g. nasa (without @)",
+  "modset.instagram-notifs.accounts.channel": "Channel",
+  "modset.instagram-notifs.accounts.mentionRoles": "Ping roles",
+  "modset.instagram-notifs.accounts.message": "Message",
+  "modset.var.username": "Username",
+  "modset.var.caption": "Caption of the post",
+  "modset.var.type": "Kind (image, video, album)",
+  "admin.integrations.instagram_hint": "Needs your own Instagram Business or Creator account linked to a Facebook page and a Meta app with the permissions instagram_basic and pages_show_list. Account ID: the Instagram business account ID (Graph API Explorer: me/accounts → instagram_business_account). Access token: a token that does not expire (system user token of the Business Manager, or the page token from a long-lived user token).",
+  "admin.integrations.acrcloud_hint": "Create an audio recognition project (music bucket) in the ACRCloud console and copy its Access Key and Access Secret:"
 }

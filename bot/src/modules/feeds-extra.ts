@@ -7,7 +7,7 @@ import { lookup } from 'node:dns/promises';
 import type { Guild } from 'discord.js';
 import { privateAddress } from '../sdk/discord-api.js';
 import { baseVars, type MessageConfig, type ModuleContext } from './context.js';
-import { send } from './guard.js';
+import { send, warn } from './guard.js';
 import { failed, messageOf, notification, recovered, target, waiting } from './feeds.js';
 
 const UA = 'BotHub (Discord bot; +https://github.com/Kljub/BothubV3)';
@@ -185,6 +185,78 @@ export async function bluesky(ctx: ModuleContext, guilds: Guild[]): Promise<void
       const vars = { ...baseVars(t.guild, null), handle: p.handle, name: p.name, text: p.text, url: p.url, image: p.image, avatar: p.avatar, repost: p.repost ? 'true' : 'false' };
       const payload = notification(messageOf(a.message, BSKY_DEFAULT), vars, t.roles);
       if (!payload || !(await send(ctx, 'bluesky-notifs', t.channel, payload))) break;
+      remember([p.id]);
+    }
+  }
+}
+
+// ---------- Instagram (Graph API, Business Discovery) ----------
+// Public posts of other Instagram Business or Creator accounts, read through
+// the bot owner's own Business account (Admin → API / Secrets: account ID and
+// access token). Personal accounts and stories are not available there.
+
+export interface InstaPost { id: string; username: string; name: string; caption: string; url: string; image: string; type: string; avatar: string }
+
+/** Posts of a business_discovery answer, newest first. */
+export function parseInstagram(json: unknown): InstaPost[] {
+  const d = (json as { business_discovery?: Record<string, unknown> } | null)?.business_discovery;
+  if (!d) return [];
+  const media = ((d.media as { data?: unknown[] } | undefined)?.data ?? []) as Record<string, unknown>[];
+  const str = (v: unknown) => (typeof v === 'string' ? v : '');
+  return media.filter((m) => str(m.id) && str(m.permalink)).map((m) => {
+    const type = str(m.media_type).toLowerCase();
+    return {
+      id: str(m.id), username: str(d.username), name: str(d.name) || str(d.username),
+      caption: str(m.caption).slice(0, 1500), url: str(m.permalink),
+      image: type === 'video' ? str(m.thumbnail_url) : str(m.media_url), type: type === 'carousel_album' ? 'album' : type || 'image',
+      avatar: str(d.profile_picture_url),
+    };
+  });
+}
+
+const INSTA_DEFAULT: MessageConfig = { mode: 'text', content: '📸 **{name}** posted on Instagram\n{url}' };
+interface InstaEntry { username: string; channel: unknown; mentionRoles: unknown; message: unknown }
+const INSTA_FIELDS = 'username,name,profile_picture_url,media.limit(10){id,caption,media_type,media_url,thumbnail_url,permalink,timestamp}';
+
+export async function instagram(ctx: ModuleContext, guilds: Guild[]): Promise<void> {
+  const list = ctx.config<{ accounts: InstaEntry[] }>('instagram-notifs').accounts ?? [];
+  if (!list.length) return;
+  const account = ctx.secret('INSTAGRAM_ACCOUNT_ID');
+  const token = ctx.secret('INSTAGRAM_ACCESS_TOKEN');
+  if (!account || !/^\d{5,30}$/.test(account) || !token) {
+    warn(ctx, 'WAR-2008', { module: 'instagram-notifs', problem: 'the Instagram integration is not set up (Admin → API / Secrets: account ID and access token)' });
+    return;
+  }
+  let budget = 20; // calls per 15-minute round; the Graph API allows about 200 per hour
+  for (const a of list) {
+    const username = String(a.username ?? '').trim().replace(/^@/, '').toLowerCase();
+    if (!/^[a-z0-9._]{1,30}$/.test(username)) continue;
+    const t = target(guilds, a.channel, a.mentionRoles);
+    if (!t || waiting(ctx, 'instagram-notifs', t.guild.id, username)) continue;
+    if (budget-- <= 0) break;
+    const url = `https://graph.facebook.com/v23.0/${account}?fields=${encodeURIComponent(`business_discovery.username(${username}){${INSTA_FIELDS}}`)}`;
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' }, signal: AbortSignal.timeout(10_000) }).catch(() => null);
+    if (!res?.ok) {
+      const body = (await res?.json().catch(() => null)) as { error?: { code?: number; message?: string } } | null;
+      // 190: token expired or wrong; 4/17/32: rate limit; 110 / 100: account not found or not a business account
+      if (body?.error?.code === 190) warn(ctx, 'WAR-2008', { module: 'instagram-notifs', problem: 'the Instagram access token expired or is wrong' });
+      failed(ctx, 'instagram-notifs', t.guild.id, username, `HTTP ${res?.status ?? 'error'}${body?.error?.code ? ` code ${body.error.code}` : ''}`);
+      continue;
+    }
+    recovered(ctx, 'instagram-notifs', t.guild.id, username);
+    const posts = parseInstagram(await res.json().catch(() => null));
+    const key = `seen:${t.channel.id}:${username}`;
+    const seen = ctx.getState<string[]>('instagram-notifs', t.guild.id, key);
+    const fresh = unseen(posts, seen);
+    const remember = (ids: string[]) => ctx.setState('instagram-notifs', t.guild.id, key, [...new Set([...ids, ...(seen ?? [])])].slice(0, 100));
+    if (fresh === null) {
+      remember(posts.map((p) => p.id));
+      continue;
+    }
+    for (const p of fresh) {
+      const vars = { ...baseVars(t.guild, null), username: p.username, name: p.name, caption: p.caption, url: p.url, image: p.image, type: p.type, avatar: p.avatar };
+      const payload = notification(messageOf(a.message, INSTA_DEFAULT), vars, t.roles);
+      if (!payload || !(await send(ctx, 'instagram-notifs', t.channel, payload))) break;
       remember([p.id]);
     }
   }

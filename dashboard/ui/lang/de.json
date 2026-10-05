@@ -4769,5 +4769,19 @@
   "modset.economy.payrollMode.sum": "Alle auszahlen",
   "modset.economy.payrollMode.highest": "Nur die höchste auszahlen",
   "modset.economy.payrollChannel": "Im Kanal ankündigen (optional)",
-  "modset.economy.payrollChannel_hint": "Eine kurze Zusammenfassung nach jedem Zahltag."
+  "modset.economy.payrollChannel_hint": "Eine kurze Zusammenfassung nach jedem Zahltag.",
+  "module.instagram-notifs.name": "Instagram",
+  "module.instagram-notifs.description": "Postet neue Instagram-Beiträge von Business- und Creator-Accounts",
+  "modset.instagram-notifs.accounts": "Accounts",
+  "modset.instagram-notifs.accounts_hint": "Prüfung alle 15 Minuten über die offizielle Instagram Graph API. Braucht die Instagram-Integration (Admin → API / Secrets). Nur Business- und Creator-Accounts; Storys und private Accounts gibt es dort nicht.",
+  "modset.instagram-notifs.accounts.username": "Instagram-Benutzername",
+  "modset.instagram-notifs.accounts.username_hint": "z. B. nasa (ohne @)",
+  "modset.instagram-notifs.accounts.channel": "Channel",
+  "modset.instagram-notifs.accounts.mentionRoles": "Rollen anpingen",
+  "modset.instagram-notifs.accounts.message": "Nachricht",
+  "modset.var.username": "Benutzername",
+  "modset.var.caption": "Text des Beitrags",
+  "modset.var.type": "Art (image, video, album)",
+  "admin.integrations.instagram_hint": "Braucht einen eigenen Instagram-Business- oder Creator-Account, verknüpft mit einer Facebook-Seite, und eine Meta-App mit den Berechtigungen instagram_basic und pages_show_list. Account-ID: die ID des Instagram-Business-Accounts (Graph API Explorer: me/accounts → instagram_business_account). Access Token: ein Token, das nicht abläuft (System-User-Token im Business Manager oder Seiten-Token aus einem langlebigen User-Token).",
+  "admin.integrations.acrcloud_hint": "Lege in der ACRCloud-Konsole ein Projekt zur Audio-Erkennung (Music Bucket) an und kopiere Access Key und Access Secret:"
 }

@@ -8,7 +8,7 @@ import type { Guild, MessageCreateOptions, SendableChannels } from 'discord.js';
 import { log } from '../core/log.js';
 import { baseVars, buildMessage, idIn, idsIn, type MessageConfig, type ModuleContext } from './context.js';
 import { send, warn } from './guard.js';
-import { bluesky, rss } from './feeds-extra.js';
+import { bluesky, instagram, rss } from './feeds-extra.js';
 
 const UA = 'BotHub (Discord bot; +https://github.com/Kljub/BotHub)';
 const TIMEOUT = 10_000;
@@ -256,6 +256,7 @@ export async function pollFeeds(ctx: ModuleContext, guilds: Guild[], now: number
     if (ctx.enabled('rss-notifs')) await run('rss-notifs', () => rss(ctx, guilds));
     if (ctx.enabled('bluesky-notifs')) await run('bluesky-notifs', () => bluesky(ctx, guilds));
   }
+  if (every(now, 900_000) && ctx.enabled('instagram-notifs')) await run('instagram-notifs', () => instagram(ctx, guilds));
 }
 
 // ---------- Twitch ----------

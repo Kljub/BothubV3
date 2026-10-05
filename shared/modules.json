@@ -294,6 +294,11 @@
       "icon": "🦋"
     },
     {
+      "key": "instagram-notifs",
+      "category": "social",
+      "icon": "📸"
+    },
+    {
       "key": "rss-notifs",
       "category": "social",
       "icon": "📰"
