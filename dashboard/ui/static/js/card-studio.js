@@ -780,16 +780,33 @@
       gallery.showModal();
     });
 
+    // Saves the card; true when it is stored. Changes are also saved on
+    // their own 2 seconds after the last edit.
+    let saving = null;
     async function save() {
+      clearTimeout(autoTimer);
+      autoTimer = null;
+      if (saving) await saving;
       status.textContent = t('saving');
-      try {
-        await api('PUT', `/api/v1/bots/${bot}/cards/${cardId}`, { name: nameInput.value.trim(), kind: kindSelect.value, design });
-        dirty = false;
-        status.textContent = t('saved');
-      } catch (ex) {
-        status.textContent = `${t('save_failed')} (${ex.message})`;
-      }
+      const sent = JSON.stringify(design);
+      saving = api('PUT', `/api/v1/bots/${bot}/cards/${cardId}`, { name: nameInput.value.trim(), kind: kindSelect.value, design: JSON.parse(sent) })
+        .then(() => {
+          if (JSON.stringify(design) === sent) dirty = false;
+          status.textContent = dirty ? t('unsaved') : t('saved');
+          return true;
+        })
+        .catch((ex) => {
+          status.textContent = `${t('save_failed')} (${ex.message})`;
+          return false;
+        });
+      const ok = await saving;
+      saving = null;
+      return ok;
     }
+    let autoTimer = null;
+    setInterval(() => {
+      if (dirty && !saving && !autoTimer) autoTimer = setTimeout(() => { autoTimer = null; if (dirty) save(); }, 2000);
+    }, 500);
     root.querySelector('[data-cs-save]').addEventListener('click', save);
 
     // "Send a test": pick a server and channel; the bot posts the saved card there.
@@ -828,7 +845,11 @@
       const out = testPanel.querySelector('[data-cs-test-status]');
       const channelId = testPanel.querySelector('[data-cs-test-channel]').value;
       if (!channelId) return;
-      if (dirty) await save();
+      // The bot draws the stored card: save first, and never send an old one.
+      if (dirty && !(await save())) {
+        out.textContent = `${t('test_failed')} (${t('save_failed')})`;
+        return;
+      }
       try {
         await api('POST', `/api/v1/bots/${bot}/cards/${cardId}/send`, { channelId });
         out.textContent = t('test_sent');
