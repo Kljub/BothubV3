@@ -1,0 +1,72 @@
+/* bh-cards: Card Designer (card list) and Card Studio (editor). */
+
+.cards-new { gap: 8px; }
+.cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; margin-top: 12px; }
+.card-tile { display: flex; flex-direction: column; overflow: hidden; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+.card-thumb { display: block; padding: 10px; background: repeating-conic-gradient(var(--surface-2) 0 25%, var(--surface) 0 50%) 0 0 / 16px 16px; }
+.card-thumb canvas { display: block; width: 100%; height: auto; border-radius: 6px; }
+.card-tile-foot { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--border); }
+.card-tile-text { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.card-tile-text strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card-tile-text .hint { margin: 0; }
+
+/* Studio */
+.card-studio { display: flex; flex-direction: column; gap: 12px; min-height: calc(100vh - 120px); }
+.cs-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+.cs-name { width: 220px; font-weight: 600; }
+.cs-top select { width: auto; }
+.cs-spacer { flex: 1; }
+.cs-body { display: grid; grid-template-columns: 240px minmax(0, 1fr) 300px; gap: 12px; flex: 1; min-height: 0; }
+.cs-left, .cs-right { padding: 12px; overflow-y: auto; max-height: calc(100vh - 200px); background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+.cs-left h4, .cs-group h4 { margin: 0 0 8px; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-2); }
+.cs-layers { display: flex; flex-direction: column; gap: 4px; margin: 0 0 16px; padding: 0; list-style: none; }
+.cs-layer { display: flex; align-items: center; gap: 8px; padding: 6px 8px; font-size: 13px; background: var(--surface-2); border: 1px solid transparent; border-radius: 8px; cursor: pointer; }
+.cs-layer:hover { border-color: var(--border-strong); }
+.cs-layer.is-selected { border-color: #22c55e; background: color-mix(in srgb, #22c55e 10%, var(--surface-2)); }
+.cs-layer.is-hidden .cs-layer-name { opacity: 0.45; text-decoration: line-through; }
+.cs-layer-type { display: inline-grid; place-items: center; width: 20px; height: 20px; font-size: 11px; font-weight: 700; color: var(--text-2); background: var(--surface); border-radius: 5px; }
+.cs-layer-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cs-layer-actions { display: none; gap: 2px; }
+.cs-layer:hover .cs-layer-actions, .cs-layer.is-selected .cs-layer-actions { display: inline-flex; }
+.cs-layer-actions button { width: 22px; height: 22px; padding: 0; font-size: 12px; color: var(--text-2); background: transparent; border: 0; border-radius: 4px; cursor: pointer; }
+.cs-layer-actions button:hover { color: var(--text); background: var(--surface); }
+.cs-layer-bg { font-style: italic; }
+.cs-add { display: flex; flex-direction: column; gap: 4px; }
+.cs-add button { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 7px 10px; font: inherit; font-size: 13px; text-align: left; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; }
+.cs-add button:hover { border-color: var(--border-strong); }
+.cs-add .hint { margin: 0; font-size: 11px; }
+.cs-stage { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-width: 0; padding: 16px; background: repeating-conic-gradient(var(--surface-2) 0 25%, var(--bg) 0 50%) 0 0 / 20px 20px; border: 1px solid var(--border); border-radius: 12px; }
+.cs-canvas-wrap { position: relative; width: 100%; max-width: 1100px; }
+.cs-canvas-wrap canvas { display: block; width: 100%; height: auto; box-shadow: 0 10px 30px rgb(0 0 0 / 0.35); }
+.cs-overlay { position: absolute; inset: 0; cursor: default; touch-action: none; }
+.cs-box { position: absolute; border: 2px solid #22c55e; cursor: move; }
+.cs-box-label { position: absolute; top: -22px; left: -2px; padding: 1px 6px; font-size: 11px; font-weight: 600; color: #04130a; background: #22c55e; border-radius: 4px 4px 4px 0; white-space: nowrap; }
+.cs-handle { position: absolute; width: 10px; height: 10px; background: #fff; border: 2px solid #22c55e; border-radius: 2px; }
+.cs-nw { left: -6px; top: -6px; cursor: nwse-resize; }
+.cs-n { left: calc(50% - 5px); top: -6px; cursor: ns-resize; }
+.cs-ne { right: -6px; top: -6px; cursor: nesw-resize; }
+.cs-e { right: -6px; top: calc(50% - 5px); cursor: ew-resize; }
+.cs-se { right: -6px; bottom: -6px; cursor: nwse-resize; }
+.cs-s { left: calc(50% - 5px); bottom: -6px; cursor: ns-resize; }
+.cs-sw { left: -6px; bottom: -6px; cursor: nesw-resize; }
+.cs-w { left: -6px; top: calc(50% - 5px); cursor: ew-resize; }
+.cs-help { margin: 0; text-align: center; }
+.cs-group { padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid var(--border); }
+.cs-group:last-of-type { border-bottom: 0; }
+.cs-field { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 8px; font-size: 12px; color: var(--text-2); }
+.cs-field > span { flex: 0 0 100%; }
+.cs-field input, .cs-field select, .cs-field textarea { flex: 1; min-width: 0; font-size: 13px; }
+.cs-field textarea { min-height: 70px; resize: vertical; }
+.cs-field-bool { flex-wrap: nowrap; }
+.cs-field-bool > span { flex: 1; }
+.cs-field-bool input { flex: none; }
+.cs-field-color input[type="color"] { flex: none; width: 34px; height: 30px; padding: 2px; }
+.cs-vars { display: flex; flex-wrap: wrap; gap: 4px; margin: -2px 0 10px; }
+.cs-var { padding: 2px 6px; font: inherit; font-family: var(--mono, monospace); font-size: 11px; color: var(--text-2); background: var(--surface-2); border: 1px solid var(--border); border-radius: 5px; cursor: pointer; }
+.cs-var:hover { color: var(--text); border-color: var(--border-strong); }
+.cs-center { display: flex; gap: 6px; }
+
+@media (max-width: 1200px) {
+  .cs-body { grid-template-columns: 1fr; }
+  .cs-left, .cs-right { max-height: none; }
+}

@@ -18,7 +18,7 @@ export const FONTS = [
   { family: 'VT323', file: 'VT323', weights: { 400: 'Regular' } },
 ];
 
-export const LAYER_TYPES = ['text', 'avatar', 'image', 'shape', 'badge', 'bar'];
+export const LAYER_TYPES = ['text', 'avatar', 'image', 'shape', 'badge', 'bar', 'grid'];
 export const LIMITS = { minSize: 100, maxSize: 2048, maxLayers: 40, maxText: 300 };
 
 /** The weight a font really has nearest to the wanted one. */
@@ -295,6 +295,24 @@ export async function drawCard(ctx, design, opts = {}) {
       ctx.fillStyle = color(l.fill, '#5865f2');
       ctx.fill();
       drawText(ctx, { ...l, align: 'center', wrap: false, shrink: true, size: l.size ?? Math.round(h * 0.5), fillType: 'color' }, fill(l.text, vars).slice(0, 60), x + h / 3, y, w - (2 * h) / 3, h);
+    } else if (l.type === 'grid') {
+      // Rows from the text (one per line), cells split by " | " (e.g. a leaderboard variable).
+      const rows = fill(l.text, vars).split('\n').map((r) => r.split(' | ')).filter((r) => r.join('').trim() !== '').slice(0, 25);
+      if (rows.length) {
+        const cols = Math.max(...rows.map((r) => r.length));
+        const rh = h / rows.length;
+        rows.forEach((row, i) => {
+          if (l.stripes !== false && i % 2 === 1) {
+            ctx.fillStyle = color(l.stripe, 'rgba(255,255,255,0.06)');
+            ctx.fillRect(x, y + i * rh, w, rh);
+          }
+          row.forEach((cell, c) => {
+            const head = l.header && i === 0;
+            drawText(ctx, { ...l, weight: head ? 800 : l.weight ?? 500, size: l.size ?? Math.round(rh * 0.5), align: c === 0 ? 'left' : c === cols - 1 ? 'right' : 'center', wrap: false, color: head ? color(l.headColor, '#a78bfa') : l.color },
+              cell.trim(), x + (c * w) / cols + 10, y + i * rh, w / cols - 20, rh);
+          });
+        });
+      }
     } else if (l.type === 'bar') {
       const value = num(fill(l.value, vars), 0, 100, 0);
       const r = num(l.radius, 0, 1000, h / 2);
@@ -319,4 +337,5 @@ export const SAMPLE_VARS = {
   'user.created.ago': '3 years ago', 'account.days': '1100', 'member.days': '0',
   'second.name': 'Anna', 'second.avatar': '', level: '12', xp: '3400', 'xp.next': '5000', 'level.progress': '68', rank: '4',
   boosts: '7', milestone: '1200',
+  leaderboard: '#1 | Anna | 12,400\n#2 | Tom | 9,800\n#3 | Max | 7,150',
 };

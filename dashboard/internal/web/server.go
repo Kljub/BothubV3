@@ -149,6 +149,7 @@ func (s *Server) routes() http.Handler {
 	mux.Handle("GET /static/css/bothub.css", cacheStatic(http.HandlerFunc(s.serveMainCSS)))
 	mux.Handle("GET /static/", http.StripPrefix("/static/", cacheStatic(http.FileServerFS(s.static))))
 	mux.Handle("/api/", s.apiProxy())
+	mux.Handle("GET /cards/", cardFiles())
 
 	// Public pages.
 	mux.HandleFunc("GET /setup", s.handleSetupPage)
@@ -187,6 +188,7 @@ func (s *Server) routes() http.Handler {
 	mux.Handle("GET /bots", auth(s.handleBot))
 	mux.Handle("GET /bots/{section}", auth(s.handleBot))
 	mux.Handle("GET /bots/modules/{key}", auth(s.handleModuleItem("modules")))
+	mux.Handle("GET /bots/cards/{cid}", auth(s.handleCardStudio))
 	mux.Handle("GET /bots/plugins/{key}", auth(s.handleModuleItem("plugins")))
 	mux.Handle("GET /bots/commands/{name}", auth(s.handleCommandPage))
 	mux.Handle("GET /bots/builder/{cid}", auth(s.handleBuilderPage))
@@ -379,6 +381,10 @@ func (s *Server) apiProxy() http.Handler {
 		Rewrite: func(pr *httputil.ProxyRequest) {
 			pr.SetURL(target)
 			pr.SetXForwarded()
+			// The client address and agent are set here, never taken from the
+			// browser: the API uses them for sign-in limits and the IP blocklist.
+			pr.Out.Header.Set("X-BotHub-Client-IP", browserIP(pr.In))
+			pr.Out.Header.Set("X-BotHub-Client-Agent", pr.In.UserAgent())
 		},
 		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
 			slog.Error("api proxy", "path", r.URL.Path, "err", err)

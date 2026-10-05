@@ -45,6 +45,20 @@ func jsonIsland(v any) template.JS {
 }
 
 // editorTexts returns all builder.* translations for the editor script.
+// prefixTexts: every text whose key starts with one of the prefixes (for page scripts).
+func (s *Server) prefixTexts(locale string, prefixes ...string) map[string]string {
+	out := map[string]string{}
+	for _, k := range s.i18n.Keys("en") {
+		for _, pre := range prefixes {
+			if strings.HasPrefix(k, pre) {
+				out[k] = s.i18n.T(locale, k)
+				break
+			}
+		}
+	}
+	return out
+}
+
 func (s *Server) editorTexts(locale string) map[string]string {
 	out := map[string]string{}
 	for _, k := range s.i18n.Keys("en") {

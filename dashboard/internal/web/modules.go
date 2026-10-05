@@ -263,6 +263,14 @@ func (s *Server) handleModuleItem(kind string) authHandler {
 				}
 				data["MsgBuilder"] = mb
 			}
+			if info.Key == "card-designer" {
+				cards, err := s.cardsView(r, bot.ID)
+				if err != nil {
+					s.fail(w, r, p, err)
+					return
+				}
+				data["Cards"] = cards
+			}
 			if info.Key == "data-storage" {
 				storage, err := s.dataStorageView(r, bot.ID)
 				if err != nil {

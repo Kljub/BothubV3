@@ -10,7 +10,8 @@
         <a href="/select-bot/{{.ID}}" class="card-title">{{.Name}}</a>
         {{with .ApplicationID}}<span class="mono muted">{{.}}</span>{{end}}
       </div>
-      {{template "status_badge" .Status}}
+      {{/* Hover on the badge: how long the bot has been online. */}}
+      <span class="bot-card-badge"{{with uptime .}} title="{{t "bot.uptime" "time" .}}"{{end}}>{{template "status_badge" .Status}}</span>
     </header>
     {{with .StatusErrorKey}}<p class="status-text status-text-error">{{t .}}</p>
     {{else}}<p class="status-text status-text-{{.Status}}">{{t (printf "bot.status_text.%s" .Status)}}</p>{{end}}

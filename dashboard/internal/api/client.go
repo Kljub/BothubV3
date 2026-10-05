@@ -835,6 +835,27 @@ func (c *Client) SetModuleGroupsClosed(ctx context.Context, s Session, botID int
 	return err
 }
 
+// Card is an image card of the Card Designer; Design is the renderer's JSON.
+type Card struct {
+	ID        int64           `json:"id"`
+	Name      string          `json:"name"`
+	Kind      string          `json:"kind"`
+	Design    json.RawMessage `json:"design"`
+	UpdatedAt string          `json:"updatedAt"`
+}
+
+func (c *Client) Cards(ctx context.Context, s Session, botID int64) ([]Card, error) {
+	var out list[Card]
+	_, err := c.do(ctx, s, http.MethodGet, fmt.Sprintf("/api/v1/bots/%d/cards", botID), nil, &out)
+	return out.Items, err
+}
+
+func (c *Client) Card(ctx context.Context, s Session, botID, cardID int64) (Card, error) {
+	var out Card
+	_, err := c.do(ctx, s, http.MethodGet, fmt.Sprintf("/api/v1/bots/%d/cards/%d", botID, cardID), nil, &out)
+	return out, err
+}
+
 func (c *Client) ListBotModules(ctx context.Context, s Session, botID int64) ([]ModuleState, error) {
 	var out list[ModuleState]
 	_, err := c.do(ctx, s, http.MethodGet, fmt.Sprintf("/api/v1/bots/%d/modules", botID), nil, &out)

@@ -1,8 +1,10 @@
-{{define "title"}}{{if eq .Data.Kind "modules"}}{{t (printf "module.%s.name" .Data.Module.Key)}}{{else if eq .Data.Kind "command"}}/{{.Data.Command.Name}}{{else}}{{template "plugin_name" .Data.Plugin}}{{end}}{{end}}
+{{define "title"}}{{if eq .Data.Kind "card_studio"}}{{.Data.Studio.Card.Name}} · Card Studio{{else if eq .Data.Kind "modules"}}{{t (printf "module.%s.name" .Data.Module.Key)}}{{else if eq .Data.Kind "command"}}/{{.Data.Command.Name}}{{else}}{{template "plugin_name" .Data.Plugin}}{{end}}{{end}}
 
 {{define "content"}}
 {{$d := .Data}}
-{{if eq $d.Kind "modules"}}
+{{if eq $d.Kind "card_studio"}}
+{{template "card_studio" $d.Studio}}
+{{else if eq $d.Kind "modules"}}
 <div class="module-page module-group-{{$d.Category}}">
   <nav class="module-breadcrumb" aria-label="{{t "module_page.breadcrumb"}}">
     <a href="/bots/modules">{{t "module_page.breadcrumb"}}</a> › <span>{{t (printf "module.category.%s" $d.Category)}}</span> › <strong>{{t (printf "module.%s.name" $d.Module.Key)}}</strong>
@@ -18,6 +20,9 @@
   {{else if $d.MsgBuilder}}
   {{template "module_header_static" $d.Header}}
   {{template "message_builder" $d.MsgBuilder}}
+  {{else if $d.Cards}}
+  {{template "module_header" $d.Header}}
+  {{template "card_designer" $d.Cards}}
   {{else if $d.Storage}}
   {{template "module_header" $d.Header}}
   {{template "data_storage" $d.Storage}}

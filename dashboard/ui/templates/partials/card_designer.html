@@ -1,0 +1,89 @@
+{{/* Card Designer: the bot's cards (previews drawn in the browser with the
+     shared renderer) and the Card Studio. Scripts: js/card-studio.js (layout). */}}
+
+{{define "card_designer"}}
+<section class="box" data-cards data-bot="{{.BotID}}">
+  <header class="box-head">
+    <h2>{{t "cards.list.title"}}</h2>
+    <form class="inline-form cards-new" data-card-new>
+      <input name="name" required maxlength="60" placeholder="{{t "cards.new.name"}}" aria-label="{{t "cards.new.name"}}">
+      <select name="kind" aria-label="{{t "cards.kind"}}">
+        {{range .Kinds}}<option value="{{.}}">{{t (printf "cards.kind.%s" .)}}</option>{{end}}
+      </select>
+      <button type="submit" class="btn btn-primary btn-sm">+ {{t "cards.new.create"}}</button>
+    </form>
+  </header>
+  <div class="box-body">
+    <p class="hint">{{t "cards.list.hint"}}</p>
+    <div id="cards-error"></div>
+    {{if .Items}}
+    <div class="cards-grid">
+      {{range .Items}}
+      <article class="card-tile" data-card-id="{{.ID}}">
+        <a class="card-thumb" href="/bots/cards/{{.ID}}" aria-label="{{t "cards.open"}}: {{.Name}}"><canvas data-card-preview data-design="{{.DesignJSON}}"></canvas></a>
+        <div class="card-tile-foot">
+          <span class="card-tile-text"><strong>{{.Name}}</strong><span class="hint">{{t (printf "cards.kind.%s" .Kind)}} · #{{.ID}}</span></span>
+          <a class="btn btn-sm" href="/bots/cards/{{.ID}}">{{t "cards.open"}}</a>
+          <button type="button" class="ur-icon-btn ur-danger" data-card-delete="{{.ID}}" data-confirm-text="{{t "cards.delete_confirm" "name" .Name}}" title="{{t "cards.delete"}}" aria-label="{{t "cards.delete"}}">{{template "icon_trash"}}</button>
+        </div>
+      </article>
+      {{end}}
+    </div>
+    {{else}}
+    <p class="muted">{{t "cards.list.empty"}}</p>
+    {{end}}
+  </div>
+</section>
+{{end}}
+
+{{define "card_studio"}}
+<div class="card-studio" data-card-studio data-bot="{{.BotID}}" data-card="{{.Card.ID}}" data-design="{{.DesignJSON}}" data-texts="{{.Texts}}">
+  <header class="cs-top">
+    <a class="btn btn-sm" href="/bots/modules/card-designer">← {{t "cards.back"}}</a>
+    <input class="cs-name" data-cs-name value="{{.Card.Name}}" maxlength="60" aria-label="{{t "cards.new.name"}}">
+    <select data-cs-kind aria-label="{{t "cards.kind"}}">
+      {{range .Kinds}}<option value="{{.}}" {{if eq . $.Card.Kind}}selected{{end}}>{{t (printf "cards.kind.%s" .)}}</option>{{end}}
+    </select>
+    <button type="button" class="btn btn-sm" data-cs-template title="{{t "cards.template_hint"}}">{{t "cards.template"}}</button>
+    <select data-cs-size aria-label="{{t "cards.size"}}">
+      <option value="1024x500">1024 × 500</option>
+      <option value="934x282">934 × 282</option>
+      <option value="800x800">800 × 800</option>
+      <option value="1200x400">1200 × 400</option>
+    </select>
+    <select data-cs-preview aria-label="{{t "cards.preview_as"}}">
+      <option value="tom">{{t "cards.preview_as"}}: Tom</option>
+      <option value="long">{{t "cards.preview_as"}}: Maximilian Sonnenschein</option>
+    </select>
+    <span class="cs-spacer"></span>
+    <button type="button" class="ur-icon-btn" data-cs-undo title="{{t "cards.undo"}}" aria-label="{{t "cards.undo"}}">↶</button>
+    <button type="button" class="ur-icon-btn" data-cs-redo title="{{t "cards.redo"}}" aria-label="{{t "cards.redo"}}">↷</button>
+    <span class="hint" data-cs-status></span>
+    <button type="button" class="btn btn-primary btn-sm" data-cs-save>{{t "action.save"}}</button>
+  </header>
+  <div class="cs-body">
+    <aside class="cs-left">
+      <h4>{{t "cards.layers"}}</h4>
+      <ul class="cs-layers" data-cs-layers></ul>
+      <h4>{{t "cards.add_layer"}}</h4>
+      <div class="cs-add" data-cs-add>
+        <button type="button" data-add="text"><strong>{{t "cards.layer.text"}}</strong><span class="hint">{{t "cards.layer.text_hint"}}</span></button>
+        <button type="button" data-add="avatar"><strong>{{t "cards.layer.avatar"}}</strong><span class="hint">{{t "cards.layer.avatar_hint"}}</span></button>
+        <button type="button" data-add="image"><strong>{{t "cards.layer.image"}}</strong><span class="hint">{{t "cards.layer.image_hint"}}</span></button>
+        <button type="button" data-add="shape"><strong>{{t "cards.layer.shape"}}</strong><span class="hint">{{t "cards.layer.shape_hint"}}</span></button>
+        <button type="button" data-add="badge"><strong>{{t "cards.layer.badge"}}</strong><span class="hint">{{t "cards.layer.badge_hint"}}</span></button>
+        <button type="button" data-add="bar"><strong>{{t "cards.layer.bar"}}</strong><span class="hint">{{t "cards.layer.bar_hint"}}</span></button>
+        <button type="button" data-add="grid"><strong>{{t "cards.layer.grid"}}</strong><span class="hint">{{t "cards.layer.grid_hint"}}</span></button>
+      </div>
+    </aside>
+    <main class="cs-stage" data-cs-stage>
+      <div class="cs-canvas-wrap" data-cs-wrap>
+        <canvas data-cs-canvas></canvas>
+        <div class="cs-overlay" data-cs-overlay></div>
+      </div>
+      <p class="hint cs-help">{{t "cards.help"}}</p>
+    </main>
+    <aside class="cs-right" data-cs-props></aside>
+  </div>
+</div>
+{{end}}
