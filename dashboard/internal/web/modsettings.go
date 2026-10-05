@@ -149,6 +149,8 @@ type settingsView struct {
 	Values map[string]any     // for showIf of top-level fields
 	// Options of dynamic "choices" fields, by field key.
 	Options map[string][]api.ChoiceOption
+	// Currencies: the bot's Economy currencies for "currency" fields (key, label).
+	Currencies []api.ChoiceOption
 	// Integration: set while the module's integration is not set up.
 	Integration *integrationNotice
 }
@@ -189,6 +191,8 @@ type fieldView struct {
 	UploadURL, ImageURL string
 	// choices: every option with its pick state.
 	Choices []choiceItem
+	// Currencies: options of a "currency" field (the bot's Economy currencies).
+	Currencies []api.ChoiceOption
 }
 
 // choiceItem is one option of a "choices" field. Static options are i18n
@@ -260,6 +264,9 @@ func (s *Server) buildFields(v *settingsView, labels, prefix string, fields []se
 			fv.Text = strings.Join(parts, sep)
 		case "choices":
 			fv.Choices = choiceItems(f, labels+prefix+f.Key, values[f.Key], v.Options[f.Key])
+		case "currency":
+			fv.Text, _ = values[f.Key].(string)
+			fv.Currencies = v.Currencies
 		case "image", "file":
 			fv.Text, _ = values[f.Key].(string)
 			fv.UploadURL = v.Files
@@ -317,6 +324,9 @@ func (s *Server) scopeData(r *http.Request, botID int64, scope settingsScope) (s
 	v := settingsView{BotID: botID, Module: sc.Module, Base: scope.URLBase, Files: scope.FileBase, Values: cfg}
 	if scope.options != nil && hasDynamic(sc.Fields) {
 		v.Options = scope.options(r)
+	}
+	if hasType(sc.Fields, "currency") {
+		v.Currencies = s.currencyOptions(r, botID)
 	}
 	needGuild := false
 	var walk func([]settingsField)
@@ -744,6 +754,34 @@ func choiceItems(f settingsField, label string, value any, dynamic []api.ChoiceO
 	slices.Sort(rest)
 	for _, p := range rest {
 		out = append(out, choiceItem{Value: p, Label: p, Picked: true})
+	}
+	return out
+}
+
+// hasType reports whether a form has a field of the type (also inside lists).
+func hasType(fields []settingsField, typ string) bool {
+	return slices.ContainsFunc(fields, func(f settingsField) bool { return f.Type == typ || hasType(f.Item, typ) })
+}
+
+// currencyOptions: the currencies of the bot's Economy settings for a
+// "currency" field; the first is the default one.
+func (s *Server) currencyOptions(r *http.Request, botID int64) []api.ChoiceOption {
+	var cfg struct {
+		Currencies []struct {
+			Key, Name, Emoji string
+		} `json:"currencies"`
+	}
+	_ = s.api.ModuleConfigRaw(r.Context(), session(r), botID, "economy", &cfg) // optional: only "default" on error
+	out := []api.ChoiceOption{}
+	for _, c := range cfg.Currencies {
+		if c.Key == "" || c.Name == "" {
+			continue
+		}
+		label := c.Name
+		if c.Emoji != "" && !strings.HasPrefix(c.Emoji, "<") {
+			label = c.Emoji + " " + c.Name
+		}
+		out = append(out, api.ChoiceOption{Value: c.Key, Label: label})
 	}
 	return out
 }

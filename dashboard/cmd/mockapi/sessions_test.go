@@ -178,3 +178,57 @@ func TestTOTPSkew(t *testing.T) {
 		t.Fatalf("clock hint missing: %s", w.Body)
 	}
 }
+
+func TestCleanDomain(t *testing.T) {
+	for in, want := range map[string]string{
+		"gitkljub.com":                   "gitkljub.com",
+		" https://GitKljub.com/ ":        "gitkljub.com",
+		"http://bot.example.org/admin?x": "bot.example.org",
+		"example.com.":                   "example.com",
+		"":                               "",
+	} {
+		if got := cleanDomain(in); got != want {
+			t.Errorf("cleanDomain(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestRegistration(t *testing.T) {
+	s := &store{tickets: map[string]loginTicket{}, sessions: map[string]*sessionData{}}
+	s.srvSettings = defaultServerSettings()
+	s.seedUsers()
+	s.users = append(s.users, &mockUser{ID: 1, Username: "admin", RoleID: 1})
+	s.userSeq = 1
+	reg := func(name, ip string) int {
+		r := httptest.NewRequest("POST", "/api/v1/auth/register", strings.NewReader(`{"username":"`+name+`","password":"a long password 1"}`))
+		r.Header.Set("Content-Type", "application/json")
+		r.Header.Set("X-BotHub-Client-IP", ip)
+		w := httptest.NewRecorder()
+		s.register(w, r)
+		return w.Code
+	}
+	if c := reg("alice", "1.1.1.1"); c != 403 {
+		t.Fatalf("closed registration: %d", c)
+	}
+	s.registration = registration{Enabled: true}
+	if c := reg("bad name!", "1.1.1.1"); c != 422 {
+		t.Fatalf("bad name: %d", c)
+	}
+	if c := reg("alice", "1.1.1.1"); c != 201 {
+		t.Fatalf("register: %d", c)
+	}
+	if u := s.userByName("alice"); u == nil || u.RoleID != 4 {
+		t.Fatalf("new account should be a guest: %+v", u)
+	}
+	if c := reg("ALICE", "2.2.2.2"); c != 409 {
+		t.Fatalf("name taken: %d", c)
+	}
+	reg("bob", "1.1.1.1")
+	reg("carl", "1.1.1.1")
+	if c := reg("dave", "1.1.1.1"); c != 429 {
+		t.Fatalf("4th account from one IP: %d", c)
+	}
+	if s.registerableRole(1) {
+		t.Fatal("admin role must not be registerable")
+	}
+}

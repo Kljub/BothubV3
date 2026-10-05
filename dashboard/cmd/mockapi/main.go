@@ -86,6 +86,8 @@ type store struct {
 	envPasswordPlain bool
 	updater          *updater // nil: updates from git are not set up
 	updateState      updateState
+	registration     registration // self-registration (registration.go)
+	registerLimit    registerLimiter
 	bots             map[int64]*bot
 	nextID           int64
 	modules          map[string]bool // "<botID>/<key>"
@@ -176,6 +178,7 @@ func main() {
 	s.cmdStates, s.commandCatalog = map[string]bool{}, loadCommandCatalog()
 	s.loadAccounts()
 	s.loadServerSettings()
+	s.loadRegistration()
 	s.updater = newUpdater()
 	go s.runAutoUpdates()
 	// BOTHUB_ADMIN_PASSWORD may be plain text or an Argon2id hash
@@ -209,6 +212,10 @@ func main() {
 	mux.HandleFunc("GET /api/v1/admin/legal", s.auth(s.getAdminLegal))
 	mux.HandleFunc("PUT /api/v1/admin/legal", s.auth(s.putAdminLegal))
 	mux.HandleFunc("POST /api/v1/setup", s.setup)
+	mux.HandleFunc("GET /api/v1/auth/registration", s.registrationOpen)
+	mux.HandleFunc("POST /api/v1/auth/register", s.audited("registered", "", nil, s.register))
+	mux.HandleFunc("GET /api/v1/admin/registration", s.auth(s.getRegistration))
+	mux.HandleFunc("PUT /api/v1/admin/registration", s.auth(s.putRegistration))
 	mux.HandleFunc("POST /api/v1/auth/login", s.audited("login", "login_failed", []string{"error.auth.invalid_credentials"}, s.login))
 	mux.HandleFunc("POST /api/v1/auth/login/totp", s.audited("login", "login_failed", []string{"error.auth.totp_invalid", "error.auth.totp_clock"}, s.loginTOTP))
 	mux.HandleFunc("POST /api/v1/auth/passkeys/login/begin", s.loginPasskeyBegin)

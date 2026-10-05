@@ -49,6 +49,9 @@ export interface ModCase {
 
 type Row = Record<string, unknown>;
 
+/** Largest debt of a currency that allows balances below 0. */
+const MAX_BALANCE = 1e12;
+
 export class Repo {
   constructor(readonly db: Db) {}
 
@@ -370,16 +373,17 @@ export class Repo {
   }
 
   /** Currencies of the settings into the table (by key; the first is the default). Balances of removed ones stay. */
-  syncCurrencies(botId: number, list: { key: string; name: string; emoji: string }[]): void {
+  syncCurrencies(botId: number, list: { key: string; name: string; emoji: string; allowNegative?: boolean }[]): void {
     const clean = list.filter((c) => /^[a-z0-9]{1,32}$/.test(c.key ?? '') && String(c.name ?? '').trim());
     if (!clean.length) return;
     write(this.db, () => {
       this.db.prepare('UPDATE economy_currencies SET is_default = 0 WHERE bot_id = ?').run(botId);
       const upsert = this.db.prepare(
-        `INSERT INTO economy_currencies (bot_id, key, name, symbol, is_default) VALUES (?, ?, ?, ?, ?)
-         ON CONFLICT (bot_id, key) DO UPDATE SET name = excluded.name, symbol = excluded.symbol, is_default = excluded.is_default`,
+        `INSERT INTO economy_currencies (bot_id, key, name, symbol, is_default, allow_negative) VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT (bot_id, key) DO UPDATE SET name = excluded.name, symbol = excluded.symbol, is_default = excluded.is_default,
+           allow_negative = excluded.allow_negative`,
       );
-      clean.forEach((c, i) => upsert.run(botId, c.key, c.name.trim().slice(0, 40), String(c.emoji ?? '').slice(0, 64), i === 0 ? 1 : 0));
+      clean.forEach((c, i) => upsert.run(botId, c.key, c.name.trim().slice(0, 40), String(c.emoji ?? '').slice(0, 64), i === 0 ? 1 : 0, c.allowNegative === true ? 1 : 0));
     });
   }
 
@@ -390,12 +394,42 @@ export class Repo {
     return row ? Number(row.balance) : 0;
   }
 
-  /** Changes a balance; mode "add" adds (negative removes), "set" replaces. Never below 0. */
+  /** The currencies of the Economy settings (key, name, emoji), the default first; without settings the default one. */
+  currencyList(botId: number): { key: string; name: string; emoji: string; default: boolean }[] {
+    const list = ((this.moduleConfig(botId, 'economy') as { currencies?: { key?: string; name?: string; emoji?: string }[] }).currencies ?? [])
+      .filter((c) => /^[a-z0-9]{1,32}$/.test(c.key ?? '') && String(c.name ?? '').trim());
+    if (list.length) return list.map((c, i) => ({ key: c.key!, name: String(c.name).trim(), emoji: String(c.emoji ?? ''), default: i === 0 }));
+    const row = this.db.prepare('SELECT key, name, symbol FROM economy_currencies WHERE id = ?').get(this.currencyId(botId)) as Row | undefined;
+    return row ? [{ key: String(row.key), name: String(row.name), emoji: String(row.symbol), default: true }] : [];
+  }
+
+  /**
+   * The currencies of the Economy settings as slash command choices
+   * ("🪙 Coins" -> key); without settings the default currency.
+   */
+  currencyChoices(botId: number): { name: string; value: string }[] {
+    return this.currencyList(botId).map((c) => ({ name: `${c.emoji && !c.emoji.startsWith('<') ? `${c.emoji} ` : ''}${c.name}`, value: c.key }));
+  }
+
+  /** Name and emoji of a currency (empty key: the default), e.g. "🪙 Coins". */
+  currencyLabel(botId: number, key?: string | null): string {
+    const row = this.db.prepare('SELECT name, symbol FROM economy_currencies WHERE id = ?').get(this.currencyId(botId, key)) as Row | undefined;
+    return row ? `${row.symbol ? `${String(row.symbol)} ` : ''}${String(row.name)}` : '';
+  }
+
+  /** Whether a currency allows balances below 0. */
+  allowsNegative(currencyId: number): boolean {
+    const row = this.db.prepare('SELECT allow_negative FROM economy_currencies WHERE id = ?').get(currencyId) as Row | undefined;
+    return row?.allow_negative === 1;
+  }
+
+  /** Changes a balance; mode "add" adds (negative removes), "set" replaces. Never below 0, unless the currency allows debts. */
   changeBalance(botId: number, guildId: string, userId: string, amount: number, mode: 'add' | 'set', currency?: string | null): number {
     return write(this.db, () => {
       const id = this.currencyId(botId, currency);
       const current = this.balance(botId, guildId, userId, currency);
-      const next = Math.max(0, Math.trunc(mode === 'set' ? amount : current + amount));
+      const raw = Math.trunc(mode === 'set' ? amount : current + amount);
+      const next = this.allowsNegative(id) ? Math.max(-MAX_BALANCE, raw) : Math.max(0, raw);
       this.db
         .prepare(
           `INSERT INTO economy_balances (currency_id, guild_id, user_id, balance, updated_at) VALUES (?, ?, ?, ?, ?)

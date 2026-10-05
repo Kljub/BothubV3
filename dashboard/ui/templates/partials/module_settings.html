@@ -82,6 +82,15 @@
       </div>
     </details>
   </div>
+{{else if eq .Type "currency"}}
+  {{/* An Economy currency of the bot; empty: the default one. */}}
+  <label class="field">{{t .Label}}
+    <select name="{{.Name}}">
+      <option value="" {{if eq $f.Text ""}}selected{{end}}>{{t "modset.currency.default"}}</option>
+      {{range .Currencies}}<option value="{{.Value}}" {{if eq .Value $f.Text}}selected{{end}}>{{.Label}}</option>{{end}}
+    </select>
+    {{if not .Currencies}}<span class="hint">{{t "modset.currency.none"}}</span>{{end}}
+  </label>
 {{else if eq .Type "color"}}
   <label class="field">{{t .Label}}<input type="color" name="{{.Name}}" value="{{if .Text}}{{.Text}}{{else}}#a78bfa{{end}}"></label>
 {{else if eq .Type "text"}}

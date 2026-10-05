@@ -491,11 +491,13 @@
       "group": "modules",
       "risk": "low",
       "calls": [
+        "economy.currencies",
         "economy.get",
         "economy.bank",
         "economy.leaderboard"
       ],
       "implemented": [
+        "economy.currencies",
         "economy.get",
         "economy.bank",
         "economy.leaderboard"

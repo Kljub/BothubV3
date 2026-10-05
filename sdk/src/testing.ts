@@ -68,7 +68,7 @@ const CALLS: Record<string, string | null> = {
   'emoji.create': 'discord.emojis.manage', 'emoji.delete': 'discord.emojis.manage',
   'interaction.reply': 'discord.interactions.reply', 'interaction.editReply': 'discord.interactions.reply', 'interaction.deferReply': 'discord.interactions.reply',
   'interaction.followUp': 'discord.interactions.reply', 'interaction.update': 'discord.interactions.reply', 'interaction.showModal': 'discord.modals',
-  'economy.get': 'modules.economy.balance.read', 'economy.add': 'modules.economy.balance.write', 'economy.remove': 'modules.economy.balance.write', 'economy.transfer': 'modules.economy.balance.write', 'economy.leaderboard': 'modules.economy.balance.read', 'economy.bank': 'modules.economy.balance.read', 'economy.bankTransfer': 'modules.economy.bank.write',
+  'economy.currencies': 'modules.economy.balance.read', 'economy.get': 'modules.economy.balance.read', 'economy.add': 'modules.economy.balance.write', 'economy.remove': 'modules.economy.balance.write', 'economy.transfer': 'modules.economy.balance.write', 'economy.leaderboard': 'modules.economy.balance.read', 'economy.bank': 'modules.economy.balance.read', 'economy.bankTransfer': 'modules.economy.bank.write',
 };
 
 // Old coarse permission keys and their finer replacements (shared/sdk-permissions.json "replaced"):
@@ -699,16 +699,18 @@ export function createTestContext(options: TestContextOptions = {}): TestContext
       });
     }])),
     economy: {
-      get: async (g: string, u: string) => balances.get(`${g}:${u}`) ?? 0,
-      add: async (g: string, u: string, n: number) => coins(g, u, n),
-      remove: async (g: string, u: string, n: number) => {
-        if ((balances.get(`${g}:${u}`) ?? 0) < n) throw new SdkCallError('sdk.economy.not_enough');
-        return coins(g, u, -n);
+      // The test kit knows the default currency "coins" and any other well-formed key.
+      currencies: async () => [{ key: 'coins', name: 'Coins', emoji: '🪙', default: true }],
+      get: async (g: string, u: string, c?: string) => balances.get(wallet(g, u, c)) ?? 0,
+      add: async (g: string, u: string, n: number, c?: string) => coins(g, u, n, c),
+      remove: async (g: string, u: string, n: number, c?: string) => {
+        if ((balances.get(wallet(g, u, c)) ?? 0) < n) throw new SdkCallError('sdk.economy.not_enough');
+        return coins(g, u, -n, c);
       },
-      transfer: async (g: string, from: string, to: string, n: number) => {
-        if ((balances.get(`${g}:${from}`) ?? 0) < n) throw new SdkCallError('sdk.economy.not_enough');
-        coins(g, from, -n);
-        coins(g, to, n);
+      transfer: async (g: string, from: string, to: string, n: number, c?: string) => {
+        if ((balances.get(wallet(g, from, c)) ?? 0) < n) throw new SdkCallError('sdk.economy.not_enough');
+        coins(g, from, -n, c);
+        coins(g, to, n, c);
       },
       bank: async (g: string, u: string) => banks.get(`${g}:${u}`) ?? 0,
       bankTransfer: async (g: string, from: string, to: string, n: number) => {
@@ -717,14 +719,27 @@ export function createTestContext(options: TestContextOptions = {}): TestContext
         banks.set(`${g}:${from}`, (banks.get(`${g}:${from}`) ?? 0) - n);
         coins(g, to, n);
       },
-      leaderboard: async (g: string, limit = 10) =>
-        [...balances].filter(([k]) => k.startsWith(`${g}:`)).map(([k, v]) => ({ userId: k.split(':')[1]!, balance: v })).sort((x, y) => y.balance - x.balance).slice(0, limit),
+      leaderboard: async (g: string, limit = 10, c?: string) => {
+        const suffix = c && c !== 'coins' ? `:${c}` : '';
+        return [...balances]
+          .filter(([k]) => k.startsWith(`${g}:`) && k.split(':').length === (suffix ? 3 : 2) && k.endsWith(suffix))
+          .map(([k, v]) => ({ userId: k.split(':')[1]!, balance: v }))
+          .sort((x, y) => y.balance - x.balance)
+          .slice(0, limit);
+      },
     },
   };
-  function coins(g: string, u: string, n: number): number {
+  /** Key of a balance: the default currency ("coins" or empty) or another one. */
+  function wallet(g: string, u: string, c?: string): string {
+    if (c === undefined || c === '' || c === 'coins') return `${g}:${u}`;
+    if (typeof c !== 'string' || !/^[a-z0-9]{1,32}$/.test(c)) throw new SdkCallError('sdk.economy.unknown_currency');
+    return `${g}:${u}:${c}`;
+  }
+  function coins(g: string, u: string, n: number, c?: string): number {
     if (typeof n !== 'number' || !Number.isInteger(n)) throw new SdkCallError('sdk.economy.bad_amount');
-    const next = (balances.get(`${g}:${u}`) ?? 0) + n;
-    balances.set(`${g}:${u}`, next);
+    const k = wallet(g, u, c);
+    const next = (balances.get(k) ?? 0) + n;
+    balances.set(k, next);
     return next;
   }
   for (const method of ['get', 'post', 'put', 'patch', 'delete']) {

@@ -100,6 +100,12 @@ final class ModuleSettings
                     return $default ?? $f['options'][0];
                 }
                 return in_array($v, $f['options'], true) ? $v : self::fail($path);
+            case 'currency':
+                // Key of an Economy currency; empty: the default currency.
+                if ($missing || $v === null) {
+                    return (string) ($default ?? '');
+                }
+                return is_string($v) && preg_match('/^[a-z0-9]{0,32}$/', $v) ? $v : self::fail($path);
             case 'color':
                 if ($missing || $v === null || $v === '') {
                     return (string) ($default ?? '');
@@ -204,6 +210,16 @@ final class ModuleSettings
                         self::fail("{$path}.{$i}");
                     }
                     $clean = self::fields($f['item'], $item, "{$path}.{$i}.", $lenient);
+                    // autoFrom: an empty key is made from another field (e.g. the name) on save
+                    // and stored, so it stays the same when the name changes later.
+                    if (!$lenient) {
+                        foreach ($f['item'] as $sub) {
+                            if (isset($sub['autoFrom']) && ($clean[$sub['key']] ?? '') === '') {
+                                $taken = array_map(static fn (array $x) => $x[$sub['key']] ?? '', $items);
+                                $clean[$sub['key']] = self::autoKey((string) ($clean[$sub['autoFrom']] ?? ''), $taken, (int) ($sub['max'] ?? 32));
+                            }
+                        }
+                    }
                     // Stable ID of the entry: kept when valid, else a new one (not on read).
                     $id = $item['_id'] ?? null;
                     if (is_string($id) && preg_match('/^[a-z0-9]{8,16}$/', $id)) {
@@ -228,6 +244,21 @@ final class ModuleSettings
             default:
                 throw new \LogicException("unknown settings field type {$f['type']}");
         }
+    }
+
+    /** A key from a name: "Gold Münzen" -> "goldmuenzen"; unique among $taken. */
+    public static function autoKey(string $name, array $taken, int $max = 32): string
+    {
+        $s = strtr(mb_strtolower($name), ['ä' => 'ae', 'ö' => 'oe', 'ü' => 'ue', 'ß' => 'ss']);
+        $s = substr((string) preg_replace('/[^a-z0-9]+/', '', $s), 0, max(1, $max - 3));
+        if ($s === '') {
+            $s = 'currency';
+        }
+        $key = $s;
+        for ($n = 2; in_array($key, $taken, true); $n++) {
+            $key = $s . $n;
+        }
+        return $key;
     }
 
     /** @return array{id: string, guild: string} */

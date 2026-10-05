@@ -9,13 +9,14 @@ use PDO;
 
 /**
  * Instance settings the gateway owns (settings key "server": domain, ports,
- * session hours, upload limit, automatic updates, restart policy). The
+ * session hours, upload limit, automatic updates, restart policy; key
+ * "registration": self-registration on/off and its role). The
  * gateway validates them; this store only keeps them across restarts.
- * Internal routes only: GET /internal/settings/server ({value}), PUT (the object).
+ * Internal routes only: GET /internal/settings/{key} ({value}), PUT (the object).
  */
 final class InstanceSettings
 {
-    private const KEYS = ['server'];
+    private const KEYS = ['server', 'registration'];
 
     public function __construct(private readonly PDO $pdo)
     {

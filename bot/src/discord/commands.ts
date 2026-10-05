@@ -83,7 +83,10 @@ export function permissionBit(name: string): bigint | undefined {
   return undefined;
 }
 
-function optionJson(run: { nodes: GraphNode[] }, cmd: CommandRow): Record<string, unknown>[] {
+/** Choices a choice option can take from the bot itself (config "source"), e.g. the economy currencies. */
+export type ChoiceSources = Record<string, { name: string; value: string }[]>;
+
+function optionJson(run: { nodes: GraphNode[] }, cmd: CommandRow, sources: ChoiceSources = {}): Record<string, unknown>[] {
   const trig = triggerOf(cmd);
   if (!trig) return [];
   const opts = cmd.graph.edges
@@ -99,7 +102,10 @@ function optionJson(run: { nodes: GraphNode[] }, cmd: CommandRow): Record<string
       description: (String(o.config.description ?? '') || name).slice(0, 100),
       required: o.config.required !== false,
     };
-    if (o.type === 'option.choice') {
+    const source = o.type === 'option.choice' ? sources[String(o.config.source ?? '')] : undefined;
+    if (source?.length) {
+      json.choices = source.slice(0, 25).map((c) => ({ name: c.name.slice(0, 100), value: c.value.slice(0, 100) }));
+    } else if (o.type === 'option.choice') {
       const choices = String(o.config.choices ?? '')
         .split('\n')
         .map((x) => x.trim())
@@ -126,7 +132,7 @@ export function cooldownOf(v: unknown): number {
  * Discord accepts 100 top-level commands (+ menus); onOverflow gets the number left out.
  * allDm: the DM Commands module is on, every command is offered in DMs too.
  */
-export function buildCommands(cmds: CommandRow[], onOverflow?: (dropped: number) => void, allDm = false): Record<string, unknown>[] {
+export function buildCommands(cmds: CommandRow[], onOverflow?: (dropped: number) => void, allDm = false, sources: ChoiceSources = {}): Record<string, unknown>[] {
   const top = new Map<string, Record<string, unknown>>();
   const menus: Record<string, unknown>[] = [];
   const menuNames = new Set<string>();
@@ -165,7 +171,7 @@ export function buildCommands(cmds: CommandRow[], onOverflow?: (dropped: number)
     }
 
     const parts = s.name.trim().split(/\s+/);
-    const options = optionJson({ nodes: cmd.graph.nodes }, cmd);
+    const options = optionJson({ nodes: cmd.graph.nodes }, cmd, sources);
     const description = (s.description || parts.join(' ')).slice(0, 100);
     let root = top.get(parts[0]!);
     if (parts.length === 1) {

@@ -280,10 +280,11 @@ export class BotInstance {
         notes: (g, u) => repo.notes(botId, g, u),
       },
       economy: {
-        balance: (g, u) => repo.balance(botId, g, u),
-        change: (g, u, n, mode) => repo.changeBalance(botId, g, u, n, mode),
-        pay: (g, f, t, n) => repo.pay(botId, g, f, t, n),
-        leaderboard: (g, n) => repo.leaderboard(botId, g, n),
+        balance: (g, u, c) => repo.balance(botId, g, u, c),
+        change: (g, u, n, mode, c) => repo.changeBalance(botId, g, u, n, mode, c),
+        pay: (g, f, t, n, c) => repo.pay(botId, g, f, t, n, c),
+        leaderboard: (g, n, c) => repo.leaderboard(botId, g, n, c),
+        currencies: () => repo.currencyList(botId),
         bank: (g, u) => eco.bank(this.modules, g, u),
         bankTake: (g, f, t, n) => eco.bankTake(this.modules, g, f, t, n),
       },
@@ -533,6 +534,7 @@ export class BotInstance {
       [...this.commands.values()],
       (dropped) => this.deps.repo.logCode(this.botId, 'WAR-2008', { module: 'commands', problem: `Discord allows 100 commands; ${dropped} were not registered` }),
       this.deps.repo.moduleOn(this.botId, 'dm-commands'),
+      { currencies: this.deps.repo.currencyChoices(this.botId) },
     );
     const hash = createHash('sha256').update(JSON.stringify(body)).digest('hex');
     if (hash === this.registeredHash) return;

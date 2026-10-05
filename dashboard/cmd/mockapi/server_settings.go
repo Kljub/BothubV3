@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"regexp"
 	"slices"
+	"strings"
 )
 
 // Instance settings of the mock API. Ports are stored but "active" only after
@@ -26,6 +27,19 @@ type serverSettings struct {
 
 var domainPattern = regexp.MustCompile(`^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$`)
 
+// cleanDomain accepts what people paste: "https://Example.com/path" and
+// "example.com/" become "example.com".
+func cleanDomain(v string) string {
+	v = strings.ToLower(strings.TrimSpace(v))
+	if i := strings.Index(v, "://"); i >= 0 {
+		v = v[i+3:]
+	}
+	if i := strings.IndexAny(v, "/?#"); i >= 0 {
+		v = v[:i]
+	}
+	return strings.TrimSuffix(v, ".")
+}
+
 func defaultServerSettings() serverSettings {
 	return serverSettings{PublicPort: 8080, APIPort: 9000, RedisPort: 6379, SessionHours: 168, MaxUploadMB: 10,
 		AutoUpdate: "off", AutoUpdateHour: 4, RestartPolicy: "unless-stopped"}
@@ -43,6 +57,7 @@ func (s *store) putServerSettings(w http.ResponseWriter, r *http.Request, _ stri
 		return
 	}
 	normalizeServerSettings(&in)
+	in.Domain = cleanDomain(in.Domain)
 	validPort := func(p int) bool { return p >= 1 && p <= 65535 }
 	switch {
 	case in.Domain != "" && (len(in.Domain) > 253 || !domainPattern.MatchString(in.Domain)):

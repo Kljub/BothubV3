@@ -148,6 +148,8 @@ func (s *Server) routes() http.Handler {
 	// Custom invite link of a bot (Developer Portal install link).
 	mux.HandleFunc("GET /invite/{app}", s.handleInvitePage)
 	mux.HandleFunc("POST /login", s.handleLogin)
+	mux.HandleFunc("GET /register", s.handleRegisterPage)
+	mux.HandleFunc("POST /register", s.handleRegister)
 	mux.HandleFunc("POST /login/totp", s.handleLoginTOTP)
 
 	// Pages behind login.
@@ -299,6 +301,7 @@ func (s *Server) routes() http.Handler {
 	mux.Handle("POST /admin/server-settings", auth(s.handleServerSettings))
 	mux.Handle("POST /admin/legal", auth(s.handleLegalSave))
 	mux.Handle("POST /admin/invite", auth(s.handleInviteSettings))
+	mux.Handle("POST /admin/registration", auth(s.handleRegistrationSettings))
 	mux.Handle("PUT /bot/{id}/guild-access", auth(s.handleGuildAccess))
 	mux.Handle("GET /admin/sdk-policies", auth(s.handleSdkPolicySearch))
 	mux.Handle("PUT /admin/sdk-policies/{perm}", auth(s.handleSdkPolicy))

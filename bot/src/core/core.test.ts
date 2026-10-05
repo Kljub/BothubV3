@@ -160,6 +160,13 @@ test('repository: commands, variables, economy, warnings, guilds', () => {
   assert.equal(repo.pay(botId, 'g', 'a', 'b', 20), true);
   assert.deepEqual(repo.leaderboard(botId, 'g', 5), [{ userId: 'a', balance: 30 }, { userId: 'b', balance: 20 }]);
 
+  // A currency that allows debts: removing goes below 0, paying still needs the money.
+  repo.syncCurrencies(botId, [{ key: 'coins', name: 'Coins', emoji: '' }, { key: 'karma', name: 'Karma', emoji: '', allowNegative: true }]);
+  assert.equal(repo.changeBalance(botId, 'g', 'a', -40, 'add', 'karma'), -40, 'below zero allowed');
+  assert.equal(repo.changeBalance(botId, 'g', 'a', -5, 'set', 'karma'), -5);
+  assert.equal(repo.pay(botId, 'g', 'a', 'b', 1, 'karma'), false, 'no paying with debts');
+  assert.equal(repo.changeBalance(botId, 'g', 'a', -500, 'add', 'coins'), 0, 'other currency still stops at 0');
+
   repo.addWarning(botId, 'g', 'u', 'mod', 'spam');
   repo.addWarning(botId, 'g', 'u', 'mod', 'caps');
   assert.equal(repo.warnings(botId, 'g', 'u').length, 2);
@@ -239,4 +246,13 @@ test('stats: counted in memory, written per hour, active users once, old hours p
   s.add(1, 'G', 'joins', 1, t + 40 * 86_400_000);
   s.flush(t + 40 * 86_400_000 + 7_200_000);
   assert.equal((repo.db.prepare("SELECT COUNT(*) AS n FROM bot_stats WHERE metric = 'messages'").get() as { n: number }).n, 0);
+});
+
+test('economy commands offer the currencies of the settings as choices', () => {
+  const pay = presets.find((p) => p.name === 'economy-add')!;
+  const sources = { currencies: [{ name: '🪙 Coins', value: 'coins' }, { name: 'Social Credit', value: 'socialcredit' }] };
+  const body = buildCommands([asRow(pay, 1)], undefined, false, sources);
+  const cur = (body[0]!.options as { name: string; required: boolean; choices?: { name: string; value: string }[] }[]).find((o) => o.name === 'currency')!;
+  assert.equal(cur.required, false, 'empty: the default currency');
+  assert.deepEqual(cur.choices?.map((c) => c.value), ['coins', 'socialcredit']);
 });

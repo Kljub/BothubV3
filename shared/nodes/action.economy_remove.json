@@ -47,6 +47,12 @@
         "maxLength": 32,
         "x-labelKey": "builder.cfg.economy_currency",
         "x-hintKey": "builder.cfg.economy_currency_hint"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.economy_result_hint"
       }
     }
   }

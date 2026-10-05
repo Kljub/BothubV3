@@ -100,12 +100,18 @@ test('economy: plugins never take more than a member has', async () => {
     client: () => ({ isReady: () => true, guilds: { cache: new Map([[guild.id, guild]]) } }) as never,
     render: (m) => m as Record<string, unknown>,
     economy: {
-      balance: (g, u) => balances.get(`${g}:${u}`) ?? 0,
-      change: (g, u, n, mode) => {
-        const v = mode === 'set' ? n : (balances.get(`${g}:${u}`) ?? 0) + n;
-        balances.set(`${g}:${u}`, v);
+      // Balances per currency: "<guild>:<user>" (default) or "<guild>:<user>:<currency>".
+      balance: (g, u, c) => {
+        if (c && c !== 'karma') throw new Error('economy.unknown_currency');
+        return balances.get(`${g}:${u}${c ? `:${c}` : ''}`) ?? 0;
+      },
+      change: (g, u, n, mode, c) => {
+        const k = `${g}:${u}${c ? `:${c}` : ''}`;
+        const v = mode === 'set' ? n : (balances.get(k) ?? 0) + n;
+        balances.set(k, v);
         return v;
       },
+      currencies: () => [{ key: 'coins', name: 'Coins', emoji: '🪙', default: true }, { key: 'karma', name: 'Karma', emoji: '', default: false }],
       pay: () => false,
       leaderboard: () => [],
       bank: (g, u) => banks.get(`${g}:${u}`) ?? 0,
@@ -128,6 +134,13 @@ test('economy: plugins never take more than a member has', async () => {
   await call('economy.bankTransfer', guild.id, '100000000000000002', '100000000000000001', 25);
   assert.deepEqual([banks.get('200000000000000001:100000000000000002'), balances.get('200000000000000001:100000000000000001')], [15, 55]);
   assert.throws(() => call('economy.bankTransfer', guild.id, '100000000000000002', '100000000000000001', 16), /sdk.economy.not_enough/);
+  // Another currency: its own balance; unknown or malformed keys fail.
+  assert.deepEqual(((await call('economy.currencies')) as { key: string }[]).map((c) => c.key), ['coins', 'karma']);
+  assert.equal(await call('economy.add', guild.id, '100000000000000001', 7, 'karma'), 7);
+  assert.equal(await call('economy.get', guild.id, '100000000000000001', 'karma'), 7);
+  assert.equal(await call('economy.get', guild.id, '100000000000000001'), 55, 'default currency untouched');
+  assert.throws(() => call('economy.get', guild.id, '100000000000000001', 'gold'), /sdk.economy.unknown_currency/);
+  assert.throws(() => call('economy.get', guild.id, '100000000000000001', 'Bad Key'), /sdk.economy.unknown_currency/);
 });
 
 test('emoji.list / emoji.get: the custom emojis of a server', async () => {
@@ -136,7 +149,7 @@ test('emoji.list / emoji.get: the custom emojis of a server', async () => {
   const deps: DiscordApiDeps = {
     client: () => ({ isReady: () => true, guilds: { cache: new Map([[guild.id, guild]]) } }) as never,
     render: (m) => m as Record<string, unknown>,
-    economy: { balance: () => 0, change: () => 0, pay: () => false, leaderboard: () => [], bank: () => 0, bankTake: () => false },
+    economy: { balance: () => 0, change: () => 0, pay: () => false, leaderboard: () => [], bank: () => 0, bankTake: () => false, currencies: () => [] },
   };
   const api = discordApi(1, 'plugin_a', [], deps, new InteractionRegistry());
   const call = (name: string, ...args: unknown[]) => api[name]!({ args });
@@ -165,7 +178,7 @@ test('moderation cases, voice moderation and the audit log', async () => {
   const deps: DiscordApiDeps = {
     client: () => ({ isReady: () => true, user: { id: me.id }, guilds: { cache: new Map([[guild.id, guild]]) } }) as never,
     render: (m) => m as Record<string, unknown>,
-    economy: { balance: () => 0, change: () => 0, pay: () => false, leaderboard: () => [], bank: () => 0, bankTake: () => false },
+    economy: { balance: () => 0, change: () => 0, pay: () => false, leaderboard: () => [], bank: () => 0, bankTake: () => false, currencies: () => [] },
     moderation: {
       record: async (_g, c) => { recorded.push(c); return recorded.length; },
       cases: () => [], modCase: (_g, n) => (n === 1 ? { number: 1, guildId: guild.id, userId: '1', moderatorId: null, action: 'warn', reason: '', duration: '', auto: false, createdAt: '' } : undefined),
@@ -217,7 +230,7 @@ test('interaction.reply: a command set to "only me" answers ephemeral', async ()
   const reg = new InteractionRegistry();
   const sent: unknown[] = [];
   const fake = { replied: false, deferred: false, reply: async (p: unknown) => void sent.push(p) } as never;
-  const api = discordApi(1, 'plugin_a', [], { client: () => undefined, render: (m) => m as Record<string, unknown>, economy: { balance: () => 0, change: () => 0, pay: () => false, leaderboard: () => [], bank: () => 0, bankTake: () => false } }, reg);
+  const api = discordApi(1, 'plugin_a', [], { client: () => undefined, render: (m) => m as Record<string, unknown>, economy: { balance: () => 0, change: () => 0, pay: () => false, leaderboard: () => [], bank: () => 0, bankTake: () => false, currencies: () => [] } }, reg);
   await api['interaction.reply']!({ args: [reg.hold(1, 'plugin_a', fake, false, true), 'hi'] });
   await api['interaction.reply']!({ args: [reg.hold(1, 'plugin_a', fake, false), 'hi'] });
   assert.deepEqual(sent.map((p) => (p as { flags: number }).flags), [64, 0]);

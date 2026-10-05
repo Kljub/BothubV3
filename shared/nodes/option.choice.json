@@ -41,6 +41,16 @@
         "x-labelKey": "builder.cfg.subcommand",
         "x-hintKey": "builder.cfg.subcommand_hint"
       },
+      "source": {
+        "type": "string",
+        "enum": [
+          "",
+          "currencies"
+        ],
+        "default": "",
+        "x-labelKey": "builder.cfg.choices_source",
+        "x-hintKey": "builder.cfg.choices_source_hint"
+      },
       "choices": {
         "type": "string",
         "x-labelKey": "builder.cfg.choices",

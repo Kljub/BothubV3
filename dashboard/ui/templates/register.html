@@ -1,0 +1,27 @@
+{{define "title"}}{{t "register.title"}}{{end}}
+
+{{define "content"}}
+<h2>{{t "register.title"}}</h2>
+{{with .Data.Error}}{{template "flash_error" .}}{{end}}
+<form method="post" action="/register" class="form" data-login-form>
+  <label>{{t "field.username"}}
+    <input name="username" autocomplete="username" required autofocus minlength="3" maxlength="32" pattern="[A-Za-z0-9_.\-]{3,32}" value="{{.Data.Username}}">
+    <span class="hint">{{t "register.username_hint"}}</span>
+  </label>
+  <label>{{t "register.email"}}
+    <input type="email" name="email" autocomplete="email" maxlength="254" value="{{.Data.Email}}">
+  </label>
+  <label>{{t "field.password"}}
+    <input type="password" name="password" autocomplete="new-password" required minlength="12">
+    <span class="hint">{{t "register.password_hint"}}</span>
+  </label>
+  <label>{{t "register.password_confirm"}}
+    <input type="password" name="password_confirm" autocomplete="new-password" required minlength="12">
+  </label>
+  <label class="check"><input type="checkbox" name="remember" value="1" {{if .Data.Remember}}checked{{end}}> {{t "login.remember"}}</label>
+  <input type="hidden" name="device_key" value="">
+  <button type="submit" class="btn btn-primary">{{t "register.submit"}}</button>
+</form>
+<p class="hint"><a href="/login">{{t "register.back"}}</a></p>
+<p class="legal-links"><a href="/terms">{{t "legal.terms"}}</a> · <a href="/privacy">{{t "legal.privacy"}}</a></p>
+{{end}}

@@ -126,6 +126,7 @@ function fieldDefault(f: SettingsField): unknown {
     case 'color':
     case 'image':
     case 'file':
+    case 'currency':
       return '';
     case 'channel':
     case 'role':
@@ -169,6 +170,8 @@ function checkSetting(f: SettingsField, v: unknown, path: string): unknown {
         : bad();
     case 'color':
       return v === '' || (typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v)) ? (v as string).toLowerCase() : bad();
+    case 'currency':
+      return typeof v === 'string' && /^[a-z0-9]{0,32}$/.test(v) ? v : bad();
     case 'image':
       return v === '' || (typeof v === 'string' && FILE_NAME.test(v)) ? v : bad();
     case 'file':
@@ -1071,10 +1074,11 @@ export class PluginManager {
       client: () => this.deps.discord?.(botId)?.client(),
       render: (m) => live().render(m),
       economy: {
-        balance: (g, u) => live().economy.balance(g, u),
-        change: (g, u, n, mode) => live().economy.change(g, u, n, mode),
-        pay: (g, f, t, n) => live().economy.pay(g, f, t, n),
-        leaderboard: (g, n) => live().economy.leaderboard(g, n),
+        balance: (g, u, c) => live().economy.balance(g, u, c),
+        change: (g, u, n, mode, c) => live().economy.change(g, u, n, mode, c),
+        pay: (g, f, t, n, c) => live().economy.pay(g, f, t, n, c),
+        leaderboard: (g, n, c) => live().economy.leaderboard(g, n, c),
+        currencies: () => live().economy.currencies(),
         bank: (g, u) => live().economy.bank(g, u),
         bankTake: (g, f, t, n) => live().economy.bankTake(g, f, t, n),
       },

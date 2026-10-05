@@ -523,6 +523,15 @@ export function discordHandlers(repo: Repo, mod?: Moderation): Map<string, Handl
     repo.addJob(data(run).botId, 'undo', new Date(Date.now() + parseDuration(after)), payload, key);
   };
 
+  /** Economy add/remove/set: results {name} the new balance, {name.currency} "🪙 Coins". */
+  const economyChange = (node: GraphNode, run: Run, amount: number, mode: 'add' | 'set'): void => {
+    const user = snowflake(run.str(node, 'user') || (run.vars.get('user.id') ?? ''), 'user');
+    const currency = run.str(node, 'currency') || null;
+    const balance = currencyRun(() => repo.changeBalance(data(run).botId, guildId(run), user, amount, mode, currency));
+    run.setResult(node, '', balance);
+    run.setResult(node, '.currency', repo.currencyLabel(data(run).botId, currency));
+  };
+
   return new Map<string, Handler>([
     ['action.send_message', sendMessage],
     [
@@ -1201,14 +1210,15 @@ export function discordHandlers(repo: Repo, mod?: Moderation): Map<string, Handl
       run.setResult(node, '.bank', one?.bank ?? 0);
       run.setResult(node, '.all', all.map((c) => `${c.symbol ? `${c.symbol} ` : ''}**${c.balance.toLocaleString('en-US')}** ${c.name}${c.bank ? ` · bank ${c.bank.toLocaleString('en-US')}` : ''}`).join('\n'));
     }],
-    ['action.economy_add', (node, run) => void currencyRun(() => repo.changeBalance(data(run).botId, guildId(run), snowflake(run.str(node, 'user') || (run.vars.get('user.id') ?? ''), 'user'), run.num(node, 'amount'), 'add', run.str(node, 'currency') || null))],
-    ['action.economy_remove', (node, run) => void currencyRun(() => repo.changeBalance(data(run).botId, guildId(run), snowflake(run.str(node, 'user') || (run.vars.get('user.id') ?? ''), 'user'), -run.num(node, 'amount'), 'add', run.str(node, 'currency') || null))],
-    ['action.economy_set', (node, run) => void currencyRun(() => repo.changeBalance(data(run).botId, guildId(run), snowflake(run.str(node, 'user') || (run.vars.get('user.id') ?? ''), 'user'), run.num(node, 'amount'), 'set', run.str(node, 'currency') || null))],
+    ['action.economy_add', (node, run) => economyChange(node, run, run.num(node, 'amount'), 'add')],
+    ['action.economy_remove', (node, run) => economyChange(node, run, -run.num(node, 'amount'), 'add')],
+    ['action.economy_set', (node, run) => economyChange(node, run, run.num(node, 'amount'), 'set')],
     [
       'action.economy_pay',
       (node, run) => {
         const ok = currencyRun(() => repo.pay(data(run).botId, guildId(run), snowflake(run.str(node, 'from_user'), 'from_user'), snowflake(run.str(node, 'to_user'), 'to_user'), Math.trunc(run.num(node, 'amount')), run.str(node, 'currency') || null));
         if (!ok) throw new GraphError('error.run.not_enough_balance');
+        run.setResult(node, '.currency', currencyRun(() => repo.currencyLabel(data(run).botId, run.str(node, 'currency') || null)));
       },
     ],
     [
@@ -1217,6 +1227,7 @@ export function discordHandlers(repo: Repo, mod?: Moderation): Map<string, Handl
         const limit = Math.max(1, Math.min(25, Math.trunc(Number(run.raw(node, 'limit') ?? 10))));
         const rows = currencyRun(() => repo.leaderboard(data(run).botId, guildId(run), limit, run.str(node, 'currency') || null));
         run.setResult(node, '', rows.map((r, i) => `${i + 1}. <@${r.userId}> – ${r.balance}`).join('\n'));
+        run.setResult(node, '.currency', currencyRun(() => repo.currencyLabel(data(run).botId, run.str(node, 'currency') || null)));
       },
     ],
   ]);

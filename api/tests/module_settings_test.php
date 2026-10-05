@@ -103,6 +103,15 @@ $tc = ['fields' => [['key' => 'libs', 'type' => 'choices', 'dynamic' => true, 'm
 check('choices: picks kept once, default empty', ModuleSettings::normalize($tc, ['libs' => ['1:5', '1:5', '2:3']])['libs'] === ['1:5', '2:3'] && ModuleSettings::normalize($tc, [])['kind'] === []);
 check('choices: older text value split', ModuleSettings::read($tc, ['libs' => '5, 2:3'])['libs'] === ['5', '2:3']);
 check('choices: static options only', (function () use ($tc) { try { ModuleSettings::normalize($tc, ['kind' => ['c']]); return false; } catch (\Throwable) { return true; } })());
+// Economy: an empty currency key is made from the name and stays; currency fields take keys only.
+$eco = ModuleSettings::schema('economy');
+$saved = ModuleSettings::normalize($eco, ['currencies' => [['name' => 'Social Credit Punkte', 'key' => ''], ['name' => 'Gold Münzen'], ['name' => 'Social Credit Punkte!', 'key' => '']]]);
+check('currency key from the name', array_column($saved['currencies'], 'key') === ['socialcreditpunkte', 'goldmuenzen', 'socialcreditpunkte2']);
+$renamed = $saved;
+$renamed['currencies'][0]['name'] = 'Karma';
+check('currency key kept on rename', ModuleSettings::normalize($eco, $renamed)['currencies'][0]['key'] === 'socialcreditpunkte');
+check('negative balances off by default', ($saved['currencies'][0]['allowNegative'] ?? null) === false);
+check('shop currency: a key', (function () use ($eco) { try { ModuleSettings::normalize($eco, ['shop' => [['name' => 'X', 'key' => 'x', 'currency' => 'Bad Key']]]); return false; } catch (\Throwable) { return true; } })());
 check('no schema for unknown module', ModuleSettings::schema('nope') === null && ModuleSettings::schema('../x') === null);
 
 exit($failed === 0 ? 0 : 1);

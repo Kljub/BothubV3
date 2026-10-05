@@ -356,7 +356,8 @@
             "permissions",
             "image",
             "choices",
-            "file"
+            "file",
+            "currency"
           ]
         },
         "default": {},
@@ -478,7 +479,8 @@
                   "emojis",
                   "words",
                   "list",
-                  "choices"
+                  "choices",
+                  "currency"
                 ]
               }
             },
@@ -559,7 +561,8 @@
             "permissions",
             "image",
             "choices",
-            "file"
+            "file",
+            "currency"
           ]
         },
         "default": {},
@@ -645,7 +648,8 @@
                   "emojis",
                   "words",
                   "list",
-                  "choices"
+                  "choices",
+                  "currency"
                 ]
               }
             },

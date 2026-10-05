@@ -21,6 +21,7 @@
   {{template "legal_settings" .Legal}}
 {{else if eq .Section "invite_policies"}}
   {{template "invite_settings" .Invite}}
+  {{template "registration_settings" .Registration}}
 {{else if eq .Section "email"}}
   {{template "email_settings" .}}
 {{else if eq .Section "api_secrets"}}
@@ -624,4 +625,28 @@ docker compose up -d --build</pre>
   <p class="hint">{{t "update.hint"}}</p>
   {{end}}
 </section>
+{{end}}
+
+{{/* Self-registration: anyone can create an account with the chosen role. */}}
+{{define "registration_settings"}}
+<div id="registration-flash"></div>
+<form class="form" hx-post="/admin/registration" hx-swap="none">
+  <section class="section">
+    <header class="section-head"><h3>{{t "registration.title"}}</h3></header>
+    <p class="hint">{{t "registration.hint"}}</p>
+    <div class="form">
+      <label class="toggle-row">
+        <span><strong>{{t "registration.enabled"}}</strong><span class="hint mono">{{.URL}}</span></span>
+        <input type="checkbox" class="toggle" name="enabled" value="true" {{if .Enabled}}checked{{end}}>
+      </label>
+      <label class="field">{{t "registration.role"}}
+        <select name="role_id">
+          {{range .Roles}}<option value="{{.ID}}" {{if eq .ID $.RoleID}}selected{{end}}>{{.Name}}</option>{{end}}
+        </select>
+        <span class="hint">{{t "registration.role_hint"}}</span>
+      </label>
+    </div>
+  </section>
+  <div><button type="submit" class="btn btn-primary">{{t "action.save"}}</button></div>
+</form>
 {{end}}

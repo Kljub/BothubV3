@@ -22,12 +22,19 @@
           "type": "text",
           "max": 32,
           "pattern": "^[a-z0-9]{1,32}$",
-          "required": true
+          "autoFrom": "name",
+          "hint": true
         },
         {
           "key": "emoji",
           "type": "text",
           "max": 64
+        },
+        {
+          "key": "allowNegative",
+          "type": "bool",
+          "default": false,
+          "hint": true
         }
       ]
     },
@@ -155,9 +162,7 @@
         },
         {
           "key": "currency",
-          "type": "text",
-          "max": 32,
-          "pattern": "^[a-z0-9]{0,32}$"
+          "type": "currency"
         },
         {
           "key": "limit",

@@ -365,14 +365,21 @@ export interface PluginContext {
     note(guildId: Id, userId: Id, content: string, authorId?: Id): Async<number>;
     notes(guildId: Id, userId: Id): Async<Array<{ id: number; authorId: Id | null; content: string; createdAt: string }>>;
   };
-  /** "economy": balances of the bot's Economy module (the same as /balance). */
+  /**
+   * "economy": balances of the bot's Economy module (the same as /balance).
+   * currency: key of one of its currencies (a "currency" settings field gives
+   * the admin a dropdown); empty or left out: the default currency. An unknown
+   * key fails with sdk.economy.unknown_currency.
+   */
   readonly economy: {
-    get(guildId: Id, userId: Id): Async<number>;
-    add(guildId: Id, userId: Id, amount: number): Async<number>;
+    /** The currencies of the Economy settings, the default first. */
+    currencies(): Async<Array<{ key: string; name: string; emoji: string; default: boolean }>>;
+    get(guildId: Id, userId: Id, currency?: string): Async<number>;
+    add(guildId: Id, userId: Id, amount: number, currency?: string): Async<number>;
     /** Fails with sdk.economy.not_enough instead of going below 0. */
-    remove(guildId: Id, userId: Id, amount: number): Async<number>;
-    transfer(guildId: Id, fromUserId: Id, toUserId: Id, amount: number): Async<void>;
-    leaderboard(guildId: Id, limit?: number): Async<Array<{ userId: Id; balance: number }>>;
+    remove(guildId: Id, userId: Id, amount: number, currency?: string): Async<number>;
+    transfer(guildId: Id, fromUserId: Id, toUserId: Id, amount: number, currency?: string): Async<void>;
+    leaderboard(guildId: Id, limit?: number, currency?: string): Async<Array<{ userId: Id; balance: number }>>;
     /** Bank amount (with the daily interest up to today). */
     bank(guildId: Id, userId: Id): Async<number>;
     /** "modules.economy.bank.write": bank money of one member into the wallet of another; sdk.economy.not_enough when too little. */

@@ -15,7 +15,7 @@ export interface ShopItem {
 }
 
 export interface EconomyConfig {
-  currencies: { key: string; name: string; emoji: string }[];
+  currencies: { key: string; name: string; emoji: string; allowNegative?: boolean }[];
   dailyBonus: number;
   bankInterest: number;
   messageRewards: boolean;

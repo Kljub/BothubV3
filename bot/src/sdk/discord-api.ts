@@ -59,10 +59,13 @@ export interface DiscordApiDeps {
     notes(guildId: string, userId: string): { id: number; authorId: string | null; content: string; createdAt: string }[];
   };
   economy: {
-    balance(guildId: string, userId: string): number;
-    change(guildId: string, userId: string, amount: number, mode: 'add' | 'set'): number;
-    pay(guildId: string, from: string, to: string, amount: number): boolean;
-    leaderboard(guildId: string, limit: number): { userId: string; balance: number }[];
+    // currency: key of an Economy currency; empty: the default one.
+    balance(guildId: string, userId: string, currency?: string | null): number;
+    change(guildId: string, userId: string, amount: number, mode: 'add' | 'set', currency?: string | null): number;
+    pay(guildId: string, from: string, to: string, amount: number, currency?: string | null): boolean;
+    leaderboard(guildId: string, limit: number, currency?: string | null): { userId: string; balance: number }[];
+    /** The currencies of the Economy settings, the default first. */
+    currencies(): { key: string; name: string; emoji: string; default: boolean }[];
     /** Bank amount with the interest up to today. */
     bank(guildId: string, userId: string): number;
     /** Bank money of from into the wallet of to; false when from has too little. */
@@ -657,6 +660,20 @@ export function discordApi(
     }
   };
   const econGuild = (g: unknown) => guildOf(g).id;
+  // Currency key of an economy call (optional last argument); empty: the default currency.
+  const currencyOf = (v: unknown): string | null => {
+    if (v === undefined || v === null || v === '') return null;
+    if (typeof v !== 'string' || !/^[a-z0-9]{1,32}$/.test(v)) throw new SdkError('sdk.economy.unknown_currency');
+    return v;
+  };
+  const econ = <T>(fn: () => T): T => {
+    try {
+      return fn();
+    } catch (err) {
+      if (err instanceof Error && err.message === 'economy.unknown_currency') throw new SdkError('sdk.economy.unknown_currency');
+      throw err;
+    }
+  };
   const amount = (v: unknown): number => {
     if (typeof v !== 'number' || !Number.isInteger(v) || v < 0 || v > 1e12) throw new SdkError('sdk.economy.bad_amount');
     return v;
@@ -1008,26 +1025,30 @@ export function discordApi(
       return siteCheck(a(q)[0], a(q)[1], net?.resolve, net?.checkRaw);
     },
     // --- economy (the bot's Economy module: same balances as /balance) ---
-    'economy.get': (q) => deps.economy.balance(econGuild(a(q)[0]), sf(a(q)[1], 'user')),
-    'economy.add': (q) => deps.economy.change(econGuild(a(q)[0]), sf(a(q)[1], 'user'), amount(a(q)[2]), 'add'),
-    'economy.remove': (q) => {
-      const g = econGuild(a(q)[0]);
-      const u = sf(a(q)[1], 'user');
-      const n = amount(a(q)[2]);
-      // Never below 0: a plugin takes what is there at most.
-      if (deps.economy.balance(g, u) < n) throw new SdkError('sdk.economy.not_enough');
-      return deps.economy.change(g, u, -n, 'add');
-    },
-    'economy.transfer': (q) => {
-      const g = econGuild(a(q)[0]);
-      if (!deps.economy.pay(g, sf(a(q)[1], 'user'), sf(a(q)[2], 'user'), amount(a(q)[3]))) throw new SdkError('sdk.economy.not_enough');
-    },
+    'economy.currencies': () => deps.economy.currencies(),
+    'economy.get': (q) => econ(() => deps.economy.balance(econGuild(a(q)[0]), sf(a(q)[1], 'user'), currencyOf(a(q)[2]))),
+    'economy.add': (q) => econ(() => deps.economy.change(econGuild(a(q)[0]), sf(a(q)[1], 'user'), amount(a(q)[2]), 'add', currencyOf(a(q)[3]))),
+    'economy.remove': (q) =>
+      econ(() => {
+        const g = econGuild(a(q)[0]);
+        const u = sf(a(q)[1], 'user');
+        const n = amount(a(q)[2]);
+        const cur = currencyOf(a(q)[3]);
+        // Never below 0: a plugin takes what is there at most.
+        if (deps.economy.balance(g, u, cur) < n) throw new SdkError('sdk.economy.not_enough');
+        return deps.economy.change(g, u, -n, 'add', cur);
+      }),
+    'economy.transfer': (q) =>
+      econ(() => {
+        const g = econGuild(a(q)[0]);
+        if (!deps.economy.pay(g, sf(a(q)[1], 'user'), sf(a(q)[2], 'user'), amount(a(q)[3]), currencyOf(a(q)[4]))) throw new SdkError('sdk.economy.not_enough');
+      }),
     'economy.bank': (q) => deps.economy.bank(econGuild(a(q)[0]), sf(a(q)[1], 'user')),
     'economy.bankTransfer': (q) => {
       const g = econGuild(a(q)[0]);
       if (!deps.economy.bankTake(g, sf(a(q)[1], 'user'), sf(a(q)[2], 'user'), amount(a(q)[3]))) throw new SdkError('sdk.economy.not_enough');
     },
-    'economy.leaderboard': (q) => deps.economy.leaderboard(econGuild(a(q)[0]), Math.max(1, Math.min(50, Number(a(q)[1]) || 10))),
+    'economy.leaderboard': (q) => econ(() => deps.economy.leaderboard(econGuild(a(q)[0]), Math.max(1, Math.min(50, Number(a(q)[1]) || 10)), currencyOf(a(q)[2]))),
   };
 }
 
