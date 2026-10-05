@@ -11,7 +11,7 @@ test('cards: every template draws to a PNG of its size, placeholders filled', as
   await cardRenderer(shared);
   const { templates } = JSON.parse(readFileSync(join(shared, 'cards', 'templates.json'), 'utf8')) as { templates: Record<string, { width: number; height: number }> };
   for (const [kind, design] of Object.entries(templates)) {
-    const png = await renderDesign(design, { 'user.display': 'kljub', 'user.name': 'kljub', server: 'Srv', 'member.ordinal': '5th', boosts: '3', milestone: '1000', level: '2', rank: '1', xp: '10', 'xp.next': '100', 'level.progress': '10' });
+    const png = await renderDesign(design, { 'user.display': 'Kljub', 'user.name': 'kljub', server: 'Srv', 'member.ordinal': '5th', boosts: '3', milestone: '1000', level: '2', rank: '1', xp: '10', 'xp.next': '100', 'level.progress': '10' });
     assert.equal(png.subarray(1, 4).toString(), 'PNG', kind);
     assert.equal(png.readUInt32BE(16), design.width, `${kind} width`);
     assert.equal(png.readUInt32BE(20), design.height, `${kind} height`);
@@ -22,7 +22,7 @@ test('cards: every template draws to a PNG of its size, placeholders filled', as
 });
 
 test('cards: member placeholders and uploaded pictures', async () => {
-  const v = cardVars({ guildName: 'Srv', guildId: '1', members: 1203, userId: '2', userName: 'kljub', display: 'kljub', avatar: '', createdAt: Date.now() - 3 * 86_400_000, joinedAt: null });
+  const v = cardVars({ guildName: 'Srv', guildId: '1', members: 1203, userId: '2', userName: 'kljub', display: 'Kljub', avatar: '', createdAt: Date.now() - 3 * 86_400_000, joinedAt: null });
   assert.equal(v['member.ordinal'], '1,203rd');
   assert.equal(v['account.days'], '3');
   assert.equal(cardVars({ ...{ guildName: '', guildId: '', userId: '', userName: '', display: '', avatar: '', createdAt: 0, joinedAt: null }, members: 12 })['member.ordinal'], '12th');
