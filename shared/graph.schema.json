@@ -4,7 +4,11 @@
   "title": "BotHub command graph",
   "description": "Format of every command (built-in and custom). Structure only: port types, required fields and cycle checks need the node definitions and happen in the API validator. Limits live in shared/graph-limits.json.",
   "type": "object",
-  "required": ["schemaVersion", "nodes", "edges"],
+  "required": [
+    "schemaVersion",
+    "nodes",
+    "edges"
+  ],
   "additionalProperties": false,
   "properties": {
     "schemaVersion": {
@@ -15,20 +19,32 @@
       "type": "array",
       "minItems": 1,
       "maxItems": 500,
-      "items": { "$ref": "#/$defs/node" }
+      "items": {
+        "$ref": "#/$defs/node"
+      }
     },
     "edges": {
       "type": "array",
       "maxItems": 2000,
-      "items": { "$ref": "#/$defs/edge" }
+      "items": {
+        "$ref": "#/$defs/edge"
+      }
     },
     "editor": {
       "description": "Editor-only state (zoom, pan). Ignored by the interpreter.",
       "type": "object",
       "properties": {
-        "zoom": { "type": "number", "minimum": 0.1, "maximum": 4 },
-        "panX": { "type": "number" },
-        "panY": { "type": "number" }
+        "zoom": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 4
+        },
+        "panX": {
+          "type": "number"
+        },
+        "panY": {
+          "type": "number"
+        }
       },
       "additionalProperties": false
     }
@@ -44,10 +60,17 @@
     },
     "node": {
       "type": "object",
-      "required": ["id", "type", "typeVersion", "config"],
+      "required": [
+        "id",
+        "type",
+        "typeVersion",
+        "config"
+      ],
       "additionalProperties": false,
       "properties": {
-        "id": { "$ref": "#/$defs/nodeId" },
+        "id": {
+          "$ref": "#/$defs/nodeId"
+        },
         "type": {
           "description": "Node definition key, e.g. `trigger.slash`, `economy.add_balance`, `plugin.casino.spin`.",
           "type": "string",
@@ -64,11 +87,18 @@
         },
         "position": {
           "type": "object",
-          "required": ["x", "y"],
+          "required": [
+            "x",
+            "y"
+          ],
           "additionalProperties": false,
           "properties": {
-            "x": { "type": "number" },
-            "y": { "type": "number" }
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
           }
         },
         "label": {
@@ -80,6 +110,19 @@
           "description": "Helper text shown next to the block on the canvas.",
           "type": "string",
           "maxLength": 500
+        },
+        "noteStyle": {
+          "description": "Look of the helper text: colour and icon.",
+          "type": "string",
+          "enum": [
+            "note",
+            "info",
+            "tip",
+            "warning",
+            "danger",
+            "success"
+          ],
+          "default": "note"
         },
         "paths": {
           "description": "Success and error paths: the flow output `next` becomes `success` and `error`.",
@@ -95,20 +138,34 @@
     },
     "edge": {
       "type": "object",
-      "required": ["from", "to"],
+      "required": [
+        "from",
+        "to"
+      ],
       "additionalProperties": false,
       "properties": {
-        "from": { "$ref": "#/$defs/endpoint" },
-        "to": { "$ref": "#/$defs/endpoint" }
+        "from": {
+          "$ref": "#/$defs/endpoint"
+        },
+        "to": {
+          "$ref": "#/$defs/endpoint"
+        }
       }
     },
     "endpoint": {
       "type": "object",
-      "required": ["node", "port"],
+      "required": [
+        "node",
+        "port"
+      ],
       "additionalProperties": false,
       "properties": {
-        "node": { "$ref": "#/$defs/nodeId" },
-        "port": { "$ref": "#/$defs/portName" }
+        "node": {
+          "$ref": "#/$defs/nodeId"
+        },
+        "port": {
+          "$ref": "#/$defs/portName"
+        }
       }
     }
   }

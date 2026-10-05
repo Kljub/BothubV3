@@ -5242,5 +5242,12 @@
   "builder.msg.from_original": "Started from the original message",
   "builder.msg.use_original": "Start from the original message",
   "builder.msg.use_original_confirm": "Replace this message with the original message?",
-  "builder.msg.original_hint": "Editing a message of this command: “Write message” starts from the original."
+  "builder.msg.original_hint": "Editing a message of this command: “Write message” starts from the original.",
+  "builder.cfg.note_style": "Look",
+  "builder.enum.note_style.note": "Note",
+  "builder.enum.note_style.info": "Info",
+  "builder.enum.note_style.tip": "Tip",
+  "builder.enum.note_style.warning": "Warning",
+  "builder.enum.note_style.danger": "Important",
+  "builder.enum.note_style.success": "Done"
 }

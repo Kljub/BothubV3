@@ -408,6 +408,11 @@
     if (def.category === 'option') return node.config.name ? `{option_${node.config.name}}` : t('builder.cat.option');
     if (node.type === 'trigger.event') return EVENT_INFO[node.config.event] ? t(`builder.event.${node.config.event}`) : t('builder.event.pick');
     if (node.type === 'action.send_message') return t(tk(`builder.msg.target_short.${node.config.target || 'reply'}`));
+    // A Note block shows the start of its text.
+    if (node.type === 'action.note' && String(node.config.note || '').trim()) {
+      const first = String(node.config.note).trim().split('\n')[0];
+      return first.length > 48 ? `${first.slice(0, 47)}…` : first;
+    }
     if (def.conditionKind === 'compare' && node.config.subject) return t('builder.checks', { value: node.config.subject });
     if (def.category === 'condition' || def.category === 'trigger' || def.category === 'utility') {
       return def.category === 'condition' ? t(def.descriptionKey || '') : t('builder.cat.' + def.category);
@@ -440,6 +445,10 @@
     return b;
   }
 
+  // Helper texts and Note blocks: colour and icon per style.
+  const NOTE_STYLES = { note: '📝', info: 'ℹ️', tip: '💡', warning: '⚠️', danger: '⛔', success: '✅' };
+  const noteStyle = (v) => (NOTE_STYLES[v] ? v : 'note');
+
   function renderNode(node) {
     const def = defs[node.type] || { category: 'action', labelKey: node.type, outputs: [], inputs: [] };
     const optionState = isState(node);
@@ -447,6 +456,7 @@
     if (def.color) cls.push(`bnode-color-${def.color}`);
     if (def.wide) cls.push('bnode-wide');
     if (node.type === 'component.button') cls.push('bnode-button');
+    if (node.type === 'action.note') cls.push('bnode-notecard', `bnote-${noteStyle(node.config.style)}`);
     if (optionState) cls.push('bnode-optstate', node.type === 'condition.else' ? 'bnode-else' : 'bnode-state');
     else if (def.compact) cls.push('bnode-compact', node.type === 'condition.else' ? 'bnode-else' : 'bnode-state');
     const box = el('div', cls.join(' '));
@@ -465,7 +475,7 @@
       cap.append(icon('pointer'), document.createTextNode(t('builder.node.component_button.label')));
       box.append(prev, cap);
     } else {
-      box.append(el('span', 'bnode-icon', optionState ? (node.type === 'condition.else' ? '?' : isOptionState(node) ? '☰' : '?') : (def.icon || '•')));
+      box.append(el('span', 'bnode-icon', optionState ? (node.type === 'condition.else' ? '?' : isOptionState(node) ? '☰' : '?') : (node.type === 'action.note' ? NOTE_STYLES[noteStyle(node.config.style)] : def.icon || '•')));
       const text = el('span', 'bnode-text');
       if (def.compact) {
         const [small, big] = stateLabel(node);
@@ -520,9 +530,12 @@
       box.append(port);
     }
     if (node.note) {
-      const note = el('div', 'bnode-note', node.note);
+      const style = noteStyle(node.noteStyle);
+      const note = el('div', `bnode-note bnote-${style}`);
+      note.append(el('span', 'bnote-icon', NOTE_STYLES[style]), el('span', '', node.note));
       box.append(note);
     }
+
     outputsOf(node).forEach((p, i, all) => {
       const left = `${(100 * (i + 1)) / (all.length + 1)}%`;
       const port = el('span', `bport bport-out bport-${p.name}`);
@@ -948,7 +961,26 @@
       refreshNode(node);
       commit();
     });
-    note.c.append(area);
+    // Look of the helper text: colour and icon.
+    const looks = el('div', 'bnote-looks');
+    looks.hidden = !ns.checked;
+    for (const [style, ic] of Object.entries(NOTE_STYLES)) {
+      const b = el('button', `bnote-look bnote-${style}`, ic);
+      b.type = 'button';
+      b.title = t(`builder.enum.note_style.${style}`);
+      b.setAttribute('aria-label', b.title);
+      b.setAttribute('aria-pressed', String(noteStyle(node.noteStyle) === style));
+      b.addEventListener('click', () => {
+        if (style === 'note') delete node.noteStyle;
+        else node.noteStyle = style;
+        looks.querySelectorAll('.bnote-look').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+        refreshNode(node);
+        commit();
+      });
+      looks.append(b);
+    }
+    ns.addEventListener('change', () => { looks.hidden = !ns.checked; });
+    note.c.append(area, looks);
     wrap.append(note.c);
     return wrap;
   }

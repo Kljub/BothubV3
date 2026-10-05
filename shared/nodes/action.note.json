@@ -33,6 +33,20 @@
         "maxLength": 2000,
         "x-labelKey": "builder.cfg.note",
         "x-multiline": true
+      },
+      "style": {
+        "type": "string",
+        "enum": [
+          "note",
+          "info",
+          "tip",
+          "warning",
+          "danger",
+          "success"
+        ],
+        "default": "note",
+        "x-labelKey": "builder.cfg.note_style",
+        "x-enumKey": "builder.enum.note_style"
       }
     }
   }
