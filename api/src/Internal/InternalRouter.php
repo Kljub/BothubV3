@@ -176,6 +176,32 @@ final class InternalRouter
                 $this->bots->find((int) $m[1]) ?? throw ApiError::notFound();
                 return $this->templateRoute($method, (int) $m[1], isset($m[2]) && $m[2] !== '' ? (int) $m[2] : null, isset($m[3]), $body, $bodyObject);
             }
+            if ($this->cards !== null && preg_match('#^/internal/bots/(\d+)/cards/(\d+)/send$#', $path, $m)) {
+                $this->bots->find((int) $m[1]) ?? throw ApiError::notFound();
+                if ($method !== 'POST') {
+                    throw new ApiError(405, 'error.method_not_allowed');
+                }
+                try {
+                    return [202, $this->cards->send((int) $m[1], (int) $m[2], $body, $this->jobs)];
+                } catch (\RedisException) {
+                    throw new ApiError(503, 'error.redis.unavailable');
+                }
+            }
+            if ($this->cards !== null && preg_match('#^/internal/bots/(\d+)/card-images(?:/(\d+))?$#', $path, $m)) {
+                $this->bots->find((int) $m[1]) ?? throw ApiError::notFound();
+                $botId = (int) $m[1];
+                $iid = isset($m[2]) ? (int) $m[2] : null;
+                return match (true) {
+                    $iid === null && $method === 'GET' => [200, ['items' => $this->cards->images($botId)]],
+                    $iid === null && $method === 'POST' => [201, $this->cards->addImage($botId, $body)],
+                    $iid !== null && $method === 'GET' => [200, $this->cards->image($botId, $iid)],
+                    $iid !== null && $method === 'DELETE' => (function () use ($botId, $iid) {
+                        $this->cards->deleteImage($botId, $iid);
+                        return [204, null];
+                    })(),
+                    default => throw new ApiError(405, 'error.method_not_allowed'),
+                };
+            }
             if ($this->cards !== null && preg_match('#^/internal/bots/(\d+)/cards(?:/(\d+))?$#', $path, $m)) {
                 $this->bots->find((int) $m[1]) ?? throw ApiError::notFound();
                 return $this->cardRoute($method, (int) $m[1], isset($m[2]) ? (int) $m[2] : null, $bodyObject);

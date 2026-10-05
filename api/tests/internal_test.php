@@ -262,6 +262,13 @@ check('card renamed, design kept', $s === 200 && $card2['name'] === 'Hello' && $
 check('card checks', call('POST', "{$b}/cards", '{"name":"x","kind":"nope","design":' . $design . '}')[0] === 422
     && call('POST', "{$b}/cards", '{"name":"x","kind":"custom","design":{"width":5000,"height":500,"layers":[]}}')[0] === 422
     && call('POST', "{$b}/cards", '{"name":"x","kind":"custom","design":{"width":500,"height":500,"layers":' . json_encode(array_fill(0, 41, ['type' => 'text'])) . '}}')[0] === 422);
+$png = base64_encode(base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='));
+[$s, $img] = call('POST', "{$b}/card-images", json_encode(['name' => 'bg.png', 'data' => $png]));
+check('card picture uploaded', $s === 201 && $img['mime'] === 'image/png' && $img['size'] > 0);
+check('card picture read back', call('GET', "{$b}/card-images/{$img['id']}")[1]['data'] === $png && count(call('GET', "{$b}/card-images")[1]['items']) === 1);
+check('card picture: no image refused', call('POST', "{$b}/card-images", json_encode(['name' => 'x', 'data' => base64_encode('<?php evil')]))[0] === 422);
+check('card picture deleted', call('DELETE', "{$b}/card-images/{$img['id']}")[0] === 204);
+check('card test needs a channel', call('POST', "{$b}/cards/{$card['id']}/send", '{"channelId":"x"}')[0] === 422);
 check('card list and delete', count(call('GET', "{$b}/cards")[1]['items']) === 1 && call('DELETE', "{$b}/cards/{$card['id']}")[0] === 204 && call('GET', "{$b}/cards/{$card['id']}")[0] === 404);
 
 // message builder: saved messages

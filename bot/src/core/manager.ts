@@ -195,6 +195,14 @@ export class BotManager {
         await bot.sendTemplate(j.templateId, j.target);
         return { ok: true };
       }
+      if (job.type === 'card.send') {
+        const j = job as { cardId?: unknown; target?: unknown };
+        const bot = this.bots.get(id);
+        if (!bot) return { ok: false, errorKey: 'error.bot.not_running' };
+        if (typeof j.cardId !== 'number' || typeof j.target !== 'string') return { ok: false, errorKey: 'error.job.invalid' };
+        await bot.sendCard(j.cardId, j.target);
+        return { ok: true };
+      }
       if (job.type === 'bot.start' || job.type === 'bot.restart') await this.start(id);
       else if (job.type === 'bot.stop') await this.stop(id);
       else return { ok: false, errorKey: 'error.job.unknown' };

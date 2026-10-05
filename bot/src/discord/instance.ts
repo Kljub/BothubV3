@@ -24,6 +24,7 @@ import {
 import type { GraphLimits } from '../core/config.js';
 import { guardRest, guardValue } from '../core/leakguard.js';
 import { log } from '../core/log.js';
+import { cardVars, renderCard } from '../cards/cards.js';
 import type { CommandRow, Repo } from '../core/repo.js';
 import { GraphError, Run, type Engine, type Handler, type RunResult } from '../graph/interpreter.js';
 import { cronMatches, parseCron, type Cron } from '../graph/cron.js';
@@ -491,6 +492,22 @@ export class BotInstance {
    * or a Discord webhook URL. Placeholders get the channel and server of the
    * target; buttons and menus are blocks, so a template has none.
    */
+  /** Card Designer "Send a test": the card in a channel, drawn for the bot's own user. */
+  async sendCard(cardId: number, target: string): Promise<void> {
+    if (!this.client?.isReady()) throw new GraphError('error.bot.not_running');
+    const channel = await this.client.channels.fetch(target).catch(() => null);
+    if (!channel || !channel.isSendable()) throw new GraphError('error.run.channel_not_found', { value: target });
+    const guild = 'guild' in channel ? (channel.guild as Guild) : null;
+    const me = this.client.user;
+    const vars = cardVars({
+      guildName: guild?.name ?? 'Server', guildId: guild?.id ?? '', members: guild?.memberCount ?? 1, userId: me.id, userName: me.username,
+      display: me.globalName ?? me.username, avatar: me.displayAvatarURL({ extension: 'png', size: 256 }), createdAt: me.createdTimestamp, joinedAt: guild?.members.me?.joinedTimestamp ?? null,
+    });
+    const png = await renderCard(this.deps.repo.db, this.botId, cardId, vars);
+    if (!png) throw new GraphError('error.card.unknown');
+    await channel.send({ content: '🖼️ Card Designer test', files: [{ attachment: png, name: 'card.png' }] });
+  }
+
   async sendTemplate(templateId: number, target: string): Promise<void> {
     const row = this.deps.repo.db.prepare('SELECT message FROM message_templates WHERE id = ? AND bot_id = ?').get(templateId, this.botId) as { message: string } | undefined;
     if (!row) throw new GraphError('error.template.unknown');

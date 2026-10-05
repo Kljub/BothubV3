@@ -202,7 +202,7 @@ export async function drawCard(ctx, design, opts = {}) {
   const vars = opts.vars ?? {};
   const load = async (url) => {
     const u = fill(url, vars).trim();
-    if (!/^https:\/\//.test(u) && !/^data:image\//.test(u) && !/^\//.test(u)) return null;
+    if (!/^https:\/\//.test(u) && !/^data:image\//.test(u) && !/^\//.test(u) && !/^asset:\d+$/.test(u)) return null;
     try {
       return (await opts.loadImage?.(u)) ?? null;
     } catch {
