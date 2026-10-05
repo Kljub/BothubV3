@@ -29,16 +29,33 @@
     return renderer;
   }
 
-  // Pictures for the preview (the page only loads its own files, data: and the Discord CDN).
+  // Pictures for the preview (the page only loads its own files, data: and the
+  // Discord CDN). "asset:<id>" is an uploaded picture of the bot (Your pictures).
   const images = new Map();
+  let assetBot = null;
+  const assetUrl = async (id) => {
+    const a = await api('GET', `/api/v1/bots/${assetBot}/card-images/${id}`);
+    return `data:${a.mime};base64,${a.data}`;
+  };
   function loadImage(url) {
     if (!images.has(url)) {
-      images.set(url, new Promise((resolve) => {
-        const img = new Image();
-        img.onload = () => resolve(img);
-        img.onerror = () => resolve(null);
-        img.src = url;
-      }));
+      images.set(url, (async () => {
+        let src = url;
+        const asset = /^asset:(\d+)$/.exec(url);
+        if (asset) {
+          try {
+            src = await assetUrl(asset[1]);
+          } catch {
+            return null;
+          }
+        }
+        return new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.onerror = () => resolve(null);
+          img.src = src;
+        });
+      })());
     }
     return images.get(url);
   }
@@ -63,6 +80,7 @@
     if (root.dataset.ready) return;
     root.dataset.ready = '1';
     const bot = root.dataset.bot;
+    assetBot = bot;
     for (const c of root.querySelectorAll('[data-card-preview]')) {
       try {
         draw(c, JSON.parse(c.dataset.design));
@@ -107,6 +125,7 @@
     const texts = JSON.parse(root.dataset.texts || '{}');
     const t = (k) => texts[`cards.${k}`] ?? k;
     const bot = root.dataset.bot;
+    assetBot = bot;
     const cardId = root.dataset.card;
     const canvas = root.querySelector('[data-cs-canvas]');
     const overlay = root.querySelector('[data-cs-overlay]');
@@ -341,6 +360,75 @@
       parent.append(box);
     }
 
+    // "Your pictures": uploads of the bot; a click puts one into obj[key] as asset:<id>.
+    let pictureList = null;
+    function pictures(parent, obj, key) {
+      const box = el('div', 'cs-pictures');
+      parent.append(el('span', 'cs-sub', t('pictures')), box);
+      const fill = (items) => {
+        box.innerHTML = '';
+        for (const p of items) {
+          const tile = el('button', `cs-pic${obj[key] === `asset:${p.id}` ? ' is-selected' : ''}`);
+          tile.type = 'button';
+          tile.title = p.name;
+          const img = el('img');
+          img.alt = '';
+          loadImage(`asset:${p.id}`).then((i) => {
+            if (i) img.src = i.src;
+          });
+          const del = el('span', 'cs-pic-del', '✕');
+          del.title = t('picture_delete');
+          tile.append(img, del);
+          tile.addEventListener('click', async (e) => {
+            if (e.target === del) {
+              if (!window.confirm(t('picture_delete_confirm'))) return;
+              await api('DELETE', `/api/v1/bots/${bot}/card-images/${p.id}`).catch(() => null);
+              pictureList = null;
+              renderProps();
+              return;
+            }
+            begin();
+            obj[key] = `asset:${p.id}`;
+            end();
+            refresh();
+          });
+          box.append(tile);
+        }
+        const up = el('label', 'cs-pic cs-pic-add', '+');
+        up.title = t('picture_upload');
+        const input = el('input');
+        input.type = 'file';
+        input.accept = 'image/png,image/jpeg,image/gif,image/webp';
+        input.hidden = true;
+        input.addEventListener('change', () => {
+          const file = input.files?.[0];
+          if (!file) return;
+          if (file.size > 2 * 1024 * 1024) {
+            status.textContent = t('picture_too_big');
+            return;
+          }
+          const reader = new FileReader();
+          reader.onload = async () => {
+            try {
+              const data = String(reader.result).split(',')[1];
+              const pic = await api('POST', `/api/v1/bots/${bot}/card-images`, { name: file.name, data });
+              pictureList = null;
+              begin();
+              obj[key] = `asset:${pic.id}`;
+              end();
+              refresh();
+            } catch (ex) {
+              status.textContent = `${t('picture_failed')} (${ex.message})`;
+            }
+          };
+          reader.readAsDataURL(file);
+        });
+        up.append(input);
+        box.append(up);
+      };
+      (pictureList ??= api('GET', `/api/v1/bots/${bot}/card-images`).then((r) => r.items || []).catch(() => [])).then(fill);
+    }
+
     function renderProps() {
       props.innerHTML = '';
       const l = selected && layerById(selected);
@@ -354,6 +442,7 @@
           field(g, bg, 'angle', t('angle'), 'number', { min: 0, max: 360, fallback: 135 });
         }
         if (bg.type === 'image') {
+          pictures(g, bg, 'image');
           field(g, bg, 'image', t('image_url'), 'text');
           g.append(el('p', 'hint', t('image_hint')));
         }
@@ -377,6 +466,7 @@
         });
       }
       if (l.type === 'image') {
+        pictures(g, l, 'url');
         field(g, l, 'url', t('image_url'), 'text');
         g.append(el('p', 'hint', t('image_hint')));
         field(g, l, 'fit', t('fit'), 'select', { options: [['cover', t('fit.cover')], ['contain', t('fit.contain')]] });
@@ -651,6 +741,51 @@
       }
     }
     root.querySelector('[data-cs-save]').addEventListener('click', save);
+
+    // "Send a test": pick a server and channel; the bot posts the saved card there.
+    const testPanel = root.querySelector('[data-cs-test-panel]');
+    root.querySelector('[data-cs-test]').addEventListener('click', async () => {
+      testPanel.hidden = !testPanel.hidden;
+      if (testPanel.hidden || testPanel.dataset.loaded) return;
+      testPanel.dataset.loaded = '1';
+      const gSel = testPanel.querySelector('[data-cs-test-guild]');
+      const cSel = testPanel.querySelector('[data-cs-test-channel]');
+      const loadChannels = async () => {
+        cSel.innerHTML = '';
+        if (!gSel.value) return;
+        const res = await api('GET', `/api/v1/bots/${bot}/guilds/${gSel.value}/channels`).catch(() => ({ items: [] }));
+        for (const c of res.items || []) {
+          if (c.type !== 'text' && c.type !== 'announcement') continue;
+          const o = el('option', '', `# ${c.name}`);
+          o.value = c.id;
+          cSel.append(o);
+        }
+      };
+      try {
+        const res = await api('GET', `/api/v1/bots/${bot}/guilds`);
+        for (const g of res.items || []) {
+          const o = el('option', '', g.name);
+          o.value = g.id;
+          gSel.append(o);
+        }
+        gSel.addEventListener('change', loadChannels);
+        await loadChannels();
+      } catch (ex) {
+        testPanel.querySelector('[data-cs-test-status]').textContent = t('test_no_servers');
+      }
+    });
+    root.querySelector('[data-cs-test-send]').addEventListener('click', async () => {
+      const out = testPanel.querySelector('[data-cs-test-status]');
+      const channelId = testPanel.querySelector('[data-cs-test-channel]').value;
+      if (!channelId) return;
+      if (dirty) await save();
+      try {
+        await api('POST', `/api/v1/bots/${bot}/cards/${cardId}/send`, { channelId });
+        out.textContent = t('test_sent');
+      } catch (ex) {
+        out.textContent = `${t('test_failed')} (${ex.message})`;
+      }
+    });
     window.addEventListener('beforeunload', (e) => {
       if (dirty && root.isConnected) e.preventDefault();
     });

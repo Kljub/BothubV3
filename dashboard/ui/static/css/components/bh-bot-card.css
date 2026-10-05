@@ -4,7 +4,8 @@
 .bot-grid { --gap: 16px; display: grid; grid-template-columns: repeat(auto-fill, minmax(max(240px, calc((100% - 4 * var(--gap)) / 5)), 1fr)); gap: var(--gap); }
 .bot-card { position: relative; display: flex; flex-direction: column; border-width: 2px; }
 .bot-card .card-title::after { content: ""; position: absolute; inset: 0 0 56px 0; }
-.bot-card { overflow: hidden; }
+.bot-card { overflow: visible; }
+.bot-card-banner { border-radius: calc(var(--radius) - 2px) calc(var(--radius) - 2px) 0 0; overflow: hidden; }
 .bot-card:hover { background: color-mix(in srgb, var(--surface) 85%, var(--text) 3%); }
 .bot-card-running { border-color: var(--green); }
 .bot-card-stopped { border-color: var(--red); }
@@ -89,3 +90,23 @@
 .bot-presence-idle::after { top: -2px; left: -2px; width: 6px; height: 6px; }
 .bot-presence-dnd::after { left: 1px; right: 1px; top: 3px; height: 3px; }
 .bot-presence-invisible::after, .bot-presence-offline::after { inset: 2px; }
+.bot-verified { position: relative; z-index: 1; cursor: pointer; }
+/* The whole tile (banner included, footer not) opens the bot settings. */
+.bot-card-body { position: static; }
+/* No footer: the tile is only the profile; actions sit in the "⋯" menu on the banner. */
+.bot-card .card-title::after { inset: 0; }
+.bot-card-body { padding-bottom: 12px; }
+.bot-card-menu { position: absolute; top: 6px; right: 6px; z-index: 3; }
+.bot-card-menu > summary { display: grid; place-items: center; width: 28px; height: 28px; font-size: 18px; line-height: 1; color: #fff; list-style: none; background: rgb(0 0 0 / 0.55); border-radius: 50%; cursor: pointer; }
+.bot-card-menu > summary::-webkit-details-marker { display: none; }
+.bot-card-menu > summary:hover, .bot-card-menu[open] > summary { background: rgb(0 0 0 / 0.8); }
+.bot-card-menu-list { position: absolute; top: 34px; right: 0; display: flex; flex-direction: column; min-width: 210px; padding: 6px; background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: 10px; box-shadow: 0 12px 30px rgb(0 0 0 / 0.45); }
+.bot-card-menu-list a, .bot-card-menu-list button { display: block; width: 100%; padding: 8px 10px; font: inherit; font-size: 13px; font-weight: 600; text-align: left; color: var(--text); text-decoration: none; background: none; border: 0; border-radius: 6px; cursor: pointer; }
+.bot-card-menu-list a:hover, .bot-card-menu-list button:hover { background: color-mix(in srgb, var(--text) 8%, transparent); }
+.bot-card-menu-list hr { margin: 4px 6px; border: 0; border-top: 1px solid var(--border); }
+.bot-card-menu-list .menu-danger { color: #f87171; }
+.bot-card-menu-list .menu-warn { color: #fbbf24; }
+.bot-card-menu-list .menu-good { color: var(--green); }
+/* The "⋯" button is faint until the tile is hovered (or the menu is open). */
+.bot-card-menu > summary { opacity: 0.25; transition: opacity 0.15s; }
+.bot-card:hover .bot-card-menu > summary, .bot-card-menu[open] > summary, .bot-card-menu > summary:focus-visible { opacity: 1; }

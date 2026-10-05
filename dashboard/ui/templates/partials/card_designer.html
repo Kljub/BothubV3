@@ -59,8 +59,16 @@
     <button type="button" class="ur-icon-btn" data-cs-undo title="{{t "cards.undo"}}" aria-label="{{t "cards.undo"}}">↶</button>
     <button type="button" class="ur-icon-btn" data-cs-redo title="{{t "cards.redo"}}" aria-label="{{t "cards.redo"}}">↷</button>
     <span class="hint" data-cs-status></span>
+    <button type="button" class="btn btn-sm" data-cs-test>{{t "cards.test"}}</button>
     <button type="button" class="btn btn-primary btn-sm" data-cs-save>{{t "action.save"}}</button>
   </header>
+  <div class="cs-test" data-cs-test-panel hidden>
+    <span>{{t "cards.test_hint"}}</span>
+    <select data-cs-test-guild aria-label="{{t "cards.test_server"}}"></select>
+    <select data-cs-test-channel aria-label="{{t "cards.test_channel"}}"></select>
+    <button type="button" class="btn btn-primary btn-sm" data-cs-test-send>{{t "cards.test_send"}}</button>
+    <span class="hint" data-cs-test-status></span>
+  </div>
   <div class="cs-body">
     <aside class="cs-left">
       <h4>{{t "cards.layers"}}</h4>

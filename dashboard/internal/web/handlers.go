@@ -288,6 +288,10 @@ func (s *Server) handleStopBot(w http.ResponseWriter, r *http.Request, p Page) {
 	s.botAction(w, r, p, s.api.StopBot)
 }
 
+func (s *Server) handleRestartBotCard(w http.ResponseWriter, r *http.Request, p Page) {
+	s.botAction(w, r, p, s.api.RestartBot)
+}
+
 func (s *Server) botAction(w http.ResponseWriter, r *http.Request, p Page, action func(context.Context, api.Session, int64) (api.Job, error)) {
 	id, ok := s.botID(w, r, p)
 	if !ok {

@@ -310,6 +310,7 @@ func (s *Server) routes() http.Handler {
 	mux.Handle("POST /bot/{id}/presence/rotation", auth(s.handleRotation))
 	mux.Handle("POST /bot/{id}/start", auth(s.handleStartBot))
 	mux.Handle("POST /bot/{id}/stop", auth(s.handleStopBot))
+	mux.Handle("POST /bot/{id}/restart", auth(s.handleRestartBotCard))
 	mux.Handle("PUT /bot/{id}/modules/{key}", auth(s.handleSetModule))
 	mux.Handle("DELETE /bot/{id}/guilds/{guildId}", auth(s.handleLeaveGuild))
 	mux.Handle("GET /admin/{section}", auth(s.handleAdminSection))

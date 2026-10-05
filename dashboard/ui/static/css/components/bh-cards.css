@@ -70,3 +70,16 @@
   .cs-body { grid-template-columns: 1fr; }
   .cs-left, .cs-right { max-height: none; }
 }
+
+/* Send a test, Your pictures */
+.cs-test { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 12px; font-size: 13px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+.cs-test[hidden] { display: none; }
+.cs-test select { width: auto; max-width: 260px; }
+.cs-sub { display: block; margin: 4px 0 6px; font-size: 12px; color: var(--text-2); }
+.cs-pictures { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px; }
+.cs-pic { position: relative; display: grid; place-items: center; aspect-ratio: 1; padding: 0; overflow: hidden; font: inherit; font-size: 20px; color: var(--text-2); background: var(--surface-2); border: 2px solid var(--border); border-radius: 8px; cursor: pointer; }
+.cs-pic img { width: 100%; height: 100%; object-fit: cover; }
+.cs-pic.is-selected { border-color: #22c55e; }
+.cs-pic-add:hover { color: var(--text); border-color: var(--border-strong); }
+.cs-pic-del { position: absolute; top: 2px; right: 2px; display: none; width: 18px; height: 18px; font-size: 11px; line-height: 18px; text-align: center; color: #fff; background: rgb(0 0 0 / 0.65); border-radius: 50%; }
+.cs-pic:hover .cs-pic-del { display: block; }

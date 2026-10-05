@@ -890,3 +890,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 300);
   }, true);
 })();
+
+// Bot tile "⋯" menus: one open at a time, closed by a click elsewhere; the
+// tile list does not refresh while a menu is open.
+document.addEventListener('click', (e) => {
+  for (const m of document.querySelectorAll('[data-bot-menu][open]')) if (!m.contains(e.target)) m.open = false;
+});
+document.addEventListener('toggle', (e) => {
+  if (!(e.target instanceof HTMLElement) || !e.target.matches('[data-bot-menu]') || !e.target.open) return;
+  for (const m of document.querySelectorAll('[data-bot-menu][open]')) if (m !== e.target) m.open = false;
+}, true);
+document.addEventListener('htmx:beforeRequest', (e) => {
+  if (e.detail.elt?.id === 'bot-grid' && document.querySelector('[data-bot-menu][open]')) e.preventDefault();
+});

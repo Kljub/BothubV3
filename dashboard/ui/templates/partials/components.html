@@ -7,6 +7,28 @@
 <article class="card bot-card bot-card-{{.Status}}" id="bot-{{.ID}}"
   {{if .Transitioning}}hx-get="/bot/{{.ID}}/card" hx-trigger="load delay:1500ms" hx-swap="outerHTML"{{end}}>
   <div class="bot-card-banner" aria-hidden="true">{{with .BannerURL}}<img src="{{.}}" alt="" loading="lazy">{{end}}</div>
+  {{/* "⋯" menu on the banner: profile, share, start/stop/restart, delete, copy. */}}
+  <details class="bot-card-menu" data-bot-menu>
+    <summary aria-label="{{t "bots.menu"}}" title="{{t "bots.menu"}}">⋯</summary>
+    <div class="bot-card-menu-list" role="menu">
+      <a role="menuitem" href="/select-bot/{{.ID}}?to=settings">{{t "bots.menu.profile"}}</a>
+      {{with .ApplicationID}}<button type="button" role="menuitem" data-copy="https://discord.com/oauth2/authorize?client_id={{.}}" data-copy-done="{{t "bots.id_copied"}}">{{t "bots.menu.share"}}</button>{{end}}
+      <a role="menuitem" href="/select-bot/{{.ID}}?to=logs">{{t "bots.menu.logs"}}</a>
+      <hr>
+      {{if or (eq .Status "stopped") (eq .Status "error")}}
+      <button type="button" role="menuitem" class="menu-good" hx-post="/bot/{{.ID}}/start" hx-target="#bot-{{.ID}}" hx-swap="outerHTML">{{t "bots.start"}}</button>
+      {{else if eq .Status "running"}}
+      <button type="button" role="menuitem" class="menu-warn" hx-post="/bot/{{.ID}}/stop" hx-target="#bot-{{.ID}}" hx-swap="outerHTML">{{t "bots.menu.stop"}}</button>
+      <button type="button" role="menuitem" hx-post="/bot/{{.ID}}/restart" hx-target="#bot-{{.ID}}" hx-swap="outerHTML">{{t "bots.menu.restart"}}</button>
+      {{end}}
+      <button type="button" role="menuitem" class="menu-danger" hx-delete="/bot/{{.ID}}" hx-confirm="{{t "bots.menu.delete_confirm" "name" .Name}}">{{t "bots.menu.delete"}}</button>
+      <hr>
+      {{with .ApplicationID}}
+      <button type="button" role="menuitem" data-copy="https://discord.com/users/{{.}}" data-copy-done="{{t "bots.id_copied"}}"><span>🔗 {{t "bots.menu.copy_link"}}</span></button>
+      <button type="button" role="menuitem" data-copy="{{.}}" data-copy-done="{{t "bots.id_copied"}}"><span>🆔 {{t "bots.menu.copy_id"}}</span></button>
+      {{end}}
+    </div>
+  </details>
   <div class="bot-card-body">
     <header class="bot-card-header">
       <div class="bot-card-avatar">
@@ -16,8 +38,8 @@
       </div>
       <div class="bot-card-title">
         <div class="bot-card-name">
-          <a href="/select-bot/{{.ID}}" class="card-title">{{.Name}}</a>
-          {{if .Verified}}<span class="bot-verified" title="{{t "bot.verified"}}" aria-label="{{t "bot.verified"}}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 8.5l2.5 2.5L12 5.5"/></svg></span>{{end}}
+          <a href="/select-bot/{{.ID}}?to=settings" class="card-title">{{.Name}}</a>
+          {{if .Verified}}<a class="bot-verified" href="https://support-dev.discord.com/hc/en-us/articles/23926564536471-How-Do-I-Get-My-App-Verified" target="_blank" rel="noopener noreferrer" title="{{t "bot.verified"}}" aria-label="{{t "bot.verified"}}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 8.5l2.5 2.5L12 5.5"/></svg></a>{{end}}
         </div>
         {{/* Blurred until hovered; a click copies it. */}}
         {{with .ApplicationID}}<button type="button" class="mono muted bot-card-app" data-copy="{{.}}" data-copy-done="{{t "bots.id_copied"}}" title="{{t "bots.id_copy"}}">{{.}}</button>{{end}}
@@ -27,18 +49,6 @@
     {{with .StatusErrorKey}}<p class="status-text status-text-error">{{t .}}</p>
     {{else}}<p class="status-text status-text-{{.Status}}">{{t (printf "bot.status_text.%s" .Status)}}</p>{{end}}
   </div>
-  <footer class="bot-card-footer">
-    <a class="icon-btn" href="/select-bot/{{.ID}}?to=settings" title="{{t "bots.manage"}}" aria-label="{{t "bots.manage"}}">{{template "icon_gear"}}</a>
-    <a class="icon-btn" href="/select-bot/{{.ID}}?to=logs" title="{{t "bots.logs"}}" aria-label="{{t "bots.logs"}}">{{template "icon_log"}}</a>
-    <span class="spacer"></span>
-    {{if or (eq .Status "stopped") (eq .Status "error")}}
-    <button class="icon-btn icon-btn-start" hx-post="/bot/{{.ID}}/start" hx-target="#bot-{{.ID}}" hx-swap="outerHTML"
-      title="{{t "bots.start"}}" aria-label="{{t "bots.start"}}">{{template "icon_play"}}</button>
-    {{else if eq .Status "running"}}
-    <button class="icon-btn icon-btn-stop" hx-post="/bot/{{.ID}}/stop" hx-target="#bot-{{.ID}}" hx-swap="outerHTML"
-      title="{{t "bots.stop"}}" aria-label="{{t "bots.stop"}}">{{template "icon_stop"}}</button>
-    {{end}}
-  </footer>
 </article>
 {{end}}
 
