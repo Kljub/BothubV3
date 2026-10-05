@@ -82,6 +82,18 @@
       </div>
     </details>
   </div>
+{{else if eq .Type "section"}}
+  {{/* A heading that groups the fields below it (no value). */}}
+  <h3 class="modset-section">{{t .Label}}</h3>
+{{else if eq .Type "card"}}
+  {{/* A card of the Card Designer; empty: no card. */}}
+  <label class="field">{{t .Label}}
+    <select name="{{.Name}}">
+      <option value="" {{if eq $f.Text ""}}selected{{end}}>{{t "modset.card.none"}}</option>
+      {{range .View.Cards}}<option value="{{.Value}}" {{if eq .Value $f.Text}}selected{{end}}>{{.Label}}</option>{{end}}
+    </select>
+    {{if not .View.Cards}}<span class="hint">{{t "modset.card.empty"}}</span>{{end}}
+  </label>
 {{else if eq .Type "currency"}}
   {{/* An Economy currency of the bot; empty: the default one. */}}
   <label class="field">{{t .Label}}

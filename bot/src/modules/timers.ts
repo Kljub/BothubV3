@@ -11,6 +11,7 @@ import { pollFeeds } from './feeds.js';
 import { lotteryDraw, payroll } from './economy.js';
 import { postFreeGames } from './freegames.js';
 import { autoPurge, dayNight } from './server-auto.js';
+import { welcomeTick } from './members.js';
 
 // ---------- pure helpers ----------
 
@@ -94,6 +95,7 @@ export class ModuleTimers {
       await this.timedMessages(guilds, now);
       if (Math.floor(now / 600_000) !== Math.floor((now - 30_000) / 600_000)) await this.statChannels(guilds);
       await pollFeeds(this.ctx, guilds, now);
+      await welcomeTick(this.ctx, guilds, now);
       const local = localTime(now, this.timezone());
       await this.birthdays(guilds, local);
       await this.qotd(guilds, local);

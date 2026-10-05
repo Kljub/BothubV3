@@ -581,3 +581,40 @@ test('instagram: business discovery posts parsed, video uses the thumbnail', asy
   assert.equal(posts[1]!.type, 'album');
   assert.deepEqual(parseInstagram({ error: { code: 190 } }), []);
 });
+
+test('welcomer: ordinal, which welcome, raid window', async () => {
+  const { ordinal, pickWelcome, raidCheck } = await import('./members.js');
+  assert.deepEqual([1, 2, 3, 4, 11, 12, 13, 21, 112, 1523].map(ordinal), ['1st', '2nd', '3rd', '4th', '11th', '12th', '13th', '21st', '112th', '1,523rd']);
+  const m = (content: string) => ({ mode: 'text' as const, content });
+  const cfg = {
+    message: m('normal'), returningEnabled: true, returningMessage: m('back'), milestoneEvery: 100, milestoneMessage: m('milestone'),
+    inviteWelcomes: [{ code: 'Summer', message: m('summer') }, { code: 'empty', message: m('') }],
+  };
+  const pick = (code: string | null, members: number, timesJoined: number) => pickWelcome(cfg, { code, members, timesJoined })?.content;
+  assert.equal(pick(null, 57, 1), 'normal');
+  assert.equal(pick(null, 57, 3), 'back');
+  assert.equal(pick(null, 200, 3), 'milestone');
+  assert.equal(pick('summer', 200, 3), 'summer');
+  assert.equal(pick('empty', 57, 1), 'normal'); // empty invite message: the normal one
+  const t0 = 1_000_000;
+  assert.equal(raidCheck('g', 0, 10, t0).raid, false);
+  for (let i = 0; i < 3; i++) assert.equal(raidCheck('g2', 3, 10, t0 + i).raid, false);
+  assert.deepEqual(raidCheck('g2', 3, 10, t0 + 4), { raid: true, first: true });
+  assert.deepEqual(raidCheck('g2', 3, 10, t0 + 5), { raid: true, first: false });
+  assert.equal(raidCheck('g2', 3, 10, t0 + 60_000).raid, false);
+});
+
+test('leaver: message by reason, quick, timeout and long-timer', async () => {
+  const { pickLeave } = await import('./members.js');
+  const m = (content: string) => ({ mode: 'text' as const, content });
+  const cfg = { message: m('left'), kickedMessage: m('kicked'), bannedMessage: m(''), botMessage: m('bot'), quickMinutes: 10, quickMessage: m('quick'), troubleMessage: m('trouble'), longDays: 365, longMessage: m('long') };
+  const pick = (l: Partial<Parameters<typeof pickLeave>[1]>) => pickLeave(cfg, { bot: false, reason: 'left', stayMs: 86_400_000, timedOut: false, ...l })?.content;
+  assert.equal(pick({}), 'left');
+  assert.equal(pick({ reason: 'kicked' }), 'kicked');
+  assert.equal(pick({ reason: 'banned' }), 'left'); // no ban message set
+  assert.equal(pick({ bot: true, reason: 'kicked' }), 'bot');
+  assert.equal(pick({ stayMs: 60_000 }), 'quick');
+  assert.equal(pick({ timedOut: true }), 'trouble');
+  assert.equal(pick({ stayMs: 400 * 86_400_000 }), 'long');
+  assert.equal(pick({ stayMs: null }), 'left');
+});

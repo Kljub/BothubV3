@@ -52,6 +52,9 @@ final class ModuleSettings
     {
         $out = [];
         foreach ($fields as $f) {
+            if ($f['type'] === 'section') {
+                continue; // a heading in the form, no value
+            }
             $key = $f['key'];
             try {
                 $out[$key] = self::value($f, array_key_exists($key, $in) ? $in[$key] : null, $path . $key, !array_key_exists($key, $in), $lenient);
@@ -106,6 +109,12 @@ final class ModuleSettings
                     return (string) ($default ?? '');
                 }
                 return is_string($v) && preg_match('/^[a-z0-9]{0,32}$/', $v) ? $v : self::fail($path);
+            case 'card':
+                // ID of a card of the Card Designer (bot_cards); empty: no card.
+                if ($missing || $v === null || $v === '') {
+                    return '';
+                }
+                return is_string($v) && preg_match('/^[1-9][0-9]{0,9}$/', $v) ? $v : self::fail($path);
             case 'color':
                 if ($missing || $v === null || $v === '') {
                     return (string) ($default ?? '');

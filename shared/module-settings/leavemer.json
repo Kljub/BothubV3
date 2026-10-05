@@ -2,6 +2,10 @@
   "module": "leavemer",
   "fields": [
     {
+      "key": "s_message",
+      "type": "section"
+    },
+    {
       "key": "channel",
       "type": "channel",
       "channelTypes": [
@@ -29,13 +33,226 @@
         "member.days",
         "server",
         "server.id",
-        "members"
+        "members",
+        "leave_reason",
+        "times_joined"
       ]
+    },
+    {
+      "key": "card",
+      "type": "card",
+      "hint": true
     },
     {
       "key": "ignoreBots",
       "type": "bool",
       "default": true
+    },
+    {
+      "key": "s_reasons",
+      "type": "section"
+    },
+    {
+      "key": "kickedMessage",
+      "type": "message",
+      "vars": [
+        "user",
+        "user.mention",
+        "user.name",
+        "user.id",
+        "user.avatar",
+        "user.created",
+        "user.created.ago",
+        "member.joined",
+        "member.joined.ago",
+        "member.days",
+        "server",
+        "server.id",
+        "members",
+        "leave_reason",
+        "times_joined"
+      ]
+    },
+    {
+      "key": "bannedMessage",
+      "type": "message",
+      "vars": [
+        "user",
+        "user.mention",
+        "user.name",
+        "user.id",
+        "user.avatar",
+        "user.created",
+        "user.created.ago",
+        "member.joined",
+        "member.joined.ago",
+        "member.days",
+        "server",
+        "server.id",
+        "members",
+        "leave_reason",
+        "times_joined"
+      ]
+    },
+    {
+      "key": "prunedMessage",
+      "type": "message",
+      "vars": [
+        "user",
+        "user.mention",
+        "user.name",
+        "user.id",
+        "user.avatar",
+        "user.created",
+        "user.created.ago",
+        "member.joined",
+        "member.joined.ago",
+        "member.days",
+        "server",
+        "server.id",
+        "members",
+        "leave_reason",
+        "times_joined"
+      ]
+    },
+    {
+      "key": "botMessage",
+      "type": "message",
+      "vars": [
+        "user",
+        "user.mention",
+        "user.name",
+        "user.id",
+        "user.avatar",
+        "user.created",
+        "user.created.ago",
+        "member.joined",
+        "member.joined.ago",
+        "member.days",
+        "server",
+        "server.id",
+        "members",
+        "leave_reason",
+        "times_joined"
+      ]
+    },
+    {
+      "key": "s_special",
+      "type": "section"
+    },
+    {
+      "key": "quickMinutes",
+      "type": "number",
+      "min": 0,
+      "max": 1440,
+      "default": 0,
+      "hint": true
+    },
+    {
+      "key": "quickMessage",
+      "type": "message",
+      "vars": [
+        "user",
+        "user.mention",
+        "user.name",
+        "user.id",
+        "user.avatar",
+        "user.created",
+        "user.created.ago",
+        "member.joined",
+        "member.joined.ago",
+        "member.days",
+        "server",
+        "server.id",
+        "members",
+        "leave_reason",
+        "times_joined"
+      ]
+    },
+    {
+      "key": "troubleMessage",
+      "type": "message",
+      "vars": [
+        "user",
+        "user.mention",
+        "user.name",
+        "user.id",
+        "user.avatar",
+        "user.created",
+        "user.created.ago",
+        "member.joined",
+        "member.joined.ago",
+        "member.days",
+        "server",
+        "server.id",
+        "members",
+        "leave_reason",
+        "times_joined"
+      ]
+    },
+    {
+      "key": "longDays",
+      "type": "number",
+      "min": 0,
+      "max": 3650,
+      "default": 0,
+      "hint": true
+    },
+    {
+      "key": "longMessage",
+      "type": "message",
+      "vars": [
+        "user",
+        "user.mention",
+        "user.name",
+        "user.id",
+        "user.avatar",
+        "user.created",
+        "user.created.ago",
+        "member.joined",
+        "member.joined.ago",
+        "member.days",
+        "server",
+        "server.id",
+        "members",
+        "leave_reason",
+        "times_joined"
+      ]
+    },
+    {
+      "key": "s_mods",
+      "type": "section"
+    },
+    {
+      "key": "modChannel",
+      "type": "channel",
+      "channelTypes": [
+        "text",
+        "announcement"
+      ]
+    },
+    {
+      "key": "modMessage",
+      "type": "text",
+      "max": 2000,
+      "multiline": true,
+      "vars": [
+        "user",
+        "user.mention",
+        "user.name",
+        "user.id",
+        "user.avatar",
+        "user.created",
+        "user.created.ago",
+        "member.joined",
+        "member.joined.ago",
+        "member.days",
+        "server",
+        "server.id",
+        "members",
+        "leave_reason",
+        "times_joined"
+      ]
     }
   ]
 }

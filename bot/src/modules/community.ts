@@ -17,6 +17,7 @@ import {
 import { log } from '../core/log.js';
 import { baseVars, fill, idIn, idsIn, passes, reactionOf, sameEmoji, type ModuleContext } from './context.js';
 import { assignable, send, warn } from './guard.js';
+import type { JoinInfo } from './members.js';
 
 // ---------- Leveling ----------
 
@@ -241,9 +242,13 @@ interface InviteConfig {
 
 const joinQueue = new Map<string, Promise<unknown>>();
 
-/** Joins of one server are handled one after another (invite use counts are compared). */
-export function inviteJoin(ctx: ModuleContext, member: GuildMember): Promise<void> {
-  if (!ctx.enabled('invite-tracker')) return Promise.resolve();
+/**
+ * Joins of one server are handled one after another (invite use counts are
+ * compared). Also runs for the Welcomer alone ({inviter_name}, {times_joined}):
+ * then it only records the join, without messages or rewards.
+ */
+export function inviteJoin(ctx: ModuleContext, member: GuildMember): Promise<JoinInfo | null> {
+  if (!ctx.enabled('invite-tracker') && !ctx.enabled('welcommer')) return Promise.resolve(null);
   const key = `${ctx.botId}:${member.guild.id}`;
   const run = (joinQueue.get(key) ?? Promise.resolve()).then(() => handleJoin(ctx, member));
   const tail = run.catch(() => undefined);
@@ -254,7 +259,7 @@ export function inviteJoin(ctx: ModuleContext, member: GuildMember): Promise<voi
   return run;
 }
 
-async function handleJoin(ctx: ModuleContext, member: GuildMember): Promise<void> {
+async function handleJoin(ctx: ModuleContext, member: GuildMember): Promise<JoinInfo> {
   const guild = member.guild;
   const key = `${ctx.botId}:${guild.id}`;
   const before = inviteCache.get(key);
@@ -268,10 +273,13 @@ async function handleJoin(ctx: ModuleContext, member: GuildMember): Promise<void
   const recent = ctx.db
     .prepare("SELECT 1 FROM invite_joins WHERE bot_id = ? AND guild_id = ? AND user_id = ? AND left_at IS NULL AND joined_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-60 seconds')")
     .get(ctx.botId, guild.id, member.id);
-  if (recent) return;
+  const inviterUser = inviterId ? await guild.client.users.fetch(inviterId).catch(() => null) : null;
+  const info: JoinInfo = { inviterId, inviterName: inviterUser ? (inviterUser.globalName ?? inviterUser.username) : '', code };
+  if (recent) return info;
   // A rejoin without a recorded leave (bot was offline) closes the old row first.
   ctx.db.prepare("UPDATE invite_joins SET left_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE bot_id = ? AND guild_id = ? AND user_id = ? AND left_at IS NULL").run(ctx.botId, guild.id, member.id);
   ctx.db.prepare('INSERT INTO invite_joins (bot_id, guild_id, user_id, inviter_id, code, fake) VALUES (?, ?, ?, ?, ?, ?)').run(ctx.botId, guild.id, member.id, inviterId, code, fake ? 1 : 0);
+  if (!ctx.enabled('invite-tracker')) return info;
 
   const invites = inviterId ? inviteCount(ctx, guild.id, inviterId) : 0;
   const inviter = inviterId ? await guild.members.fetch(inviterId).catch(() => null) : null;
@@ -283,10 +291,17 @@ async function handleJoin(ctx: ModuleContext, member: GuildMember): Promise<void
     const give = assignable(ctx, 'invite-tracker', guild, (cfg.rewards ?? []).filter((r) => r.count <= invites).map((r) => idIn(r.role, guild.id)).filter((id): id is string => !!id));
     if (give.length) await inviter.roles.add(give, 'Invite reward').catch(() => undefined);
   }
+  return info;
 }
 
 export async function inviteLeave(ctx: ModuleContext, member: GuildMember | PartialGuildMember): Promise<void> {
-  if (!ctx.enabled('invite-tracker')) return;
+  if (!ctx.enabled('invite-tracker')) {
+    // Welcomer alone: just close the join ({times_joined}, join/leave spam).
+    if (ctx.enabled('welcommer')) {
+      ctx.db.prepare("UPDATE invite_joins SET left_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE bot_id = ? AND guild_id = ? AND user_id = ? AND left_at IS NULL").run(ctx.botId, member.guild.id, member.id);
+    }
+    return;
+  }
   const cfg = ctx.config<InviteConfig>('invite-tracker');
   if (cfg.registerLeaves === false) return;
   const guild = member.guild;

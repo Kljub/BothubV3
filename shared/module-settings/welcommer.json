@@ -2,6 +2,10 @@
   "module": "welcommer",
   "fields": [
     {
+      "key": "s_message",
+      "type": "section"
+    },
+    {
       "key": "channelEnabled",
       "type": "bool",
       "default": true
@@ -47,8 +51,21 @@
         "member.days",
         "server",
         "server.id",
-        "members"
+        "members",
+        "member_number_ordinal",
+        "inviter_name",
+        "times_joined"
       ]
+    },
+    {
+      "key": "card",
+      "type": "card",
+      "showIf": {
+        "channelEnabled": [
+          "true"
+        ]
+      },
+      "hint": true
     },
     {
       "key": "reactions",
@@ -60,6 +77,44 @@
         ]
       },
       "hint": true
+    },
+    {
+      "key": "roleButtons",
+      "type": "roles",
+      "max": 3,
+      "showIf": {
+        "channelEnabled": [
+          "true"
+        ]
+      },
+      "hint": true
+    },
+    {
+      "key": "waveButton",
+      "type": "bool",
+      "default": false,
+      "showIf": {
+        "channelEnabled": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "deleteAfter",
+      "type": "number",
+      "min": 0,
+      "max": 10080,
+      "default": 0,
+      "hint": true,
+      "showIf": {
+        "channelEnabled": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "s_dm",
+      "type": "section"
     },
     {
       "key": "dm",
@@ -91,8 +146,16 @@
         "member.days",
         "server",
         "server.id",
-        "members"
+        "members",
+        "member_number_ordinal",
+        "inviter_name",
+        "times_joined",
+        "welcome_message_link"
       ]
+    },
+    {
+      "key": "s_member",
+      "type": "section"
     },
     {
       "key": "roles",
@@ -101,9 +164,351 @@
       "hint": true
     },
     {
+      "key": "removeRoles",
+      "type": "roles",
+      "max": 10,
+      "hint": true
+    },
+    {
+      "key": "nickname",
+      "type": "text",
+      "max": 100,
+      "hint": true,
+      "vars": [
+        "user",
+        "user.name",
+        "member_number_ordinal",
+        "times_joined"
+      ]
+    },
+    {
       "key": "ignoreBots",
       "type": "bool",
       "default": true
+    },
+    {
+      "key": "s_mods",
+      "type": "section"
+    },
+    {
+      "key": "modChannel",
+      "type": "channel",
+      "channelTypes": [
+        "text",
+        "announcement"
+      ],
+      "hint": true
+    },
+    {
+      "key": "modMessage",
+      "type": "text",
+      "max": 2000,
+      "multiline": true,
+      "vars": [
+        "user",
+        "user.mention",
+        "user.name",
+        "user.id",
+        "user.avatar",
+        "user.created",
+        "user.created.ago",
+        "member.joined",
+        "member.joined.ago",
+        "member.days",
+        "server",
+        "server.id",
+        "members",
+        "member_number_ordinal",
+        "inviter_name",
+        "times_joined",
+        "welcome_message_link"
+      ]
+    },
+    {
+      "key": "s_timing",
+      "type": "section"
+    },
+    {
+      "key": "timing",
+      "type": "select",
+      "options": [
+        "now",
+        "wait",
+        "rules"
+      ],
+      "default": "now",
+      "hint": true
+    },
+    {
+      "key": "waitMinutes",
+      "type": "number",
+      "min": 1,
+      "max": 1440,
+      "default": 5,
+      "showIf": {
+        "timing": [
+          "wait"
+        ]
+      }
+    },
+    {
+      "key": "skipQuickLeavers",
+      "type": "bool",
+      "default": true,
+      "hint": true
+    },
+    {
+      "key": "s_special",
+      "type": "section"
+    },
+    {
+      "key": "returningEnabled",
+      "type": "bool",
+      "default": false
+    },
+    {
+      "key": "returningMessage",
+      "type": "message",
+      "vars": [
+        "user",
+        "user.mention",
+        "user.name",
+        "user.id",
+        "user.avatar",
+        "user.created",
+        "user.created.ago",
+        "member.joined",
+        "member.joined.ago",
+        "member.days",
+        "server",
+        "server.id",
+        "members",
+        "member_number_ordinal",
+        "inviter_name",
+        "times_joined"
+      ],
+      "default": {
+        "mode": "text",
+        "content": "Welcome back {user.mention}! This is your {times_joined}. time here."
+      },
+      "showIf": {
+        "returningEnabled": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "milestoneEvery",
+      "type": "number",
+      "min": 0,
+      "max": 1000000,
+      "default": 0,
+      "hint": true
+    },
+    {
+      "key": "milestoneMessage",
+      "type": "message",
+      "vars": [
+        "user",
+        "user.mention",
+        "user.name",
+        "user.id",
+        "user.avatar",
+        "user.created",
+        "user.created.ago",
+        "member.joined",
+        "member.joined.ago",
+        "member.days",
+        "server",
+        "server.id",
+        "members",
+        "member_number_ordinal",
+        "inviter_name",
+        "times_joined"
+      ],
+      "default": {
+        "mode": "embed",
+        "title": "🎉 Member #{members}!",
+        "description": "{user.mention} is our {member_number_ordinal} member!",
+        "color": "#fbbf24"
+      }
+    },
+    {
+      "key": "botEnabled",
+      "type": "bool",
+      "default": false,
+      "hint": true
+    },
+    {
+      "key": "botMessage",
+      "type": "message",
+      "vars": [
+        "user",
+        "user.mention",
+        "user.name",
+        "user.id",
+        "user.avatar",
+        "user.created",
+        "user.created.ago",
+        "member.joined",
+        "member.joined.ago",
+        "member.days",
+        "server",
+        "server.id",
+        "members",
+        "member_number_ordinal",
+        "inviter_name",
+        "times_joined"
+      ],
+      "default": {
+        "mode": "text",
+        "content": "🤖 {user.name} was added to the server."
+      },
+      "showIf": {
+        "botEnabled": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "inviteWelcomes",
+      "type": "list",
+      "max": 20,
+      "titleField": "code",
+      "hint": true,
+      "unique": [
+        "code"
+      ],
+      "item": [
+        {
+          "key": "code",
+          "type": "text",
+          "max": 32,
+          "pattern": "^[A-Za-z0-9-]{2,32}$",
+          "required": true
+        },
+        {
+          "key": "message",
+          "type": "message",
+          "vars": [
+            "user",
+            "user.mention",
+            "user.name",
+            "user.id",
+            "user.avatar",
+            "user.created",
+            "user.created.ago",
+            "member.joined",
+            "member.joined.ago",
+            "member.days",
+            "server",
+            "server.id",
+            "members",
+            "member_number_ordinal",
+            "inviter_name",
+            "times_joined"
+          ],
+          "default": {
+            "mode": "text",
+            "content": "Welcome {user.mention}, invited by {inviter_name}!"
+          }
+        }
+      ]
+    },
+    {
+      "key": "s_protection",
+      "type": "section"
+    },
+    {
+      "key": "raidJoins",
+      "type": "number",
+      "min": 0,
+      "max": 100,
+      "default": 0,
+      "hint": true
+    },
+    {
+      "key": "raidSeconds",
+      "type": "number",
+      "min": 5,
+      "max": 600,
+      "default": 10
+    },
+    {
+      "key": "minAccountDays",
+      "type": "number",
+      "min": 0,
+      "max": 365,
+      "default": 0,
+      "hint": true
+    },
+    {
+      "key": "suspiciousAction",
+      "type": "select",
+      "options": [
+        "notify",
+        "skip",
+        "both"
+      ],
+      "default": "notify"
+    },
+    {
+      "key": "rejoinLimit",
+      "type": "number",
+      "min": 0,
+      "max": 20,
+      "default": 0,
+      "hint": true
+    },
+    {
+      "key": "s_later",
+      "type": "section"
+    },
+    {
+      "key": "rulesRole",
+      "type": "role",
+      "hint": true
+    },
+    {
+      "key": "firstMessage",
+      "type": "text",
+      "max": 2000,
+      "multiline": true,
+      "hint": true,
+      "vars": [
+        "user",
+        "user.mention",
+        "user.name",
+        "user.id",
+        "user.avatar",
+        "user.created",
+        "user.created.ago",
+        "member.joined",
+        "member.joined.ago",
+        "member.days",
+        "server",
+        "server.id",
+        "members"
+      ]
+    },
+    {
+      "key": "stayDays",
+      "type": "number",
+      "min": 0,
+      "max": 365,
+      "default": 0
+    },
+    {
+      "key": "stayRole",
+      "type": "role"
+    },
+    {
+      "key": "kickAfterHours",
+      "type": "number",
+      "min": 0,
+      "max": 720,
+      "default": 0,
+      "hint": true
     }
   ]
 }

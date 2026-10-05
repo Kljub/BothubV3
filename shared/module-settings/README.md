@@ -19,6 +19,8 @@ list item use `modset.<module>.<list>.<key>`.
 | `select`   | one of `options`                                        | `options`, `default`                 |
 | `file`     | name of a plugin file or `""` (plugins, uploaded in the dashboard) | `accept`: `audio` (mp3, ogg, wav, webm, max. 8 MB) |
 | `choices`  | `["value", …]` (several picks)                          | `options` (strings), `dynamic` (plugins: options from `ctx.config.setOptions`), `max` |
+| `card`     | ID of a card of the Card Designer as text, or `""`       |                                      |
+| `section`  | none: a heading above the fields that follow            | `hint`                               |
 | `color`    | `#rrggbb`                                               | `default`                            |
 | `channel`  | `{id, guild}` or `null`                                 | `channelTypes`                       |
 | `channels` | `[{id, guild}]`                                         | `channelTypes`, `max`                |

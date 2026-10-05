@@ -72,3 +72,7 @@
 
 /* "file" field (sounds): player instead of an image preview. */
 .modset-audio-preview { height: 34px; max-width: 280px; }
+
+/* "section" fields: a heading that groups the fields below it. */
+.modset-section { margin: 14px 0 0; padding-top: 12px; font-size: 13px; font-weight: 700; letter-spacing: 0.02em; color: var(--text); border-top: 1px solid var(--border); }
+.modset-field:first-child > .modset-section { margin-top: 0; padding-top: 0; border-top: 0; }

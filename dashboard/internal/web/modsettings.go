@@ -151,6 +151,8 @@ type settingsView struct {
 	Options map[string][]api.ChoiceOption
 	// Currencies: the bot's Economy currencies for "currency" fields (key, label).
 	Currencies []api.ChoiceOption
+	// Cards: the bot's cards (Card Designer) for "card" fields (ID, name).
+	Cards []api.ChoiceOption
 	// Integration: set while the module's integration is not set up.
 	Integration *integrationNotice
 }
@@ -267,6 +269,8 @@ func (s *Server) buildFields(v *settingsView, labels, prefix string, fields []se
 		case "currency":
 			fv.Text, _ = values[f.Key].(string)
 			fv.Currencies = v.Currencies
+		case "card":
+			fv.Text, _ = values[f.Key].(string)
 		case "image", "file":
 			fv.Text, _ = values[f.Key].(string)
 			fv.UploadURL = v.Files
@@ -327,6 +331,9 @@ func (s *Server) scopeData(r *http.Request, botID int64, scope settingsScope) (s
 	}
 	if hasType(sc.Fields, "currency") {
 		v.Currencies = s.currencyOptions(r, botID)
+	}
+	if hasType(sc.Fields, "card") {
+		v.Cards = s.cardOptions(r, botID)
 	}
 	needGuild := false
 	var walk func([]settingsField)
@@ -457,7 +464,7 @@ func formValues(fields []settingsField, form url.Values) map[string]any {
 	for _, f := range fields {
 		k := f.Key
 		switch f.Type {
-		case "list":
+		case "list", "section":
 			continue
 		case "bool":
 			out[k] = form.Get(k) == "true"
@@ -782,6 +789,16 @@ func (s *Server) currencyOptions(r *http.Request, botID int64) []api.ChoiceOptio
 			label = c.Emoji + " " + c.Name
 		}
 		out = append(out, api.ChoiceOption{Value: c.Key, Label: label})
+	}
+	return out
+}
+
+// cardOptions: the bot's cards of the Card Designer for a "card" field.
+func (s *Server) cardOptions(r *http.Request, botID int64) []api.ChoiceOption {
+	cards, _ := s.api.Cards(r.Context(), session(r), botID) // optional: no cards on error
+	out := []api.ChoiceOption{}
+	for _, c := range cards {
+		out = append(out, api.ChoiceOption{Value: strconv.FormatInt(c.ID, 10), Label: c.Name})
 	}
 	return out
 }

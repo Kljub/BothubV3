@@ -8,7 +8,7 @@ import { cacheInvites, inviteChanged, inviteJoin, inviteLeave, levelingLeave, le
 import { automodHit, automodMedia, syncAutomod } from './automod.js';
 import type { ModuleContext } from './context.js';
 import { onCountingMessage, onStarReaction } from './games.js';
-import { onBan, onMemberAdd, onMemberRemove } from './members.js';
+import { onBan, onMemberAdd, onMemberRemove, onMemberUpdate, welcomeButtonRoute, welcomeFirstMessage } from './members.js';
 import { ensureStickies, onMessage } from './messages.js';
 import { globalChat, tempVoice } from './social.js';
 import { ensurePanels, modmailMessage, onModuleInteraction } from './support.js';
@@ -55,7 +55,10 @@ export function bindModules(client: Client, ctx: ModuleContext, timezone: () => 
     guard('stickies', ensureStickies(ctx, guilds));
   };
   client.on(Events.AutoModerationActionExecution, (e) => guard('automod-hit', automodHit(ctx, e)));
-  client.on(Events.InteractionCreate, (i) => guard('interaction', onModuleInteraction(ctx, i)));
+  client.on(Events.InteractionCreate, (i) => {
+    guard('interaction', onModuleInteraction(ctx, i));
+    guard('welcome-button', welcomeButtonRoute(ctx, i));
+  });
   client.on(Events.GuildCreate, (g) => {
     guard('invites', cacheInvites(ctx, g));
     guard('automod', syncAutomod(ctx, g));
@@ -76,6 +79,7 @@ export function bindModules(client: Client, ctx: ModuleContext, timezone: () => 
     guard('economy-messages', messageReward(ctx, msg));
     guard('afk', afkMessage(ctx, msg));
     guard('thanks', thanksMessage(ctx, msg));
+    guard('welcome-first', welcomeFirstMessage(ctx, msg));
   });
   client.on(Events.MessageUpdate, (old, msg) => {
     // Link previews arrive with an edit: the media filter checks them then.
@@ -86,14 +90,17 @@ export function bindModules(client: Client, ctx: ModuleContext, timezone: () => 
     if (!msg.partial && ctx.enabled('media-channels')) guard('message-edit', onMessage(ctx, msg, true));
   });
   client.on(Events.GuildMemberUpdate, (before, after) => {
+    guard('welcome-rules', onMemberUpdate(ctx, before, after));
     // Role Prefix: roles or name changed.
     if (before.partial || before.roles.cache.size !== after.roles.cache.size || before.displayName !== after.displayName || ![...before.roles.cache.keys()].every((r) => after.roles.cache.has(r))) {
       guard('role-prefix', rolePrefix(ctx, after));
     }
   });
   client.on(Events.GuildMemberAdd, (m) => {
-    guard('member-add', onMemberAdd(ctx, m));
-    guard('invite-join', inviteJoin(ctx, m));
+    // The invite is found first: the welcome names the inviter.
+    const join = inviteJoin(ctx, m);
+    guard('invite-join', join);
+    guard('member-add', join.catch(() => null).then((info) => onMemberAdd(ctx, m, info)));
   });
   client.on(Events.GuildMemberRemove, (m) => {
     guard('member-remove', onMemberRemove(ctx, m));
