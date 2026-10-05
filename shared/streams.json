@@ -96,6 +96,13 @@
           "templateId": "integer",
           "target": "string",
           "$comment": "Message Builder: the bot sends saved message templateId (message_templates) to target, a channel ID or a Discord webhook URL (https://discord.com/api/webhooks/...)"
+        },
+        "card.send": {
+          "jobId": "string",
+          "botId": "integer",
+          "cardId": "integer",
+          "target": "string",
+          "$comment": "Card Designer \"Send me a test\": the bot draws card cardId (bot_cards) with sample values and itself as the member and posts it in channel target (a channel ID)"
         }
       }
     },
