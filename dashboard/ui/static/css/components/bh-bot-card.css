@@ -4,13 +4,14 @@
 .bot-grid { --gap: 16px; display: grid; grid-template-columns: repeat(auto-fill, minmax(max(240px, calc((100% - 4 * var(--gap)) / 5)), 1fr)); gap: var(--gap); }
 .bot-card { position: relative; display: flex; flex-direction: column; border-width: 2px; }
 .bot-card .card-title::after { content: ""; position: absolute; inset: 0 0 56px 0; }
+.bot-card { overflow: hidden; }
 .bot-card:hover { background: color-mix(in srgb, var(--surface) 85%, var(--text) 3%); }
 .bot-card-running { border-color: var(--green); }
 .bot-card-stopped { border-color: var(--red); }
 .bot-card-error { border-color: var(--yellow); }
-.bot-card-body { display: flex; flex-direction: column; gap: 14px; padding: 16px 16px 18px; }
-.bot-card-header { display: flex; align-items: center; gap: 10px; }
-.bot-card-title { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.3; }
+.bot-card-body { display: flex; flex-direction: column; gap: 10px; padding: 0 16px 16px; }
+.bot-card-header { display: flex; align-items: flex-end; gap: 12px; margin-top: -34px; }
+.bot-card-title { display: flex; flex-direction: column; min-width: 0; flex: 1; padding-bottom: 4px; line-height: 1.3; }
 .avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex: none; }
 .bot-card .avatar { border: 2px solid var(--border-strong); }
 .bot-card-running .avatar { border-color: var(--green); }
@@ -43,3 +44,22 @@
 }
 .add-card:hover { color: var(--text-2); border-color: var(--muted); }
 .add-card-plus { font-size: 22px; font-weight: 300; line-height: 1; }
+
+/* Banner, big avatar with presence dot, name row with the status badge. */
+.bot-card-banner { height: 84px; background: linear-gradient(135deg, color-mix(in srgb, var(--blue) 45%, var(--surface-2)), var(--surface-2)); }
+.bot-card-banner img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.bot-card-avatar { position: relative; flex: none; }
+.bot-card-avatar .avatar { width: 72px; height: 72px; font-size: 26px; border: 4px solid var(--surface); box-shadow: 0 0 0 2px var(--border-strong); }
+.bot-card-running .bot-card-avatar .avatar { box-shadow: 0 0 0 2px var(--green); }
+.bot-card-name { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.bot-card-name .card-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; font-weight: 700; }
+.bot-card-badge { flex: none; }
+.bot-card-app { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.bot-presence { position: absolute; right: 0; bottom: 2px; width: 18px; height: 18px; border: 3px solid var(--surface); border-radius: 50%; background: #80848e; }
+.bot-presence-online { background: #23a55a; }
+.bot-presence-idle { background: #f0b232; }
+.bot-presence-idle::after { content: ""; position: absolute; top: -2px; left: -2px; width: 8px; height: 8px; border-radius: 50%; background: var(--surface); }
+.bot-presence-dnd { background: #f23f43; }
+.bot-presence-dnd::after { content: ""; position: absolute; left: 2px; right: 2px; top: 5px; height: 3px; border-radius: 2px; background: var(--surface); }
+.bot-presence-invisible, .bot-presence-offline { background: #80848e; }
+.bot-presence-invisible::after, .bot-presence-offline::after { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: var(--surface); }

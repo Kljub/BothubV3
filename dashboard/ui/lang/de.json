@@ -5003,5 +5003,10 @@
   "error.card.unknown": "Diese Karte gibt es nicht (mehr).",
   "error.card.invalid": "Die Karte ist ungültig ({field}).",
   "error.card.too_big": "Das Kartendesign ist zu groß.",
-  "error.card.too_many": "Ein Bot kann höchstens {max} Karten haben."
+  "error.card.too_many": "Ein Bot kann höchstens {max} Karten haben.",
+  "bot.presence.online": "Online",
+  "bot.presence.idle": "Abwesend",
+  "bot.presence.dnd": "Bitte nicht stören",
+  "bot.presence.invisible": "Unsichtbar",
+  "bot.presence.offline": "Offline"
 }

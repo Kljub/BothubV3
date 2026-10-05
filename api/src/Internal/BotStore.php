@@ -19,7 +19,8 @@ final class BotStore
     private const COLUMNS = "b.id, b.name, b.application_id, b.avatar_url, b.status, b.status_error_key,
         b.token_enc IS NOT NULL AS token_set, b.autostart, b.created_at, b.started_at, b.owner_id,
         (SELECT json_group_array(json_object('userId', m.user_id, 'role', m.role, 'permissions', json(m.permissions))) FROM bot_members m WHERE m.bot_id = b.id) AS members,
-        (SELECT COUNT(*) FROM bot_guilds g WHERE g.bot_id = b.id AND g.left_at IS NULL) AS guild_count";
+        (SELECT COUNT(*) FROM bot_guilds g WHERE g.bot_id = b.id AND g.left_at IS NULL) AS guild_count,
+        (SELECT json_extract(p.presence, '$.status') FROM bot_profiles p WHERE p.bot_id = b.id) AS presence_status";
 
     /** $owner: the signed-in user; a new bot belongs to them and uses their secrets. */
     public function __construct(private readonly PDO $pdo, private readonly SecretBox $box, private readonly ?PluginStore $plugins = null, private readonly int $owner = 1)
@@ -306,6 +307,8 @@ final class BotStore
             // Co-Work: the owner and the other users who work on the bot.
             'ownerId' => (int) $r['owner_id'],
             'members' => json_decode((string) ($r['members'] ?? '[]'), true) ?: [],
+            // Status the bot shows on Discord (online, idle, dnd, invisible), set under Bot settings.
+            'presence' => in_array($r['presence_status'] ?? null, ['online', 'idle', 'dnd', 'invisible'], true) ? $r['presence_status'] : 'online',
         ];
     }
 }

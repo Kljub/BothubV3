@@ -5003,5 +5003,10 @@
   "error.card.unknown": "This card does not exist (any more).",
   "error.card.invalid": "The card is not valid ({field}).",
   "error.card.too_big": "The card design is too big.",
-  "error.card.too_many": "A bot can have at most {max} cards."
+  "error.card.too_many": "A bot can have at most {max} cards.",
+  "bot.presence.online": "Online",
+  "bot.presence.idle": "Idle",
+  "bot.presence.dnd": "Do not disturb",
+  "bot.presence.invisible": "Invisible",
+  "bot.presence.offline": "Offline"
 }

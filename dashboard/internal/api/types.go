@@ -71,6 +71,10 @@ type Bot struct {
 	StartedAt *time.Time `json:"startedAt"`
 	// Discriminator of the bot user ("1234"); empty when unknown.
 	Discriminator string `json:"discriminator,omitempty"`
+	// Bot tile: profile banner (from Discord) and the presence status
+	// (online, idle, dnd, invisible) set under Bot settings.
+	BannerURL *string `json:"bannerUrl,omitempty"`
+	Presence  string  `json:"presence,omitempty"`
 }
 
 // Transitioning reports whether the bot is between two stable states.

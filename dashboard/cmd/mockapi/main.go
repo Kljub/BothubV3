@@ -42,7 +42,10 @@ type bot struct {
 	Permissions []string `json:"permissions,omitempty"`
 	// Discriminator of the bot user ("#1234"), from Discord on demand.
 	Discriminator string `json:"discriminator,omitempty"`
-	token         string
+	// Bot tile: the profile banner (from Discord) and the presence status.
+	BannerURL *string `json:"bannerUrl,omitempty"`
+	Presence  string  `json:"presence,omitempty"`
+	token     string
 }
 
 type guild struct {
@@ -735,6 +738,20 @@ func (s *store) listBots(w http.ResponseWriter, r *http.Request, sid string) {
 			}
 			c := *b
 			c.Access, c.Permissions = role, perms
+			p := s.profileOf(b.ID)
+			c.BannerURL = p.banner
+			if c.Presence == "" {
+				c.Presence = s.presenceOf(b.ID).Status
+			}
+			// Banner not read yet: from Discord in the background (the next poll shows it).
+			if !p.synced && time.Since(p.syncTried) > time.Minute {
+				p.syncTried = time.Now()
+				go func(b *bot) {
+					ctx, cancel := context.WithTimeout(context.Background(), profileLoadTimeout)
+					defer cancel()
+					_ = s.loadProfile(ctx, b)
+				}(b)
+			}
 			items = append(items, c)
 		}
 	}

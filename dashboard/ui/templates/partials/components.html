@@ -1,17 +1,26 @@
 {{/* Components shared by several pages. Every page set includes this file. */}}
 
 {{define "bot_card"}}
+{{/* Bot tile: banner, big avatar with the presence dot, name with the
+     status badge (hover: uptime), application ID, status text, actions. */}}
 <article class="card bot-card bot-card-{{.Status}}" id="bot-{{.ID}}"
   {{if .Transitioning}}hx-get="/bot/{{.ID}}/card" hx-trigger="load delay:1500ms" hx-swap="outerHTML"{{end}}>
+  <div class="bot-card-banner" aria-hidden="true">{{with .BannerURL}}<img src="{{.}}" alt="" loading="lazy">{{end}}</div>
   <div class="bot-card-body">
     <header class="bot-card-header">
-      {{template "avatar" .}}
-      <div class="bot-card-title">
-        <a href="/select-bot/{{.ID}}" class="card-title">{{.Name}}</a>
-        {{with .ApplicationID}}<span class="mono muted">{{.}}</span>{{end}}
+      <div class="bot-card-avatar">
+        {{template "avatar" .}}
+        {{$p := or .Presence "online"}}{{if ne .Status "running"}}{{$p = "offline"}}{{end}}
+        <span class="bot-presence bot-presence-{{$p}}" title="{{t (printf "bot.presence.%s" $p)}}" aria-label="{{t (printf "bot.presence.%s" $p)}}"></span>
       </div>
-      {{/* Hover on the badge: how long the bot has been online. */}}
-      <span class="bot-card-badge"{{with uptime .}} title="{{t "bot.uptime" "time" .}}"{{end}}>{{template "status_badge" .Status}}</span>
+      <div class="bot-card-title">
+        <div class="bot-card-name">
+          <a href="/select-bot/{{.ID}}" class="card-title">{{.Name}}</a>
+          {{/* Hover on the badge: how long the bot has been online. */}}
+          <span class="bot-card-badge"{{with uptime .}} title="{{t "bot.uptime" "time" .}}"{{end}}>{{template "status_badge" .Status}}</span>
+        </div>
+        {{with .ApplicationID}}<span class="mono muted bot-card-app">{{.}}</span>{{end}}
+      </div>
     </header>
     {{with .StatusErrorKey}}<p class="status-text status-text-error">{{t .}}</p>
     {{else}}<p class="status-text status-text-{{.Status}}">{{t (printf "bot.status_text.%s" .Status)}}</p>{{end}}
