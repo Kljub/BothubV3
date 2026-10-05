@@ -5,6 +5,7 @@
 // its manifest AND switched on in the SDK policies (sdk_policies, global).
 // Plugin blocks become node types plugin.<id>.<name>.
 
+import { redact, redactDeep } from '../core/leakguard.js';
 import { randomBytes } from 'node:crypto';
 import { readFileSync, statSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
@@ -485,12 +486,12 @@ export class PluginManager {
   private async runBlock(p: PluginProcess, name: string, node: GraphNode, run: Run): Promise<string | void> {
     // Placeholders are filled in here; the plugin sees plain values.
     const config: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(node.config)) config[k] = typeof v === 'string' ? run.str(node, k) : v;
+    for (const [k, v] of Object.entries(node.config)) config[k] = redactDeep(typeof v === 'string' ? run.str(node, k) : v);
     const vars: Record<string, string> = {};
     let n = 0;
     for (const [k, v] of run.vars) {
       if (++n > 200) break;
-      vars[k] = v.slice(0, 1000);
+      vars[k] = redact(v.slice(0, 1000));
     }
     // The command/click of the run: the plugin may answer it (ctx.interaction.*) when allowed.
     const interaction = (run.data as { interaction?: RepliableInteraction } | undefined)?.interaction;

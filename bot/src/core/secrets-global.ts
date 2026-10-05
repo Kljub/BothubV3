@@ -4,6 +4,7 @@
 // Values are decrypted only here and only for use in outgoing requests;
 // they never go into run variables, results, logs or messages.
 
+import { guardValue } from './leakguard.js';
 import { decrypt } from './secrets.js';
 import type { Repo } from './repo.js';
 
@@ -18,7 +19,9 @@ export function secretValue(repo: Repo, secretKey: () => Buffer, botId: number, 
     .prepare('SELECT s.value_enc FROM secrets s JOIN bots b ON b.owner_id = s.owner_id WHERE b.id = ? AND s.key = ?')
     .get(botId, key) as { value_enc: Uint8Array } | undefined;
   // An empty value is a placeholder ([NULL]) a plugin install created: no value yet.
-  return row && row.value_enc.length > 0 ? decrypt(secretKey(), row.value_enc) : null;
+  const value = row && row.value_enc.length > 0 ? decrypt(secretKey(), row.value_enc) : null;
+  guardValue(value);
+  return value;
 }
 
 /** Replaces every secret value in a text (error messages, response bodies). */

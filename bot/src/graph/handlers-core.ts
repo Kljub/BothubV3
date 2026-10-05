@@ -1,6 +1,7 @@
 // Blocks that need no Discord: variables, text, math, wait, loops, HTTP,
 // notes, logs.
 
+import { isDiscordApi, redact, redactDeep } from '../core/leakguard.js';
 import { randomUUID, randomInt } from 'node:crypto';
 import { request, parseHeaders } from './http.js';
 import { mask } from '../core/secrets-global.js';
@@ -313,7 +314,8 @@ export function coreHandlers(deps: CoreDeps): Map<string, Handler> {
       'action.api_request',
       async (node, run) => {
         const method = String(run.raw(node, 'method') ?? 'GET').toUpperCase();
-        const body = method === 'GET' || method === 'DELETE' ? undefined : run.str(node, 'body') || undefined;
+        // Leak guard: tokens and secrets never go out in the body, headers or address the graph builds.
+        const body = method === 'GET' || method === 'DELETE' ? undefined : redact(run.str(node, 'body')) || undefined;
         const headers = parseHeaders(run.str(node, 'headers'));
         if (body !== undefined && !Object.keys(headers).some((h) => h.toLowerCase() === 'content-type')) {
           headers['Content-Type'] = /^\s*[[{]/.test(body) ? 'application/json' : 'text/plain';
@@ -323,7 +325,7 @@ export function coreHandlers(deps: CoreDeps): Map<string, Handler> {
         // needs an address from a secret, so nobody sends it to their own server.
         const urlSecret = run.str(node, 'url_secret').trim();
         const authSecret = run.str(node, 'auth_secret').trim();
-        let url = run.str(node, 'url').trim();
+        let url = redact(run.str(node, 'url').trim());
         const hide: string[] = [];
         const secretOf = (name: string) => {
           const v = deps.secret?.(name) ?? null;
@@ -334,6 +336,15 @@ export function coreHandlers(deps: CoreDeps): Map<string, Handler> {
         if (urlSecret) {
           url = joinPath(secretOf(urlSecret).trim(), url);
         }
+        // Headers typed in the block may carry the bot token to the Discord API
+        // only, never to another address (the key of a secret is added below).
+        let toDiscord = false;
+        try {
+          toDiscord = isDiscordApi(new URL(url));
+        } catch {
+          // a bad address fails in http() below
+        }
+        if (!toDiscord) Object.assign(headers, redactDeep({ ...headers }));
         if (authSecret) {
           if (!urlSecret) throw new GraphError('error.run.secret_needs_url', { message: 'A key from a secret needs the address from a secret too (field "Address from secret").' });
           const key = secretOf(authSecret);
@@ -354,7 +365,7 @@ export function coreHandlers(deps: CoreDeps): Map<string, Handler> {
           if (err instanceof GraphError && hide.length) throw new GraphError(err.key, JSON.parse(mask(JSON.stringify(err.params), hide)));
           throw err;
         }
-        const text = mask(res.body, hide);
+        const text = redact(mask(res.body, hide));
         run.setResult(node, '.status', res.status);
         run.setResult(node, '.body', text);
         try {

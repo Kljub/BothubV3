@@ -22,6 +22,7 @@ import {
   type User,
 } from 'discord.js';
 import type { GraphLimits } from '../core/config.js';
+import { guardRest, guardValue } from '../core/leakguard.js';
 import { log } from '../core/log.js';
 import type { CommandRow, Repo } from '../core/repo.js';
 import { GraphError, Run, type Engine, type Handler, type RunResult } from '../graph/interpreter.js';
@@ -191,6 +192,7 @@ export class BotInstance {
   // ---------- lifecycle ----------
 
   async start(token: string): Promise<void> {
+    guardValue(token);
     await this.stop();
     this.deps.repo.setBotStatus(this.botId, 'starting');
     this.reloadGraphs();
@@ -342,6 +344,7 @@ export class BotInstance {
       intents,
       partials: [Partials.Message, Partials.Channel, Partials.Reaction, Partials.User, Partials.GuildMember],
     });
+    guardRest(client.rest as never);
     client.once(Events.ClientReady, (c) => void this.onReady(c.user, [...c.guilds.cache.values()]));
     client.on(Events.InteractionCreate, (i) => void this.onInteraction(i).catch((err) => log.error('interaction failed', { botId: this.botId, err })));
     client.on(Events.GuildCreate, (g) => void this.onGuildJoin(g));
@@ -577,6 +580,7 @@ export class BotInstance {
   }
 
   private async onInteraction(i: Interaction): Promise<void> {
+    guardValue(i.token, 16 * 60_000);
     if (i.isChatInputCommand()) return this.onCommand(i, [i.commandName, i.options.getSubcommandGroup(false), i.options.getSubcommand(false)].filter(Boolean).join(' '));
     if (i.isUserContextMenuCommand()) return this.onCommand(i, `user:${i.commandName}`);
     if (i.isMessageContextMenuCommand()) return this.onCommand(i, `message:${i.commandName}`);

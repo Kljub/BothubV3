@@ -10,6 +10,7 @@
 //     private or local addresses (checked on every redirect hop)
 //   - interaction tokens stay here: the plugin gets an opaque handle
 
+import { isDiscordApi, redact, redactDiscordAnswer } from '../core/leakguard.js';
 import { createHash, randomBytes } from 'node:crypto';
 import { lookup } from 'node:dns/promises';
 import { request as httpRequest } from 'node:http';
@@ -472,7 +473,7 @@ export async function outboundHttp(
     }
     const type = res.headers['content-type'] ?? '';
     const binary = type !== '' && !/json|text|xml|javascript|x-www-form-urlencoded/.test(type);
-    const text = binary ? '' : res.body.toString('utf8');
+    const text = binary ? '' : isDiscordApi(url) ? redactDiscordAnswer(res.body.toString('utf8')) : redact(res.body.toString('utf8'));
     let json: unknown = null;
     if (type.includes('json')) {
       try {

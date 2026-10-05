@@ -4,6 +4,7 @@
 
 import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
+import { isDiscordApi, redactDiscordAnswer } from '../core/leakguard.js';
 import { GraphError } from './interpreter.js';
 
 const MAX_BODY = 1_000_000;
@@ -87,7 +88,9 @@ export async function request(method: string, rawUrl: string, headers: Record<st
       }
       continue;
     }
-    return { status: res.status, body: await readLimited(res) };
+    // Answers of the Discord API (e.g. PATCH /users/@me) lose their token fields.
+    const text = await readLimited(res);
+    return { status: res.status, body: isDiscordApi(url) ? redactDiscordAnswer(text) : text };
   }
   throw new GraphError('error.run.http_failed', { message: 'too many redirects' });
 }
