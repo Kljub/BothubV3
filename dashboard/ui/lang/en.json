@@ -5009,5 +5009,7 @@
   "bot.presence.dnd": "Do not disturb",
   "bot.presence.invisible": "Invisible",
   "bot.presence.offline": "Offline",
-  "bot.verified": "Verified bot (Discord)"
+  "bot.verified": "Verified bot (Discord)",
+  "bots.id_copy": "Click to copy",
+  "bots.id_copied": "Copied!"
 }

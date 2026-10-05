@@ -1,12 +1,12 @@
 {{/* Components shared by several pages. Every page set includes this file. */}}
 
 {{define "bot_card"}}
-{{/* Bot tile (compact): avatar with the presence dot, name with the
-     verified check, application ID, status badge on the right (hover:
-     uptime), status text; the profile banner faintly behind the top. */}}
+{{/* Bot tile: banner strip, avatar reaching into it with the presence dot,
+     name (verified check) and ID right next to the avatar, status badge on
+     the right (hover: uptime), status text below. */}}
 <article class="card bot-card bot-card-{{.Status}}" id="bot-{{.ID}}"
   {{if .Transitioning}}hx-get="/bot/{{.ID}}/card" hx-trigger="load delay:1500ms" hx-swap="outerHTML"{{end}}>
-  {{with .BannerURL}}<div class="bot-card-banner" aria-hidden="true"><img src="{{.}}" alt="" loading="lazy"></div>{{end}}
+  <div class="bot-card-banner" aria-hidden="true">{{with .BannerURL}}<img src="{{.}}" alt="" loading="lazy">{{end}}</div>
   <div class="bot-card-body">
     <header class="bot-card-header">
       <div class="bot-card-avatar">
@@ -19,7 +19,8 @@
           <a href="/select-bot/{{.ID}}" class="card-title">{{.Name}}</a>
           {{if .Verified}}<span class="bot-verified" title="{{t "bot.verified"}}" aria-label="{{t "bot.verified"}}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 8.5l2.5 2.5L12 5.5"/></svg></span>{{end}}
         </div>
-        {{with .ApplicationID}}<span class="mono muted bot-card-app">{{.}}</span>{{end}}
+        {{/* Blurred until hovered; a click copies it. */}}
+        {{with .ApplicationID}}<button type="button" class="mono muted bot-card-app" data-copy="{{.}}" data-copy-done="{{t "bots.id_copied"}}" title="{{t "bots.id_copy"}}">{{.}}</button>{{end}}
       </div>
       <span class="bot-card-badge"{{with uptime .}} title="{{t "bot.uptime" "time" .}}"{{end}}>{{template "status_badge" .Status}}</span>
     </header>

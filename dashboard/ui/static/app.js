@@ -695,34 +695,27 @@ function initPasskeyUI(root) {
 document.addEventListener('DOMContentLoaded', () => initPasskeyUI(document));
 document.addEventListener('htmx:load', (event) => initPasskeyUI(event.detail.elt));
 
-// Copy buttons: [data-copy] puts its text on the clipboard; the inner <span>
-// shows data-copy-done for a moment.
+// Copy buttons: [data-copy] puts its value on the clipboard and shows
+// data-copy-done for a moment (in the inner <span> when there is one, else as
+// the whole text); .is-copied is set meanwhile.
 document.addEventListener('click', async (event) => {
   const btn = event.target.closest('[data-copy]');
   if (!btn) return;
   event.preventDefault();
-  const label = btn.querySelector('span');
-  const before = label?.textContent;
+  event.stopPropagation();
+  const label = btn.querySelector('span') || btn;
+  const before = label.textContent;
   try {
     await navigator.clipboard.writeText(btn.dataset.copy);
-    if (label && btn.dataset.copyDone) label.textContent = btn.dataset.copyDone;
+    if (btn.dataset.copyDone) label.textContent = btn.dataset.copyDone;
+    btn.classList.add('is-copied');
   } catch {
-    if (label) label.textContent = '⚠';
+    return; // clipboard blocked: the value stays visible to copy by hand
   }
-  setTimeout(() => { if (label) label.textContent = before; }, 1600);
-});
-
-// Copy buttons: [data-copy] puts its value on the clipboard and shows
-// data-copy-done for a moment.
-document.addEventListener('click', async (event) => {
-  const btn = event.target.closest('[data-copy]');
-  if (!btn) return;
-  try {
-    await navigator.clipboard.writeText(btn.dataset.copy);
-    const old = btn.textContent;
-    btn.textContent = btn.dataset.copyDone || old;
-    setTimeout(() => { btn.textContent = old; }, 1500);
-  } catch { /* clipboard blocked: the value stays visible to copy by hand */ }
+  setTimeout(() => {
+    label.textContent = before;
+    btn.classList.remove('is-copied');
+  }, 1500);
 });
 
 // Webhook form: the example request follows the event ID and the key switch.

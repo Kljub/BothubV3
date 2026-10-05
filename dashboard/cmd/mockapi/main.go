@@ -96,6 +96,7 @@ type store struct {
 	registration     registration     // self-registration (registration.go)
 	security         securityPolicy   // Security Policies (policies.go)
 	discrims         map[int64]string // bot ID -> discriminator of the bot user
+	mem              memSampler       // memory of the overview (memstats.go)
 	registerLimit    registerLimiter
 	bots             map[int64]*bot
 	nextID           int64
@@ -189,6 +190,7 @@ func main() {
 	s.loadServerSettings()
 	s.loadRegistration()
 	s.loadSecurity()
+	go s.runMemorySampler()
 	s.loadSMTP()
 	s.updater = newUpdater()
 	go s.runAutoUpdates()
@@ -1059,11 +1061,26 @@ func (s *store) transition(w http.ResponseWriter, b *bot, jobType, during, after
 
 // --- stats ---
 
-// overviewStats counts the bots. Memory numbers come from the real
-// processes later; until then they are 0 (no invented values).
+// overviewStats counts the bots; memory comes from the sampler (memstats.go).
 func (s *store) overviewStats(w http.ResponseWriter, r *http.Request, _ string) {
-	rng := r.URL.Query().Get("range")
-	if rng == "" {
+	q := r.URL.Query()
+	rng := q.Get("range")
+	to := time.Now().UTC()
+	from := to.Add(-24 * time.Hour)
+	switch rng {
+	case "1h":
+		from = to.Add(-time.Hour)
+	case "7d":
+		from = to.Add(-7 * 24 * time.Hour)
+	case "custom":
+		f, err1 := time.Parse(time.RFC3339, q.Get("from"))
+		t, err2 := time.Parse(time.RFC3339, q.Get("to"))
+		if err1 != nil || err2 != nil || !f.Before(t) {
+			apiError(w, 422, "error.validation.failed")
+			return
+		}
+		from, to = f, t
+	default:
 		rng = "24h"
 	}
 	s.mu.Lock()
@@ -1075,11 +1092,8 @@ func (s *store) overviewStats(w http.ResponseWriter, r *http.Request, _ string) 
 	}
 	s.mu.Unlock()
 	writeJSON(w, 200, map[string]any{
-		"bots": map[string]int{"total": total, "online": online},
-		"memory": map[string]any{
-			"range": rng, "currentBytes": 0, "averageBytes": 0, "peakBytes": 0, "limitBytes": 0,
-			"services": []map[string]any{}, "series": []map[string]any{},
-		},
+		"bots":   map[string]int{"total": total, "online": online},
+		"memory": s.memoryStats(r.Context(), rng, from, to),
 	})
 }
 

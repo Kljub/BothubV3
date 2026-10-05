@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 func TestLoginLimiter(t *testing.T) {
@@ -95,5 +97,23 @@ func TestSecurityPolicy(t *testing.T) {
 	admin := httptest.NewRequest("GET", "/api/v1/admin/users", nil)
 	if !allowedWithout2FA(get) || allowedWithout2FA(post) || !allowedWithout2FA(setup) || allowedWithout2FA(admin) {
 		t.Fatal("without 2FA: read and set up only")
+	}
+}
+
+func TestMemorySampler(t *testing.T) {
+	s := &store{}
+	now := time.Now().UTC()
+	s.mem.add(memSample{t: now.Add(-8 * 24 * time.Hour), app: 1})
+	s.mem.add(memSample{t: now.Add(-2 * time.Hour), app: 100, bot: 50})
+	s.mem.add(memSample{t: now.Add(-time.Minute), app: 200, bot: 50})
+	if len(s.mem.samples) != 2 {
+		t.Fatalf("samples older than 7 days are dropped: %d", len(s.mem.samples))
+	}
+	if got := s.mem.between(now.Add(-time.Hour), now); len(got) != 1 || got[0].app != 200 {
+		t.Fatalf("between: %v", got)
+	}
+	st := s.memoryStats(context.Background(), "24h", now.Add(-24*time.Hour), now)
+	if st["averageBytes"].(int64) != 200 || st["peakBytes"].(int64) < 250 {
+		t.Fatalf("stats: %v", st)
 	}
 }
