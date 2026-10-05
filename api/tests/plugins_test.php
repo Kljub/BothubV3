@@ -151,6 +151,8 @@ $r = install(zipOf(pluginFiles(change: ['settings' => ['fields' => [['key' => 't
 check('secret setting type refused', $r[0] === 422 && str_contains(json_encode($r[1]), 'settings'));
 $r = install(zipOf(pluginFiles(change: ['settings' => ['fields' => [['key' => 'l', 'type' => 'list', 'item' => [['key' => 'n', 'type' => 'list', 'item' => [['key' => 'x', 'type' => 'bool']]]]]]]])));
 check('nested list refused', $r[0] === 422 && str_contains(json_encode($r[1]), 'settings'));
+$r = install(zipOf(pluginFiles('0.7.4', change: ['settings' => ['fields' => [['key' => 'currencyKey', 'type' => 'currency']]]])));
+check('currency setting type accepted', $r[0] === 201);
 $r = install(zipOf(pluginFiles(change: ['settings' => ['fields' => [['key' => 'logo', 'type' => 'image']]]])));
 check('image field needs storage.files', $r[0] === 422 && str_contains(json_encode($r[1]), 'storage.files'));
 $bad = pluginFiles();

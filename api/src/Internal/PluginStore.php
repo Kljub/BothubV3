@@ -35,7 +35,7 @@ final class PluginStore
     private const CONNECT_PROVIDERS = ['plex'];
     private const ICON = '/^[^\s<>&"\']{1,16}$/u';
     private const CATEGORIES = ['utility', 'security', 'messages', 'fun', 'ticket', 'social'];
-    private const FIELD_TYPES = ['bool', 'text', 'number', 'select', 'color', 'channel', 'channels', 'role', 'roles', 'emojis', 'words', 'message', 'list', 'permissions', 'image', 'choices', 'file'];
+    private const FIELD_TYPES = ['bool', 'text', 'number', 'select', 'color', 'channel', 'channels', 'role', 'roles', 'emojis', 'words', 'message', 'list', 'permissions', 'image', 'choices', 'file', 'currency'];
 
     /** Hosts that may receive the market token; every other host gets the request without it. */
     private const TOKEN_HOSTS = ['api.github.com', 'raw.githubusercontent.com'];
