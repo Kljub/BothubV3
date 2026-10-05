@@ -1,0 +1,21 @@
+{{define "title"}}{{.Data.Studio.Card.Name}} · Card Studio{{end}}
+{{define "content"}}{{end}}
+
+{{/* Card Studio as its own full-screen builder (like the command builder):
+     layers left, the live preview in the middle, properties right. The
+     editor is js/card-studio.js; the frame is the "card_studio" partial. */}}
+{{define "card_builder_layout"}}<!doctype html>
+<html lang="{{.Locale}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="csrf-token" content="{{.CSRF}}">
+<title>{{.Data.Studio.Card.Name}} · Card Studio · BotHub</title>
+<link rel="stylesheet" href="/static/css/bothub.css?v={{.AssetVersion}}">
+<script src="/static/js/card-studio.js?v={{.AssetVersion}}" defer></script>
+</head>
+<body class="builder-body cs-builder-body" data-theme="{{.Theme}}">
+{{template "card_studio" .Data.Studio}}
+</body>
+</html>
+{{end}}

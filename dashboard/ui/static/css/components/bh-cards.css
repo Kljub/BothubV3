@@ -96,3 +96,10 @@
 .cs-gallery-tile[hidden] { display: none; }
 .cs-gallery-tile:hover { border-color: #22c55e; color: var(--text); }
 .cs-gallery-tile canvas { width: 100%; height: auto; aspect-ratio: 2 / 1; object-fit: contain; border-radius: 6px; background: var(--bg); }
+
+/* Full-screen Card Studio (card_builder.html): the page is only the studio. */
+.cs-builder-body .card-studio { height: 100vh; min-height: 0; padding: 12px; box-sizing: border-box; }
+.cs-builder-body .cs-body { min-height: 0; }
+.cs-builder-body .cs-left, .cs-builder-body .cs-right { max-height: none; min-height: 0; }
+.cs-builder-body .cs-stage { min-height: 0; overflow: auto; }
+.cs-builder-body .cs-canvas-wrap { max-height: 100%; }

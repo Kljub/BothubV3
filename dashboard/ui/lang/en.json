@@ -5163,5 +5163,6 @@
   "modset.var.inviter_name": "Who invited the member",
   "modset.var.times_joined": "How often the member joined",
   "modset.var.welcome_message_link": "Link to the welcome message",
-  "modset.var.leave_reason": "Why they left (left, kicked, banned, pruned)"
+  "modset.var.leave_reason": "Why they left (left, kicked, banned, pruned)",
+  "cards.new.default_name": "New card"
 }

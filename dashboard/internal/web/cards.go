@@ -85,5 +85,6 @@ func (s *Server) handleCardStudio(w http.ResponseWriter, r *http.Request, p Page
 	texts, _ := json.Marshal(s.prefixTexts(p.Locale, "cards."))
 	data := map[string]any{"Bot": bot, "Section": "modules", "Kind": "card_studio", "Category": "utility",
 		"Studio": cardStudioView{BotID: bot.ID, Card: card, DesignJSON: string(card.Design), Kinds: cardKinds, Texts: string(texts)}}
-	s.render(w, http.StatusOK, "module_item", "layout", withData(p, data))
+	// Its own full-screen page, like the command builder.
+	s.render(w, http.StatusOK, "card_builder", "card_builder_layout", withData(p, data))
 }

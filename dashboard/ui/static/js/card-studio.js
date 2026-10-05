@@ -98,7 +98,7 @@
       try {
         const { templates } = await (await fetch('/cards/templates.json')).json();
         const kind = f.kind.value;
-        const card = await api('POST', `/api/v1/bots/${bot}/cards`, { name: f.name.value.trim(), kind, design: templates[kind] || templates.custom });
+        const card = await api('POST', `/api/v1/bots/${bot}/cards`, { name: f.name.value.trim() || f.dataset.defaultName, kind, design: templates[kind] || templates.custom });
         location.href = `/bots/cards/${card.id}`;
       } catch (ex) {
         err(ex.message);

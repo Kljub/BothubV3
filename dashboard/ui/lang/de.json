@@ -5163,5 +5163,6 @@
   "modset.var.inviter_name": "Wer das Mitglied eingeladen hat",
   "modset.var.times_joined": "Wie oft das Mitglied beigetreten ist",
   "modset.var.welcome_message_link": "Link zur Willkommensnachricht",
-  "modset.var.leave_reason": "Warum gegangen (left, kicked, banned, pruned)"
+  "modset.var.leave_reason": "Warum gegangen (left, kicked, banned, pruned)",
+  "cards.new.default_name": "Neue Karte"
 }

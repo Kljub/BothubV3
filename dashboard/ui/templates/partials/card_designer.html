@@ -5,8 +5,8 @@
 <section class="box" data-cards data-bot="{{.BotID}}">
   <header class="box-head">
     <h2>{{t "cards.list.title"}}</h2>
-    <form class="inline-form cards-new" data-card-new>
-      <input name="name" required maxlength="60" placeholder="{{t "cards.new.name"}}" aria-label="{{t "cards.new.name"}}">
+    <form class="inline-form cards-new" data-card-new data-default-name="{{t "cards.new.default_name"}}">
+      <input name="name" maxlength="60" placeholder="{{t "cards.new.name"}}" aria-label="{{t "cards.new.name"}}">
       <select name="kind" aria-label="{{t "cards.kind"}}">
         {{range .Kinds}}<option value="{{.}}">{{t (printf "cards.kind.%s" .)}}</option>{{end}}
       </select>
