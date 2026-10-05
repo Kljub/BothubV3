@@ -612,7 +612,7 @@ docker compose up -d --build</pre>
   <div class="update-run">
     <strong>{{if or (eq .Status "running") (eq .Status "created")}}⏳ {{t "update.running"}}{{else if eq .ExitCode 0}}✅ {{t "update.done"}}{{else}}❌ {{t "update.failed" "code" .ExitCode}}{{end}}</strong>
     {{with .FinishedAt}}{{if ne . "0001-01-01T00:00:00Z"}}<span class="muted"> · {{.}}</span>{{end}}{{end}}
-    <pre class="update-log">{{.Log}}</pre>
+    <pre class="update-log" tabindex="0">{{newestFirst .Log}}</pre>
   </div>
   {{end}}
   <div class="update-actions">

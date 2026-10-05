@@ -46,6 +46,8 @@ var baseFuncs = template.FuncMap{
 	"add":   func(a, b float64) float64 { return a + b },
 	"upper": strings.ToUpper,
 	"list":  func(v ...any) []any { return v },
+	// newestFirst turns a log around: the last line first (update log).
+	"newestFirst": newestFirst,
 	// Choices of the update and restart settings (Admin → Server settings).
 	"autoUpdateModes": func() []string { return api.AutoUpdateModes },
 	"restartPolicies": func() []string { return api.RestartPolicies },

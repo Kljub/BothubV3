@@ -2,6 +2,8 @@ package web
 
 import (
 	"net/http"
+	"slices"
+	"strings"
 
 	"github.com/Kljub/BothubV3/dashboard/internal/api"
 )
@@ -13,6 +15,13 @@ type updateView struct {
 	Info   api.UpdateInfo
 	Check  *api.UpdateCheck
 	Locale string
+}
+
+// newestFirst reverses the lines of a log, so the newest is on top.
+func newestFirst(log string) string {
+	lines := strings.Split(strings.TrimRight(strings.ReplaceAll(log, "\r\n", "\n"), "\n"), "\n")
+	slices.Reverse(lines)
+	return strings.Join(lines, "\n")
 }
 
 // LastCheck: when the last check ran (empty before the first).

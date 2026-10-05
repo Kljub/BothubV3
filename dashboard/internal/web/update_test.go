@@ -7,6 +7,15 @@ import (
 	"github.com/Kljub/BothubV3/dashboard/internal/api"
 )
 
+func TestNewestFirst(t *testing.T) {
+	if got := newestFirst("a\r\nb\nc\n"); got != "c\nb\na" {
+		t.Errorf("newestFirst = %q", got)
+	}
+	if got := newestFirst(""); got != "" {
+		t.Errorf("empty log = %q", got)
+	}
+}
+
 func TestUpdateAvailable(t *testing.T) {
 	behind := func(n int) *api.UpdateCheck { return &api.UpdateCheck{Behind: n} }
 	last := api.UpdateInfo{}
