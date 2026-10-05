@@ -52,7 +52,8 @@
         "type": "string",
         "maxLength": 64,
         "x-labelKey": "builder.cfg.button_emoji",
-        "x-placeholder": "👍"
+        "x-placeholder": "👍",
+        "x-widget": "emoji"
       },
       "url": {
         "type": "string",

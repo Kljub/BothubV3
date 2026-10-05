@@ -72,7 +72,7 @@
       }
     },
     "config": {
-      "description": "JSON Schema for the node config. Editor extensions per property: x-labelKey (required), x-hintKey, x-enumKey (i18n prefix for enum values), x-multiline, x-mono, x-placeholder, x-showIf ({field: [values]}), x-kinds (state nodes: condition kinds that use the field), x-widget (custom editor: permissions, form), x-advanced (shown under Advanced), x-ref (member, channel, category, role, roles, message: value is a block variable or channel/message ID), x-group (rendered by a widget), x-undoTitleKey/x-undoHintKey (undo widget), x-permissionGroups (permissions widget: palette groups).",
+      "description": "JSON Schema for the node config. Editor extensions per property: x-labelKey (required), x-hintKey, x-enumKey (i18n prefix for enum values), x-multiline, x-mono, x-placeholder, x-showIf ({field: [values]}), x-kinds (state nodes: condition kinds that use the field), x-widget (custom editor: permissions, form, webhook, card, emoji), x-advanced (shown under Advanced), x-ref (member, channel, category, role, roles, message: value is a block variable or channel/message ID), x-group (rendered by a widget), x-undoTitleKey/x-undoHintKey (undo widget), x-permissionGroups (permissions widget: palette groups).",
       "type": "object"
     },
     "group": {

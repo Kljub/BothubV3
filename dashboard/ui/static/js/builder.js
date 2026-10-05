@@ -1916,7 +1916,21 @@
     if (schema['x-placeholder']) input.placeholder = schema['x-placeholder'];
     if (key === 'variable' || schema['x-mono']) input.classList.add('mono');
     if (input.tagName !== 'SELECT') input.addEventListener('focus', () => { lastField = input; });
-    if (key === 'var_name' && window.BotHubVarPicker) {
+    if (schema['x-widget'] === 'emoji') {
+      // Buttons and menu options: pick a standard emoji or one of the server's.
+      const row = el('div', 'bemoji-field');
+      const pickBtn = el('button', 'btn btn-sm bemoji-btn');
+      pickBtn.type = 'button';
+      pickBtn.title = t('builder.emoji.pick');
+      pickBtn.setAttribute('aria-label', t('builder.emoji.pick'));
+      pickBtn.append(icon('smile'));
+      pickBtn.addEventListener('click', (ev) => {
+        ev.preventDefault();
+        openEmojiPicker(row, (v) => { input.value = v; update(v); });
+      });
+      row.append(input, pickBtn);
+      label.append(row);
+    } else if (key === 'var_name' && window.BotHubVarPicker) {
       // Variable blocks: pick a Data Storage variable ({var.key}) or one of this command.
       const row = el('div', 'bvp-field');
       const pickBtn = el('button', 'btn btn-sm');
@@ -2255,6 +2269,110 @@
     const w = toWorld(ev.clientX, ev.clientY);
     addNode(type, w.x - SIZE.normal.w / 2, w.y - SIZE.normal.h / 2);
   });
+
+  // ---------- emoji picker (buttons, menu options) ----------
+  const EMOJI_SETS = [
+    ['smileys', '😀 😃 😄 😁 😆 😅 😂 🤣 😊 😇 🙂 😉 😍 🥰 😘 😋 😛 😜 🤪 😎 🤩 🥳 😏 😒 😔 😢 😭 😤 😡 🤯 😳 🥺 😱 🤔 🤫 🙄 😴 🤤 😷 🤒 🤠 🤡 👻 💀 👽 🤖 💩 😺'],
+    ['people', '👋 🤚 ✋ 🖖 👌 🤌 ✌️ 🤞 🤟 🤘 🤙 👈 👉 👆 👇 ☝️ 👍 👎 ✊ 👊 👏 🙌 👐 🤝 🙏 ✍️ 💪 🧠 👀 👁️ 👅 👄 👶 🧑 👨 👩 🧓 👮 🕵️ 💂 🥷 👷 🤴 👸 🧙 🧚 🧛 🧜'],
+    ['nature', '🐶 🐱 🐭 🐹 🐰 🦊 🐻 🐼 🐨 🐯 🦁 🐮 🐷 🐸 🐵 🐔 🐧 🐦 🦆 🦅 🦉 🐺 🐴 🦄 🐝 🦋 🐌 🐞 🐢 🐍 🐙 🦈 🐬 🐳 🌲 🌴 🌵 🌷 🌹 🌻 🍀 🍁 🍄 🌍 🌙 ⭐ 🌟 ☀️ ⛅ 🌈 ❄️ 🔥 💧 🌊'],
+    ['food', '🍏 🍎 🍐 🍊 🍋 🍌 🍉 🍇 🍓 🍒 🍑 🥭 🍍 🥥 🥝 🍅 🥑 🥦 🌽 🥕 🍞 🧀 🥚 🍳 🥓 🍔 🍟 🍕 🌭 🌮 🍣 🍜 🍩 🍪 🎂 🍰 🍫 🍬 🍭 🍿 ☕ 🍵 🥤 🍺 🍷 🍹'],
+    ['activities', '⚽ 🏀 🏈 ⚾ 🎾 🏐 🏉 🎱 🏓 🏸 🥊 🥋 ⛳ 🎣 🎿 🏂 🏆 🥇 🥈 🥉 🏅 🎖️ 🎗️ 🎫 🎟️ 🎪 🎭 🎨 🎬 🎤 🎧 🎼 🎹 🥁 🎷 🎺 🎸 🎻 🎲 ♟️ 🎯 🎳 🎮 🕹️ 🧩'],
+    ['travel', '🚗 🚕 🚌 🏎️ 🚓 🚑 🚒 🚚 🚜 🏍️ 🚲 🛴 🚂 ✈️ 🚀 🛸 🚁 ⛵ 🚢 ⚓ 🗺️ 🗽 🗼 🏰 🏯 🏟️ 🎡 🎢 🏖️ 🏝️ 🏔️ 🌋 🏠 🏢 🏥 🏦 🏫 ⛪ 🕌 ⛩️ 🌃 🌆 🌉'],
+    ['objects', '⌚ 📱 💻 ⌨️ 🖥️ 🖨️ 🖱️ 💾 💿 📷 🎥 📺 📻 ⏰ ⏳ 🔋 🔌 💡 🔦 🕯️ 💸 💵 💰 💳 💎 ⚖️ 🔧 🔨 ⚒️ 🛠️ ⚙️ 🔩 🧲 🔫 💣 🔪 🛡️ 🔮 🧿 💈 🔭 🔬 💊 💉 🧬 🧹 🧺 🎁 🎈 🎉 🎊 ✉️ 📦 📝 📌 📎 🔒 🔓 🔑 🗝️ 📢 📣 🔔 🔕 📅 📊 📈 📉'],
+    ['symbols', '❤️ 🧡 💛 💚 💙 💜 🖤 🤍 🤎 💔 ❣️ 💕 💞 💓 💗 💖 💘 💝 ☮️ ✝️ ☪️ 🕉️ ☯️ ♈ ♉ ♊ ⛎ 🆔 ⚛️ ☢️ ☣️ ✅ ☑️ ✔️ ❌ ❎ ➕ ➖ ➗ ✖️ ♾️ ‼️ ⁉️ ❓ ❔ ❕ ❗ 〰️ ⚠️ 🚫 ⛔ 🔞 💯 🔅 🔆 🔱 ⚜️ 🔰 ♻️ 🌐 💠 Ⓜ️ 🌀 💤 🏧 🚾 ♿ 🅿️ 🔤 🆗 🆙 🆒 🆕 🆓 0️⃣ 1️⃣ 2️⃣ 3️⃣ 4️⃣ 5️⃣ 6️⃣ 7️⃣ 8️⃣ 9️⃣ 🔟 ▶️ ⏸️ ⏹️ ⏺️ ⏭️ ⏮️ ⏩ ⏪ 🔀 🔁 🔂 ◀️ 🔼 🔽 ➡️ ⬅️ ⬆️ ⬇️ ↗️ ↘️ ↙️ ↖️ ↕️ ↔️ 🔄 🔃 🎵 🎶 💲 ©️ ®️ ™️ 🔘 🔴 🟠 🟡 🟢 🔵 🟣 ⚫ ⚪ 🟥 🟧 🟨 🟩 🟦 🟪 ⬛ ⬜ 🔶 🔷 🔸 🔹 🔺 🔻'],
+    ['flags', '🏁 🚩 🎌 🏴 🏳️ 🏳️‍🌈 🏴‍☠️ 🇩🇪 🇦🇹 🇨🇭 🇬🇧 🇺🇸 🇫🇷 🇮🇹 🇪🇸 🇳🇱 🇵🇱 🇹🇷 🇺🇦 🇷🇺 🇯🇵 🇰🇷 🇨🇳 🇧🇷 🇨🇦 🇦🇺 🇪🇺'],
+  ];
+
+  function openEmojiPicker(anchor, onPick) {
+    root.querySelector('.bemoji-pop')?.remove();
+    const pop = el('div', 'bemoji-pop');
+    pop.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') { ev.stopPropagation(); pop.remove(); } });
+    const close = () => { pop.remove(); document.removeEventListener('pointerdown', outside, true); };
+    const outside = (ev) => { if (!pop.contains(ev.target) && !anchor.contains(ev.target)) close(); };
+    document.addEventListener('pointerdown', outside, true);
+    const tabs = el('div', 'bemoji-tabs');
+    const body = el('div', 'bemoji-body');
+    const pick = (v) => { onPick(v); close(); };
+    const showStandard = () => {
+      body.replaceChildren();
+      for (const [cat, list] of EMOJI_SETS) {
+        body.append(el('div', 'bemoji-cat', t(`builder.emoji.cat.${cat}`)));
+        const grid = el('div', 'bemoji-grid');
+        for (const e of list.split(' ')) {
+          const btn = el('button', 'bemoji-item', e);
+          btn.type = 'button';
+          btn.addEventListener('click', () => pick(e));
+          grid.append(btn);
+        }
+        body.append(grid);
+      }
+    };
+    const showServer = async () => {
+      body.replaceChildren(el('p', 'bpick-status', t('builder.pick.loading')));
+      let guilds;
+      try {
+        guilds = await load(guildsUrl());
+      } catch {
+        body.replaceChildren(el('p', 'bpick-status', t('builder.pick.load_failed')));
+        return;
+      }
+      if (!guilds.length) {
+        body.replaceChildren(el('p', 'bpick-status', t('builder.emoji.no_servers')));
+        return;
+      }
+      const sel = el('select', 'bemoji-guild');
+      for (const g of guilds) {
+        const o = el('option', '', g.name);
+        o.value = g.id;
+        sel.append(o);
+      }
+      const grid = el('div', 'bemoji-grid');
+      const fill = async () => {
+        grid.replaceChildren(el('p', 'bpick-status', t('builder.pick.loading')));
+        let items;
+        try {
+          items = await load(guildPart(sel.value, 'emojis'));
+        } catch {
+          grid.replaceChildren(el('p', 'bpick-status', t('builder.pick.load_failed')));
+          return;
+        }
+        grid.replaceChildren();
+        if (!items.length) grid.append(el('p', 'bpick-status', t('builder.emoji.none')));
+        for (const e of items) {
+          const btn = el('button', 'bemoji-item');
+          btn.type = 'button';
+          btn.title = `:${e.name}:`;
+          const img = el('img');
+          img.src = e.url;
+          img.alt = e.name;
+          img.loading = 'lazy';
+          btn.append(img);
+          btn.addEventListener('click', () => pick(e.text));
+          grid.append(btn);
+        }
+      };
+      sel.addEventListener('change', fill);
+      body.replaceChildren(sel, grid);
+      fill();
+    };
+    for (const [key, show] of [['standard', showStandard], ['server', showServer]]) {
+      const tb = el('button', 'bemoji-tab', t(`builder.emoji.tab.${key}`));
+      tb.type = 'button';
+      tb.addEventListener('click', () => {
+        tabs.querySelectorAll('.bemoji-tab').forEach((x) => x.classList.toggle('is-active', x === tb));
+        show();
+      });
+      tabs.append(tb);
+    }
+    const clear = el('button', 'bemoji-tab bemoji-clear', t('builder.emoji.clear'));
+    clear.type = 'button';
+    clear.addEventListener('click', () => pick(''));
+    tabs.append(clear);
+    pop.append(tabs, body);
+    anchor.append(pop);
+    tabs.querySelector('.bemoji-tab').classList.add('is-active');
+    showStandard();
+  }
 
   // ---------- copy and paste blocks (Ctrl+C / Ctrl+V) ----------
   // The selected block with everything attached to it (states, buttons,

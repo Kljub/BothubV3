@@ -5217,5 +5217,20 @@
   "builder.clip.copied": "{count} Block/Blöcke kopiert",
   "builder.clip.pasted": "{count} Block/Blöcke eingefügt",
   "builder.clip.partly": "{count} Block/Blöcke eingefügt; einige gibt es hier nicht (Plugin fehlt)",
-  "builder.clip.nothing": "Diese Blöcke gibt es hier nicht."
+  "builder.clip.nothing": "Diese Blöcke gibt es hier nicht.",
+  "builder.emoji.pick": "Emoji wählen",
+  "builder.emoji.tab.standard": "Emojis",
+  "builder.emoji.tab.server": "Server-Emojis",
+  "builder.emoji.clear": "Keins",
+  "builder.emoji.none": "Dieser Server hat keine eigenen Emojis.",
+  "builder.emoji.no_servers": "Der Bot ist auf keinem Server (oder läuft nicht).",
+  "builder.emoji.cat.smileys": "Smileys",
+  "builder.emoji.cat.people": "Menschen",
+  "builder.emoji.cat.nature": "Natur",
+  "builder.emoji.cat.food": "Essen",
+  "builder.emoji.cat.activities": "Aktivitäten",
+  "builder.emoji.cat.travel": "Reisen",
+  "builder.emoji.cat.objects": "Objekte",
+  "builder.emoji.cat.symbols": "Symbole",
+  "builder.emoji.cat.flags": "Flaggen"
 }

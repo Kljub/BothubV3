@@ -43,6 +43,18 @@ function hexToInt(hex: string | undefined): number | undefined {
 }
 
 /** Discord payload for a message block. customId(node) names interactive components. */
+/**
+ * Emoji of a button or menu option: a server emoji (<:name:id>, <a:name:id>)
+ * goes as its ID, anything else as the Unicode emoji; empty: none.
+ */
+export function componentEmoji(raw: string): { id?: string; name: string; animated?: boolean } | undefined {
+  const v = raw.trim();
+  if (!v) return undefined;
+  const custom = /^<(a?):([A-Za-z0-9_]{2,32}):(\d{15,21})>$/.exec(v);
+  if (custom) return { id: custom[3]!, name: custom[2]!, ...(custom[1] ? { animated: true } : {}) };
+  return { name: v };
+}
+
 export function buildMessage(run: Run, node: GraphNode, customId: (component: GraphNode) => string): Record<string, unknown> {
   const msg = (run.raw(node, 'message') ?? {}) as BuilderMessage;
   const r = (s: string | undefined) => (s ? run.render(s) : undefined);
@@ -93,7 +105,7 @@ function componentRows(run: Run, node: GraphNode, customId: (component: GraphNod
           type: 2,
           style: STYLE[style] ?? 1,
           label: run.str(b, 'label'),
-          emoji: run.str(b, 'emoji') ? { name: run.str(b, 'emoji') } : undefined,
+          emoji: componentEmoji(run.str(b, 'emoji')),
           url: style === 'link' ? run.str(b, 'url') : undefined,
           custom_id: style === 'link' ? undefined : customId(b),
           disabled: run.bool(b, 'disabled') || undefined,
@@ -120,7 +132,7 @@ function componentRows(run: Run, node: GraphNode, customId: (component: GraphNod
               label: run.str(s, 'value').slice(0, 100) || '–',
               value: run.str(s, 'value').slice(0, 100) || s.id,
               description: run.str(s, 'option_description').slice(0, 100),
-              emoji: run.str(s, 'option_emoji') ? { name: run.str(s, 'option_emoji') } : undefined,
+              emoji: componentEmoji(run.str(s, 'option_emoji')),
             }),
           ),
         }),

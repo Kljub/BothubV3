@@ -306,6 +306,7 @@ func main() {
 	mux.HandleFunc("GET /api/v1/bots/{id}/guilds", s.auth(s.withBot(s.listGuilds)))
 	mux.HandleFunc("GET /api/v1/bots/{id}/guilds/{guildId}/roles", s.auth(s.withBot(s.listGuildRoles)))
 	mux.HandleFunc("GET /api/v1/bots/{id}/guilds/{guildId}/channels", s.auth(s.withBot(s.listGuildChannels)))
+	mux.HandleFunc("GET /api/v1/bots/{id}/guilds/{guildId}/emojis", s.auth(s.withBot(s.listGuildEmojis)))
 	mux.HandleFunc("GET /api/v1/bots/{id}/modules", s.auth(s.withBot(s.modulesFromPHP(s.listModules))))
 	mux.HandleFunc("PUT /api/v1/bots/{id}/modules/{key}", s.auth(s.withBot(s.viaPHP(s.setModule))))
 	mux.HandleFunc("GET /api/v1/bots/{id}/modules/{key}/config", s.auth(s.withBot(s.viaPHP(phpRequired))))
@@ -1172,6 +1173,37 @@ func (s *store) listGuildRoles(w http.ResponseWriter, r *http.Request, b *bot) {
 			continue
 		}
 		items = append(items, map[string]any{"id": role.ID, "name": role.Name, "color": roleColor(role.Color), "position": role.Position, "managed": role.Managed})
+	}
+	writeJSON(w, 200, map[string]any{"items": items})
+}
+
+// listGuildEmojis returns the server's own emojis (emoji picker of buttons
+// and menu options): name, the text that uses it and its picture.
+func (s *store) listGuildEmojis(w http.ResponseWriter, r *http.Request, b *bot) {
+	g, ok := s.guildOf(w, r, b)
+	if !ok {
+		return
+	}
+	list, err := s.discord.emojis(r.Context(), s.botToken(b), g.ID)
+	if err != nil {
+		de := asDiscordError(err)
+		apiError(w, de.Status, de.Key)
+		return
+	}
+	items := []map[string]any{}
+	for _, e := range list {
+		if e.ID == "" || (e.Available != nil && !*e.Available) {
+			continue
+		}
+		prefix, ext := "", "png"
+		if e.Animated {
+			prefix, ext = "a", "gif"
+		}
+		items = append(items, map[string]any{
+			"id": e.ID, "name": e.Name, "animated": e.Animated,
+			"text": "<" + prefix + ":" + e.Name + ":" + e.ID + ">",
+			"url":  "https://cdn.discordapp.com/emojis/" + e.ID + "." + ext + "?size=48",
+		})
 	}
 	writeJSON(w, 200, map[string]any{"items": items})
 }

@@ -286,6 +286,19 @@ func (c *discordClient) roles(ctx context.Context, token, guildID string) ([]dis
 	return out, err
 }
 
+type discordEmoji struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Animated  bool   `json:"animated"`
+	Available *bool  `json:"available"`
+}
+
+func (c *discordClient) emojis(ctx context.Context, token, guildID string) ([]discordEmoji, error) {
+	var out []discordEmoji
+	err := c.cachedGet(ctx, token, "/guilds/"+guildID+"/emojis", &out)
+	return out, err
+}
+
 func (c *discordClient) channels(ctx context.Context, token, guildID string) ([]discordChannel, error) {
 	var out []discordChannel
 	err := c.cachedGet(ctx, token, "/guilds/"+guildID+"/channels", &out)
