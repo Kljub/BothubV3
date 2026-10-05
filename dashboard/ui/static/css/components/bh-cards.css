@@ -83,3 +83,16 @@
 .cs-pic-add:hover { color: var(--text); border-color: var(--border-strong); }
 .cs-pic-del { position: absolute; top: 2px; right: 2px; display: none; width: 18px; height: 18px; font-size: 11px; line-height: 18px; text-align: center; color: #fff; background: rgb(0 0 0 / 0.65); border-radius: 50%; }
 .cs-pic:hover .cs-pic-del { display: block; }
+
+/* Template gallery */
+.cs-gallery { width: min(1200px, calc(100vw - 48px)); height: min(820px, calc(100vh - 48px)); padding: 0; color: var(--text); background: var(--surface); border: 1px solid var(--border-strong); border-radius: 14px; }
+.cs-gallery[open] { display: flex; flex-direction: column; }
+.cs-gallery::backdrop { background: rgb(0 0 0 / 0.6); }
+.cs-gallery-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+.cs-gallery-cats { padding: 10px 16px; border-bottom: 1px solid var(--border); }
+.cs-gallery-cats .chip.is-active { border-color: #22c55e; color: var(--text); }
+.cs-gallery-grid { flex: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; align-content: start; padding: 16px; overflow-y: auto; }
+.cs-gallery-tile { display: flex; flex-direction: column; gap: 6px; padding: 8px; font: inherit; font-size: 12px; color: var(--text-2); text-align: left; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; }
+.cs-gallery-tile[hidden] { display: none; }
+.cs-gallery-tile:hover { border-color: #22c55e; color: var(--text); }
+.cs-gallery-tile canvas { width: 100%; height: auto; aspect-ratio: 2 / 1; object-fit: contain; border-radius: 6px; background: var(--bg); }

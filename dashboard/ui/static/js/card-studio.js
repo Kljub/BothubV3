@@ -720,14 +720,64 @@
       preview = e.target.value;
       redraw();
     });
+    // Template gallery: categories, previews drawn when they scroll into view.
+    let gallery = null;
     root.querySelector('[data-cs-template]').addEventListener('click', async () => {
-      if (!window.confirm(t('template_confirm'))) return;
-      const { templates } = await (await fetch('/cards/templates.json')).json();
-      begin();
-      design = clone(templates[kindSelect.value] || templates.custom);
-      selected = null;
-      end();
-      refresh();
+      if (!gallery) {
+        const data = await (await fetch('/cards/gallery.json')).json();
+        gallery = el('dialog', 'cs-gallery');
+        const head = el('header', 'cs-gallery-head');
+        head.append(el('strong', '', t('gallery')));
+        const close = el('button', 'icon-btn', '×');
+        close.type = 'button';
+        close.addEventListener('click', () => gallery.close());
+        head.append(close);
+        const chips = el('div', 'chips cs-gallery-cats');
+        const grid = el('div', 'cs-gallery-grid');
+        const io = new IntersectionObserver((entries) => {
+          for (const e of entries) {
+            if (!e.isIntersecting) continue;
+            io.unobserve(e.target);
+            const tpl = data.templates[Number(e.target.dataset.i)];
+            draw(e.target, tpl.design, varsFor(r, preview));
+          }
+        }, { root: grid });
+        const show = (cat) => {
+          for (const b of chips.children) b.classList.toggle('is-active', b.dataset.cat === cat);
+          for (const tile of grid.children) tile.hidden = cat !== 'all' && tile.dataset.cat !== cat;
+        };
+        for (const cat of ['all', ...data.categories]) {
+          const b = el('button', 'chip', t(`gallery.${cat}`));
+          b.type = 'button';
+          b.dataset.cat = cat;
+          b.addEventListener('click', () => show(cat));
+          chips.append(b);
+        }
+        data.templates.forEach((tpl, i) => {
+          const tile = el('button', 'cs-gallery-tile');
+          tile.type = 'button';
+          tile.dataset.cat = tpl.category;
+          const c = el('canvas');
+          c.dataset.i = String(i);
+          tile.append(c, el('span', '', tpl.name));
+          tile.addEventListener('click', () => {
+            if (design.layers.length && !window.confirm(t('template_confirm'))) return;
+            begin();
+            design = clone(tpl.design);
+            if ([...kindSelect.options].some((o) => o.value === tpl.kind)) kindSelect.value = tpl.kind;
+            selected = null;
+            end();
+            gallery.close();
+            refresh();
+          });
+          grid.append(tile);
+          io.observe(c);
+        });
+        gallery.append(head, chips, grid);
+        document.body.append(gallery);
+        show('all');
+      }
+      gallery.showModal();
     });
 
     async function save() {
