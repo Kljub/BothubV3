@@ -23,7 +23,19 @@
     },
     {
       "key": "social",
-      "icon": "📡"
+      "icon": "🌐"
+    },
+    {
+      "key": "community",
+      "icon": "👥"
+    },
+    {
+      "key": "customization",
+      "icon": "🎨"
+    },
+    {
+      "key": "statistics",
+      "icon": "📊"
     }
   ],
   "modules": [
@@ -61,26 +73,6 @@
       "key": "card-designer",
       "category": "utility",
       "icon": "🎨"
-    },
-    {
-      "key": "transcripts",
-      "category": "utility",
-      "icon": "📄"
-    },
-    {
-      "key": "bookmarks",
-      "category": "utility",
-      "icon": "🔖"
-    },
-    {
-      "key": "role-prefix",
-      "category": "utility",
-      "icon": "🏷️"
-    },
-    {
-      "key": "day-night",
-      "category": "utility",
-      "icon": "🌗"
     },
     {
       "key": "automod",
@@ -183,53 +175,14 @@
       "icon": "📋"
     },
     {
-      "key": "starboard",
-      "category": "fun",
-      "icon": "⭐"
+      "key": "forum-tagger",
+      "category": "messages",
+      "icon": "🏷️"
     },
     {
       "key": "temp-voice",
       "category": "fun",
       "icon": "🎙️"
-    },
-    {
-      "key": "leveling",
-      "category": "fun",
-      "icon": "📈",
-      "beta": true
-    },
-    {
-      "key": "achievements",
-      "category": "fun",
-      "icon": "🏆"
-    },
-    {
-      "key": "invite-tracker",
-      "category": "fun",
-      "icon": "🔗",
-      "beta": true
-    },
-    {
-      "key": "counting",
-      "category": "fun",
-      "icon": "🔢"
-    },
-    {
-      "key": "birthday",
-      "category": "fun",
-      "icon": "🎂",
-      "beta": true
-    },
-    {
-      "key": "suggestions",
-      "category": "fun",
-      "icon": "💡",
-      "beta": true
-    },
-    {
-      "key": "qotd",
-      "category": "social",
-      "icon": "❓"
     },
     {
       "key": "giveaway",
@@ -242,14 +195,9 @@
       "icon": "💰"
     },
     {
-      "key": "afk",
+      "key": "music",
       "category": "fun",
-      "icon": "💤"
-    },
-    {
-      "key": "thanks",
-      "category": "fun",
-      "icon": "🙏"
+      "icon": "🎵"
     },
     {
       "key": "ticket",
@@ -263,9 +211,9 @@
       "icon": "📮"
     },
     {
-      "key": "forum-tagger",
+      "key": "transcripts",
       "category": "ticket",
-      "icon": "🏷️"
+      "icon": "📄"
     },
     {
       "key": "github-notifs",
@@ -320,13 +268,77 @@
       "beta": true
     },
     {
-      "key": "music",
-      "category": "social",
-      "icon": "🎵"
+      "key": "starboard",
+      "category": "community",
+      "icon": "⭐"
+    },
+    {
+      "key": "leveling",
+      "category": "community",
+      "icon": "📈",
+      "beta": true
+    },
+    {
+      "key": "achievements",
+      "category": "community",
+      "icon": "🏆"
+    },
+    {
+      "key": "invite-tracker",
+      "category": "community",
+      "icon": "🔗",
+      "beta": true
+    },
+    {
+      "key": "counting",
+      "category": "community",
+      "icon": "🔢"
+    },
+    {
+      "key": "birthday",
+      "category": "community",
+      "icon": "🎂",
+      "beta": true
+    },
+    {
+      "key": "suggestions",
+      "category": "community",
+      "icon": "💡",
+      "beta": true
+    },
+    {
+      "key": "thanks",
+      "category": "community",
+      "icon": "🙏"
+    },
+    {
+      "key": "bookmarks",
+      "category": "community",
+      "icon": "🔖"
+    },
+    {
+      "key": "qotd",
+      "category": "community",
+      "icon": "❓"
+    },
+    {
+      "key": "afk",
+      "category": "community",
+      "icon": "💤"
+    },
+    {
+      "key": "day-night",
+      "category": "customization",
+      "icon": "🌗"
+    },
+    {
+      "key": "role-prefix",
+      "category": "customization",
+      "icon": "🏷️"
     },
     {
       "key": "statistic-channels",
-      "category": "social",
+      "category": "statistics",
       "icon": "📊"
     }
   ]

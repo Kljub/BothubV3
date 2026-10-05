@@ -2,7 +2,7 @@
      cards without groups. "Edit →" opens the module or plugin content page. */}}
 
 {{define "module_group"}}
-<details class="module-group module-group-{{.Key}}" open>
+<details class="module-group module-group-{{.Key}}" data-module-group="{{.Key}}" open>
   <summary class="module-group-head">
     <span class="module-group-icon" aria-hidden="true">{{.Icon}}</span>
     <span class="module-group-text">

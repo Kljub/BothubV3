@@ -159,8 +159,12 @@ check('unknown event type 422', $s === 422);
 check('events and commands apart', call('GET', "{$b}/commands/{$ev['id']}")[0] === 404 && count(call('GET', "{$b}/events")[1]['items']) === 1);
 
 // modules
-[$s, $m] = call('PUT', "{$b}/modules/moderation", '{"enabled":false}');
-check('module switch stored', $s === 200 && call('GET', "{$b}/modules")[1]['items'] === [['key' => 'moderation', 'enabled' => false]]);
+// A new bot starts with every module switched off.
+$switch = static fn (string $key) => array_values(array_filter(call('GET', "{$b}/modules")[1]['items'], static fn ($i) => $i['key'] === $key))[0]['enabled'] ?? null;
+$all = call('GET', "{$b}/modules")[1]['items'];
+check('new bot: every module off', count($all) === count(\BotHub\Internal\CommandStore::moduleKeys()) && array_filter($all, static fn ($i) => $i['enabled']) === []);
+[$s, $m] = call('PUT', "{$b}/modules/moderation", '{"enabled":true}');
+check('module switch stored', $s === 200 && $switch('moderation') === true && $switch('automod') === false);
 [$s] = call('PUT', "{$b}/modules/nope", '{"enabled":true}');
 check('unknown module 404', $s === 404);
 
@@ -172,7 +176,7 @@ $cfg = '{"logEnabled":true,"logChannels":[{"id":"111111111111111111","guild":"22
 [$s, $mc] = call('PUT', "{$b}/modules/moderation/config", $cfg);
 check('moderation config stored', $s === 200 && $mc['punishmentColor'] === '#aabbcc' && count($mc['autoPunishments']) === 2
     && call('GET', "{$b}/modules/moderation/config")[1]['logChannels'][0]['id'] === '111111111111111111');
-check('module switch kept after config', call('GET', "{$b}/modules")[1]['items'] === [['key' => 'moderation', 'enabled' => false]]);
+check('module switch kept after config', $switch('moderation') === true);
 [$s, $e] = call('PUT', "{$b}/modules/moderation/config", '{"logEnabled":true,"logChannels":[]}');
 check('log without channel 422', $s === 422 && $e['error']['key'] === 'error.moderation.log_channel_required');
 [$s, $e] = call('PUT', "{$b}/modules/moderation/config", '{"autoPunishments":[{"trigger":"warnings","count":3,"action":"timeout","duration":""}]}');

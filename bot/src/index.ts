@@ -52,7 +52,7 @@ async function main(): Promise<void> {
   // SDK manager: plugins run sandboxed and reach Discord and the database only through it.
   useCatalog(join(config.sharedDir, 'sdk-permissions.json'));
   const sdk = readShared<{ permissions: { key: string; risk: string }[]; limits: ConstructorParameters<typeof PluginManager>[1]['limits'] }>(config, 'sdk-permissions.json');
-  const plugins = new PluginManager(db, { pluginsDir: join(config.dataDir, 'plugins'), limits: sdk.limits, modules: readShared<{ modules: { key: string }[] }>(config, 'modules.json').modules.map((m) => m.key), policy: () => loadPolicy(db, sdk.permissions) }, {
+  const plugins = new PluginManager(db, { pluginsDir: join(config.dataDir, 'plugins'), limits: sdk.limits, modules: readShared<{ modules: { key: string }[] }>(config, 'modules.json').modules.map((m) => m.key), moduleCategories: Object.fromEntries(readShared<{ modules: { key: string; category: string }[] }>(config, 'modules.json').modules.map((m) => [m.key, m.category])), policy: () => loadPolicy(db, sdk.permissions) }, {
     sendMessage: (botId, channelId, message, files) => manager!.instance(botId)?.pluginSend(channelId, message, files) ?? Promise.reject(new Error('error.bot.not_running')),
     guildInfo: async (botId, guildId) => {
       const bot = manager!.instance(botId);

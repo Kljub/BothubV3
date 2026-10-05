@@ -6,6 +6,9 @@
 .module-group-fun { --group: #a855f7; }
 .module-group-ticket { --group: #ec4899; }
 .module-group-social { --group: #3b82f6; }
+.module-group-community { --group: #22c55e; }
+.module-group-customization { --group: #f97316; }
+.module-group-statistics { --group: #06b6d4; }
 .module-card-plugin { --group: #a855f7; }
 
 .module-group { margin-bottom: 36px; }

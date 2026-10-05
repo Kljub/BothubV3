@@ -367,6 +367,8 @@ Events (`discord.events`, `bothub.events`): messageCreate, messageUpdate, messag
 | `module.getConfig()` | modules.read or modules.<module>.read | medium | ✅ |
 | `module.list()` | modules.read or modules.<module>.read | medium | ✅ |
 
+`module.get()` and `module.list()` answer `{ id, name, category, enabled, config }`; `category` is the module group: `utility`, `security`, `messages`, `fun`, `ticket`, `social`, `community`, `customization`, `statistics`. Plugins use the same keys as `category` in `bothub.json` (App Store group).
+
 ## plugins
 
 | Call | Permission | Risk | Status |

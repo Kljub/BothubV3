@@ -279,7 +279,7 @@ test('module calls: read BotHub modules of the bot when switched on', async () =
     assert.equal(manager.blockHandlers(1).get('plugin.plugin_mods.read'), undefined, 'modules.read is medium risk: off by default, the plugin does not start');
     db.prepare("INSERT INTO sdk_policies (permission, enabled) VALUES ('modules.read', 1)").run();
     const res = await read();
-    assert.deepEqual(JSON.parse(res['.get']!), { id: 'moderation', name: 'Moderation', enabled: true, config: { x: 1 } });
+    assert.deepEqual(JSON.parse(res['.get']!), { id: 'moderation', name: 'Moderation', category: 'utility', enabled: true, config: { x: 1 } }, 'without the catalog (setup) the group is utility');
     assert.equal(res['.enabled'], 'false');
     assert.equal(res['.unknown'], 'sdk.module.unknown');
   } finally {

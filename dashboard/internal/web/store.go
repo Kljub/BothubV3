@@ -17,7 +17,7 @@ import (
 // and uninstalls. Only an admin manages plugins; the API refuses everyone
 // else. Bot owners switch installed plugins on per bot under Bot → Plugins.
 
-var storeCategories = []string{"utility", "security", "messages", "fun", "ticket", "social"}
+var storeCategories = []string{"utility", "security", "messages", "fun", "ticket", "social", "community", "customization", "statistics"}
 
 var storeFilters = []string{"all", "installed", "updates"}
 

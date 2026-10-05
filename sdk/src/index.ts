@@ -132,7 +132,8 @@ export type AccessSubject = { userId: Id; guildId: Id | null; channelId?: Id | n
 export interface AccessResult { allowed: boolean; reason: 'role' | 'banned_role' | 'permission' | 'channel' | 'member' | null }
 
 export interface GuildInfo { id: Id; name: string; memberCount: number }
-export interface ModuleInfo { id: string; name: string; enabled: boolean; config: Record<string, Json> }
+/** category: the module group (utility, security, messages, fun, ticket, social, community, customization, statistics). */
+export interface ModuleInfo { id: string; name: string; category: string; enabled: boolean; config: Record<string, Json> }
 
 export interface PluginContext {
   /** Bot the plugin runs for; storage and Discord calls stay inside it. */

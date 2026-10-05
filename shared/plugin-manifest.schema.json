@@ -90,7 +90,10 @@
         "messages",
         "fun",
         "ticket",
-        "social"
+        "social",
+        "community",
+        "customization",
+        "statistics"
       ],
       "description": "Optional App Store category, same keys as the module groups (shared/modules.json). Default utility."
     },

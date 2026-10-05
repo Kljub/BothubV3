@@ -874,3 +874,35 @@ document.addEventListener('DOMContentLoaded', async () => {
   setInterval(() => { last = 0; renew(); }, 5 * 60 * 1000);
   document.addEventListener('visibilitychange', renew);
 });
+
+// Module groups (Modules tab): open or closed is remembered in this browser.
+(() => {
+  const KEY = 'bothub.moduleGroups';
+  const read = () => {
+    try {
+      return JSON.parse(localStorage.getItem(KEY) || '{}');
+    } catch {
+      return {};
+    }
+  };
+  const apply = (scope) => {
+    const saved = read();
+    for (const d of (scope || document).querySelectorAll('[data-module-group]')) {
+      const key = d.dataset.moduleGroup;
+      if (key in saved) d.open = saved[key];
+    }
+  };
+  document.addEventListener('toggle', (e) => {
+    const d = e.target;
+    if (!(d instanceof HTMLElement) || !d.matches('[data-module-group]')) return;
+    const saved = read();
+    saved[d.dataset.moduleGroup] = d.open;
+    try {
+      localStorage.setItem(KEY, JSON.stringify(saved));
+    } catch {
+      // private mode or storage blocked: the groups just open again next time
+    }
+  }, true);
+  document.addEventListener('DOMContentLoaded', () => apply(document));
+  document.addEventListener('htmx:afterSettle', () => apply(document));
+})();

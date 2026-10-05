@@ -1,5 +1,5 @@
 {
-  "$comment": "SDK v1 capability catalog (user spec 2026-09-30, sdk/API.md). 'core' calls need no permission (plugin info, lifecycle, logger, config, utils, locale, resources, rate limits). Every other call needs its permission switched on in the SDK policies (admin > SDK Policies, table sdk_policies; default: risk low = on, otherwise off) and declared in the plugin manifest. Plugins never get a database handle, the bot token, environment variables or direct network access; every call goes through the SDK manager in the bot. 'implemented' lists the calls the manager answers today; the others answer sdk.call.not_available. Texts: dashboard lang keys sdk.perm.<key> and sdk.perm.<key>_hint. Every permission has a main \"group\" (the SDK policies page shows the groups alphabetically, each one opens to its permissions). \"replaced\" maps old coarse keys to the finer ones: a manifest that names an old key is read as if it named the new keys. Discord events: a plugin needs the discord.events.* permission whose \"events\" list holds the event. Module permissions: modules.<module>.<area>; \"scope\": \"module\" entries (modules.<key>.read) share the module.* calls of modules.read, which allows every module, while modules.<key>.read allows that one module only.",
+  "$comment": "SDK v1 capability catalog (user spec 2026-09-30, sdk/API.md). 'core' calls need no permission (plugin info, lifecycle, logger, config, utils, locale, resources, rate limits). Every other call needs its permission switched on in the SDK policies (admin > SDK Policies, table sdk_policies; default: risk low = on, otherwise off) and declared in the plugin manifest. Plugins never get a database handle, the bot token, environment variables or direct network access; every call goes through the SDK manager in the bot. 'implemented' lists the calls the manager answers today; the others answer sdk.call.not_available. Texts: dashboard lang keys sdk.perm.<key> and sdk.perm.<key>_hint. Every permission has a main \"group\" (the SDK policies page shows the groups alphabetically, each one opens to its permissions). \"replaced\" maps old coarse keys to the finer ones: a manifest that names an old key is read as if it named the new keys. Discord events: a plugin needs the discord.events.* permission whose \"events\" list holds the event. Module permissions: modules.<module>.<area>; \"scope\": \"module\" entries (modules.<key>.read) share the module.* calls of modules.read, which allows every module, while modules.<key>.read allows that one module only. \"category\" is the module group of shared/modules.json.",
   "sdkVersion": 1,
   "core": {
     "calls": [
@@ -977,7 +977,8 @@
         "module.getConfig"
       ],
       "module": "command-builder",
-      "scope": "module"
+      "scope": "module",
+      "category": "utility"
     },
     {
       "key": "modules.custom-events.read",
@@ -998,7 +999,8 @@
         "module.getConfig"
       ],
       "module": "custom-events",
-      "scope": "module"
+      "scope": "module",
+      "category": "utility"
     },
     {
       "key": "modules.timed-events.read",
@@ -1019,7 +1021,8 @@
         "module.getConfig"
       ],
       "module": "timed-events",
-      "scope": "module"
+      "scope": "module",
+      "category": "utility"
     },
     {
       "key": "modules.data-storage.read",
@@ -1040,7 +1043,8 @@
         "module.getConfig"
       ],
       "module": "data-storage",
-      "scope": "module"
+      "scope": "module",
+      "category": "utility"
     },
     {
       "key": "modules.webhooks.read",
@@ -1061,7 +1065,8 @@
         "module.getConfig"
       ],
       "module": "webhooks",
-      "scope": "module"
+      "scope": "module",
+      "category": "utility"
     },
     {
       "key": "modules.message-builder.read",
@@ -1082,7 +1087,8 @@
         "module.getConfig"
       ],
       "module": "message-builder",
-      "scope": "module"
+      "scope": "module",
+      "category": "utility"
     },
     {
       "key": "modules.card-designer.read",
@@ -1103,7 +1109,8 @@
         "module.getConfig"
       ],
       "module": "card-designer",
-      "scope": "module"
+      "scope": "module",
+      "category": "utility"
     },
     {
       "key": "modules.transcripts.read",
@@ -1124,7 +1131,8 @@
         "module.getConfig"
       ],
       "module": "transcripts",
-      "scope": "module"
+      "scope": "module",
+      "category": "ticket"
     },
     {
       "key": "modules.automod.read",
@@ -1145,7 +1153,8 @@
         "module.getConfig"
       ],
       "module": "automod",
-      "scope": "module"
+      "scope": "module",
+      "category": "security"
     },
     {
       "key": "modules.moderation.read",
@@ -1166,7 +1175,8 @@
         "module.getConfig"
       ],
       "module": "moderation",
-      "scope": "module"
+      "scope": "module",
+      "category": "security"
     },
     {
       "key": "modules.polls-filter.read",
@@ -1187,7 +1197,8 @@
         "module.getConfig"
       ],
       "module": "polls-filter",
-      "scope": "module"
+      "scope": "module",
+      "category": "security"
     },
     {
       "key": "modules.server-management.read",
@@ -1208,7 +1219,8 @@
         "module.getConfig"
       ],
       "module": "server-management",
-      "scope": "module"
+      "scope": "module",
+      "category": "security"
     },
     {
       "key": "modules.verification.read",
@@ -1229,7 +1241,8 @@
         "module.getConfig"
       ],
       "module": "verification",
-      "scope": "module"
+      "scope": "module",
+      "category": "security"
     },
     {
       "key": "modules.sticky-roles.read",
@@ -1250,7 +1263,8 @@
         "module.getConfig"
       ],
       "module": "sticky-roles",
-      "scope": "module"
+      "scope": "module",
+      "category": "security"
     },
     {
       "key": "modules.honeypot.read",
@@ -1271,7 +1285,8 @@
         "module.getConfig"
       ],
       "module": "honeypot",
-      "scope": "module"
+      "scope": "module",
+      "category": "security"
     },
     {
       "key": "modules.dm-commands.read",
@@ -1292,7 +1307,8 @@
         "module.getConfig"
       ],
       "module": "dm-commands",
-      "scope": "module"
+      "scope": "module",
+      "category": "security"
     },
     {
       "key": "modules.reaction-roles.read",
@@ -1313,7 +1329,8 @@
         "module.getConfig"
       ],
       "module": "reaction-roles",
-      "scope": "module"
+      "scope": "module",
+      "category": "messages"
     },
     {
       "key": "modules.polls.read",
@@ -1334,7 +1351,8 @@
         "module.getConfig"
       ],
       "module": "polls",
-      "scope": "module"
+      "scope": "module",
+      "category": "messages"
     },
     {
       "key": "modules.timed-messages.read",
@@ -1355,7 +1373,8 @@
         "module.getConfig"
       ],
       "module": "timed-messages",
-      "scope": "module"
+      "scope": "module",
+      "category": "messages"
     },
     {
       "key": "modules.auto-responder.read",
@@ -1376,7 +1395,8 @@
         "module.getConfig"
       ],
       "module": "auto-responder",
-      "scope": "module"
+      "scope": "module",
+      "category": "messages"
     },
     {
       "key": "modules.autoreact.read",
@@ -1397,7 +1417,8 @@
         "module.getConfig"
       ],
       "module": "autoreact",
-      "scope": "module"
+      "scope": "module",
+      "category": "messages"
     },
     {
       "key": "modules.welcommer.read",
@@ -1418,7 +1439,8 @@
         "module.getConfig"
       ],
       "module": "welcommer",
-      "scope": "module"
+      "scope": "module",
+      "category": "messages"
     },
     {
       "key": "modules.leavemer.read",
@@ -1439,7 +1461,8 @@
         "module.getConfig"
       ],
       "module": "leavemer",
-      "scope": "module"
+      "scope": "module",
+      "category": "messages"
     },
     {
       "key": "modules.sticky-messages.read",
@@ -1460,7 +1483,8 @@
         "module.getConfig"
       ],
       "module": "sticky-messages",
-      "scope": "module"
+      "scope": "module",
+      "category": "messages"
     },
     {
       "key": "modules.media-channels.read",
@@ -1481,7 +1505,8 @@
         "module.getConfig"
       ],
       "module": "media-channels",
-      "scope": "module"
+      "scope": "module",
+      "category": "messages"
     },
     {
       "key": "modules.global-chat.read",
@@ -1502,7 +1527,8 @@
         "module.getConfig"
       ],
       "module": "global-chat",
-      "scope": "module"
+      "scope": "module",
+      "category": "messages"
     },
     {
       "key": "modules.message-logger.read",
@@ -1523,7 +1549,8 @@
         "module.getConfig"
       ],
       "module": "message-logger",
-      "scope": "module"
+      "scope": "module",
+      "category": "messages"
     },
     {
       "key": "modules.starboard.read",
@@ -1544,7 +1571,8 @@
         "module.getConfig"
       ],
       "module": "starboard",
-      "scope": "module"
+      "scope": "module",
+      "category": "community"
     },
     {
       "key": "modules.temp-voice.read",
@@ -1565,7 +1593,8 @@
         "module.getConfig"
       ],
       "module": "temp-voice",
-      "scope": "module"
+      "scope": "module",
+      "category": "fun"
     },
     {
       "key": "modules.leveling.read",
@@ -1586,7 +1615,8 @@
         "module.getConfig"
       ],
       "module": "leveling",
-      "scope": "module"
+      "scope": "module",
+      "category": "community"
     },
     {
       "key": "modules.achievements.read",
@@ -1607,7 +1637,8 @@
         "module.getConfig"
       ],
       "module": "achievements",
-      "scope": "module"
+      "scope": "module",
+      "category": "community"
     },
     {
       "key": "modules.invite-tracker.read",
@@ -1628,7 +1659,8 @@
         "module.getConfig"
       ],
       "module": "invite-tracker",
-      "scope": "module"
+      "scope": "module",
+      "category": "community"
     },
     {
       "key": "modules.counting.read",
@@ -1649,7 +1681,8 @@
         "module.getConfig"
       ],
       "module": "counting",
-      "scope": "module"
+      "scope": "module",
+      "category": "community"
     },
     {
       "key": "modules.birthday.read",
@@ -1670,7 +1703,8 @@
         "module.getConfig"
       ],
       "module": "birthday",
-      "scope": "module"
+      "scope": "module",
+      "category": "community"
     },
     {
       "key": "modules.suggestions.read",
@@ -1691,7 +1725,8 @@
         "module.getConfig"
       ],
       "module": "suggestions",
-      "scope": "module"
+      "scope": "module",
+      "category": "community"
     },
     {
       "key": "modules.qotd.read",
@@ -1712,7 +1747,8 @@
         "module.getConfig"
       ],
       "module": "qotd",
-      "scope": "module"
+      "scope": "module",
+      "category": "community"
     },
     {
       "key": "modules.giveaway.read",
@@ -1733,7 +1769,8 @@
         "module.getConfig"
       ],
       "module": "giveaway",
-      "scope": "module"
+      "scope": "module",
+      "category": "fun"
     },
     {
       "key": "modules.economy.read",
@@ -1754,7 +1791,8 @@
         "module.getConfig"
       ],
       "module": "economy",
-      "scope": "module"
+      "scope": "module",
+      "category": "fun"
     },
     {
       "key": "modules.ticket.read",
@@ -1775,7 +1813,8 @@
         "module.getConfig"
       ],
       "module": "ticket",
-      "scope": "module"
+      "scope": "module",
+      "category": "ticket"
     },
     {
       "key": "modules.modmail.read",
@@ -1796,7 +1835,8 @@
         "module.getConfig"
       ],
       "module": "modmail",
-      "scope": "module"
+      "scope": "module",
+      "category": "ticket"
     },
     {
       "key": "modules.forum-tagger.read",
@@ -1817,7 +1857,8 @@
         "module.getConfig"
       ],
       "module": "forum-tagger",
-      "scope": "module"
+      "scope": "module",
+      "category": "messages"
     },
     {
       "key": "modules.github-notifs.read",
@@ -1838,7 +1879,8 @@
         "module.getConfig"
       ],
       "module": "github-notifs",
-      "scope": "module"
+      "scope": "module",
+      "category": "social"
     },
     {
       "key": "modules.twitch-notifs.read",
@@ -1859,7 +1901,8 @@
         "module.getConfig"
       ],
       "module": "twitch-notifs",
-      "scope": "module"
+      "scope": "module",
+      "category": "social"
     },
     {
       "key": "modules.youtube-notifs.read",
@@ -1880,7 +1923,8 @@
         "module.getConfig"
       ],
       "module": "youtube-notifs",
-      "scope": "module"
+      "scope": "module",
+      "category": "social"
     },
     {
       "key": "modules.reddit-notifs.read",
@@ -1901,7 +1945,8 @@
         "module.getConfig"
       ],
       "module": "reddit-notifs",
-      "scope": "module"
+      "scope": "module",
+      "category": "social"
     },
     {
       "key": "modules.kick-notifs.read",
@@ -1922,7 +1967,8 @@
         "module.getConfig"
       ],
       "module": "kick-notifs",
-      "scope": "module"
+      "scope": "module",
+      "category": "social"
     },
     {
       "key": "modules.twitter-linkfix.read",
@@ -1943,7 +1989,8 @@
         "module.getConfig"
       ],
       "module": "twitter-linkfix",
-      "scope": "module"
+      "scope": "module",
+      "category": "social"
     },
     {
       "key": "modules.free-games.read",
@@ -1964,7 +2011,8 @@
         "module.getConfig"
       ],
       "module": "free-games",
-      "scope": "module"
+      "scope": "module",
+      "category": "social"
     },
     {
       "key": "modules.music.read",
@@ -1985,7 +2033,8 @@
         "module.getConfig"
       ],
       "module": "music",
-      "scope": "module"
+      "scope": "module",
+      "category": "fun"
     },
     {
       "key": "modules.statistic-channels.read",
@@ -2006,7 +2055,206 @@
         "module.getConfig"
       ],
       "module": "statistic-channels",
-      "scope": "module"
+      "scope": "module",
+      "category": "statistics"
+    },
+    {
+      "key": "modules.auto-purge.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "auto-purge",
+      "scope": "module",
+      "category": "security"
+    },
+    {
+      "key": "modules.bluesky-notifs.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "bluesky-notifs",
+      "scope": "module",
+      "category": "social"
+    },
+    {
+      "key": "modules.instagram-notifs.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "instagram-notifs",
+      "scope": "module",
+      "category": "social"
+    },
+    {
+      "key": "modules.rss-notifs.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "rss-notifs",
+      "scope": "module",
+      "category": "social"
+    },
+    {
+      "key": "modules.thanks.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "thanks",
+      "scope": "module",
+      "category": "community"
+    },
+    {
+      "key": "modules.bookmarks.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "bookmarks",
+      "scope": "module",
+      "category": "community"
+    },
+    {
+      "key": "modules.afk.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "afk",
+      "scope": "module",
+      "category": "community"
+    },
+    {
+      "key": "modules.day-night.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "day-night",
+      "scope": "module",
+      "category": "customization"
+    },
+    {
+      "key": "modules.role-prefix.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "role-prefix",
+      "scope": "module",
+      "category": "customization"
     },
     {
       "key": "plugins.interop",

@@ -124,7 +124,7 @@ const encoder = new TextEncoder();
 const bytes = (text: string): number => encoder.encode(text).length;
 
 export interface TestGuild { id: string; name: string; memberCount: number }
-export interface TestModule { id: string; name: string; enabled: boolean; config: Record<string, Json> }
+export interface TestModule { id: string; name: string; category?: string; enabled: boolean; config: Record<string, Json> }
 
 export interface TestContextOptions {
   /** Plugin ID (default "test-plugin"). */

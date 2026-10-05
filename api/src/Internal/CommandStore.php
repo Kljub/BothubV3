@@ -553,6 +553,13 @@ final class CommandStore
         return self::$eventTypes;
     }
 
+    /** @return list<string> keys of every module of shared/modules.json */
+    public static function moduleKeys(): array
+    {
+        $doc = json_decode((string) file_get_contents(self::shared('modules.json')), true, 512, JSON_THROW_ON_ERROR);
+        return array_values(array_filter(array_map(static fn (array $m) => (string) ($m['key'] ?? ''), $doc['modules']), static fn (string $k) => $k !== ''));
+    }
+
     public static function moduleKnown(string $key): bool
     {
         $doc = json_decode((string) file_get_contents(self::shared('modules.json')), true, 512, JSON_THROW_ON_ERROR);

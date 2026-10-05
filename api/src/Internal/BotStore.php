@@ -70,6 +70,11 @@ final class BotStore
             $id = (int) $pdo->lastInsertId();
             $pdo->prepare('INSERT INTO bot_profiles (bot_id) VALUES (?)')->execute([$id]);
             CommandPresets::seed($pdo, $id);
+            // New bots start with every module switched off; the owner turns on what they need.
+            $off = $pdo->prepare('INSERT OR IGNORE INTO bot_modules (bot_id, module_key, enabled) VALUES (?, ?, 0)');
+            foreach (CommandStore::moduleKeys() as $key) {
+                $off->execute([$id, $key]);
+            }
             $this->plugins?->seedBot($pdo, $id); // command copies of installed plugins
             Outbox::add($pdo, 'bot.created', ['botId' => $id]);
             return $id;

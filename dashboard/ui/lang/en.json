@@ -4876,5 +4876,11 @@
   "roles.color.pink": "Pink",
   "roles.color.teal": "Teal",
   "roles.color.gray": "Gray",
-  "roles.color.white": "White"
+  "roles.color.white": "White",
+  "module.category.community": "Community",
+  "module.category.community.description": "Levels, birthdays, suggestions and everything that keeps a server together.",
+  "module.category.customization": "Customization",
+  "module.category.customization.description": "The look of the server: icons, banners and names.",
+  "module.category.statistics": "Statistics",
+  "module.category.statistics.description": "Server numbers in channel names and more."
 }

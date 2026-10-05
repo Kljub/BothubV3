@@ -34,7 +34,7 @@ final class PluginStore
     /** Sign-in helpers the dashboard implements (services.connect). */
     private const CONNECT_PROVIDERS = ['plex'];
     private const ICON = '/^[^\s<>&"\']{1,16}$/u';
-    private const CATEGORIES = ['utility', 'security', 'messages', 'fun', 'ticket', 'social'];
+    private const CATEGORIES = ['utility', 'security', 'messages', 'fun', 'ticket', 'social', 'community', 'customization', 'statistics'];
     private const FIELD_TYPES = ['bool', 'text', 'number', 'select', 'color', 'channel', 'channels', 'role', 'roles', 'emojis', 'words', 'message', 'list', 'permissions', 'image', 'choices', 'file', 'currency'];
 
     /** Hosts that may receive the market token; every other host gets the request without it. */

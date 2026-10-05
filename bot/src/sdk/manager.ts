@@ -54,6 +54,8 @@ export interface ManagerOptions {
   limits: SdkLimits & StorageLimits;
   /** Module keys of shared/modules.json (module.* calls). */
   modules: string[];
+  /** Module group per module key (shared/modules.json). */
+  moduleCategories?: Record<string, string>;
   /** Permissions switched on in the SDK policies, read at every start. */
   policy: () => ReadonlySet<Permission>;
 }
@@ -755,7 +757,7 @@ export class PluginManager {
     }
   }
 
-  private moduleInfo(botId: number, key: unknown): { id: string; name: string; enabled: boolean; config: Record<string, unknown> } {
+  private moduleInfo(botId: number, key: unknown): { id: string; name: string; category: string; enabled: boolean; config: Record<string, unknown> } {
     if (typeof key !== 'string' || !this.options.modules.includes(key)) throw new SdkError('sdk.module.unknown');
     const row = this.db.prepare('SELECT enabled, config FROM bot_modules WHERE bot_id = ? AND module_key = ?').get(botId, key) as { enabled: number; config: string } | undefined;
     let config: Record<string, unknown> = {};
@@ -765,7 +767,7 @@ export class PluginManager {
       config = {};
     }
     const name = key.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-    return { id: key, name, enabled: row ? row.enabled === 1 : true, config };
+    return { id: key, name, category: this.options.moduleCategories?.[key] ?? 'utility', enabled: row ? row.enabled === 1 : true, config };
   }
 
   private async startPlugin(botId: number, row: Row, policy: ReadonlySet<Permission>): Promise<PluginProcess> {
