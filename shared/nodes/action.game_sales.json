@@ -1,0 +1,71 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.game_sales",
+  "version": 1,
+  "category": "action",
+  "group": "free_games",
+  "order": 1510,
+  "color": "purple",
+  "icon": "💸",
+  "labelKey": "builder.node.action_game_sales.label",
+  "descriptionKey": "builder.node.action_game_sales.description",
+  "module": "free-games",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": "",
+      "labelKey": "builder.result.game_sales.0"
+    },
+    {
+      "suffix": ".count",
+      "labelKey": "builder.result.game_sales.1"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "min_discount": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 100,
+        "default": 0,
+        "x-labelKey": "builder.cfg.game_sales_min",
+        "x-hintKey": "builder.cfg.game_sales_min_hint"
+      },
+      "limit": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 25,
+        "default": 20,
+        "x-labelKey": "builder.cfg.game_sales_limit"
+      },
+      "reply": {
+        "type": "boolean",
+        "default": true,
+        "x-labelKey": "builder.cfg.game_sales_reply",
+        "x-hintKey": "builder.cfg.game_sales_reply_hint"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  }
+}

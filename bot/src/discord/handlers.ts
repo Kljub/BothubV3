@@ -3,6 +3,7 @@
 // to the error handler, so a graph never silently does half of its work.
 
 import {
+  EmbedBuilder,
   type GuildTextBasedChannel,
   MessageFlags,
   type Client,
@@ -23,7 +24,7 @@ import { ModuleContext } from '../modules/context.js';
 import { clock, findTracks, musicOf, MusicError, type LoopMode } from './music.js';
 import { lyricsOf } from './lyrics.js';
 import { createTicket, finishTicket, modmailBlock, modmailClose, modmailReply, reopenTicket, ticketCounts, ticketMember, ticketPanelIndex, ticketPanelPayload, type TicketConfig } from '../modules/support.js';
-import { freeGames, freeGamesText, gameEmbed, platformsOf, type FreeGamesConfig } from '../modules/freegames.js';
+import { freeGames, freeGamesText, gameEmbed, gameSales, gameSalesText, platformsOf, type FreeGamesConfig } from '../modules/freegames.js';
 import { deleteGiveaway, endGiveaway, giveawayPayload, listGiveaways, loadGiveaway, saveGiveaway, type Giveaway } from '../modules/giveaway.js';
 
 /** What a run knows about where it runs (run.data). */
@@ -910,6 +911,31 @@ export function discordHandlers(repo: Repo, mod?: Moderation): Map<string, Handl
         if (run.raw(node, 'embeds') === undefined || run.bool(node, 'embeds')) {
           const embeds = games.slice(0, 10).map(gameEmbed);
           await answer(run, embeds.length ? { content: `🎮 **Free games right now (${games.length})**`, embeds } : { content: 'No free games right now.' });
+        }
+      },
+    ],
+    [
+      'action.game_sales',
+      async (node, run) => {
+        run.countDiscordCall();
+        const cfg = repo.moduleConfig(data(run).botId, 'free-games') as Partial<FreeGamesConfig>;
+        const min = Math.max(0, Math.min(100, Math.trunc(Number(run.raw(node, 'min_discount') ?? 0)) || 0));
+        const limit = Math.max(1, Math.min(25, Math.trunc(Number(run.raw(node, 'limit') ?? 20)) || 20));
+        let sales;
+        try {
+          sales = (await gameSales(String(cfg.salesCountry || 'de').toLowerCase())).filter((s) => s.percent >= min).slice(0, limit);
+        } catch (err) {
+          throw new GraphError('error.run.module_failed', { message: `The Steam sales could not be loaded: ${(err as Error).message}` });
+        }
+        const text = gameSalesText(sales);
+        run.setResult(node, '', text || 'No Steam sales right now.');
+        run.setResult(node, '.count', sales.length);
+        if (run.raw(node, 'reply') === undefined || run.bool(node, 'reply')) {
+          const embed = new EmbedBuilder().setColor(0x1b2838).setTitle(`💸 Steam sales (${sales.length})`).setURL('https://store.steampowered.com/specials')
+            .setDescription((text || 'No Steam sales right now.').slice(0, 4096));
+          // Picture of the module settings (top right of the embed).
+          if (/^https:\/\/\S{1,500}$/.test(String(cfg.salesImage ?? ''))) embed.setThumbnail(String(cfg.salesImage));
+          await answer(run, { embeds: [embed] });
         }
       },
     ],

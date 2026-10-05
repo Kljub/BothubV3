@@ -4553,5 +4553,20 @@
   "modset.economy.currencies.allowNegative": "Allow balances below 0",
   "modset.economy.currencies.allowNegative_hint": "Removing, setting and fines may go into debt (e.g. -50). Buying, lottery tickets and payments still need enough money.",
   "modset.currency.default": "Default currency of the Economy module",
-  "modset.currency.none": "Set up currencies in the Economy module (Modules → Economy) to pick one here."
+  "modset.currency.none": "Set up currencies in the Economy module (Modules → Economy) to pick one here.",
+  "builder.node.action_game_sales.label": "Steam Sales",
+  "builder.node.action_game_sales.description": "Load discounted Steam games as a list",
+  "builder.result.game_sales.0": "The sales as a list",
+  "builder.result.game_sales.1": "How many",
+  "builder.cfg.game_sales_min": "Minimum discount (%)",
+  "builder.cfg.game_sales_min_hint": "0: every discounted game.",
+  "builder.cfg.game_sales_limit": "At most (games)",
+  "builder.cfg.game_sales_reply": "Answer with the list",
+  "builder.cfg.game_sales_reply_hint": "On: the block answers itself with one embed holding the list. Off: use the results in your own message block.",
+  "modset.free-games.salesCountry": "Store country for /gamesales",
+  "modset.free-games.salesCountry_hint": "Two letters, e.g. de, at, ch, us: decides prices and currency of the Steam sales.",
+  "command.gamesales.title": "Game sales",
+  "command.gamesales.description": "Shows discounted Steam games as a list",
+  "modset.free-games.salesImage": "Picture for /gamesales (link)",
+  "modset.free-games.salesImage_hint": "An https link to an image (e.g. copied from Discord: right-click the image → Copy Link). It shows at the top right of the list. Empty: none."
 }

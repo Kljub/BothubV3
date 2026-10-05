@@ -15,6 +15,8 @@ export interface FreeGame { title: string; store: 'Epic Games' | 'Steam'; url: s
 export interface FreeGamesConfig {
   channel: unknown; pingRole: unknown; epic: boolean; steam: boolean; schedule: boolean; time: string; editLast: boolean;
   mon: boolean; tue: boolean; wed: boolean; thu: boolean; fri: boolean; sat: boolean; sun: boolean;
+  salesCountry: string; // store country of /gamesales (prices and currency), e.g. "de"
+  salesImage: string; // picture of the /gamesales answer (https link)
 }
 
 const EPIC = 'https://store-site-backend-static-ipv4.ak.epicgames.com/freeGamesPromotions?locale=en-US&country=US&allowCountries=US';
@@ -76,6 +78,66 @@ export async function freeGames(platforms: { epic: boolean; steam: boolean }): P
   if (platforms.steam) games.push(...steamGames(await getJson(STEAM).catch(() => [])));
   cache.set(key, { at: Date.now(), games });
   return games;
+}
+
+// ---------- Steam sales (/gamesales) ----------
+
+export interface GameSale { id: number; title: string; url: string; percent: number; original: number; final: number; currency: string; until: number | null }
+
+const SALES = (cc: string) => `https://store.steampowered.com/api/featuredcategories?cc=${encodeURIComponent(cc)}&l=english`;
+
+/** Discounted games of Steam's store front (specials, new releases, top sellers), biggest discount first. */
+export function steamSales(raw: unknown): GameSale[] {
+  const byId = new Map<number, GameSale>();
+  for (const cat of Object.values((raw ?? {}) as Record<string, { items?: unknown[] }>)) {
+    if (!cat || typeof cat !== 'object' || !Array.isArray(cat.items)) continue;
+    for (const i of cat.items as Record<string, any>[]) {
+      const percent = Number(i?.discount_percent ?? 0);
+      if (!i?.discounted || !(percent > 0) || !Number.isInteger(i.id) || byId.has(i.id)) continue;
+      byId.set(i.id, {
+        id: i.id,
+        title: String(i.name ?? '?'),
+        url: `https://store.steampowered.com/app/${i.id}/`,
+        percent,
+        original: Number(i.original_price ?? 0),
+        final: Number(i.final_price ?? 0),
+        currency: String(i.currency ?? 'USD'),
+        until: Number.isInteger(i.discount_expiration) ? i.discount_expiration : null,
+      });
+    }
+  }
+  return [...byId.values()].sort((a, b) => b.percent - a.percent || a.title.localeCompare(b.title));
+}
+
+const salesCache = new Map<string, { at: number; sales: GameSale[] }>();
+
+export async function gameSales(country: string): Promise<GameSale[]> {
+  const cc = /^[a-z]{2}$/.test(country) ? country : 'de';
+  const hit = salesCache.get(cc);
+  if (hit && Date.now() - hit.at < CACHE_MS) return hit.sales;
+  const sales = steamSales(await getJson(SALES(cc)));
+  salesCache.set(cc, { at: Date.now(), sales });
+  return sales;
+}
+
+/** Price in cents as money, e.g. 1799 EUR -> "17,99 €" (German format for EUR). */
+export function price(cents: number, currency: string): string {
+  const v = cents / 100;
+  try {
+    return new Intl.NumberFormat(currency === 'EUR' ? 'de-DE' : 'en-US', { style: 'currency', currency }).format(v);
+  } catch {
+    return `${v.toFixed(2)} ${currency}`;
+  }
+}
+
+/** One line per sale: "-70 % **[Title](url)** ~~59,99 €~~ **17,99 €** · until <t:…:R>". */
+export function gameSalesText(sales: GameSale[]): string {
+  return sales
+    .map((s) => {
+      const until = s.until ? ` · until <t:${s.until}:R>` : '';
+      return `\`-${s.percent} %\` **[${s.title}](${s.url})** ~~${price(s.original, s.currency)}~~ **${price(s.final, s.currency)}**${until}`;
+    })
+    .join('\n');
 }
 
 /** Platforms of the module settings (both when never set). */

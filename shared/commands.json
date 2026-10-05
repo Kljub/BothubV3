@@ -113,6 +113,7 @@
     { "name": "modmail reply", "usage": "/modmail reply [message]", "module": "modmail" },
     { "name": "modmail block", "usage": "/modmail block @user", "module": "modmail" },
     { "name": "modmail unblock", "usage": "/modmail unblock @user", "module": "modmail" },
-    { "name": "free-games", "usage": "/free-games", "module": "free-games" }
+    { "name": "free-games", "usage": "/free-games", "module": "free-games" },
+    { "name": "gamesales", "usage": "/gamesales", "module": "free-games" }
   ]
 }

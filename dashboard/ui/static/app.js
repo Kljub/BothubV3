@@ -318,9 +318,24 @@ document.addEventListener('click', (event) => {
   form?.dispatchEvent(new Event('change', { bubbles: true }));
 });
 
-// Forms marked data-reset-on="<event>" are cleared when the server sends that event.
+// Forms marked data-reset-on="<event>" are cleared when the server sends that
+// event; single fields marked data-clear-on (e.g. a password) are emptied.
 document.addEventListener('bothub:reset-forms', () => {
   document.querySelectorAll('form[data-reset-on="bothub:reset-forms"]').forEach((form) => form.reset());
+  document.querySelectorAll('[data-clear-on="bothub:reset-forms"]').forEach((el) => { el.value = ''; });
+});
+
+// Auto-save: forms marked data-autosave save on every change (a field left,
+// a switch flipped, an option picked). The server answers with the usual
+// "saved" or error message; invalid fields show the browser's hint instead.
+document.addEventListener('change', (event) => {
+  const form = event.target.closest?.('form[data-autosave]');
+  if (!form || !event.target.name) return;
+  clearTimeout(form.autosaveTimer);
+  form.autosaveTimer = setTimeout(() => {
+    if (form.checkValidity()) form.requestSubmit();
+    else form.reportValidity();
+  }, 250);
 });
 
 // Cooldown ring: counts down to data-reset-at, then asks htmx to reload the card.

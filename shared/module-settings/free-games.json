@@ -117,6 +117,21 @@
           "true"
         ]
       }
+    },
+    {
+      "key": "salesCountry",
+      "type": "text",
+      "max": 2,
+      "default": "de",
+      "pattern": "^[a-z]{2}$",
+      "hint": true
+    },
+    {
+      "key": "salesImage",
+      "type": "text",
+      "max": 500,
+      "pattern": "^(https://\\S+)?$",
+      "hint": true
     }
   ]
 }

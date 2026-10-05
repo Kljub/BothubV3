@@ -4553,5 +4553,20 @@
   "modset.economy.currencies.allowNegative": "Kontostand unter 0 erlauben",
   "modset.economy.currencies.allowNegative_hint": "Abziehen, Setzen und Strafen dürfen ins Minus gehen (z. B. -50). Kaufen, Lose und Überweisungen brauchen weiterhin genug Geld.",
   "modset.currency.default": "Standardwährung des Economy-Moduls",
-  "modset.currency.none": "Lege im Economy-Modul (Module → Economy) Währungen an, um hier eine zu wählen."
+  "modset.currency.none": "Lege im Economy-Modul (Module → Economy) Währungen an, um hier eine zu wählen.",
+  "builder.node.action_game_sales.label": "Steam-Angebote",
+  "builder.node.action_game_sales.description": "Rabattierte Steam-Spiele als Liste laden",
+  "builder.result.game_sales.0": "Die Angebote als Liste",
+  "builder.result.game_sales.1": "Anzahl",
+  "builder.cfg.game_sales_min": "Mindestrabatt (%)",
+  "builder.cfg.game_sales_min_hint": "0: jedes rabattierte Spiel.",
+  "builder.cfg.game_sales_limit": "Höchstens (Spiele)",
+  "builder.cfg.game_sales_reply": "Mit der Liste antworten",
+  "builder.cfg.game_sales_reply_hint": "An: der Block antwortet selbst mit einem Embed mit der Liste. Aus: nutze die Ergebnisse in deinem eigenen Nachrichten-Block.",
+  "modset.free-games.salesCountry": "Shop-Land für /gamesales",
+  "modset.free-games.salesCountry_hint": "Zwei Buchstaben, z. B. de, at, ch, us: bestimmt Preise und Währung der Steam-Angebote.",
+  "command.gamesales.title": "Steam-Angebote",
+  "command.gamesales.description": "Zeigt rabattierte Steam-Spiele als Liste",
+  "modset.free-games.salesImage": "Bild für /gamesales (Link)",
+  "modset.free-games.salesImage_hint": "Ein https-Link zu einem Bild (z. B. aus Discord: Rechtsklick aufs Bild → Link kopieren). Es erscheint oben rechts an der Liste. Leer: keins."
 }

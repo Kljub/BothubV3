@@ -106,7 +106,7 @@
 {{define "server_settings"}}
 <div id="admin-flash"></div>
 {{if .RestartRequired}}<div class="alert alert-error">{{t "server_settings.restart_pending"}}</div>{{end}}
-<form class="form" hx-post="/admin/server-settings" hx-swap="none" data-savebar>
+<form class="form" hx-post="/admin/server-settings" hx-swap="none" data-autosave>
   <section class="section">
     <header class="section-head"><h3>{{t "server_settings.web.title"}}</h3></header>
     <div class="form">
@@ -184,14 +184,14 @@
     </div>
   </section>
 
-  <div data-save-own><button type="submit" class="btn btn-primary">{{t "action.save"}}</button></div>
+  <div class="autosave-fallback"><button type="submit" class="btn btn-primary">{{t "action.save"}}</button></div>
 </form>
 {{end}}
 
 {{/* Custom invite link: <domain>/invite/<application ID> for the Developer Portal. */}}
 {{define "invite_settings"}}
 <div id="invite-flash"></div>
-<form class="form" hx-post="/admin/invite" hx-swap="none">
+<form class="form" hx-post="/admin/invite" hx-swap="none" data-autosave>
   <section class="section">
     <header class="section-head"><h3>{{t "invite_settings.title"}}</h3></header>
     <p class="hint">{{t "invite_settings.hint"}}</p>
@@ -209,14 +209,14 @@
       </label>
     </div>
   </section>
-  <div><button type="submit" class="btn btn-primary">{{t "action.save"}}</button></div>
+  <div class="autosave-fallback"><button type="submit" class="btn btn-primary">{{t "action.save"}}</button></div>
 </form>
 {{end}}
 
 {{/* Operator details of the public /terms and /privacy pages. */}}
 {{define "legal_settings"}}
 <div id="legal-flash"></div>
-<form class="form" hx-post="/admin/legal" hx-swap="none">
+<form class="form" hx-post="/admin/legal" hx-swap="none" data-autosave>
   <section class="section">
     <header class="section-head">
       <h3>{{t "legal_settings.title"}}</h3>
@@ -241,7 +241,7 @@
       </label>
     </div>
   </section>
-  <div><button type="submit" class="btn btn-primary">{{t "action.save"}}</button></div>
+  <div class="autosave-fallback"><button type="submit" class="btn btn-primary">{{t "action.save"}}</button></div>
 </form>
 {{end}}
 
@@ -249,7 +249,7 @@
 {{define "email_settings"}}
 {{$m := .SMTP}}
 <div id="admin-flash"></div>
-<form class="form" hx-post="/admin/email" hx-swap="none" data-reset-on="bothub:reset-forms" data-savebar>
+<form class="form" hx-post="/admin/email" hx-swap="none" data-autosave>
   <label class="toggle-row">
     <span><strong>{{t "email_settings.enabled"}}</strong><span class="hint">{{t "email_settings.enabled_hint"}}</span></span>
     <input type="checkbox" class="toggle" name="enabled" value="true" {{if $m.Enabled}}checked{{end}}>
@@ -276,7 +276,7 @@
         <input name="username" value="{{$m.Username}}" autocomplete="off" maxlength="254" class="input-medium">
       </label>
       <label class="field">{{t "email_settings.password"}}
-        <input type="password" name="password" autocomplete="new-password" class="input-medium"
+        <input type="password" name="password" autocomplete="new-password" class="input-medium" data-clear-on="bothub:reset-forms"
           placeholder="{{if $m.PasswordSet}}{{t "email_settings.password_set"}}{{end}}">
         <span class="hint">{{t "email_settings.password_hint"}}</span>
       </label>
@@ -295,7 +295,7 @@
     </div>
   </section>
 
-  <div data-save-own><button type="submit" class="btn btn-primary">{{t "action.save"}}</button></div>
+  <div class="autosave-fallback"><button type="submit" class="btn btn-primary">{{t "action.save"}}</button></div>
 </form>
 
 <section class="section">
@@ -630,7 +630,7 @@ docker compose up -d --build</pre>
 {{/* Self-registration: anyone can create an account with the chosen role. */}}
 {{define "registration_settings"}}
 <div id="registration-flash"></div>
-<form class="form" hx-post="/admin/registration" hx-swap="none">
+<form class="form" hx-post="/admin/registration" hx-swap="none" data-autosave>
   <section class="section">
     <header class="section-head"><h3>{{t "registration.title"}}</h3></header>
     <p class="hint">{{t "registration.hint"}}</p>
@@ -647,6 +647,6 @@ docker compose up -d --build</pre>
       </label>
     </div>
   </section>
-  <div><button type="submit" class="btn btn-primary">{{t "action.save"}}</button></div>
+  <div class="autosave-fallback"><button type="submit" class="btn btn-primary">{{t "action.save"}}</button></div>
 </form>
 {{end}}

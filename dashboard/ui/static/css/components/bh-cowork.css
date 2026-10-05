@@ -28,3 +28,6 @@
 .update-commits { margin: 6px 0 10px; padding-left: 18px; font-size: 12px; }
 .update-actions { display: flex; gap: 8px; margin: 10px 0 6px; }
 .update-run { margin-top: 10px; }
+
+/* Auto-saving forms (Admin): the save button only without JavaScript. */
+.js form[data-autosave] .autosave-fallback { display: none; }

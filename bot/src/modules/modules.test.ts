@@ -398,3 +398,14 @@ test('welcome and leave: account age and membership placeholders', async () => {
   assert.equal(left['member.joined'], '?', 'unknown join time of an uncached member');
   assert.equal(left['member.days'], '?');
 });
+
+test('game sales: Steam specials, biggest discount first, as a list', async () => {
+  const { steamSales, gameSalesText, price } = await import('./freegames.js');
+  const item = (id: number, name: string, pct: number, orig: number, fin: number) => ({ id, name, discounted: pct > 0, discount_percent: pct, original_price: orig, final_price: fin, currency: 'EUR', discount_expiration: 1791478800 });
+  const sales = steamSales({ specials: { items: [item(1, 'Cyberpunk 2077', 70, 5999, 1799), item(2, 'Full Price', 0, 999, 999)] }, new_releases: { items: [item(3, 'Indie', 90, 1000, 100), item(1, 'Cyberpunk 2077', 70, 5999, 1799)] }, status: 1 });
+  assert.deepEqual(sales.map((s) => s.title), ['Indie', 'Cyberpunk 2077'], 'discounted only, no doubles, biggest first');
+  assert.equal(price(1799, 'EUR').replace(/\s/g, ' '), '17,99 €');
+  const text = gameSalesText(sales);
+  assert.match(text, /`-70 %` \*\*\[Cyberpunk 2077\]\(https:\/\/store\.steampowered\.com\/app\/1\/\)\*\* ~~59,99.€~~ \*\*17,99.€\*\* · until <t:1791478800:R>/);
+  assert.equal(text.split('\n').length, 2);
+});
