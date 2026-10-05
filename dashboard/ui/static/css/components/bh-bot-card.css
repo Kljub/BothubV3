@@ -9,7 +9,7 @@
 .bot-card-running { border-color: var(--green); }
 .bot-card-stopped { border-color: var(--red); }
 .bot-card-error { border-color: var(--yellow); }
-.bot-card-body { display: flex; flex-direction: column; gap: 10px; padding: 0 16px 16px; }
+.bot-card-body { display: flex; align-items: flex-start; gap: 12px; padding: 0 14px 14px; }
 .bot-card-header { display: flex; align-items: flex-end; gap: 12px; margin-top: -34px; }
 .bot-card-title { display: flex; flex-direction: column; min-width: 0; flex: 1; padding-bottom: 4px; line-height: 1.3; }
 .avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex: none; }
@@ -63,3 +63,11 @@
 .bot-presence-dnd::after { content: ""; position: absolute; left: 2px; right: 2px; top: 5px; height: 3px; border-radius: 2px; background: var(--surface); }
 .bot-presence-invisible, .bot-presence-offline { background: #80848e; }
 .bot-presence-invisible::after, .bot-presence-offline::after { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: var(--surface); }
+
+/* Layout of the image: avatar column (status text under it), name column, badge on the right. */
+.bot-card-avatar-col { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; flex: none; width: 128px; margin-top: -34px; }
+.bot-card-avatar-col .status-text { margin: 0; }
+.bot-card-body .bot-card-title { padding-top: 10px; }
+.bot-card-body .bot-card-badge { margin-top: 10px; }
+.bot-verified { display: inline-grid; place-items: center; flex: none; width: 20px; height: 20px; background: #5865f2; border-radius: 6px; }
+.bot-verified svg { width: 14px; height: 14px; fill: none; stroke: #fff; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }

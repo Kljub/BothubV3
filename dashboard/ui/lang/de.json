@@ -5008,5 +5008,6 @@
   "bot.presence.idle": "Abwesend",
   "bot.presence.dnd": "Bitte nicht stören",
   "bot.presence.invisible": "Unsichtbar",
-  "bot.presence.offline": "Offline"
+  "bot.presence.offline": "Offline",
+  "bot.verified": "Verifizierter Bot (Discord)"
 }

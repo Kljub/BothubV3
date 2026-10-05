@@ -202,7 +202,12 @@ type discordUser struct {
 	Bot        bool    `json:"bot"`
 	// Discriminator: "1234" for bots ("0" for users with the new names).
 	Discriminator string `json:"discriminator"`
+	// PublicFlags: badges of the user; verifiedBot is bit 16.
+	PublicFlags int64 `json:"public_flags"`
 }
+
+// verifiedBot: Discord's "Verified Bot" flag (public_flags bit 16).
+const verifiedBot = 1 << 16
 
 type discordApplication struct {
 	ID          string `json:"id"`

@@ -7,23 +7,24 @@
   {{if .Transitioning}}hx-get="/bot/{{.ID}}/card" hx-trigger="load delay:1500ms" hx-swap="outerHTML"{{end}}>
   <div class="bot-card-banner" aria-hidden="true">{{with .BannerURL}}<img src="{{.}}" alt="" loading="lazy">{{end}}</div>
   <div class="bot-card-body">
-    <header class="bot-card-header">
+    <div class="bot-card-avatar-col">
       <div class="bot-card-avatar">
         {{template "avatar" .}}
         {{$p := or .Presence "online"}}{{if ne .Status "running"}}{{$p = "offline"}}{{end}}
         <span class="bot-presence bot-presence-{{$p}}" title="{{t (printf "bot.presence.%s" $p)}}" aria-label="{{t (printf "bot.presence.%s" $p)}}"></span>
       </div>
-      <div class="bot-card-title">
-        <div class="bot-card-name">
-          <a href="/select-bot/{{.ID}}" class="card-title">{{.Name}}</a>
-          {{/* Hover on the badge: how long the bot has been online. */}}
-          <span class="bot-card-badge"{{with uptime .}} title="{{t "bot.uptime" "time" .}}"{{end}}>{{template "status_badge" .Status}}</span>
-        </div>
-        {{with .ApplicationID}}<span class="mono muted bot-card-app">{{.}}</span>{{end}}
+      {{with .StatusErrorKey}}<p class="status-text status-text-error">{{t .}}</p>
+      {{else}}<p class="status-text status-text-{{.Status}}">{{t (printf "bot.status_text.%s" .Status)}}</p>{{end}}
+    </div>
+    <div class="bot-card-title">
+      <div class="bot-card-name">
+        <a href="/select-bot/{{.ID}}" class="card-title">{{.Name}}</a>
+        {{if .Verified}}<span class="bot-verified" title="{{t "bot.verified"}}" aria-label="{{t "bot.verified"}}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 8.5l2.5 2.5L12 5.5"/></svg></span>{{end}}
       </div>
-    </header>
-    {{with .StatusErrorKey}}<p class="status-text status-text-error">{{t .}}</p>
-    {{else}}<p class="status-text status-text-{{.Status}}">{{t (printf "bot.status_text.%s" .Status)}}</p>{{end}}
+      {{with .ApplicationID}}<span class="mono muted bot-card-app">{{.}}</span>{{end}}
+    </div>
+    {{/* Hover on the badge: how long the bot has been online. */}}
+    <span class="bot-card-badge"{{with uptime .}} title="{{t "bot.uptime" "time" .}}"{{end}}>{{template "status_badge" .Status}}</span>
   </div>
   <footer class="bot-card-footer">
     <a class="icon-btn" href="/select-bot/{{.ID}}?to=settings" title="{{t "bots.manage"}}" aria-label="{{t "bots.manage"}}">{{template "icon_gear"}}</a>

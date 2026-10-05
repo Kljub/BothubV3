@@ -75,6 +75,7 @@ type Bot struct {
 	// (online, idle, dnd, invisible) set under Bot settings.
 	BannerURL *string `json:"bannerUrl,omitempty"`
 	Presence  string  `json:"presence,omitempty"`
+	Verified  bool    `json:"verified,omitempty"` // Discord's Verified Bot badge
 }
 
 // Transitioning reports whether the bot is between two stable states.

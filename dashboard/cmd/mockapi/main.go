@@ -45,6 +45,7 @@ type bot struct {
 	// Bot tile: the profile banner (from Discord) and the presence status.
 	BannerURL *string `json:"bannerUrl,omitempty"`
 	Presence  string  `json:"presence,omitempty"`
+	Verified  bool    `json:"verified,omitempty"` // Discord's Verified Bot badge
 	token     string
 }
 
@@ -739,7 +740,7 @@ func (s *store) listBots(w http.ResponseWriter, r *http.Request, sid string) {
 			c := *b
 			c.Access, c.Permissions = role, perms
 			p := s.profileOf(b.ID)
-			c.BannerURL = p.banner
+			c.BannerURL, c.Verified = p.banner, p.verified
 			if c.Presence == "" {
 				c.Presence = s.presenceOf(b.ID).Status
 			}

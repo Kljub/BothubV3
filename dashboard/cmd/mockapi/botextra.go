@@ -51,6 +51,7 @@ type profileData struct {
 	pronouns, bio   string
 	avatarRL, banRL rateWindow
 	synced          bool      // avatar, banner and bio were read from Discord
+	verified        bool      // Discord's Verified Bot badge
 	syncTried       time.Time // last automatic attempt (retried after a minute)
 }
 
@@ -150,6 +151,7 @@ func (s *store) loadProfile(ctx context.Context, b *bot) error {
 	p := s.profileOf(b.ID)
 	avatar := avatarURL(user)
 	p.avatar, p.banner, p.bio, b.AvatarURL, p.synced = &avatar, bannerURL(user), app.Description, &avatar, true
+	p.verified = user.PublicFlags&verifiedBot != 0
 	return nil
 }
 
