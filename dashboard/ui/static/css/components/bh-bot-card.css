@@ -57,14 +57,14 @@
 .bot-card-badge { flex: none; align-self: flex-end; padding-bottom: 6px; }
 .bot-verified { display: inline-grid; place-items: center; flex: none; width: 16px; height: 16px; background: #5865f2; border-radius: 4px; }
 .bot-verified svg { width: 12px; height: 12px; fill: none; stroke: #fff; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
-/* Discord's presence dot on the avatar. */
-.bot-presence { position: absolute; right: -1px; bottom: -1px; width: 15px; height: 15px; border: 3px solid var(--surface); border-radius: 50%; background: #80848e; }
+/* Discord's presence dot on the avatar: a dark ring cuts it into the avatar edge. */
+.bot-presence { position: absolute; right: -4px; bottom: -3px; width: 22px; height: 22px; border: 4px solid var(--surface); border-radius: 50%; background: #80848e; }
 .bot-presence-online { background: #23a55a; }
 .bot-presence-idle { background: #f0b232; }
-.bot-presence-idle::after { content: ""; position: absolute; top: -2px; left: -2px; width: 6px; height: 6px; border-radius: 50%; background: var(--surface); }
+.bot-presence-idle::after { content: ""; position: absolute; top: -1px; left: -1px; width: 9px; height: 9px; border-radius: 50%; background: var(--surface); }
 .bot-presence-dnd { background: #f23f43; }
-.bot-presence-dnd::after { content: ""; position: absolute; left: 1px; right: 1px; top: 4px; height: 2px; border-radius: 1px; background: var(--surface); }
-.bot-presence-invisible::after, .bot-presence-offline::after { content: ""; position: absolute; inset: 2px; border-radius: 50%; background: var(--surface); }
+.bot-presence-dnd::after { content: ""; position: absolute; left: 3px; right: 3px; top: 5px; height: 4px; border-radius: 2px; background: var(--surface); }
+.bot-presence-invisible::after, .bot-presence-offline::after { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: var(--surface); }
 /* Bot ID: blurred until hovered or focused; a click copies it. */
 .bot-card-app { position: relative; z-index: 1; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0; font: inherit; font-size: 12px; text-align: left; color: var(--muted); background: none; border: 0; cursor: copy; filter: blur(4px); transition: filter 0.15s; }
 .bot-card-app:hover, .bot-card-app:focus-visible, .bot-card-app.is-copied { filter: none; }
