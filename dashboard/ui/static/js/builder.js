@@ -2256,6 +2256,110 @@
     addNode(type, w.x - SIZE.normal.w / 2, w.y - SIZE.normal.h / 2);
   });
 
+  // ---------- copy and paste blocks (Ctrl+C / Ctrl+V) ----------
+  // The selected block with everything attached to it (states, buttons,
+  // menu options) is copied. It is kept in this browser, so it pastes into
+  // other commands and bots too; with "Copy blocks to the clipboard" on, it
+  // also goes to the system clipboard as JSON (paste it anywhere, or into
+  // BotHub on another computer).
+  const CLIP_KEY = 'bothub.builder.clip';
+  const SYS_KEY = 'bothub.builder.systemClipboard';
+  const systemClipboard = () => { try { return localStorage.getItem(SYS_KEY) === '1'; } catch { return false; } };
+  let lastPointer = null;
+  canvas.addEventListener('pointermove', (ev) => { lastPointer = toWorld(ev.clientX, ev.clientY); });
+
+  function copyBlocks() {
+    let node = selected?.kind === 'node' ? nodeById(selected.id) : null;
+    if (!node) return null;
+    // A state or menu option is copied with the block it belongs to.
+    if (isState(node) && parentOf(node)) node = parentOf(node);
+    if (node.type === 'condition.option' && menuOf(node)) node = menuOf(node);
+    if (defs[node.type]?.locked) return null;
+    const nodes = [node, ...attachedTo(node)];
+    const ids = new Set(nodes.map((n) => n.id));
+    return {
+      bothub: 'blocks',
+      version: 1,
+      nodes: structuredClone(nodes),
+      edges: structuredClone(graph.edges.filter((e) => ids.has(e.from.node) && ids.has(e.to.node))),
+    };
+  }
+
+  function readBlocks(text) {
+    try {
+      const data = JSON.parse(text);
+      return data?.bothub === 'blocks' && Array.isArray(data.nodes) && Array.isArray(data.edges) ? data : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function pasteBlocks(data) {
+    const nodes = data.nodes.filter((n) => n && typeof n.type === 'string' && defs[n.type] && !defs[n.type].locked && n.position);
+    if (!nodes.length) {
+      toast(t('builder.clip.nothing'));
+      return;
+    }
+    const left = Math.min(...nodes.map((n) => n.position.x));
+    const top = Math.min(...nodes.map((n) => n.position.y));
+    const at = lastPointer ?? { x: left + 40, y: top + 40 };
+    const ids = new Map();
+    const used = new Set(graph.nodes.map((n) => n.config?.variable).filter(Boolean));
+    for (const n of nodes) {
+      const copy = structuredClone(n);
+      copy.id = newId(n.type);
+      copy.typeVersion = defs[n.type].version;
+      copy.config ??= {};
+      copy.position = { x: Math.round(at.x + n.position.x - left), y: Math.round(at.y + n.position.y - top) };
+      if (copy.config.variable && used.has(copy.config.variable)) copy.config.variable = newVariable();
+      if (copy.config.variable) used.add(copy.config.variable);
+      ids.set(n.id, copy.id);
+      graph.nodes.push(copy);
+    }
+    for (const e of data.edges) {
+      if (!ids.has(e?.from?.node) || !ids.has(e?.to?.node)) continue;
+      graph.edges.push({ from: { node: ids.get(e.from.node), port: e.from.port }, to: { node: ids.get(e.to.node), port: e.to.port } });
+    }
+    // Pasted command options join this command's trigger, under a free name.
+    const trig = trigger();
+    for (const id of ids.values()) {
+      const node = nodeById(id);
+      if (defs[node.type].category !== 'option' || !trig) continue;
+      const base = node.config.name || node.type.split('.').pop();
+      node.config.name = ''; // not counted as taken by itself
+      node.config.name = uniqueOptionName(base);
+      graph.edges.push({ from: { node: id, port: 'option' }, to: { node: trig.id, port: 'options' } });
+    }
+    selected = { kind: 'node', id: ids.get(nodes[0].id) };
+    commit();
+    render();
+    toast(nodes.length < data.nodes.length ? t('builder.clip.partly', { count: nodes.length }) : t('builder.clip.pasted', { count: nodes.length }));
+  }
+
+  const editing = (ev) => document.querySelector('.bform, .bmsg, .bsetup, .btop-pop') || ev.target.closest?.('input, textarea, select, [contenteditable="true"]');
+  document.addEventListener('copy', (ev) => {
+    if (editing(ev) || window.getSelection()?.toString()) return;
+    const data = copyBlocks();
+    if (!data) return;
+    const text = JSON.stringify(data);
+    try { localStorage.setItem(CLIP_KEY, text); } catch { /* storage blocked: system clipboard only */ }
+    if (systemClipboard()) {
+      ev.clipboardData.setData('text/plain', text);
+      ev.preventDefault();
+    }
+    toast(t('builder.clip.copied', { count: data.nodes.length }));
+  });
+  document.addEventListener('paste', (ev) => {
+    if (editing(ev)) return;
+    let data = systemClipboard() ? readBlocks(ev.clipboardData?.getData('text/plain') || '') : null;
+    if (!data) {
+      try { data = readBlocks(localStorage.getItem(CLIP_KEY) || ''); } catch { data = null; }
+    }
+    if (!data) return;
+    ev.preventDefault();
+    pasteBlocks(data);
+  });
+
   document.addEventListener('keydown', (ev) => {
     if (document.querySelector('.bform')) return; // form builder open
     const typing = ev.target.closest('input, textarea, select');
@@ -2669,7 +2773,18 @@
     share.type = 'button';
     share.append(icon('copy'), document.createTextNode(t('builder.settings.share')));
     share.addEventListener('click', () => copyText(JSON.stringify(graph), t('builder.settings.shared')));
-    pop.append(row, el('p', 'bfield-hint', t('builder.settings.share_hint')), share);
+    // Copy blocks to the system clipboard (a per-browser choice).
+    const clipRow = el('label', 'bopt');
+    const ch = el('div', 'bopt-head');
+    const ct = el('div', 'bopt-text');
+    ct.append(el('strong', '', t('builder.settings.clipboard')), el('span', '', t('builder.settings.clipboard_hint')));
+    const cs = el('input', 'toggle');
+    cs.type = 'checkbox';
+    cs.checked = systemClipboard();
+    cs.addEventListener('change', () => { try { localStorage.setItem(SYS_KEY, cs.checked ? '1' : '0'); } catch { /* storage blocked */ } });
+    ch.append(ct, cs);
+    clipRow.append(ch);
+    pop.append(row, clipRow, el('p', 'bfield-hint', t('builder.settings.share_hint')), share);
   }
 
   async function openHistory(anchor) {

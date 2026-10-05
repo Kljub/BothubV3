@@ -5211,5 +5211,11 @@
   "memberstats.path.leave.bot": "Bot removed",
   "memberstats.path.boost.first": "First boost",
   "memberstats.path.boost.again": "Boosted again",
-  "memberstats.path.boost.stop": "Stopped boosting"
+  "memberstats.path.boost.stop": "Stopped boosting",
+  "builder.settings.clipboard": "Copy blocks to the clipboard",
+  "builder.settings.clipboard_hint": "Ctrl+C also puts the selected block into your system clipboard (as JSON), so you can paste it on another computer or share it. Off: copies stay in this browser.",
+  "builder.clip.copied": "{count} block(s) copied",
+  "builder.clip.pasted": "{count} block(s) pasted",
+  "builder.clip.partly": "{count} block(s) pasted; some are not available here (plugin missing)",
+  "builder.clip.nothing": "These blocks are not available here."
 }

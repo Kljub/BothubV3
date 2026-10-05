@@ -5211,5 +5211,11 @@
   "memberstats.path.leave.bot": "Bot entfernt",
   "memberstats.path.boost.first": "Erster Boost",
   "memberstats.path.boost.again": "Erneut geboostet",
-  "memberstats.path.boost.stop": "Boost beendet"
+  "memberstats.path.boost.stop": "Boost beendet",
+  "builder.settings.clipboard": "Blöcke in die Zwischenablage kopieren",
+  "builder.settings.clipboard_hint": "Strg+C legt den gewählten Block auch in die System-Zwischenablage (als JSON), zum Einfügen auf einem anderen Rechner oder zum Teilen. Aus: Kopien bleiben in diesem Browser.",
+  "builder.clip.copied": "{count} Block/Blöcke kopiert",
+  "builder.clip.pasted": "{count} Block/Blöcke eingefügt",
+  "builder.clip.partly": "{count} Block/Blöcke eingefügt; einige gibt es hier nicht (Plugin fehlt)",
+  "builder.clip.nothing": "Diese Blöcke gibt es hier nicht."
 }
