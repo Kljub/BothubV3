@@ -1006,7 +1006,23 @@
   }
   const messageFilled = (node) => window.BotHubMessage?.hasBody(node.config.message) || componentsOf(node).length > 0;
 
+  // "Edit a message" of a message this command sent: the block that sent it
+  // (its variable is in edit_message, e.g. {Var1}), or null.
+  function originalMessageNode(node) {
+    if (node.config.target !== 'edit') return null;
+    const m = /^\{?([A-Za-z][A-Za-z0-9_]{0,31})\}?$/.exec(String(node.config.edit_message || '').trim());
+    if (!m) return null;
+    const src = graph.nodes.find((n) => n !== node && n.config?.variable === m[1] && n.config.message && typeof n.config.message === 'object');
+    return src && messageFilled(src) ? src : null;
+  }
+
   function openMessageBuilder(node) {
+    // An edit starts from the original message instead of an empty one.
+    const original = originalMessageNode(node);
+    if (original && !messageFilled(node)) {
+      node.config.message = structuredClone(original.config.message);
+      toast(t('builder.msg.from_original'));
+    }
     if (!node.config.message) node.config.message = structuredClone(defs[node.type].config.properties.message.default);
     window.BotHubMessage.open({
       message: node.config.message,
@@ -1071,6 +1087,23 @@
     btn.addEventListener('click', () => openMessageBuilder(node));
     card.append(btn);
     wrap.append(card);
+    const original = originalMessageNode(node);
+    if (original && filled) {
+      // Start over from the message that is edited.
+      const again = el('button', 'btn btn-sm');
+      again.type = 'button';
+      again.append(icon('copy'), document.createTextNode(t('builder.msg.use_original')));
+      again.addEventListener('click', () => {
+        if (!window.confirm(t('builder.msg.use_original_confirm'))) return;
+        node.config.message = structuredClone(original.config.message);
+        refreshNode(node);
+        commit();
+        renderInspector();
+      });
+      wrap.append(again);
+    } else if (original) {
+      wrap.append(el('p', 'bfield-hint', t('builder.msg.original_hint')));
+    }
     if (!filled) {
       const err = el('p', 'berror');
       err.append(icon('alert'), document.createTextNode(t('builder.msg.error_empty')));

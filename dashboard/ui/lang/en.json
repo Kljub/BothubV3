@@ -5238,5 +5238,9 @@
   "builder.resume.found_changed": "Unsaved changes from {time} were found. It was saved since then: restoring replaces that version.",
   "builder.resume.restore": "Restore",
   "builder.resume.discard": "Discard",
-  "builder.resume.restored": "Changes restored (not saved yet)"
+  "builder.resume.restored": "Changes restored (not saved yet)",
+  "builder.msg.from_original": "Started from the original message",
+  "builder.msg.use_original": "Start from the original message",
+  "builder.msg.use_original_confirm": "Replace this message with the original message?",
+  "builder.msg.original_hint": "Editing a message of this command: “Write message” starts from the original."
 }

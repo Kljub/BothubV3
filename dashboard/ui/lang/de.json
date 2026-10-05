@@ -5238,5 +5238,9 @@
   "builder.resume.found_changed": "Ungespeicherte Änderungen vom {time} gefunden. Seitdem wurde gespeichert: Wiederherstellen ersetzt diese Version.",
   "builder.resume.restore": "Wiederherstellen",
   "builder.resume.discard": "Verwerfen",
-  "builder.resume.restored": "Änderungen wiederhergestellt (noch nicht gespeichert)"
+  "builder.resume.restored": "Änderungen wiederhergestellt (noch nicht gespeichert)",
+  "builder.msg.from_original": "Mit der Original-Nachricht begonnen",
+  "builder.msg.use_original": "Von der Original-Nachricht starten",
+  "builder.msg.use_original_confirm": "Diese Nachricht durch die Original-Nachricht ersetzen?",
+  "builder.msg.original_hint": "Bearbeitet eine Nachricht dieses Befehls: „Nachricht schreiben“ startet mit dem Original."
 }
