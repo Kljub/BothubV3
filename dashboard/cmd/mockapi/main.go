@@ -74,6 +74,7 @@ type loginTicket struct {
 	userID  int64
 	expires time.Time
 	opts    sessionOpts
+	tries   int // wrong 2FA codes so far
 }
 
 type store struct {
@@ -502,6 +503,11 @@ func (s *store) login(w http.ResponseWriter, r *http.Request) {
 	if !readJSON(w, r, &in) {
 		return
 	}
+	ip := clientIP(r)
+	if wait := logins.blocked(ip, in.Username); wait > 0 {
+		apiErrorParams(w, 429, "error.auth.too_many_attempts", map[string]any{"minutes": wait})
+		return
+	}
 	s.mu.Lock()
 	u := s.userByName(in.Username)
 	hash := ""
@@ -528,9 +534,11 @@ func (s *store) login(w http.ResponseWriter, r *http.Request) {
 	}
 	s.mu.Unlock()
 	if !ok {
+		logins.failed(ip, in.Username)
 		apiError(w, 401, "error.auth.invalid_credentials")
 		return
 	}
+	logins.succeeded(ip, in.Username)
 	s.startSession(w, r, 200, u.ID, in.sessionOpts)
 }
 
@@ -722,6 +730,23 @@ func (s *store) createBot(w http.ResponseWriter, r *http.Request, _ string) {
 		apiError(w, 422, "error.field.required")
 		return
 	}
+	// Bot limit of the role (Users & Roles).
+	if s.php != nil {
+		if err := s.syncBots(r.Context()); err != nil {
+			pe := asPHPError(err)
+			apiError(w, pe.Status, pe.Key)
+			return
+		}
+	}
+	s.mu.Lock()
+	allowed := true
+	if u := s.sessUserFromRequest(r); u != nil {
+		allowed = s.canCreateBot(w, u.ID)
+	}
+	s.mu.Unlock()
+	if !allowed {
+		return
+	}
 	// Discord tells whether the token is valid and whose bot it is.
 	id, err := s.discord.checkToken(r.Context(), in.Token)
 	if err != nil {
@@ -911,6 +936,12 @@ func (s *store) storedJob(w http.ResponseWriter, r *http.Request, b *bot, action
 }
 
 func (s *store) startBot(w http.ResponseWriter, r *http.Request, b *bot) {
+	s.mu.Lock()
+	allowed := s.canRunBot(w, b)
+	s.mu.Unlock()
+	if !allowed {
+		return
+	}
 	// The gateway login belongs to the NodeCore; here Discord only confirms
 	// that the token still works, the status change itself is simulated.
 	if _, err := s.discord.me(r.Context(), s.botToken(b)); err != nil {

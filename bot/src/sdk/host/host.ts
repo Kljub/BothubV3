@@ -30,7 +30,7 @@ for (const name of ['fetch', 'WebSocket', 'EventSource', 'XMLHttpRequest']) {
 }
 const BLOCKED = new Set([
   'net', 'tls', 'http', 'https', 'http2', 'dgram', 'dns', 'dns/promises', 'child_process', 'cluster', 'worker_threads',
-  'inspector', 'inspector/promises', 'module', 'repl', 'trace_events', 'v8', 'wasi', 'sqlite', 'undici',
+  'inspector', 'inspector/promises', 'module', 'repl', 'trace_events', 'v8', 'vm', 'wasi', 'sqlite', 'undici',
 ]);
 registerHooks({
   resolve(specifier, context, nextResolve) {

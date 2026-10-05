@@ -45,6 +45,7 @@ final class AccountStore
         $roles = array_map(static fn (array $r) => [
             'id' => (int) $r['id'], 'key' => $r['key'], 'name' => $r['name'], 'builtin' => (int) $r['builtin'] === 1,
             'permissions' => json_decode($r['permissions'], true),
+            'limits' => (object) json_decode($r['limits'] ?? '{}', true),
         ], $this->pdo->query('SELECT * FROM roles ORDER BY id')->fetchAll());
         $this->pdo->prepare('DELETE FROM user_sessions WHERE expires_at < ?')->execute([gmdate('Y-m-d\TH:i:s\Z')]);
         $sessions = array_map(static fn (array $x) => [
@@ -104,10 +105,18 @@ final class AccountStore
         if ($id < 1 || !preg_match('/^[a-z][a-z0-9_-]{0,31}$/', $key) || $name === '' || mb_strlen($name) > 40 || !is_array($perms)) {
             throw new ApiError(422, 'error.validation', ['field' => 'role']);
         }
+        // Limits: whole numbers 0..10000 per known key; other keys are dropped.
+        $limits = [];
+        foreach (['maxBots', 'maxRunning', 'idleStopHours'] as $k) {
+            $v = $in['limits'][$k] ?? null;
+            if (is_int($v) && $v >= 0 && $v <= 10000) {
+                $limits[$k] = $v;
+            }
+        }
         $this->pdo->prepare(
-            'INSERT INTO roles (id, key, name, builtin, permissions) VALUES (?, ?, ?, ?, ?)
-             ON CONFLICT (id) DO UPDATE SET key = excluded.key, name = excluded.name, builtin = excluded.builtin, permissions = excluded.permissions',
-        )->execute([$id, $key, $name, ($in['builtin'] ?? false) === true ? 1 : 0, json_encode(array_values(array_map('strval', $perms)))]);
+            'INSERT INTO roles (id, key, name, builtin, permissions, limits) VALUES (?, ?, ?, ?, ?, ?)
+             ON CONFLICT (id) DO UPDATE SET key = excluded.key, name = excluded.name, builtin = excluded.builtin, permissions = excluded.permissions, limits = excluded.limits',
+        )->execute([$id, $key, $name, ($in['builtin'] ?? false) === true ? 1 : 0, json_encode(array_values(array_map('strval', $perms))), json_encode((object) $limits)]);
     }
 
     public function deleteRole(int $id): void

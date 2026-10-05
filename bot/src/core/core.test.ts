@@ -261,3 +261,21 @@ test('economy commands offer the currencies of the settings as choices', () => {
   assert.equal(cur.required, false, 'empty: the default currency');
   assert.deepEqual(cur.choices?.map((c) => c.value), ['coins', 'socialcredit']);
 });
+
+test('role limits: owner limits from the role, admins have none, activity is tracked', () => {
+  const { repo } = migratedDb();
+  const db = repo.db;
+  db.prepare("UPDATE roles SET limits = ? WHERE key = 'member'").run(JSON.stringify({ maxRunning: 2, idleStopHours: 24, junk: 'x' }));
+  db.prepare("UPDATE roles SET limits = ? WHERE key = 'admin'").run(JSON.stringify({ maxRunning: 0 }));
+  const role = (key: string) => (db.prepare('SELECT id FROM roles WHERE key = ?').get(key) as { id: number }).id;
+  db.prepare("INSERT INTO users (id, username, password_hash, role_id) VALUES (1, 'admin', 'x', ?), (2, 'ann', 'x', ?)").run(role('admin'), role('member'));
+  assert.deepEqual(repo.ownerLimits(1), { maxRunning: null, idleStopHours: null }, 'admins have no limits');
+  assert.deepEqual(repo.ownerLimits(2), { maxRunning: 2, idleStopHours: 24 });
+  assert.deepEqual(repo.ownerLimits(99), { maxRunning: null, idleStopHours: null });
+  db.exec("INSERT INTO bots (id, name, owner_id) VALUES (5, 'Bot', 2)");
+  assert.equal(repo.bot(5)?.ownerId, 2);
+  assert.equal(repo.lastActive(5), 0);
+  repo.touchBot(5, Date.parse('2026-10-01T10:00:00Z'));
+  repo.touchBot(5, Date.parse('2026-10-01T10:01:00Z')); // throttled
+  assert.equal(repo.lastActive(5), Date.parse('2026-10-01T10:00:00Z'));
+});

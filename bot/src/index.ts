@@ -77,6 +77,8 @@ async function main(): Promise<void> {
   const secretKey = () => loadSecretKey(config.dataDir);
   manager = new BotManager(repo, { repo, defs, limits, plugins, secretKey }, secretKey);
   await manager.startAll();
+  const idleTimer = setInterval(() => void manager?.stopIdle().catch((err) => log.warn('idle stop failed', { err })), 300_000);
+  idleTimer.unref();
 
   streams = new StreamConsumer(config.redisUrl, config.consumerName);
   await streams.connect();

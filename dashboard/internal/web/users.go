@@ -26,6 +26,7 @@ type usersRolesView struct {
 	Roles       []roleView
 	Users       []userRow
 	Permissions []string
+	NoLimits    api.RoleLimits // the empty limit fields of the "new role" form
 }
 
 func (s *Server) usersRoles(r *http.Request) (usersRolesView, error) {
@@ -65,6 +66,18 @@ func (s *Server) renderUsersRoles(w http.ResponseWriter, r *http.Request, p Page
 }
 
 // permissionsFrom keeps only known permissions from the checkboxes.
+// limitsFrom reads the limit fields of the role form; empty = no limit.
+func limitsFrom(r *http.Request) *api.RoleLimits {
+	num := func(name string) *int {
+		v, err := strconv.Atoi(strings.TrimSpace(r.PostFormValue(name)))
+		if err != nil || v < 0 || v > 10000 {
+			return nil
+		}
+		return &v
+	}
+	return &api.RoleLimits{MaxBots: num("max_bots"), MaxRunning: num("max_running"), IdleStopHours: num("idle_stop_hours")}
+}
+
 func permissionsFrom(r *http.Request) []string {
 	_ = r.ParseForm()
 	var out []string
@@ -82,7 +95,7 @@ func pathID(r *http.Request) int64 {
 }
 
 func (s *Server) handleCreateRole(w http.ResponseWriter, r *http.Request, p Page) {
-	in := api.RoleWrite{Name: strings.TrimSpace(r.PostFormValue("name")), Permissions: permissionsFrom(r)}
+	in := api.RoleWrite{Name: strings.TrimSpace(r.PostFormValue("name")), Permissions: permissionsFrom(r), Limits: limitsFrom(r)}
 	if _, err := s.api.CreateRole(r.Context(), session(r), in); err != nil {
 		s.failTo(w, r, p, err, "#admin-flash")
 		return
@@ -91,7 +104,7 @@ func (s *Server) handleCreateRole(w http.ResponseWriter, r *http.Request, p Page
 }
 
 func (s *Server) handleUpdateRole(w http.ResponseWriter, r *http.Request, p Page) {
-	in := api.RoleWrite{Name: strings.TrimSpace(r.PostFormValue("name")), Permissions: permissionsFrom(r)}
+	in := api.RoleWrite{Name: strings.TrimSpace(r.PostFormValue("name")), Permissions: permissionsFrom(r), Limits: limitsFrom(r)}
 	if _, err := s.api.UpdateRole(r.Context(), session(r), pathID(r), in); err != nil {
 		s.failTo(w, r, p, err, "#admin-flash")
 		return

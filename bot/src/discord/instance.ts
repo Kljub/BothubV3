@@ -581,6 +581,7 @@ export class BotInstance {
 
   private async onInteraction(i: Interaction): Promise<void> {
     guardValue(i.token, 16 * 60_000);
+    this.deps.repo.touchBot(this.botId);
     if (i.isChatInputCommand()) return this.onCommand(i, [i.commandName, i.options.getSubcommandGroup(false), i.options.getSubcommand(false)].filter(Boolean).join(' '));
     if (i.isUserContextMenuCommand()) return this.onCommand(i, `user:${i.commandName}`);
     if (i.isMessageContextMenuCommand()) return this.onCommand(i, `message:${i.commandName}`);

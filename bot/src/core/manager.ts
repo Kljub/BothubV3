@@ -43,9 +43,26 @@ export class BotManager {
     return n;
   }
 
+  /** Running bots of an owner (bot `except` not counted). */
+  private runningOf(ownerId: number, except = 0): number {
+    let n = 0;
+    for (const [id, b] of this.bots) if (id !== except && b.running && this.repo.bot(id)?.ownerId === ownerId) n++;
+    return n;
+  }
+
   /** Starts all autostart bots in parallel (Discord rate limits logins per token, not per process). */
   async startAll(): Promise<void> {
-    const ids = this.repo.bots().filter((b) => b.autostart && b.tokenEnc).map((b) => b.id);
+    // Role limits: per owner at most maxRunning bots, and none that were idle longer than the idle stop.
+    const perOwner = new Map<number, number>();
+    const ids = this.repo.bots().filter((b) => {
+      if (!b.autostart || !b.tokenEnc) return false;
+      const l = this.repo.ownerLimits(b.ownerId);
+      if (l.idleStopHours && Date.now() - this.repo.lastActive(b.id) > l.idleStopHours * 3_600_000) return false;
+      const n = perOwner.get(b.ownerId) ?? 0;
+      if (l.maxRunning !== null && n >= l.maxRunning) return false;
+      perOwner.set(b.ownerId, n + 1);
+      return true;
+    }).map((b) => b.id);
     await Promise.allSettled(ids.map((id) => this.enqueue(id, () => this.start(id)).catch((err) => log.error('bot start failed', { botId: id, err }))));
     log.info('bots started', { count: this.bots.size, of: ids.length });
   }
@@ -69,7 +86,10 @@ export class BotManager {
     const bot = this.repo.bot(botId);
     if (!bot) throw new Error('error.bot.not_found');
     if (!bot.tokenEnc) throw new Error('error.bot.no_token');
+    const limits = this.repo.ownerLimits(bot.ownerId);
+    if (!this.bots.get(botId)?.running && limits.maxRunning !== null && this.runningOf(bot.ownerId, botId) >= limits.maxRunning) throw new Error('error.limit.running');
     const token = decrypt(this.secretKey(), bot.tokenEnc);
+    this.repo.touchBot(botId);
     let instance = this.bots.get(botId);
     if (!instance) {
       instance = new BotInstance(botId, this.deps);
@@ -81,6 +101,25 @@ export class BotManager {
   async stop(botId: number): Promise<void> {
     await this.bots.get(botId)?.stop();
     this.bots.delete(botId);
+  }
+
+  /**
+   * Idle stop (role limit "idleStopHours"): running bots that nobody used for
+   * that long are stopped to save resources. Called every few minutes.
+   */
+  async stopIdle(now = Date.now()): Promise<number> {
+    let stopped = 0;
+    for (const [id, b] of [...this.bots]) {
+      if (!b.running) continue;
+      const bot = this.repo.bot(id);
+      const hours = bot ? this.repo.ownerLimits(bot.ownerId).idleStopHours : null;
+      if (!hours || now - this.repo.lastActive(id) < hours * 3_600_000) continue;
+      await this.enqueue(id, () => this.stop(id));
+      this.repo.logUpdate(id, 'log.update.bot_idle_stopped', { hours });
+      log.info('bot stopped after idle time', { botId: id, hours });
+      stopped++;
+    }
+    return stopped;
   }
 
   async stopAll(): Promise<void> {

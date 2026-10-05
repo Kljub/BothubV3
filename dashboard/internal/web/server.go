@@ -114,16 +114,29 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.handler.ServeHTTP(w, r.WithContext(api.WithClient(r.Context(), r.UserAgent(), browserIP(r))))
 }
 
-// browserIP is the client address; behind a proxy its X-Forwarded-For (only
-// shown to the user, never used for access decisions).
+// browserIP is the client address (session list, sign-in limits). The
+// X-Forwarded-For header counts only when the request comes from a proxy on
+// this machine or the private network (the reverse proxy in front of
+// BotHub); its last entry is the address that proxy saw. Anyone else could
+// write any address there to dodge the sign-in limits.
 func browserIP(r *http.Request) string {
-	if fwd := r.Header.Get("X-Forwarded-For"); fwd != "" {
-		return strings.TrimSpace(strings.Split(fwd, ",")[0])
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		host = r.RemoteAddr
 	}
-	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
-		return host
+	if fwd := r.Header.Get("X-Forwarded-For"); fwd != "" && trustedProxy(host) {
+		parts := strings.Split(fwd, ",")
+		if last := strings.TrimSpace(parts[len(parts)-1]); net.ParseIP(last) != nil {
+			return last
+		}
 	}
-	return r.RemoteAddr
+	return host
+}
+
+// trustedProxy: loopback or a private address (Docker network, LAN).
+func trustedProxy(host string) bool {
+	ip := net.ParseIP(host)
+	return ip != nil && (ip.IsLoopback() || ip.IsPrivate())
 }
 
 func (s *Server) routes() http.Handler {

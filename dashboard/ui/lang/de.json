@@ -4783,5 +4783,15 @@
   "modset.var.caption": "Text des Beitrags",
   "modset.var.type": "Art (image, video, album)",
   "admin.integrations.instagram_hint": "Braucht einen eigenen Instagram-Business- oder Creator-Account, verknüpft mit einer Facebook-Seite, und eine Meta-App mit den Berechtigungen instagram_basic und pages_show_list. Account-ID: die ID des Instagram-Business-Accounts (Graph API Explorer: me/accounts → instagram_business_account). Access Token: ein Token, das nicht abläuft (System-User-Token im Business Manager oder Seiten-Token aus einem langlebigen User-Token).",
-  "admin.integrations.acrcloud_hint": "Lege in der ACRCloud-Konsole ein Projekt zur Audio-Erkennung (Music Bucket) an und kopiere Access Key und Access Secret:"
+  "admin.integrations.acrcloud_hint": "Lege in der ACRCloud-Konsole ein Projekt zur Audio-Erkennung (Music Bucket) an und kopiere Access Key und Access Secret:",
+  "error.auth.too_many_attempts": "Zu viele fehlgeschlagene Anmeldungen. Versuche es in {minutes} Minuten wieder.",
+  "error.limit.bots": "Deine Rolle erlaubt höchstens {max} Bots. Lösche einen oder frage einen Admin.",
+  "error.limit.running": "Deine Rolle erlaubt höchstens {max} Bots gleichzeitig online. Stoppe zuerst einen anderen Bot.",
+  "log.update.bot_idle_stopped": "💤 Bot gestoppt: {hours} Stunden nicht benutzt (Rollen-Limit)",
+  "roles.limits.title": "Bot-Limits",
+  "roles.limits.max_bots": "Bots pro Benutzer",
+  "roles.limits.max_running": "Gleichzeitig online",
+  "roles.limits.idle_stop_hours": "Stoppen nach Stunden ohne Nutzung",
+  "roles.limits.hint": "Leer: kein Limit. Nutzung heißt Commands, Buttons und Menüs des Bots; ein gestoppter Bot lässt sich jederzeit wieder starten.",
+  "roles.limits.admin": "Für sie gelten keine Bot-Limits."
 }

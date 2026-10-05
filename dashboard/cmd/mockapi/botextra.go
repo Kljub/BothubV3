@@ -305,6 +305,12 @@ func (s *store) patchPresence(w http.ResponseWriter, r *http.Request, b *bot) {
 }
 
 func (s *store) restartBot(w http.ResponseWriter, r *http.Request, b *bot) {
+	s.mu.Lock()
+	allowed := s.canRunBot(w, b)
+	s.mu.Unlock()
+	if !allowed {
+		return
+	}
 	if s.storedJob(w, r, b, "restart") {
 		return
 	}

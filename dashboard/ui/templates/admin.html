@@ -354,6 +354,25 @@
      below (search by name, add, change role, delete). Receives {View, Flash}. */}}
 {{define "users_roles_fragment"}}{{template "users_roles" .Data}}{{end}}
 
+{{/* Bot limits of a role (empty field = no limit). Receives api.RoleLimits. */}}
+{{define "role_limits"}}
+<fieldset class="role-limits">
+  <legend>{{t "roles.limits.title"}}</legend>
+  <div class="secret-grid">
+    <label class="field">{{t "roles.limits.max_bots"}}
+      <input type="number" name="max_bots" min="0" max="10000" class="input-small" placeholder="∞" value="{{with .MaxBots}}{{.}}{{end}}">
+    </label>
+    <label class="field">{{t "roles.limits.max_running"}}
+      <input type="number" name="max_running" min="0" max="10000" class="input-small" placeholder="∞" value="{{with .MaxRunning}}{{.}}{{end}}">
+    </label>
+    <label class="field">{{t "roles.limits.idle_stop_hours"}}
+      <input type="number" name="idle_stop_hours" min="0" max="10000" class="input-small" placeholder="∞" value="{{with .IdleStopHours}}{{.}}{{end}}">
+    </label>
+  </div>
+  <p class="hint">{{t "roles.limits.hint"}}</p>
+</fieldset>
+{{end}}
+
 {{define "users_roles"}}
 {{$v := .View}}
 <div id="users-roles">
@@ -381,8 +400,9 @@
               <label class="chip"><input type="checkbox" name="permissions" value="{{.}}" {{if index $role.Has .}}checked{{end}} {{if eq $role.Key "admin"}}disabled{{end}}>{{t (printf "permission.%s" .)}}</label>
               {{end}}
             </div>
-            {{if eq .Key "admin"}}<p class="hint">{{t "roles.admin_locked"}}</p>
-            {{else if eq .Key "banned"}}<p class="hint">{{t "roles.banned_hint"}}</p>{{end}}
+            {{if eq .Key "admin"}}<p class="hint">{{t "roles.admin_locked"}} {{t "roles.limits.admin"}}</p>
+            {{else if eq .Key "banned"}}<p class="hint">{{t "roles.banned_hint"}}</p>
+            {{else}}{{template "role_limits" .Limits}}{{end}}
             <div class="inline-form">
               {{if ne .Key "admin"}}<button type="submit" class="btn btn-primary btn-sm">{{t "action.save"}}</button>{{end}}
               {{if not .Builtin}}<button type="button" class="btn btn-danger-soft btn-sm" hx-delete="/admin/roles/{{.ID}}" hx-target="#users-roles" hx-swap="outerHTML" hx-confirm="{{t "roles.delete_confirm" "name" .Name}}">{{t "roles.delete"}}</button>{{end}}
@@ -401,6 +421,7 @@
         <div class="chips">
           {{range $v.Permissions}}<label class="chip"><input type="checkbox" name="permissions" value="{{.}}">{{t (printf "permission.%s" .)}}</label>{{end}}
         </div>
+        {{template "role_limits" $v.NoLimits}}
         <div><button type="submit" class="btn btn-primary btn-sm">{{t "roles.create"}}</button></div>
       </form>
     </details>

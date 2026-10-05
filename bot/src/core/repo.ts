@@ -16,6 +16,13 @@ export interface BotRow {
   applicationId: string | null;
   autostart: boolean;
   tokenEnc: Uint8Array | null;
+  ownerId: number;
+}
+
+/** Bot limits of the owner's role (Users & Roles); admins have none. */
+export interface OwnerLimits {
+  maxRunning: number | null;
+  idleStopHours: number | null;
 }
 
 export interface CommandRow {
@@ -58,12 +65,41 @@ export class Repo {
   // ---------- bots ----------
 
   bots(): BotRow[] {
-    return (this.db.prepare('SELECT id, name, application_id, autostart, token_enc FROM bots ORDER BY id').all() as Row[]).map(botRow);
+    return (this.db.prepare('SELECT id, name, application_id, autostart, token_enc, owner_id FROM bots ORDER BY id').all() as Row[]).map(botRow);
   }
 
   bot(id: number): BotRow | undefined {
-    const row = this.db.prepare('SELECT id, name, application_id, autostart, token_enc FROM bots WHERE id = ?').get(id) as Row | undefined;
+    const row = this.db.prepare('SELECT id, name, application_id, autostart, token_enc, owner_id FROM bots WHERE id = ?').get(id) as Row | undefined;
     return row ? botRow(row) : undefined;
+  }
+
+  ownerLimits(ownerId: number): OwnerLimits {
+    const row = this.db.prepare('SELECT r.permissions, r.limits FROM users u JOIN roles r ON r.id = u.role_id WHERE u.id = ?').get(ownerId) as { permissions: string; limits: string } | undefined;
+    const none = { maxRunning: null, idleStopHours: null };
+    if (!row) return none;
+    try {
+      if ((JSON.parse(row.permissions) as string[]).includes('admin.access')) return none;
+      const l = JSON.parse(row.limits) as Record<string, unknown>;
+      const n = (v: unknown) => (Number.isInteger(v) && (v as number) >= 0 ? (v as number) : null);
+      return { maxRunning: n(l.maxRunning), idleStopHours: n(l.idleStopHours) };
+    } catch {
+      return none;
+    }
+  }
+
+  private readonly touched = new Map<number, number>();
+
+  /** Marks a bot as used (commands, buttons, start); written at most every 5 minutes. */
+  touchBot(id: number, now = Date.now()): void {
+    if (now - (this.touched.get(id) ?? 0) < 300_000) return;
+    this.touched.set(id, now);
+    this.db.prepare('UPDATE bots SET last_active_at = ? WHERE id = ?').run(new Date(now).toISOString(), id);
+  }
+
+  /** Last use of a bot (ms), or 0 when never. */
+  lastActive(id: number): number {
+    const row = this.db.prepare('SELECT last_active_at, started_at FROM bots WHERE id = ?').get(id) as { last_active_at: string | null; started_at: string | null } | undefined;
+    return Math.max(Date.parse(row?.last_active_at ?? '') || 0, Date.parse(row?.started_at ?? '') || 0);
   }
 
   setBotStatus(id: number, status: BotStatus, errorKey: string | null = null): void {
@@ -488,6 +524,7 @@ function botRow(r: Row): BotRow {
     applicationId: (r.application_id as string | null) ?? null,
     autostart: r.autostart === 1,
     tokenEnc: (r.token_enc as Uint8Array | null) ?? null,
+    ownerId: Number(r.owner_id ?? 1),
   };
 }
 

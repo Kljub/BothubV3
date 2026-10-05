@@ -121,9 +121,19 @@ func (s *store) loginTOTP(w http.ResponseWriter, r *http.Request) {
 	if !readJSON(w, r, &in) {
 		return
 	}
+	ip := clientIP(r)
 	s.mu.Lock()
 	t, ok := s.tickets[in.Ticket]
 	u := s.userByID(t.userID)
+	name := ""
+	if u != nil {
+		name = u.Username
+	}
+	if wait := logins.blocked(ip, name); ok && wait > 0 {
+		s.mu.Unlock()
+		apiErrorParams(w, 429, "error.auth.too_many_attempts", map[string]any{"minutes": wait})
+		return
+	}
 	if !ok || u == nil || time.Now().After(t.expires) {
 		delete(s.tickets, in.Ticket)
 		s.mu.Unlock()
@@ -132,12 +142,20 @@ func (s *store) loginTOTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if !s.checkSecondFactor(u, in.Code) {
 		secret := u.totpSecret
+		// A few wrong codes end the ticket: the password has to be entered again.
+		if t.tries++; t.tries >= ticketMaxTries {
+			delete(s.tickets, in.Ticket)
+		} else {
+			s.tickets[in.Ticket] = t
+		}
 		s.mu.Unlock()
+		logins.failed(ip, name)
 		totpError(w, 401, secret, in.Code)
 		return
 	}
 	delete(s.tickets, in.Ticket)
 	s.mu.Unlock()
+	logins.succeeded(ip, name)
 	s.startSession(w, r, 200, u.ID, t.opts)
 }
 

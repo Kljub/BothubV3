@@ -304,17 +304,26 @@ var Permissions = []string{
 // Role groups permissions. The native roles (admin, user, banned, guest) are
 // Builtin: they cannot be deleted, and admin always has every permission.
 type Role struct {
-	ID          int64    `json:"id"`
-	Key         string   `json:"key"` // builtin key; empty for custom roles
-	Name        string   `json:"name"`
-	Builtin     bool     `json:"builtin"`
-	Permissions []string `json:"permissions"`
-	UserCount   int      `json:"userCount"`
+	ID          int64      `json:"id"`
+	Key         string     `json:"key"` // builtin key; empty for custom roles
+	Name        string     `json:"name"`
+	Builtin     bool       `json:"builtin"`
+	Permissions []string   `json:"permissions"`
+	UserCount   int        `json:"userCount"`
+	Limits      RoleLimits `json:"limits"`
+}
+
+// RoleLimits: bot limits of a role; nil = no limit (admins never have any).
+type RoleLimits struct {
+	MaxBots       *int `json:"maxBots,omitempty"`
+	MaxRunning    *int `json:"maxRunning,omitempty"`
+	IdleStopHours *int `json:"idleStopHours,omitempty"`
 }
 
 type RoleWrite struct {
-	Name        string   `json:"name"`
-	Permissions []string `json:"permissions"`
+	Name        string      `json:"name"`
+	Permissions []string    `json:"permissions"`
+	Limits      *RoleLimits `json:"limits,omitempty"`
 }
 
 type User struct {

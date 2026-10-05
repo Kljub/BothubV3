@@ -16,12 +16,13 @@ import (
 // user 1 and cannot change or delete itself here.
 
 type role struct {
-	ID          int64    `json:"id"`
-	Key         string   `json:"key"`
-	Name        string   `json:"name"`
-	Builtin     bool     `json:"builtin"`
-	Permissions []string `json:"permissions"`
-	UserCount   int      `json:"userCount"`
+	ID          int64      `json:"id"`
+	Key         string     `json:"key"`
+	Name        string     `json:"name"`
+	Builtin     bool       `json:"builtin"`
+	Permissions []string   `json:"permissions"`
+	UserCount   int        `json:"userCount"`
+	Limits      roleLimits `json:"limits"`
 }
 
 type mockUser struct {
@@ -115,8 +116,9 @@ func (s *store) listRoles(w http.ResponseWriter, r *http.Request, _ string) {
 
 func (s *store) createRole(w http.ResponseWriter, r *http.Request, _ string) {
 	var in struct {
-		Name        string   `json:"name"`
-		Permissions []string `json:"permissions"`
+		Name        string     `json:"name"`
+		Permissions []string   `json:"permissions"`
+		Limits      roleLimits `json:"limits"`
 	}
 	if !readJSON(w, r, &in) {
 		return
@@ -135,7 +137,7 @@ func (s *store) createRole(w http.ResponseWriter, r *http.Request, _ string) {
 		}
 	}
 	s.roleSeq++
-	nr := &role{ID: s.roleSeq, Key: fmt.Sprintf("custom%d", s.roleSeq), Name: in.Name, Permissions: validPermissions(in.Permissions)}
+	nr := &role{ID: s.roleSeq, Key: fmt.Sprintf("custom%d", s.roleSeq), Name: in.Name, Permissions: validPermissions(in.Permissions), Limits: in.Limits.clean()}
 	s.roles = append(s.roles, nr)
 	s.persistRole(nr)
 	writeJSON(w, 201, nr)
@@ -143,7 +145,8 @@ func (s *store) createRole(w http.ResponseWriter, r *http.Request, _ string) {
 
 func (s *store) updateRole(w http.ResponseWriter, r *http.Request, _ string) {
 	var in struct {
-		Permissions []string `json:"permissions"`
+		Permissions []string    `json:"permissions"`
+		Limits      *roleLimits `json:"limits"`
 	}
 	if !readJSON(w, r, &in) {
 		return
@@ -156,8 +159,11 @@ func (s *store) updateRole(w http.ResponseWriter, r *http.Request, _ string) {
 		apiError(w, 404, "error.role.not_found")
 		return
 	}
-	if ro.Key != "admin" { // admin keeps every permission
+	if ro.Key != "admin" { // admin keeps every permission and has no limits
 		ro.Permissions = validPermissions(in.Permissions)
+		if in.Limits != nil {
+			ro.Limits = in.Limits.clean()
+		}
 		s.persistRole(ro)
 	}
 	writeJSON(w, 200, ro)

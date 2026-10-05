@@ -4783,5 +4783,15 @@
   "modset.var.caption": "Caption of the post",
   "modset.var.type": "Kind (image, video, album)",
   "admin.integrations.instagram_hint": "Needs your own Instagram Business or Creator account linked to a Facebook page and a Meta app with the permissions instagram_basic and pages_show_list. Account ID: the Instagram business account ID (Graph API Explorer: me/accounts → instagram_business_account). Access token: a token that does not expire (system user token of the Business Manager, or the page token from a long-lived user token).",
-  "admin.integrations.acrcloud_hint": "Create an audio recognition project (music bucket) in the ACRCloud console and copy its Access Key and Access Secret:"
+  "admin.integrations.acrcloud_hint": "Create an audio recognition project (music bucket) in the ACRCloud console and copy its Access Key and Access Secret:",
+  "error.auth.too_many_attempts": "Too many failed sign-ins. Try again in {minutes} minutes.",
+  "error.limit.bots": "Your role allows at most {max} bots. Delete one or ask an admin.",
+  "error.limit.running": "Your role allows at most {max} bots online at the same time. Stop another bot first.",
+  "log.update.bot_idle_stopped": "💤 Bot stopped: not used for {hours} hours (role limit)",
+  "roles.limits.title": "Bot limits",
+  "roles.limits.max_bots": "Bots per user",
+  "roles.limits.max_running": "Online at the same time",
+  "roles.limits.idle_stop_hours": "Stop after hours without use",
+  "roles.limits.hint": "Empty: no limit. Use means commands, buttons and menus of the bot; a stopped bot can be started again at any time.",
+  "roles.limits.admin": "They have no bot limits."
 }
