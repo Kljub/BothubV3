@@ -903,3 +903,61 @@ document.addEventListener('toggle', (e) => {
 document.addEventListener('htmx:beforeRequest', (e) => {
   if (e.detail.elt?.id === 'bot-grid' && document.querySelector('[data-bot-menu][open]')) e.preventDefault();
 });
+
+// Bot tiles "Repositioning": drag the tiles into a new order, "Done" saves it
+// for this account (the sidebar's bot switch uses the same order).
+(() => {
+  let dragged = null;
+  const gridOf = () => document.querySelector('#bot-grid .bot-grid');
+  const stop = (reload) => {
+    const grid = gridOf();
+    grid?.classList.remove('is-reordering');
+    for (const c of grid?.querySelectorAll('.bot-card') || []) c.draggable = false;
+    const bar = document.querySelector('[data-reorder-bar]');
+    if (bar) bar.hidden = true;
+    if (reload) location.reload();
+  };
+  document.addEventListener('click', async (e) => {
+    if (e.target.closest('[data-bot-reorder]')) {
+      e.preventDefault();
+      for (const m of document.querySelectorAll('[data-bot-menu][open]')) m.open = false;
+      const grid = gridOf();
+      if (!grid) return;
+      grid.classList.add('is-reordering');
+      for (const c of grid.querySelectorAll('.bot-card')) c.draggable = true;
+      document.querySelector('[data-reorder-bar]').hidden = false;
+      return;
+    }
+    if (e.target.closest('[data-reorder-cancel]')) return stop(true);
+    if (e.target.closest('[data-reorder-save]')) {
+      const ids = [...gridOf().querySelectorAll('.bot-card')].map((c) => Number(c.id.replace('bot-', ''))).filter(Boolean);
+      const meta = document.querySelector('meta[name="csrf-token"]');
+      await fetch('/api/v1/me/bot-order', { method: 'PUT', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': meta?.content || '' }, body: JSON.stringify({ ids }) }).catch(() => null);
+      stop(true);
+    }
+  });
+  document.addEventListener('dragstart', (e) => {
+    const card = e.target.closest?.('.is-reordering .bot-card');
+    if (!card) return;
+    dragged = card;
+    card.classList.add('is-dragging');
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  document.addEventListener('dragover', (e) => {
+    if (!dragged) return;
+    const over = e.target.closest?.('.is-reordering .bot-card');
+    e.preventDefault();
+    if (!over || over === dragged) return;
+    const r = over.getBoundingClientRect();
+    const after = e.clientX > r.left + r.width / 2;
+    over.parentNode.insertBefore(dragged, after ? over.nextSibling : over);
+  });
+  document.addEventListener('dragend', () => {
+    dragged?.classList.remove('is-dragging');
+    dragged = null;
+  });
+  // The grid does not refresh while tiles are being moved.
+  document.addEventListener('htmx:beforeRequest', (e) => {
+    if (e.detail.elt?.id === 'bot-grid' && document.querySelector('.bot-grid.is-reordering')) e.preventDefault();
+  });
+})();

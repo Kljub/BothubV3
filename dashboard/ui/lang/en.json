@@ -5062,5 +5062,8 @@
   "overview.storage.database": "Database",
   "overview.storage.plugins": "Plugins",
   "overview.storage.redis": "Redis",
-  "overview.storage.other": "Other"
+  "overview.storage.other": "Other",
+  "bots.menu.reorder": "Repositioning",
+  "bots.reorder.hint": "Drag the tiles into your order. The bot switch in the sidebar follows it.",
+  "bots.reorder.done": "Done"
 }

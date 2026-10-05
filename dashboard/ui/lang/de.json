@@ -5062,5 +5062,8 @@
   "overview.storage.database": "Datenbank",
   "overview.storage.plugins": "Plugins",
   "overview.storage.redis": "Redis",
-  "overview.storage.other": "Sonstiges"
+  "overview.storage.other": "Sonstiges",
+  "bots.menu.reorder": "Neu anordnen",
+  "bots.reorder.hint": "Zieh die Kacheln in deine Reihenfolge. Die Bot-Auswahl in der Sidebar übernimmt sie.",
+  "bots.reorder.done": "Fertig"
 }

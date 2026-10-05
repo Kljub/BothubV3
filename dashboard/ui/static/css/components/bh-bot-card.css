@@ -110,3 +110,13 @@
 /* The "⋯" button is faint until the tile is hovered (or the menu is open). */
 .bot-card-menu > summary { opacity: 0.25; transition: opacity 0.15s; }
 .bot-card:hover .bot-card-menu > summary, .bot-card-menu[open] > summary, .bot-card-menu > summary:focus-visible { opacity: 1; }
+/* Repositioning: tiles can be dragged; the grid does not refresh meanwhile. */
+.reorder-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; padding: 10px 12px; font-size: 13px; background: var(--surface); border: 1px dashed var(--border-strong); border-radius: 10px; }
+.reorder-bar[hidden] { display: none; }
+.reorder-bar span { flex: 1; color: var(--text-2); }
+.bot-grid.is-reordering .bot-card { cursor: grab; animation: tile-wiggle 0.6s ease-in-out infinite alternate; }
+.bot-grid.is-reordering .bot-card .card-title::after, .bot-grid.is-reordering .bot-card-menu, .bot-grid.is-reordering .add-card { pointer-events: none; }
+.bot-grid.is-reordering .bot-card-menu { display: none; }
+.bot-grid.is-reordering .bot-card.is-dragging { opacity: 0.4; animation: none; }
+@keyframes tile-wiggle { from { transform: rotate(-0.4deg); } to { transform: rotate(0.4deg); } }
+@media (prefers-reduced-motion: reduce) { .bot-grid.is-reordering .bot-card { animation: none; } }

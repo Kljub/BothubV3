@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http/httptest"
 	"testing"
 	"time"
@@ -115,5 +116,17 @@ func TestMemorySampler(t *testing.T) {
 	st := s.memoryStats(context.Background(), "24h", now.Add(-24*time.Hour), now)
 	if st["averageBytes"].(int64) != 200 || st["peakBytes"].(int64) < 250 {
 		t.Fatalf("stats: %v", st)
+	}
+}
+
+func TestOrderBots(t *testing.T) {
+	items := []bot{{ID: 1}, {ID: 2}, {ID: 3}, {ID: 4}}
+	got := orderBots(items, []int64{3, 1, 99})
+	ids := []int64{}
+	for _, b := range got {
+		ids = append(ids, b.ID)
+	}
+	if fmt.Sprint(ids) != "[3 1 2 4]" {
+		t.Fatalf("order: %v", ids)
 	}
 }

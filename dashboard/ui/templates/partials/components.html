@@ -14,6 +14,7 @@
       <a role="menuitem" href="/select-bot/{{.ID}}?to=settings">{{t "bots.menu.profile"}}</a>
       {{with .ApplicationID}}<button type="button" role="menuitem" data-copy="https://discord.com/oauth2/authorize?client_id={{.}}" data-copy-done="{{t "bots.id_copied"}}">{{t "bots.menu.share"}}</button>{{end}}
       <a role="menuitem" href="/select-bot/{{.ID}}?to=logs">{{t "bots.menu.logs"}}</a>
+      <button type="button" role="menuitem" data-bot-reorder>{{t "bots.menu.reorder"}}</button>
       <hr>
       {{if or (eq .Status "stopped") (eq .Status "error")}}
       <button type="button" role="menuitem" class="menu-good" hx-post="/bot/{{.ID}}/start" hx-target="#bot-{{.ID}}" hx-swap="outerHTML">{{t "bots.start"}}</button>
@@ -54,6 +55,11 @@
 
 {{define "bot_grid"}}
 <div id="bot-grid" hx-get="/overview/bots?page={{.Page}}" hx-trigger="every 10s" hx-swap="outerHTML">
+<div class="reorder-bar" data-reorder-bar hidden>
+  <span>{{t "bots.reorder.hint"}}</span>
+  <button type="button" class="btn btn-sm" data-reorder-cancel>{{t "action.cancel"}}</button>
+  <button type="button" class="btn btn-primary btn-sm" data-reorder-save>{{t "bots.reorder.done"}}</button>
+</div>
 <section class="bot-grid" aria-label="{{t "bots.title"}}">
   {{range .Bots}}{{template "bot_card" .}}{{end}}
   <button type="button" class="card add-card" data-open-dialog="add-bot-dialog">

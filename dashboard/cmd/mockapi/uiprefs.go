@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 	"regexp"
+	"slices"
 	"strconv"
 )
 
@@ -10,6 +11,95 @@ import (
 // groups the user closed on the Modules page (open is the default).
 type uiPrefs struct {
 	ModuleGroups map[string][]string `json:"moduleGroups,omitempty"`
+	// BotOrder: the user's order of the bot tiles (and of the bot switch); bots not in it follow by ID.
+	BotOrder []int64 `json:"botOrder,omitempty"`
+}
+
+// orderBots sorts bots by the user's order; the others keep their order after them.
+func orderBots(items []bot, order []int64) []bot {
+	pos := map[int64]int{}
+	for i, id := range order {
+		if _, dup := pos[id]; !dup {
+			pos[id] = i
+		}
+	}
+	slices.SortStableFunc(items, func(a, b bot) int {
+		pa, oka := pos[a.ID]
+		pb, okb := pos[b.ID]
+		switch {
+		case oka && okb:
+			return pa - pb
+		case oka:
+			return -1
+		case okb:
+			return 1
+		}
+		return 0
+	})
+	return items
+}
+
+// putBotOrder stores a new order of some bots (the tiles of one page): they
+// take the places those bots had in the current order.
+func (s *store) putBotOrder(w http.ResponseWriter, r *http.Request, sid string) {
+	var in struct {
+		IDs []int64 `json:"ids"`
+	}
+	if !readJSON(w, r, &in) {
+		return
+	}
+	if len(in.IDs) == 0 || len(in.IDs) > 500 {
+		apiError(w, 422, "error.validation.failed")
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	u := s.sessUser(sid)
+	if u == nil {
+		apiError(w, 401, "error.auth.required")
+		return
+	}
+	var all []bot
+	for id := int64(1); id < s.nextID; id++ {
+		if b, ok := s.bots[id]; ok {
+			if _, _, has := s.botAccess(u, b); has {
+				all = append(all, *b)
+			}
+		}
+	}
+	all = orderBots(all, u.uiPrefs.BotOrder)
+	moved := map[int64]bool{}
+	for _, id := range in.IDs {
+		moved[id] = true
+	}
+	next := 0
+	order := make([]int64, 0, len(all))
+	for _, b := range all {
+		if moved[b.ID] && next < len(in.IDs) {
+			// skip IDs the user cannot see
+			for next < len(in.IDs) && !hasBot(all, in.IDs[next]) {
+				next++
+			}
+			if next < len(in.IDs) {
+				order = append(order, in.IDs[next])
+				next++
+				continue
+			}
+		}
+		order = append(order, b.ID)
+	}
+	u.uiPrefs.BotOrder = order
+	s.persistUser(u)
+	writeJSON(w, 200, map[string]any{"order": order})
+}
+
+func hasBot(list []bot, id int64) bool {
+	for _, b := range list {
+		if b.ID == id {
+			return true
+		}
+	}
+	return false
 }
 
 var groupKey = regexp.MustCompile(`^[a-z]{1,24}$`)

@@ -283,6 +283,7 @@ func main() {
 	mux.HandleFunc("GET /api/v1/bots", s.auth(s.listBots))
 	mux.HandleFunc("POST /api/v1/bots", s.auth(s.createBot))
 	mux.HandleFunc("GET /api/v1/bots/{id}", s.auth(s.withBot(s.getBot)))
+	mux.HandleFunc("PUT /api/v1/me/bot-order", s.auth(s.putBotOrder))
 	mux.HandleFunc("GET /api/v1/bots/{id}/module-groups", s.auth(s.withBot(s.getModuleGroups)))
 	mux.HandleFunc("PUT /api/v1/bots/{id}/module-groups", s.auth(s.withBot(s.putModuleGroups)))
 	// Co-Work: the owner and members of a bot ({user}: ID or user name).
@@ -762,6 +763,9 @@ func (s *store) listBots(w http.ResponseWriter, r *http.Request, sid string) {
 			}
 			items = append(items, c)
 		}
+	}
+	if me != nil {
+		items = orderBots(items, me.uiPrefs.BotOrder)
 	}
 	writeJSON(w, 200, map[string]any{"items": items})
 }
