@@ -98,6 +98,24 @@
   const history = [JSON.stringify(graph)];
   let historyAt = 0;
 
+  // Pick up where you left off: per browser and command, the view, the
+  // selected block and unsaved changes are kept, so a reload or a closed tab
+  // loses nothing. Written shortly after each change.
+  const RESUME_KEY = `bothub.builder.resume.${meta.saveUrl}`;
+  const readResume = () => { try { return JSON.parse(localStorage.getItem(RESUME_KEY) || 'null'); } catch { return null; } };
+  let resumeTimer = null;
+  let pendingDraft = null; // offered back, not decided yet: kept as it is
+  function keepResume() {
+    clearTimeout(resumeTimer);
+    resumeTimer = setTimeout(() => {
+      const snap = JSON.stringify(graph);
+      const data = { view: { ...view }, selected, at: Date.now(), base: savedSnapshot };
+      if (snap !== savedSnapshot) data.graph = snap;
+      else if (pendingDraft) Object.assign(data, { graph: pendingDraft.graph, at: pendingDraft.at, base: pendingDraft.base });
+      try { localStorage.setItem(RESUME_KEY, JSON.stringify(data)); } catch { /* storage blocked */ }
+    }, 400);
+  }
+
   function commit() {
     const snap = JSON.stringify(graph);
     if (snap === history[historyAt]) return;
@@ -545,6 +563,7 @@
     canvas.style.backgroundSize = `${20 * view.zoom}px ${20 * view.zoom}px`;
     zoomEl.textContent = `${Math.round(view.zoom * 100)}%`;
     renderEdges();
+    keepResume();
   }
 
   function renderEdges(temp) {
@@ -2606,6 +2625,7 @@
 
   function setDirty(v) {
     dirty = v;
+    keepResume();
     if (!saving) setStatus(v ? 'unsaved' : 'saved');
   }
 
@@ -3007,6 +3027,48 @@
   setStatus('saved');
   updateLastSaved();
   updateProblems();
+  resumeWork();
+
+  function resumeWork() {
+    const r = readResume();
+    if (!r) return;
+    if (r.view && Number.isFinite(r.view.zoom)) {
+      Object.assign(view, { x: Number(r.view.x) || 0, y: Number(r.view.y) || 0, zoom: Math.min(2, Math.max(0.3, r.view.zoom)) });
+      applyView();
+    }
+    if (r.selected && exists(r.selected)) {
+      selected = r.selected;
+      render();
+    }
+    if (!r.graph || r.graph === savedSnapshot) return;
+    // Unsaved changes of an earlier visit: offer them back.
+    pendingDraft = r;
+    const bar = el('div', 'bresume');
+    bar.setAttribute('role', 'status');
+    const text = el('span', '', t(r.base === savedSnapshot ? 'builder.resume.found' : 'builder.resume.found_changed', { time: new Date(r.at).toLocaleString() }));
+    const take = el('button', 'btn btn-primary btn-sm', t('builder.resume.restore'));
+    take.type = 'button';
+    take.addEventListener('click', () => {
+      bar.remove();
+      pendingDraft = null;
+      try {
+        graph = JSON.parse(r.graph);
+      } catch {
+        return;
+      }
+      graph.nodes.forEach((n) => { n.config = n.config || {}; n.position = n.position || { x: 0, y: 0 }; });
+      if (selected && !exists(selected)) selected = null;
+      commit();
+      render();
+      updateProblems();
+      toast(t('builder.resume.restored'));
+    });
+    const drop = el('button', 'btn btn-sm', t('builder.resume.discard'));
+    drop.type = 'button';
+    drop.addEventListener('click', () => { bar.remove(); pendingDraft = null; keepResume(); });
+    bar.append(text, take, drop);
+    root.append(bar);
+  }
 
   // ---------- setup dialog for a new event ----------
   function openEventSetup() {

@@ -5233,5 +5233,10 @@
   "builder.emoji.cat.objects": "Objects",
   "builder.emoji.cat.symbols": "Symbols",
   "builder.emoji.cat.flags": "Flags",
-  "error.validation.field": "Please check: {field}"
+  "error.validation.field": "Please check: {field}",
+  "builder.resume.found": "Unsaved changes from {time} were found.",
+  "builder.resume.found_changed": "Unsaved changes from {time} were found. It was saved since then: restoring replaces that version.",
+  "builder.resume.restore": "Restore",
+  "builder.resume.discard": "Discard",
+  "builder.resume.restored": "Changes restored (not saved yet)"
 }

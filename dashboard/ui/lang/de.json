@@ -5233,5 +5233,10 @@
   "builder.emoji.cat.objects": "Objekte",
   "builder.emoji.cat.symbols": "Symbole",
   "builder.emoji.cat.flags": "Flaggen",
-  "error.validation.field": "Bitte prüfen: {field}"
+  "error.validation.field": "Bitte prüfen: {field}",
+  "builder.resume.found": "Ungespeicherte Änderungen vom {time} gefunden.",
+  "builder.resume.found_changed": "Ungespeicherte Änderungen vom {time} gefunden. Seitdem wurde gespeichert: Wiederherstellen ersetzt diese Version.",
+  "builder.resume.restore": "Wiederherstellen",
+  "builder.resume.discard": "Verwerfen",
+  "builder.resume.restored": "Änderungen wiederhergestellt (noch nicht gespeichert)"
 }
