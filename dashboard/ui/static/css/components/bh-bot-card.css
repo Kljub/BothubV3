@@ -1,9 +1,10 @@
 /* bh-bot-card: Bot cards on the dashboard. */
 
-/* 5 per row on wide screens, at least 240px each. */
-.bot-grid { --gap: 16px; display: grid; grid-template-columns: repeat(auto-fill, minmax(max(240px, calc((100% - 4 * var(--gap)) / 5)), 1fr)); gap: var(--gap); }
+/* 4 per row on wide screens, at least 260px each; all rows as high as the
+   highest tile, so the "Add bot" tile does not stretch its row. */
+.bot-grid { --gap: 16px; display: grid; grid-template-columns: repeat(auto-fill, minmax(max(260px, calc((100% - 3 * var(--gap)) / 4)), 1fr)); grid-auto-rows: 1fr; gap: var(--gap); }
 .bot-card { position: relative; display: flex; flex-direction: column; border-width: 2px; }
-.bot-card .card-title::after { content: ""; position: absolute; inset: 0 0 56px 0; }
+.bot-card .card-title::after { content: ""; position: absolute; inset: 0; }
 .bot-card { overflow: visible; }
 .bot-card-banner { border-radius: calc(var(--radius) - 2px) calc(var(--radius) - 2px) 0 0; overflow: hidden; }
 .bot-card:hover { background: color-mix(in srgb, var(--surface) 85%, var(--text) 3%); }
@@ -37,7 +38,7 @@
 .spacer { flex: 1; }
 .add-card {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
-  min-height: 156px;
+  min-height: 100px;
   font: inherit; font-size: 12px;
   color: var(--muted);
   border: 2px dashed var(--border-strong);
@@ -73,10 +74,10 @@
 
 /* Compact sizes (the user's design, 2026-10-05): low banner, smaller avatar,
    text and buttons, so the full name fits. */
-.bot-card-banner { height: 44px; }
+.bot-card-banner { height: 84px; }
 .bot-card-body { gap: 6px; padding: 0 12px 10px; }
-.bot-card-header { gap: 8px; margin-top: -20px; }
-.bot-card-avatar .avatar { width: 48px; height: 48px; border-width: 2px; }
+.bot-card-header { gap: 8px; margin-top: -24px; }
+.bot-card-avatar .avatar { width: 56px; height: 56px; border-width: 2px; }
 .bot-card-name .card-title { font-size: 12.5px; }
 .bot-card-app { font-size: 10.5px; }
 .bot-card-badge .badge { padding: 2px 8px; font-size: 10.5px; }
