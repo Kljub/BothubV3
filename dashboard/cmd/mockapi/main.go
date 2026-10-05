@@ -277,6 +277,8 @@ func main() {
 	mux.HandleFunc("GET /api/v1/bots", s.auth(s.listBots))
 	mux.HandleFunc("POST /api/v1/bots", s.auth(s.createBot))
 	mux.HandleFunc("GET /api/v1/bots/{id}", s.auth(s.withBot(s.getBot)))
+	mux.HandleFunc("GET /api/v1/bots/{id}/module-groups", s.auth(s.withBot(s.getModuleGroups)))
+	mux.HandleFunc("PUT /api/v1/bots/{id}/module-groups", s.auth(s.withBot(s.putModuleGroups)))
 	// Co-Work: the owner and members of a bot ({user}: ID or user name).
 	mux.HandleFunc("GET /api/v1/bots/{id}/members", s.auth(s.withBot(s.listMembers)))
 	mux.HandleFunc("PUT /api/v1/bots/{id}/members/{user}", s.auth(s.withBot(s.setMember)))

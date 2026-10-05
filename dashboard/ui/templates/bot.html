@@ -58,7 +58,7 @@
 </section>
 
 {{else if eq $d.Section "modules"}}
-{{range $d.Categories}}{{template "module_group" .}}{{end}}
+<div data-module-groups="/bot/{{$d.Bot.ID}}/module-groups">{{range $d.Categories}}{{template "module_group" .}}{{end}}</div>
 
 {{else if eq $d.Section "plugins"}}
 {{if $d.Plugins}}

@@ -44,6 +44,8 @@ $u = $all['users'][0];
 check('load', $u['username'] === 'admin' && $u['totpSecret'] === 'JBSWY3DPEHPK3PXP' && $u['recoveryCodes'] === ['h1', 'h2'] && $u['locale'] === 'de'
     && $all['passkeys'][0]['name'] === 'Laptop' && count($all['roles']) >= 3);
 $call('PUT', '/internal/accounts/users/1', ['username' => 'admin', 'passwordHash' => '$argon2id$y', 'roleId' => 1]);
+$prefsUser = array_values(array_filter($call('GET', '/internal/accounts')[1]['users'], static fn ($x) => $x['id'] === 1))[0] ?? null;
+check('ui prefs default empty', $prefsUser !== null && (array) $prefsUser['uiPrefs'] === []);
 check('update keeps passkeys', count($call('GET', '/internal/accounts')[1]['passkeys']) === 1);
 $hash = hash('sha256', 'cookie');
 $sess = ['id' => 'abcd1234', 'userId' => 1, 'csrf' => 'c', 'remember' => true, 'deviceKey' => 'MFkw', 'userAgent' => 'Firefox', 'ip' => '1.2.3.4',

@@ -821,6 +821,20 @@ func (c *Client) ListGuilds(ctx context.Context, s Session, botID int64) ([]Guil
 }
 
 // ListBotModules returns the module states of a bot. Modules apply to all guilds of the bot.
+// ModuleGroupsClosed: the module groups the user closed on this bot's Modules page.
+func (c *Client) ModuleGroupsClosed(ctx context.Context, s Session, botID int64) ([]string, error) {
+	var out struct {
+		Closed []string `json:"closed"`
+	}
+	_, err := c.do(ctx, s, http.MethodGet, fmt.Sprintf("/api/v1/bots/%d/module-groups", botID), nil, &out)
+	return out.Closed, err
+}
+
+func (c *Client) SetModuleGroupsClosed(ctx context.Context, s Session, botID int64, closed []string) error {
+	_, err := c.do(ctx, s, http.MethodPut, fmt.Sprintf("/api/v1/bots/%d/module-groups", botID), map[string]any{"closed": closed}, nil)
+	return err
+}
+
 func (c *Client) ListBotModules(ctx context.Context, s Session, botID int64) ([]ModuleState, error) {
 	var out list[ModuleState]
 	_, err := c.do(ctx, s, http.MethodGet, fmt.Sprintf("/api/v1/bots/%d/modules", botID), nil, &out)

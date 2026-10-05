@@ -76,6 +76,7 @@ type categoryView struct {
 	Key, Icon     string
 	Active, Total int
 	Modules       []moduleView
+	Closed        bool // closed by this user for this bot (remembered per account and bot)
 }
 
 // moduleCategories merges the catalog with the bot's module states.
@@ -88,9 +89,10 @@ func (s *Server) moduleCategories(r *http.Request, botID int64) ([]categoryView,
 	for _, st := range states {
 		enabled[st.Key] = st.Enabled
 	}
+	closed, _ := s.api.ModuleGroupsClosed(r.Context(), session(r), botID) // optional: all open on error
 	cats := make([]categoryView, 0, len(s.modules))
 	for _, c := range s.modules {
-		cv := categoryView{Key: c.Key, Icon: c.Icon, Total: len(c.Modules)}
+		cv := categoryView{Key: c.Key, Icon: c.Icon, Total: len(c.Modules), Closed: slices.Contains(closed, c.Key)}
 		for _, m := range c.Modules {
 			if enabled[m.Key] {
 				cv.Active++
@@ -100,6 +102,20 @@ func (s *Server) moduleCategories(r *http.Request, botID int64) ([]categoryView,
 		cats = append(cats, cv)
 	}
 	return cats, nil
+}
+
+// handleModuleGroups stores which module groups are closed (Modules page, per account and bot).
+func (s *Server) handleModuleGroups(w http.ResponseWriter, r *http.Request, p Page) {
+	id, ok := s.botID(w, r, p)
+	if !ok {
+		return
+	}
+	_ = r.ParseForm()
+	if err := s.api.SetModuleGroupsClosed(r.Context(), session(r), id, r.PostForm["closed"]); err != nil {
+		s.fail(w, r, p, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // findModule returns the catalog entry and its category.

@@ -41,6 +41,7 @@ final class AccountStore
             'totpPending' => $u['totp_pending_enc'] === null ? '' : $this->box->decrypt($u['totp_pending_enc']),
             'recoveryCodes' => $codes[(int) $u['id']] ?? [],
             'createdAt' => $u['created_at'], 'lastLoginAt' => $u['last_login_at'],
+            'uiPrefs' => (object) json_decode($u['ui_prefs'] ?? '{}', true),
         ], $this->pdo->query('SELECT * FROM users ORDER BY id')->fetchAll());
         $roles = array_map(static fn (array $r) => [
             'id' => (int) $r['id'], 'key' => $r['key'], 'name' => $r['name'], 'builtin' => (int) $r['builtin'] === 1,
@@ -68,16 +69,21 @@ final class AccountStore
         }
         $theme = in_array($in['theme'] ?? '', ['dark', 'light', 'system'], true) ? $in['theme'] : 'system';
         $seal = fn (mixed $v): ?string => is_string($v) && $v !== '' ? $this->box->encrypt($v) : null;
-        Connection::write($this->pdo, function (PDO $pdo) use ($id, $username, $hash, $roleId, $theme, $in, $seal): void {
+        // Dashboard preferences: a JSON object of at most 16 KB, else empty.
+        $prefs = json_encode(is_array($in['uiPrefs'] ?? null) ? (object) $in['uiPrefs'] : new \stdClass(), JSON_UNESCAPED_UNICODE);
+        if ($prefs === false || strlen($prefs) > 16384) {
+            $prefs = '{}';
+        }
+        Connection::write($this->pdo, function (PDO $pdo) use ($id, $username, $hash, $roleId, $theme, $in, $seal, $prefs): void {
             $stmt = $pdo->prepare(
-                'INSERT INTO users (id, username, email, password_hash, role_id, locale, theme, totp_secret_enc, totp_pending_enc, last_login_at)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                'INSERT INTO users (id, username, email, password_hash, role_id, locale, theme, totp_secret_enc, totp_pending_enc, last_login_at, ui_prefs)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                  ON CONFLICT (id) DO UPDATE SET username = excluded.username, email = excluded.email, password_hash = excluded.password_hash,
                    role_id = excluded.role_id, locale = excluded.locale, theme = excluded.theme, totp_secret_enc = excluded.totp_secret_enc,
-                   totp_pending_enc = excluded.totp_pending_enc, last_login_at = excluded.last_login_at',
+                   totp_pending_enc = excluded.totp_pending_enc, last_login_at = excluded.last_login_at, ui_prefs = excluded.ui_prefs',
             );
             $values = [$id, $username, ($in['email'] ?? null) ?: null, $hash, $roleId, mb_substr((string) ($in['locale'] ?? 'en'), 0, 8), $theme,
-                $seal($in['totpSecret'] ?? ''), $seal($in['totpPending'] ?? ''), $in['lastLoginAt'] ?? null];
+                $seal($in['totpSecret'] ?? ''), $seal($in['totpPending'] ?? ''), $in['lastLoginAt'] ?? null, $prefs];
             foreach ($values as $i => $v) {
                 // The 2FA secrets are BLOB columns (STRICT tables).
                 $stmt->bindValue($i + 1, $v, $v === null ? PDO::PARAM_NULL : ($i === 7 || $i === 8 ? PDO::PARAM_LOB : PDO::PARAM_STR));

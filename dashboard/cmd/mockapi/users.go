@@ -52,6 +52,7 @@ type mockUser struct {
 	CreatedAt        time.Time  `json:"createdAt"`
 	LastLoginAt      *time.Time `json:"lastLoginAt"`
 	passwordHash     string     // Argon2id (PHC string)
+	uiPrefs          uiPrefs    // dashboard preferences (closed module groups per bot)
 	locale, theme    string
 	totpSecret       string   // active secret; empty = 2FA off
 	pendingSecret    string   // set by setup, active after enable

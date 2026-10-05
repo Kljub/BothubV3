@@ -216,6 +216,7 @@ func (s *Server) routes() http.Handler {
 	mux.Handle("POST /bot/{id}/webhook-key", auth(s.handleWebhookKey))
 	mux.Handle("PUT /bot/{id}/modules/{key}/settings", auth(s.handleSettingsSave))
 	mux.Handle("POST /bot/{id}/modules/{key}/settings/{list}", auth(s.handleSettingsItem))
+	mux.Handle("POST /bot/{id}/module-groups", auth(s.handleModuleGroups))
 	mux.Handle("PUT /bot/{id}/modules/{key}/settings/{list}/{idx}", auth(s.handleSettingsItem))
 	mux.Handle("DELETE /bot/{id}/modules/{key}/settings/{list}/{idx}", auth(s.handleSettingsItem))
 	mux.Handle("POST /bot/{id}/timed-events", auth(s.handleTimedCreate))

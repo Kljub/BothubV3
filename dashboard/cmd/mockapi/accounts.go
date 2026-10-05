@@ -176,7 +176,7 @@ func (s *store) persistUser(u *mockUser) {
 	body := map[string]any{
 		"username": u.Username, "email": u.Email, "roleId": u.RoleID, "passwordHash": u.passwordHash,
 		"locale": u.locale, "theme": u.theme, "totpSecret": u.totpSecret, "totpPending": u.pendingSecret,
-		"recoveryCodes": append([]string{}, u.recovery...), "lastLoginAt": u.LastLoginAt,
+		"recoveryCodes": append([]string{}, u.recovery...), "lastLoginAt": u.LastLoginAt, "uiPrefs": u.uiPrefs,
 	}
 	id := u.ID
 	go s.phpSync(http.MethodPut, "/internal/accounts/users/"+strconv.FormatInt(id, 10), body)
@@ -234,6 +234,7 @@ func (s *store) loadAccounts() {
 			RecoveryCodes []string   `json:"recoveryCodes"`
 			CreatedAt     string     `json:"createdAt"`
 			LastLoginAt   *time.Time `json:"lastLoginAt"`
+			UIPrefs       uiPrefs    `json:"uiPrefs"`
 		} `json:"users"`
 		Roles    []*role `json:"roles"`
 		Passkeys []struct {
@@ -303,7 +304,7 @@ func (s *store) loadAccounts() {
 	for _, u := range in.Users {
 		created, _ := time.Parse(time.RFC3339Nano, u.CreatedAt)
 		s.users = append(s.users, &mockUser{ID: u.ID, Username: u.Username, Email: u.Email, RoleID: u.RoleID, CreatedAt: created, LastLoginAt: u.LastLoginAt,
-			passwordHash: u.PasswordHash, locale: u.Locale, theme: u.Theme, totpSecret: u.TotpSecret, pendingSecret: u.TotpPending, recovery: u.RecoveryCodes})
+			passwordHash: u.PasswordHash, locale: u.Locale, theme: u.Theme, totpSecret: u.TotpSecret, pendingSecret: u.TotpPending, recovery: u.RecoveryCodes, uiPrefs: u.UIPrefs})
 		s.userSeq = max(s.userSeq, u.ID)
 	}
 	s.passkeys.mu.Lock()

@@ -875,34 +875,25 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.addEventListener('visibilitychange', renew);
 });
 
-// Module groups (Modules tab): open or closed is remembered in this browser.
+// Module groups (Modules tab): which ones are closed is stored per account
+// and bot; the page is rendered with that state.
 (() => {
-  const KEY = 'bothub.moduleGroups';
-  const read = () => {
-    try {
-      return JSON.parse(localStorage.getItem(KEY) || '{}');
-    } catch {
-      return {};
-    }
-  };
-  const apply = (scope) => {
-    const saved = read();
-    for (const d of (scope || document).querySelectorAll('[data-module-group]')) {
-      const key = d.dataset.moduleGroup;
-      if (key in saved) d.open = saved[key];
-    }
-  };
+  let timer;
   document.addEventListener('toggle', (e) => {
     const d = e.target;
     if (!(d instanceof HTMLElement) || !d.matches('[data-module-group]')) return;
-    const saved = read();
-    saved[d.dataset.moduleGroup] = d.open;
-    try {
-      localStorage.setItem(KEY, JSON.stringify(saved));
-    } catch {
-      // private mode or storage blocked: the groups just open again next time
-    }
+    const wrap = d.closest('[data-module-groups]');
+    if (!wrap) return;
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      const body = new URLSearchParams();
+      for (const g of wrap.querySelectorAll('[data-module-group]')) if (!g.open) body.append('closed', g.dataset.moduleGroup);
+      const meta = document.querySelector('meta[name="csrf-token"]');
+      fetch(wrap.dataset.moduleGroups, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', ...(meta && meta.content ? { 'X-CSRF-Token': meta.content } : {}) },
+        body,
+      }).catch(() => {});
+    }, 300);
   }, true);
-  document.addEventListener('DOMContentLoaded', () => apply(document));
-  document.addEventListener('htmx:afterSettle', () => apply(document));
 })();
