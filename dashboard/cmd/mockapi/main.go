@@ -1097,8 +1097,9 @@ func (s *store) overviewStats(w http.ResponseWriter, r *http.Request, _ string) 
 	}
 	s.mu.Unlock()
 	writeJSON(w, 200, map[string]any{
-		"bots":   map[string]int{"total": total, "online": online},
-		"memory": s.memoryStats(r.Context(), rng, from, to),
+		"bots":    map[string]int{"total": total, "online": online},
+		"memory":  s.memoryStats(r.Context(), rng, from, to),
+		"storage": storageStats(),
 	})
 }
 

@@ -360,6 +360,7 @@ func (s *Server) handleAdminSection(w http.ResponseWriter, r *http.Request, p Pa
 			return
 		}
 		data["Memory"] = s.memoryPanel(stats.Memory, p.Locale)
+		data["Storage"] = stats.Storage
 	}
 	if section == "users_roles" {
 		v, err := s.usersRoles(r)

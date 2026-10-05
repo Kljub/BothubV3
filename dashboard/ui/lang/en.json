@@ -5055,5 +5055,12 @@
   "cards.gallery.giveaway": "Giveaway",
   "cards.gallery.server-stats": "Server stats",
   "cards.gallery.games": "Games",
-  "cards.gallery": "Templates"
+  "cards.gallery": "Templates",
+  "overview.storage.title": "Storage",
+  "overview.storage.subtitle": "Data folder: {used}",
+  "overview.storage.disk": "{free} free of {total}",
+  "overview.storage.database": "Database",
+  "overview.storage.plugins": "Plugins",
+  "overview.storage.redis": "Redis",
+  "overview.storage.other": "Other"
 }

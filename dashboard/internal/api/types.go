@@ -112,7 +112,31 @@ type OverviewStats struct {
 		Total  int `json:"total"`
 		Online int `json:"online"`
 	} `json:"bots"`
-	Memory MemoryStats `json:"memory"`
+	Memory  MemoryStats  `json:"memory"`
+	Storage StorageStats `json:"storage"`
+}
+
+// StorageStats: the data folder (database, plugins, Redis, rest) and its disk.
+type StorageStats struct {
+	DatabaseBytes  int64 `json:"databaseBytes"`
+	PluginsBytes   int64 `json:"pluginsBytes"`
+	RedisBytes     int64 `json:"redisBytes"`
+	OtherBytes     int64 `json:"otherBytes"`
+	DiskTotalBytes int64 `json:"diskTotalBytes"`
+	DiskFreeBytes  int64 `json:"diskFreeBytes"`
+}
+
+// Used: everything in the data folder.
+func (s StorageStats) Used() int64 {
+	return s.DatabaseBytes + s.PluginsBytes + s.RedisBytes + s.OtherBytes
+}
+
+// DiskUsedPct: how full the disk is (0 when unknown).
+func (s StorageStats) DiskUsedPct() int {
+	if s.DiskTotalBytes <= 0 {
+		return 0
+	}
+	return int((s.DiskTotalBytes - s.DiskFreeBytes) * 100 / s.DiskTotalBytes)
 }
 
 type MemoryStats struct {

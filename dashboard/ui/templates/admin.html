@@ -10,6 +10,7 @@
 {{if ne .Section "users_roles"}}<h2>{{t (printf "admin.nav.%s" .Section)}}</h2>{{end}}
 {{if eq .Section "overview"}}
   {{template "memory_panel" .Memory}}
+  {{template "storage_panel" .Storage}}
 {{else if eq .Section "users_roles"}}
   {{template "users_roles" .UsersRoles}}
 {{else if eq .Section "logs"}}
@@ -35,6 +36,30 @@
 {{else}}
   <p class="muted admin-placeholder">{{t "admin.placeholder"}}</p>
 {{end}}
+{{end}}
+
+{{/* Storage: the data folder by part and the disk it is on. */}}
+{{define "storage_panel"}}
+<section class="chart-panel admin-storage">
+  <header class="chart-header">
+    <div>
+      <h3>{{t "overview.storage.title"}}</h3>
+      <p class="muted chart-subtitle">{{t "overview.storage.subtitle" "used" (bytes .Used)}}</p>
+    </div>
+  </header>
+  {{if .DiskTotalBytes}}
+  <div class="storage-bar" role="img" aria-label="{{t "overview.storage.disk" "free" (bytes .DiskFreeBytes) "total" (bytes .DiskTotalBytes)}}">
+    <span class="storage-bar-fill storage-pct-{{.DiskUsedPct}}"></span>
+  </div>
+  <p class="hint">{{t "overview.storage.disk" "free" (bytes .DiskFreeBytes) "total" (bytes .DiskTotalBytes)}} · {{.DiskUsedPct}} %</p>
+  {{end}}
+  <ul class="service-list">
+    <li><span class="muted">{{t "overview.storage.database"}}</span> <span class="num">{{bytes .DatabaseBytes}}</span></li>
+    <li><span class="muted">{{t "overview.storage.plugins"}}</span> <span class="num">{{bytes .PluginsBytes}}</span></li>
+    <li><span class="muted">{{t "overview.storage.redis"}}</span> <span class="num">{{bytes .RedisBytes}}</span></li>
+    <li><span class="muted">{{t "overview.storage.other"}}</span> <span class="num">{{bytes .OtherBytes}}</span></li>
+  </ul>
+</section>
 {{end}}
 
 {{define "memory_panel_fragment"}}{{template "memory_panel" .Data}}{{end}}
