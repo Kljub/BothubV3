@@ -1,0 +1,82 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.game_price",
+  "version": 1,
+  "category": "action",
+  "group": "free_games",
+  "order": 1520,
+  "color": "purple",
+  "icon": "💲",
+  "labelKey": "builder.node.action_game_price.label",
+  "descriptionKey": "builder.node.action_game_price.description",
+  "module": "free-games",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    },
+    {
+      "name": "not_found",
+      "type": "flow",
+      "labelKey": "builder.port.not_found"
+    }
+  ],
+  "results": [
+    {
+      "suffix": "",
+      "labelKey": "builder.result.game_price.0"
+    },
+    {
+      "suffix": ".best",
+      "labelKey": "builder.result.game_price.1"
+    },
+    {
+      "suffix": ".store",
+      "labelKey": "builder.result.game_price.2"
+    },
+    {
+      "suffix": ".lowest",
+      "labelKey": "builder.result.game_price.3"
+    },
+    {
+      "suffix": ".deals",
+      "labelKey": "builder.result.game_price.4"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "game"
+    ],
+    "properties": {
+      "game": {
+        "type": "string",
+        "maxLength": 100,
+        "x-labelKey": "builder.cfg.game_price_game",
+        "x-hintKey": "builder.cfg.game_price_game_hint"
+      },
+      "reply": {
+        "type": "boolean",
+        "default": true,
+        "x-labelKey": "builder.cfg.game_sales_reply",
+        "x-hintKey": "builder.cfg.game_sales_reply_hint"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  }
+}

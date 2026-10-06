@@ -15168,6 +15168,120 @@
       }
     },
     {
+      "module": "free-games",
+      "group": "Free Games",
+      "name": "gameprice",
+      "title": "Game Price",
+      "description": "Shows the best prices of a game across PC stores",
+      "graph": {
+        "schemaVersion": 1,
+        "nodes": [
+          {
+            "id": "trigger",
+            "type": "trigger.slash",
+            "typeVersion": 1,
+            "config": {
+              "command_name": "gameprice",
+              "description": "Shows the best prices of a game across PC stores"
+            },
+            "position": {
+              "x": 120,
+              "y": 240
+            }
+          },
+          {
+            "id": "step1",
+            "type": "action.game_price",
+            "typeVersion": 1,
+            "config": {
+              "game": "{option_game}",
+              "reply": true,
+              "variable": "price"
+            },
+            "position": {
+              "x": 440,
+              "y": 240
+            }
+          },
+          {
+            "id": "error",
+            "type": "utility.error_handler",
+            "typeVersion": 1,
+            "config": {
+              "variable": "error"
+            },
+            "position": {
+              "x": 120,
+              "y": 520
+            }
+          },
+          {
+            "id": "error_reply",
+            "type": "action.send_message",
+            "typeVersion": 1,
+            "config": {
+              "message": {
+                "mode": "normal",
+                "content": "Failed: {error}"
+              },
+              "target": "reply"
+            },
+            "position": {
+              "x": 440,
+              "y": 520
+            }
+          },
+          {
+            "id": "option_game",
+            "type": "option.text",
+            "typeVersion": 1,
+            "config": {
+              "name": "game",
+              "description": "Name of the game",
+              "required": true,
+              "variable": "game"
+            },
+            "position": {
+              "x": 120,
+              "y": 110
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": {
+              "node": "trigger",
+              "port": "next"
+            },
+            "to": {
+              "node": "step1",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "error",
+              "port": "next"
+            },
+            "to": {
+              "node": "error_reply",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "option_game",
+              "port": "option"
+            },
+            "to": {
+              "node": "trigger",
+              "port": "options"
+            }
+          }
+        ]
+      }
+    },
+    {
       "module": "music",
       "group": "Music",
       "name": "play",

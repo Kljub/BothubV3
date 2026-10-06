@@ -671,3 +671,20 @@ test('twitch alerts: subscriptions by settings, messages by event', async () => 
   assert.equal(alertFor('channel.raid', { from_broadcaster_user_name: 'R', from_broadcaster_user_login: 'r', viewers: 3 }, cfg, 'kljub'), null);
   assert.equal(alertFor('channel.raid', { from_broadcaster_user_name: 'R', from_broadcaster_user_login: 'r', viewers: 30 }, cfg, 'kljub')!.vars['raider.url'], 'https://twitch.tv/r');
 });
+
+test('game price tracker: deals cheapest first, target and lowest-ever alerts only when crossed', async () => {
+  const { parseGames, parseTarget, priceAlert, dealsText } = await import('./pricetracker.js');
+  const names = new Map([['1', 'Steam'], ['7', 'GOG']]);
+  const [g] = parseGames({ '612': { info: { title: 'LEGO Batman', thumb: 'https://x/t.jpg' }, cheapestPriceEver: { price: '3.99', date: 1543028665 }, deals: [
+    { storeID: '1', dealID: 'a', price: '19.99', retailPrice: '19.99', savings: '0' },
+    { storeID: '7', dealID: 'b', price: '4.99', retailPrice: '19.99', savings: '75.04' },
+  ] } }, names);
+  assert.deepEqual(g!.deals.map((d) => [d.store, d.price, d.savings]), [['GOG', 4.99, 75], ['Steam', 19.99, 0]]);
+  assert.match(dealsText(g!), /^\*\*\[\$4\.99\]\(https:\/\/www\.cheapshark\.com\/redirect\?dealID=b\)\*\* at GOG \(-75 %, was \$19\.99\)/);
+  assert.deepEqual([parseTarget('9,99'), parseTarget('10'), parseTarget(''), parseTarget('abc')], [9.99, 10, null, null]);
+  assert.equal(priceAlert(4.99, 3.99, 5, undefined, true), null, 'first check');
+  assert.equal(priceAlert(4.99, 3.99, 5, { best: 9.99 }, true), 'target');
+  assert.equal(priceAlert(4.99, 3.99, 5, { best: 4.99 }, true), null, 'already below');
+  assert.equal(priceAlert(3.99, 3.99, null, { best: 4.99 }, true), 'low');
+  assert.equal(priceAlert(3.99, 3.99, null, { best: 4.99 }, false), null);
+});

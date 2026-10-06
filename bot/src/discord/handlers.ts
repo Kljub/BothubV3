@@ -32,6 +32,7 @@ import { countClick, findStations, stationLines, stationTrack } from './radio.js
 import { trackLink } from './music.js';
 import { acrIdentify, icyTitle, RecognizeError, recordSample, splitStreamTitle, type Song } from './recognize.js';
 import { freeGames, freeGamesText, gameEmbed, gameSales, gameSalesText, platformsOf, type FreeGamesConfig } from '../modules/freegames.js';
+import { dealsText, findGame, gamePrices, usd } from '../modules/pricetracker.js';
 import { deleteGiveaway, endGiveaway, giveawayPayload, listGiveaways, loadGiveaway, saveGiveaway, type Giveaway } from '../modules/giveaway.js';
 
 /** What a run knows about where it runs (run.data). */
@@ -1057,6 +1058,38 @@ export function discordHandlers(repo: Repo, mod?: Moderation, secret: (key: stri
         if (run.raw(node, 'embeds') === undefined || run.bool(node, 'embeds')) {
           const embeds = games.slice(0, 10).map(gameEmbed);
           await answer(run, embeds.length ? { content: `🎮 **Free games right now (${games.length})**`, embeds } : { content: 'No free games right now.' });
+        }
+      },
+    ],
+    [
+      // Game price: the best deals of a game across PC stores (CheapShark, USD).
+      'action.game_price',
+      async (node, run) => {
+        run.countDiscordCall();
+        const name = run.str(node, 'game').trim();
+        let g;
+        try {
+          const found = await findGame(name);
+          g = found ? (await gamePrices([found.id]))[0] : undefined;
+        } catch (err) {
+          throw new GraphError('error.run.module_failed', { message: `The prices could not be loaded: ${(err as Error).message}` });
+        }
+        if (!g) {
+          run.setResult(node, '', name);
+          if (run.raw(node, 'reply') === undefined || run.bool(node, 'reply')) await answer(run, { content: `❌ No game "${name.slice(0, 80)}" found.` });
+          return 'not_found';
+        }
+        const best = g.deals[0];
+        run.setResult(node, '', g.title);
+        run.setResult(node, '.best', best ? usd(best.price) : '');
+        run.setResult(node, '.store', best?.store ?? '');
+        run.setResult(node, '.lowest', g.lowest ? usd(g.lowest.price) : '');
+        run.setResult(node, '.deals', dealsText(g));
+        if (run.raw(node, 'reply') === undefined || run.bool(node, 'reply')) {
+          const embed = new EmbedBuilder().setColor(0x22c55e).setTitle(`💲 ${g.title}`.slice(0, 256)).setDescription(dealsText(g, 8).slice(0, 4096)).setFooter({ text: 'Prices in USD · CheapShark' });
+          if (best) embed.setURL(best.url);
+          if (g.thumb) embed.setThumbnail(g.thumb);
+          await answer(run, { embeds: [embed] });
         }
       },
     ],

@@ -132,6 +132,46 @@
       "max": 500,
       "pattern": "^(https://\\S+)?$",
       "hint": true
+    },
+    {
+      "key": "s_price",
+      "type": "section"
+    },
+    {
+      "key": "priceChannel",
+      "type": "channel",
+      "channelTypes": [
+        "text",
+        "announcement"
+      ],
+      "hint": true
+    },
+    {
+      "key": "priceWatch",
+      "type": "list",
+      "max": 50,
+      "titleField": "game",
+      "hint": true,
+      "item": [
+        {
+          "key": "game",
+          "type": "text",
+          "max": 100,
+          "required": true
+        },
+        {
+          "key": "target",
+          "type": "text",
+          "max": 8,
+          "pattern": "^\\d{1,4}([.,]\\d{1,2})?$",
+          "hint": true
+        },
+        {
+          "key": "historicLow",
+          "type": "bool",
+          "default": true
+        }
+      ]
     }
   ]
 }
