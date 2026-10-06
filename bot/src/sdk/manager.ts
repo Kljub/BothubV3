@@ -5,6 +5,7 @@
 // its manifest AND switched on in the SDK policies (sdk_policies, global).
 // Plugin blocks become node types plugin.<id>.<name>.
 
+import { handover } from '../core/handover.js';
 import { redact, redactDeep } from '../core/leakguard.js';
 import { randomBytes } from 'node:crypto';
 import { readFileSync, statSync } from 'node:fs';
@@ -415,7 +416,8 @@ export class PluginManager {
     }
     const list = this.timers.get(botId) ?? [];
     this.timers.set(botId, list);
-    const run = (name: string) => p.runTask(name).catch((err) => this.logRunError(botId, p, `task ${name}`, err));
+    // While two cores run (update), only the leader runs plugin tasks.
+    const run = (name: string) => (handover.isLeader() ? p.runTask(name).catch((err) => this.logRunError(botId, p, `task ${name}`, err)) : Promise.resolve());
     const crons: { name: string; cron: Cron }[] = [];
     for (const t of p.manifest.tasks) {
       if (t.every) {

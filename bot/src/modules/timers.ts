@@ -12,6 +12,7 @@ import { lotteryDraw, payroll } from './economy.js';
 import { postFreeGames } from './freegames.js';
 import { autoPurge, dayNight } from './server-auto.js';
 import { welcomeTick } from './members.js';
+import { handover } from '../core/handover.js';
 import { stopTwitchAlerts, twitchAlertsTick } from './twitch-alerts.js';
 
 // ---------- pure helpers ----------
@@ -90,7 +91,7 @@ export class ModuleTimers {
   }
 
   async tick(client: Client, now = Date.now()): Promise<void> {
-    if (this.busy || !client.isReady()) return;
+    if (this.busy || !client.isReady() || !handover.isLeader()) return;
     this.busy = true;
     try {
       const guilds = [...client.guilds.cache.values()];

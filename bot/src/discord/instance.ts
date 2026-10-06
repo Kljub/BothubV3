@@ -2,6 +2,7 @@
 // event graphs, buttons and menus of sent messages. All bots of the instance
 // run in this one process (context/decisions.md, decision 5).
 
+import { claimEvents, handover, ROLE } from '../core/handover.js';
 import { createHash, randomUUID } from 'node:crypto';
 import {
   Client,
@@ -311,7 +312,8 @@ export class BotInstance {
     clearTimeout(this.ticker);
     this.ticker = setTimeout(() => {
       this.scheduleTick();
-      void this.runTimed(new Date());
+      // While two cores run (update), only the leader runs timers.
+      if (handover.isLeader()) void this.runTimed(new Date());
     }, 60_000 - (Date.now() % 60_000) + 50);
     this.ticker.unref();
   }
@@ -335,8 +337,11 @@ export class BotInstance {
       const c = this.client;
       this.client = null;
       await c.destroy();
-      this.deps.repo.setBotStatus(this.botId, 'stopped');
-      this.deps.repo.logUpdate(this.botId, 'log.update.bot_stopped');
+      // During an update the bots run on in the other core: no "stopped".
+      if (ROLE === 'main' && !handover.overlap) {
+        this.deps.repo.setBotStatus(this.botId, 'stopped');
+        this.deps.repo.logUpdate(this.botId, 'log.update.bot_stopped');
+      }
     }
   }
 
@@ -345,6 +350,7 @@ export class BotInstance {
       intents,
       partials: [Partials.Message, Partials.Channel, Partials.Reaction, Partials.User, Partials.GuildMember],
     });
+    claimEvents(client as never, this.botId);
     guardRest(client.rest as never);
     client.once(Events.ClientReady, (c) => void this.onReady(c.user, [...c.guilds.cache.values()]));
     client.on(Events.InteractionCreate, (i) => void this.onInteraction(i).catch((err) => log.error('interaction failed', { botId: this.botId, err })));
@@ -371,7 +377,7 @@ export class BotInstance {
     log.info('bot ready', { botId: this.botId, user: user.tag, guilds: guilds.length });
     this.deps.repo.setBotIdentity(this.botId, user.username, user.id, user.displayAvatarURL());
     this.deps.repo.setBotStatus(this.botId, 'running');
-    this.deps.repo.logUpdate(this.botId, 'log.update.bot_started', { name: user.username });
+    if (ROLE === 'main') this.deps.repo.logUpdate(this.botId, 'log.update.bot_started', { name: user.username });
     this.applyPresence();
     await this.enforceGuildAccess();
     await this.syncGuilds();
@@ -862,7 +868,7 @@ export class BotInstance {
     const now = Date.now();
     const prev = this.lastCheckMs;
     this.lastCheckMs = now;
-    if (!this.client?.isReady()) return;
+    if (!this.client?.isReady() || !handover.isLeader()) return;
     for (const ev of this.schedules) {
       if (!isDue(ev, prev, now, this.startedMs, this.timeSettings.timezone)) continue;
       ev.lastRunAt = now;
@@ -954,7 +960,7 @@ export class BotInstance {
   async runJobs(): Promise<void> {
     const c = this.client;
     // A slow run (many Discord calls) must not overlap the next tick: jobs would run twice.
-    if (!c?.isReady() || this.jobsRunning) return;
+    if (!c?.isReady() || this.jobsRunning || !handover.isLeader()) return;
     this.jobsRunning = true;
     try {
       await this.runDueJobs(c);

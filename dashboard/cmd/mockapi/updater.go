@@ -22,8 +22,11 @@ import (
 // The gateway talks to the Docker Engine through its socket and starts a
 // short-lived helper container (docker:cli with git) that runs
 //
-//	git pull --ff-only && docker compose up -d --build
+//	git pull --ff-only && sh deploy/update.sh
 //
+// (deploy/update.sh builds, lets a second BotCore run the bots while the
+// services restart, so the bots stay online; older versions without it:
+// docker compose up -d --build)
 // in the repository. The helper runs on its own, so it finishes even when
 // the update restarts the dashboard and this gateway. Needs:
 //
@@ -284,7 +287,7 @@ func (s *store) startUpdate(ctx context.Context, actor string) error {
 	if code, err := s.updater.docker(ctx, http.MethodGet, "/containers/"+updaterName+"/json", nil, &info); err == nil && code == 200 && info.State.Running {
 		return errUpdateRunning
 	}
-	if _, _, err := s.updater.run(ctx, updaterName, `echo "Update by `+strings.ReplaceAll(actor, `"`, "")+` at $(date -u +%FT%TZ)"; echo "from $SRC ($REF)"; git pull --ff-only "$SRC" "$REF" && echo "--- rebuilding ---" && docker compose up -d --build --remove-orphans && echo "--- done ---"`, false); err != nil {
+	if _, _, err := s.updater.run(ctx, updaterName, `echo "Update by `+strings.ReplaceAll(actor, `"`, "")+` at $(date -u +%FT%TZ)"; echo "from $SRC ($REF)"; git pull --ff-only "$SRC" "$REF" && if [ -f deploy/update.sh ]; then sh deploy/update.sh; else echo "--- rebuilding ---" && docker compose up -d --build --remove-orphans && echo "--- done ---"; fi`, false); err != nil {
 		return err
 	}
 	s.mu.Lock()

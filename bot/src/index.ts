@@ -15,6 +15,7 @@ import { loadSecretKey } from './core/secrets.js';
 import { StreamConsumer, STREAM_EVENTS, STREAM_JOBS } from './core/streams.js';
 import { markCleanStop, redisHeartbeatStore, startHeartbeat, type HeartbeatStore } from './core/heartbeat.js';
 import { definitions } from './graph/interpreter.js';
+import { handover, ROLE } from './core/handover.js';
 import type { NodeDefinition } from './graph/types.js';
 
 async function main(): Promise<void> {
@@ -25,8 +26,9 @@ async function main(): Promise<void> {
   let heartbeat: (HeartbeatStore & { close(): Promise<void> }) | undefined;
 
   const shutdown = async (signal: string) => {
-    log.info('bot process stopping', { signal });
+    log.info('bot process stopping', { signal, role: ROLE });
     abort.abort();
+    await handover.stop();
     if (heartbeat) {
       await markCleanStop(heartbeat).catch((err) => log.warn('clean stop marker failed', { err }));
       await heartbeat.close();
@@ -48,6 +50,8 @@ async function main(): Promise<void> {
   const defs = definitions(readdirSync(nodeDir).filter((f) => f.endsWith('.json')).map((f) => JSON.parse(readFileSync(join(nodeDir, f), 'utf8')) as NodeDefinition));
   const limits = readShared<GraphLimits>(config, 'graph-limits.json');
   const repo = new Repo(db);
+  // Second core of an update (deploy/update.sh) or the normal one: claims and leader lock.
+  await handover.start(config.redisUrl);
 
   // SDK manager: plugins run sandboxed and reach Discord and the database only through it.
   useCatalog(join(config.sharedDir, 'sdk-permissions.json'));
@@ -77,6 +81,13 @@ async function main(): Promise<void> {
   const secretKey = () => loadSecretKey(config.dataDir);
   manager = new BotManager(repo, { repo, defs, limits, plugins, secretKey }, secretKey);
   await manager.startAll();
+  await handover.markReady();
+  if (ROLE === 'handover') {
+    // Covers the bots while the bot service restarts: no jobs, no heartbeat, no idle stop.
+    log.info('handover core running', { bots: manager.runningCount() });
+    await new Promise<void>((resolve) => abort.signal.addEventListener('abort', () => resolve()));
+    return;
+  }
   const idleTimer = setInterval(() => void manager?.stopIdle().catch((err) => log.warn('idle stop failed', { err })), 300_000);
   idleTimer.unref();
 
