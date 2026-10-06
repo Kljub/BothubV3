@@ -5386,5 +5386,9 @@
   "modset.var.twitch_since": "Auf Twitch seit",
   "modset.var.twitch_last_stream": "Sein letzter Stream",
   "modset.var.twitch_language": "Seine Sprache",
-  "modset.var.twitch_is_affiliate": "Affiliate ✅/❌"
+  "modset.var.twitch_is_affiliate": "Affiliate ✅/❌",
+  "cards.vars": "Variable einfügen",
+  "cards.vars_search": "Variablen suchen…",
+  "cards.animated": "Animierte Karte (GIF)",
+  "cards.animated_hint": "GIF-Bilder (Hintergrund und Bild-Ebenen) laufen ab, die Karte wird als GIF gesendet. Große Karten werden kleiner gesendet; max. 8 Sekunden."
 }

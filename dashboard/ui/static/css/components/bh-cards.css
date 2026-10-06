@@ -61,9 +61,6 @@
 .cs-field-bool > span { flex: 1; }
 .cs-field-bool input { flex: none; }
 .cs-field-color input[type="color"] { flex: none; width: 34px; height: 30px; padding: 2px; }
-.cs-vars { display: flex; flex-wrap: wrap; gap: 4px; margin: -2px 0 10px; }
-.cs-var { padding: 2px 6px; font: inherit; font-family: var(--mono, monospace); font-size: 11px; color: var(--text-2); background: var(--surface-2); border: 1px solid var(--border); border-radius: 5px; cursor: pointer; }
-.cs-var:hover { color: var(--text); border-color: var(--border-strong); }
 .cs-center { display: flex; gap: 6px; }
 
 @media (max-width: 1200px) {
@@ -103,3 +100,16 @@
 .cs-builder-body .cs-left, .cs-builder-body .cs-right { max-height: none; min-height: 0; }
 .cs-builder-body .cs-stage { min-height: 0; overflow: auto; }
 .cs-builder-body .cs-canvas-wrap { max-height: 100%; }
+
+/* Variables of a text field: clipboard button and a searchable list (card-studio.js varPicker). */
+.cs-has-vars { position: relative; }
+.cs-has-vars textarea, .cs-has-vars input { padding-right: 34px; }
+.cs-var-btn { position: absolute; right: 6px; top: 24px; width: 26px; height: 26px; padding: 0; font-size: 13px; line-height: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; }
+.cs-var-btn:hover { border-color: var(--border-strong); }
+.cs-varpop { position: absolute; top: calc(100% + 4px); right: 0; left: 0; z-index: 20; display: flex; flex-direction: column; gap: 6px; padding: 8px; background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: 10px; box-shadow: 0 12px 30px rgb(0 0 0 / 0.45); }
+.cs-varpop-search { width: 100%; }
+.cs-varpop-list { display: flex; flex-direction: column; max-height: 240px; overflow-y: auto; }
+.cs-varpop-item { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 6px 8px; font: inherit; font-size: 12px; text-align: left; color: var(--text); background: none; border: 0; border-radius: 6px; cursor: pointer; }
+.cs-varpop-item:hover { background: color-mix(in srgb, var(--text) 8%, transparent); }
+.cs-varpop-item code { font-size: 11.5px; color: var(--accent); }
+.cs-varpop-item span { overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }

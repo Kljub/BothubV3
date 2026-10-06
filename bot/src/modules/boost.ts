@@ -47,6 +47,7 @@ async function boosted(ctx: ModuleContext, member: GuildMember, kind: 'boost' | 
   stats(ctx.db).add(ctx.botId, guild.id, `path:boost:${path}`);
   const vars = baseVars(guild, member, {
     boost_count: String(guild.premiumSubscriptionCount ?? 0),
+    boosts: String(guild.premiumSubscriptionCount ?? 0), // the boost card templates use {boosts}
     boost_level: String(guild.premiumTier),
     times_boosted: String(state.count),
   });

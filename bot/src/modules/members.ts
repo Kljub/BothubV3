@@ -5,7 +5,7 @@ import {
   type APIEmbed, type ButtonInteraction, type Guild, type GuildBan, type GuildMember, type Interaction, type Message, type MessageCreateOptions, type PartialGuildMember, type User,
 } from 'discord.js';
 import { log } from '../core/log.js';
-import { cardVars, renderCard } from '../cards/cards.js';
+import { cardFile, cardVars, renderCard } from '../cards/cards.js';
 import { stats } from '../core/stats.js';
 import { baseVars, buildMessage, fill, timeVars, idIn, idsIn, reactionOf, type MessageConfig, type ModuleContext } from './context.js';
 import { allow, assignable, send, warn } from './guard.js';
@@ -127,10 +127,11 @@ export async function addCard(ctx: ModuleContext, cardId: string | undefined, gu
   });
   if (!png) return payload;
   const out: MessageCreateOptions = payload ?? { allowedMentions: { parse: ['users'] } };
-  out.files = [{ attachment: png, name: 'card.png' }];
+  const name = cardFile(png);
+  out.files = [{ attachment: png, name }];
   // In an embed the card is its image; a text message just carries the file.
   const embed = out.embeds?.[0] as APIEmbed | undefined;
-  if (embed && !embed.image) out.embeds = [{ ...embed, image: { url: 'attachment://card.png' } }];
+  if (embed && !embed.image) out.embeds = [{ ...embed, image: { url: `attachment://${name}` } }];
   return out;
 }
 
@@ -192,6 +193,7 @@ function welcomeVars(ctx: ModuleContext, member: GuildMember, info: JoinInfo | n
   const joins = joinsOf(ctx, member.guild.id, member.id);
   return baseVars(member.guild, member, {
     member_number_ordinal: ordinal(member.guild.memberCount),
+    milestone: String(member.guild.memberCount),
     inviter_name: info?.inviterName || '?',
     times_joined: String(joins.total),
     welcome_message_link: '',

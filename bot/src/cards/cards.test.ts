@@ -46,3 +46,26 @@ test('cards: {card} in a message attaches the made card; the name leaves the tex
   attachCards(q, files);
   assert.equal(q.files, undefined);
 });
+
+test('cards: an animated GIF in an animated card gives a GIF; otherwise a PNG', async () => {
+  const { renderDesign, cardFile, gifFrames } = await import('./cards.js');
+  const { GIFEncoder, quantize, applyPalette } = (await import('gifenc')).default;
+  const { GifReader } = (await import('omggif')).default;
+  // A 2-frame GIF: red, then blue.
+  const enc = GIFEncoder();
+  for (const rgb of [[255, 0, 0], [0, 0, 255]]) {
+    const px = new Uint8ClampedArray(8 * 8 * 4);
+    for (let i = 0; i < 64; i++) px.set([...rgb, 255], i * 4);
+    const pal = quantize(px, 4);
+    enc.writeFrame(applyPalette(px, pal), 8, 8, { palette: pal, delay: 200 });
+  }
+  enc.finish();
+  const gif = Buffer.from(enc.bytes());
+  assert.equal(gifFrames(gif)!.frames.length, 2);
+  const design = { width: 200, height: 100, background: { type: 'image', image: 'asset:1' }, layers: [] };
+  const still = await renderDesign(design, {}, () => gif);
+  assert.equal(cardFile(still), 'card.png', 'not animated: the first frame as PNG');
+  const moving = await renderDesign({ ...design, animated: true }, {}, () => gif);
+  assert.equal(cardFile(moving, 'card-1'), 'card-1.gif');
+  assert.ok(new GifReader(new Uint8Array(moving)).numFrames() >= 2);
+});

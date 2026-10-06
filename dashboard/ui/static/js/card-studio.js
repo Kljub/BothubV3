@@ -49,6 +49,8 @@
             return null;
           }
         }
+        const frames = await gifFrames(src);
+        if (frames) return frames;
         return new Promise((resolve) => {
           const img = new Image();
           img.onload = () => resolve(img);
@@ -60,18 +62,53 @@
     return images.get(url);
   }
 
+  // Animated GIFs: their frames ({ frames: [{ image, delay }] }, the shared
+  // renderer picks one by time). Needs the browser's ImageDecoder; without
+  // it (or for pictures of other sites) the first frame shows.
+  let anyAnimated = false;
+  async function gifFrames(src) {
+    if (typeof ImageDecoder === 'undefined') return null;
+    try {
+      // Uploaded pictures arrive as data: URLs (no fetch: the page's CSP), others by fetch.
+      let bytes;
+      const m = /^data:image\/gif;base64,(.+)$/.exec(src);
+      if (m) bytes = Uint8Array.from(atob(m[1]), (c) => c.charCodeAt(0));
+      else if (/^data:/.test(src)) return null;
+      else {
+        const res = await fetch(src);
+        const blob = res.ok ? await res.blob() : null;
+        if (!blob || blob.type !== 'image/gif') return null;
+        bytes = new Uint8Array(await blob.arrayBuffer());
+      }
+      const dec = new ImageDecoder({ data: bytes, type: 'image/gif' });
+      await dec.tracks.ready;
+      const count = Math.min(dec.tracks.selectedTrack?.frameCount ?? 0, 100);
+      if (count < 2) return null;
+      const frames = [];
+      for (let i = 0; i < count; i++) {
+        const { image } = await dec.decode({ frameIndex: i });
+        frames.push({ image: await createImageBitmap(image), delay: Math.max(20, (image.duration || 100000) / 1000) });
+        image.close();
+      }
+      anyAnimated = true;
+      return { frames };
+    } catch {
+      return null;
+    }
+  }
+
   const PREVIEWS = {
     kljub: { 'user.avatar': 'https://cdn.discordapp.com/embed/avatars/1.png', 'second.avatar': 'https://cdn.discordapp.com/embed/avatars/3.png' },
     long: { user: 'Maximilian Sonnenschein', 'user.name': 'maximilian.sonnenschein', 'user.display': 'Maximilian Sonnenschein', 'user.avatar': 'https://cdn.discordapp.com/embed/avatars/4.png', 'member.ordinal': '12,345th', members: '12345' },
   };
   const varsFor = (r, key) => ({ ...r.SAMPLE_VARS, ...PREVIEWS.kljub, ...(PREVIEWS[key] || {}) });
 
-  async function draw(canvas, design, vars) {
+  async function draw(canvas, design, vars, time = 0) {
     const r = await load();
     const d = r.normalize(design);
     if (canvas.width !== d.width) canvas.width = d.width;
     if (canvas.height !== d.height) canvas.height = d.height;
-    await r.drawCard(canvas.getContext('2d'), design, { vars: vars || varsFor(r, 'kljub'), loadImage });
+    await r.drawCard(canvas.getContext('2d'), design, { vars: vars || varsFor(r, 'kljub'), loadImage, time });
   }
 
   // ---------- card list ----------
@@ -176,10 +213,27 @@
       drawing = true;
       do {
         again = false;
-        await draw(canvas, design, varsFor(r, preview));
+        await draw(canvas, design, varsFor(r, preview), performance.now() - animStart);
       } while (again);
       drawing = false;
       placeBox();
+      animate();
+    }
+
+    // Animated card: the preview plays (about 12 pictures a second).
+    const animStart = performance.now();
+    let animTimer = null;
+    function animate() {
+      clearTimeout(animTimer);
+      if (!design.animated || !anyAnimated || !root.isConnected) return;
+      animTimer = setTimeout(async () => {
+        if (!drawing) {
+          drawing = true;
+          await draw(canvas, design, varsFor(r, preview), performance.now() - animStart);
+          drawing = false;
+        }
+        animate();
+      }, 80);
     }
 
     const scale = () => canvas.clientWidth / canvas.width || 1;
@@ -349,15 +403,54 @@
       return input;
     }
 
-    function varChips(parent, onPick) {
-      const box = el('div', 'cs-vars');
-      for (const k of Object.keys(r.SAMPLE_VARS)) {
-        const b = el('button', 'cs-var', `{${k}}`);
-        b.type = 'button';
-        b.addEventListener('click', () => onPick(`{${k}}`));
-        box.append(b);
-      }
-      parent.append(box);
+    // Variables: a clipboard button on the field opens a searchable list
+    // (name and sample value) instead of every chip taking room below it.
+    function varPicker(input, onPick) {
+      const wrap = input.parentElement;
+      wrap.classList.add('cs-has-vars');
+      const btn = el('button', 'cs-var-btn', '📋');
+      btn.type = 'button';
+      btn.title = t('vars');
+      btn.setAttribute('aria-label', t('vars'));
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const open = wrap.querySelector('.cs-varpop');
+        if (open) return open.remove();
+        const pop = el('div', 'cs-varpop');
+        const search = el('input', 'cs-varpop-search');
+        search.placeholder = t('vars_search');
+        const list = el('div', 'cs-varpop-list');
+        const fill = () => {
+          const q = search.value.trim().toLowerCase();
+          list.innerHTML = '';
+          for (const [k, sample] of Object.entries(r.SAMPLE_VARS)) {
+            if (q && !k.toLowerCase().includes(q)) continue;
+            const item = el('button', 'cs-varpop-item');
+            item.type = 'button';
+            item.append(el('code', '', `{${k}}`), el('span', '', String(sample).split('\n')[0].slice(0, 40)));
+            item.addEventListener('click', () => {
+              onPick(`{${k}}`);
+              pop.remove();
+              input.focus();
+            });
+            list.append(item);
+          }
+        };
+        search.addEventListener('input', fill);
+        search.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') { pop.remove(); input.focus(); } });
+        pop.append(search, list);
+        wrap.append(pop);
+        fill();
+        search.focus();
+        const outside = (ev) => {
+          if (!pop.contains(ev.target) && ev.target !== btn) {
+            pop.remove();
+            document.removeEventListener('pointerdown', outside, true);
+          }
+        };
+        document.addEventListener('pointerdown', outside, true);
+      });
+      wrap.append(btn);
     }
 
     // "Your pictures": uploads of the bot; a click puts one into obj[key] as asset:<id>.
@@ -435,6 +528,8 @@
       if (!l) {
         const bg = design.background || (design.background = {});
         const g = group(t('background'));
+        field(g, design, 'animated', t('animated'), 'bool', { fallback: false });
+        g.append(el('p', 'hint', t('animated_hint')));
         field(g, bg, 'type', t('bg.type'), 'select', { options: [['color', t('bg.color')], ['gradient', t('bg.gradient')], ['image', t('bg.image')]], fallback: 'color', rerender: true });
         field(g, bg, 'color', t('colour'), 'color', { fallback: '#23272a' });
         if (bg.type === 'gradient') {
@@ -456,7 +551,7 @@
       if (l.type === 'text' || l.type === 'badge' || l.type === 'grid') {
         const area = field(g, l, 'text', l.type === 'grid' ? t('rows') : t('says'), l.type === 'text' || l.type === 'grid' ? 'area' : 'text');
         if (l.type === 'grid') g.append(el('p', 'hint', t('grid_hint')));
-        varChips(g, (v) => {
+        varPicker(area, (v) => {
           begin();
           const at = area.selectionStart ?? area.value.length;
           area.value = area.value.slice(0, at) + v + area.value.slice(area.selectionEnd ?? at);

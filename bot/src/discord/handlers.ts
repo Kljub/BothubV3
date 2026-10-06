@@ -19,7 +19,7 @@ import type { GraphNode } from '../graph/types.js';
 import { parseDuration, snowflake, snowflakes } from '../graph/util.js';
 import type { CaseAction, ModCase, Repo } from '../core/repo.js';
 import { buildMessage, hasBody } from './message.js';
-import { cardVars, renderCard } from '../cards/cards.js';
+import { cardFile, cardVars, renderCard } from '../cards/cards.js';
 import { lookupResults, lookupTwitch, twitchVars } from './twitch-lookup.js';
 import { appToken, getJson } from '../modules/feeds.js';
 import { twitchUserToken } from '../modules/twitch-alerts.js';
@@ -160,7 +160,7 @@ export function attachCards(payload: Record<string, unknown>, files: Map<string,
   for (const [name, png] of files) if (json.includes(`attachment://${name}`)) attach.push({ attachment: png, name });
   if (!attach.length) return;
   if (typeof payload.content === 'string') {
-    payload.content = payload.content.replace(/attachment:\/\/card-[a-z0-9]+\.png/g, '').trim();
+    payload.content = payload.content.replace(/attachment:\/\/card-[a-z0-9]+\.(png|gif)/g, '').trim();
   }
   payload.files = [...((payload.files as unknown[]) ?? []), ...attach];
 }
@@ -656,7 +656,7 @@ export function discordHandlers(repo: Repo, mod?: Moderation, secret: (key: stri
         if (!png) throw new GraphError('error.card.unknown');
         d.files ??= new Map();
         if (d.files.size >= 5) throw new GraphError('error.card.too_many_in_run', { max: 5 });
-        const name = `card-${d.files.size + 1}.png`;
+        const name = cardFile(png, `card-${d.files.size + 1}`);
         d.files.set(name, png);
         run.setResult(node, '', `attachment://${name}`);
       },

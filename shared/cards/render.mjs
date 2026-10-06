@@ -64,6 +64,8 @@ export function normalize(design) {
   return {
     width,
     height,
+    // Animated: GIF pictures play and the card is sent as a GIF.
+    animated: d.animated === true,
     background: {
       type: ['color', 'gradient', 'image'].includes(bg.type) ? bg.type : 'color',
       color: color(bg.color, '#23272a'),
@@ -124,6 +126,26 @@ function paint(ctx, l, x, y, w, h) {
     return g;
   }
   return color(l.fill, '#5865f2');
+}
+
+/**
+ * An animated picture is { frames: [{ image, delay }] } (delay in ms); the
+ * frame shown at time t (ms) loops through them. A still picture is itself.
+ */
+export function frameAt(img, t = 0) {
+  if (!img || !Array.isArray(img.frames) || !img.frames.length) return img;
+  const total = img.frames.reduce((n, f) => n + Math.max(20, f.delay || 100), 0);
+  let left = ((t % total) + total) % total;
+  for (const f of img.frames) {
+    left -= Math.max(20, f.delay || 100);
+    if (left < 0) return f.image;
+  }
+  return img.frames[img.frames.length - 1].image;
+}
+
+/** Length of one loop of an animated picture (ms), 0 for a still one. */
+export function loopLength(img) {
+  return img && Array.isArray(img.frames) && img.frames.length > 1 ? img.frames.reduce((n, f) => n + Math.max(20, f.delay || 100), 0) : 0;
 }
 
 /** Cover or contain an image into a box. */
@@ -230,7 +252,7 @@ export async function drawCard(ctx, design, opts = {}) {
     ctx.fillStyle = d.background.color;
     ctx.fillRect(0, 0, W, H);
     if (d.background.type === 'image' && d.background.image) {
-      const img = await load(d.background.image);
+      const img = frameAt(await load(d.background.image), opts.time);
       if (img) drawImageFit(ctx, img, 0, 0, W, H, 'cover');
     }
   }
@@ -269,7 +291,7 @@ export async function drawCard(ctx, design, opts = {}) {
       ctx.save();
       shapePath(ctx, l.type === 'avatar' && l.shape !== 'square' && l.shape !== 'rounded' ? 'circle' : 'rect', x, y, w, h, radius);
       ctx.clip();
-      const img = await load(url);
+      const img = frameAt(await load(url), opts.time);
       if (img) drawImageFit(ctx, img, x, y, w, h, l.fit === 'contain' ? 'contain' : 'cover');
       else {
         ctx.fillStyle = 'rgba(255,255,255,0.12)';

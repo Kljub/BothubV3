@@ -5386,5 +5386,9 @@
   "modset.var.twitch_since": "On Twitch since",
   "modset.var.twitch_last_stream": "Their last stream",
   "modset.var.twitch_language": "Their language",
-  "modset.var.twitch_is_affiliate": "Affiliate ✅/❌"
+  "modset.var.twitch_is_affiliate": "Affiliate ✅/❌",
+  "cards.vars": "Insert a variable",
+  "cards.vars_search": "Search variables…",
+  "cards.animated": "Animated card (GIF)",
+  "cards.animated_hint": "GIF pictures (background and image layers) play, and the card is sent as a GIF. Big cards are sent smaller; max. 8 seconds."
 }

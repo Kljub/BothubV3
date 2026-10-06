@@ -25,7 +25,7 @@ import {
 import type { GraphLimits } from '../core/config.js';
 import { guardRest, guardValue } from '../core/leakguard.js';
 import { log } from '../core/log.js';
-import { cardVars, renderCard } from '../cards/cards.js';
+import { cardFile, cardRenderer, cardVars, renderCard } from '../cards/cards.js';
 import type { CommandRow, Repo } from '../core/repo.js';
 import { GraphError, Run, type Engine, type Handler, type RunResult } from '../graph/interpreter.js';
 import { cronMatches, parseCron, type Cron } from '../graph/cron.js';
@@ -509,9 +509,11 @@ export class BotInstance {
       guildName: guild?.name ?? 'Server', guildId: guild?.id ?? '', members: guild?.memberCount ?? 1, userId: me.id, userName: me.username,
       display: me.globalName ?? me.username, avatar: me.displayAvatarURL({ extension: 'png', size: 256 }), createdAt: me.createdTimestamp, joinedAt: guild?.members.me?.joinedTimestamp ?? null,
     });
-    const png = await renderCard(this.deps.repo.db, this.botId, cardId, vars);
+    // Sample values (boosts, level, …) for what a test has no real value for.
+    const r = await cardRenderer();
+    const png = await renderCard(this.deps.repo.db, this.botId, cardId, { ...r.SAMPLE_VARS, ...vars });
     if (!png) throw new GraphError('error.card.unknown');
-    await channel.send({ content: '🖼️ Card Designer test', files: [{ attachment: png, name: 'card.png' }] });
+    await channel.send({ content: '🖼️ Card Designer test', files: [{ attachment: png, name: cardFile(png) }] });
   }
 
   async sendTemplate(templateId: number, target: string): Promise<void> {
