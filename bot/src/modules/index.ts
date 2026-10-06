@@ -18,6 +18,7 @@ import { messageReward, syncCurrencies } from './economy.js';
 import { afkMessage } from './afk.js';
 import { boostChange, boostMessage } from './boost.js';
 import { achCommand, achMessage, achReaction, achVoice } from './achievements.js';
+import { antiAudit, antiAuditWarn, antiJoin, antiMessage } from './anticontrol.js';
 import { autoMemberAdd, autoMemberRemove, autoMemberUpdate, autoMessage, autoReaction, autoVoice } from './automations.js';
 import { rolePrefix } from './server-auto.js';
 import { thanksMessage } from './thanks.js';
@@ -46,6 +47,7 @@ export function bindModules(client: Client, ctx: ModuleContext, timezone: () => 
     for (const g of guilds) guard('automod', syncAutomod(ctx, g));
     guard('stickies', ensureStickies(ctx, guilds));
     levelingVoiceInit(ctx, guilds);
+    for (const g of guilds) antiAuditWarn(ctx, g);
   });
   ctx.onChange = () => {
     syncCurrencies(ctx);
@@ -87,6 +89,7 @@ export function bindModules(client: Client, ctx: ModuleContext, timezone: () => 
     guard('boost', boostMessage(ctx, msg));
     guard('automations', autoMessage(ctx, msg));
     achMessage(ctx, msg);
+    guard('anticontrol', antiMessage(ctx, msg));
   });
   client.on(Events.MessageUpdate, (old, msg) => {
     // Link previews arrive with an edit: the media filter checks them then.
@@ -111,6 +114,7 @@ export function bindModules(client: Client, ctx: ModuleContext, timezone: () => 
     guard('invite-join', join);
     guard('member-add', join.catch(() => null).then((info) => onMemberAdd(ctx, m, info)));
     guard('automations', autoMemberAdd(ctx, m));
+    guard('anticontrol', antiJoin(ctx, m));
   });
   client.on(Events.GuildMemberRemove, (m) => {
     guard('member-remove', onMemberRemove(ctx, m));
@@ -119,6 +123,8 @@ export function bindModules(client: Client, ctx: ModuleContext, timezone: () => 
     guard('automations', autoMemberRemove(ctx, m));
   });
   client.on(Events.GuildBanAdd, (ban) => guard('ban', onBan(ctx, ban)));
+  // AntiControl: AntiNuke, webhooks and permission changes come from the audit log.
+  client.on(Events.GuildAuditLogEntryCreate, (entry, guild) => guard('anticontrol', antiAudit(ctx, entry, guild)));
   client.on(Events.MessageReactionAdd, (r, u) => {
     guard('star-add', onStarReaction(ctx, r, u));
     guard('reaction-role-add', reactionRoles(ctx, r, u, true));

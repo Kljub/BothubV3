@@ -12,6 +12,7 @@ import { lotteryDraw, payroll } from './economy.js';
 import { postFreeGames } from './freegames.js';
 import { watchPrices } from './pricetracker.js';
 import { flushAchievements } from './achievements.js';
+import { anticontrolTick } from './anticontrol.js';
 import { autoPurge, dayNight } from './server-auto.js';
 import { welcomeTick } from './members.js';
 import { handover } from '../core/handover.js';
@@ -102,6 +103,7 @@ export class ModuleTimers {
       await pollFeeds(this.ctx, guilds, now);
       await welcomeTick(this.ctx, guilds, now);
       await flushAchievements(this.ctx, guilds, now);
+      if (this.ctx.enabled('anticontrol')) await anticontrolTick(this.ctx, guilds, now);
       await twitchAlertsTick(this.ctx, guilds);
       const local = localTime(now, this.timezone());
       await this.birthdays(guilds, local);

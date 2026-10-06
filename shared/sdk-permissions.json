@@ -1135,6 +1135,28 @@
       "category": "utility"
     },
     {
+      "key": "modules.anticontrol.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "anticontrol",
+      "scope": "module",
+      "category": "security"
+    },
+    {
       "key": "modules.transcripts.read",
       "group": "modules",
       "risk": "medium",

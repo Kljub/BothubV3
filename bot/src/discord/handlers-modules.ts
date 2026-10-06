@@ -16,6 +16,7 @@ import { bookmark, bookmarkLines, bookmarksOf, removeBookmark } from '../modules
 import { giveThanks, thanksOf, thanksRank, thanksTop, ThanksError } from '../modules/thanks.js';
 import type { DiscordData } from './handlers.js';
 import * as ach from '../modules/achievements.js';
+import { lockdown, unlock } from '../modules/anticontrol.js';
 
 function guildOf(run: Run): Guild {
   const guild = (run.data as unknown as DiscordData).guild;
@@ -255,6 +256,25 @@ export function moduleHandlers(repo: Repo, botId: number): Map<string, Handler> 
       'action.bookmark_remove',
       (node, run) => {
         if (!removeBookmark(ctx, guildOf(run).id, userOf(run, node), Math.trunc(Number(run.str(node, 'number')) || 0))) throw new GraphError('error.run.economy', { message: 'There is no bookmark with this number. See /bookmarks.' });
+      },
+    ],
+    // --- AntiControl: lock or unlock the server by hand ---
+    [
+      'action.lockdown',
+      async (node, run) => {
+        const guild = guildOf(run);
+        const mode = run.str(node, 'mode') || 'on';
+        const reason = run.str(node, 'reason').trim() || 'by command';
+        if (mode === 'off') {
+          const n = await unlock(ctx, guild, reason);
+          run.setResult(node, '', n ? `🔓 Server unlocked (${n} channel(s) open again).` : 'The server was not locked.');
+          run.setResult(node, '.channels', n);
+          return;
+        }
+        const minutes = Math.max(0, Math.min(10_080, Math.floor(run.num(node, 'minutes')) || 0));
+        const n = await lockdown(ctx, guild, minutes, reason);
+        run.setResult(node, '', `🔒 Server locked: ${n} channel(s) read-only${minutes ? ` for ${minutes} minutes` : ' until /lockdown off'}.`);
+        run.setResult(node, '.channels', n);
       },
     ],
     // --- Achievements ---  (an empty "user" option: the member who asked)

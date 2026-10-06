@@ -714,3 +714,25 @@ test('achievements: unlocks once, daily challenges per day the same for all, str
   assert.deepEqual(newlyDone(m, todays).map((c) => c.name), ['Ten']);
   assert.match(dailyText(m, todays, 0), /⬜ \*\*Fifty\*\* — ▰+▱+ 25\/50 messages/);
 });
+
+test('anticontrol: scam links and look-alikes, invites, mentions, join risk, dangerous permissions, windows', async () => {
+  const { scamReason, inviteCodes, mentionCount, riskScore, newDangerous, Window } = await import('./anticontrol.js');
+  const { PermissionFlagsBits } = await import('discord.js');
+  assert.match(scamReason('free nitro https://discord-nitro.gift/abc')!, /scam link/);
+  assert.match(scamReason('trade https://steamcomrnunity.com/tradeoffer')!, /look-alike|fake/);
+  assert.match(scamReason('https://dlscord.com/gifts/x')!, /look-alike/);
+  assert.equal(scamReason('see https://discord.com/channels/1/2 and https://store.steampowered.com/app/1'), null);
+  assert.equal(scamReason('https://github.com/x'), null);
+  assert.match(scamReason('my https://evil.example/x', ['evil.example'])!, /scam link/);
+  assert.deepEqual(inviteCodes('join discord.gg/abc123 or https://discord.com/invite/XYZ'), ['abc123', 'XYZ']);
+  assert.equal(mentionCount({ users: 3, roles: 1, everyone: true }), 9);
+  const now = Date.now();
+  const fresh = riskScore({ createdTimestamp: now - 3_600_000, avatar: null, username: 'nitro_support1234' }, [], now);
+  assert.ok(fresh.score >= 80, String(fresh.score));
+  assert.equal(riskScore({ createdTimestamp: now - 400 * 86_400_000, avatar: 'a', username: 'anna' }, [], now).score, 0);
+  assert.ok(riskScore({ createdTimestamp: now - 400 * 86_400_000, avatar: 'a', username: 'kljub_mod', globalName: 'Kljub' }, ['kljub'], now).score >= 35);
+  assert.deepEqual(newDangerous(0n, PermissionFlagsBits.Administrator | PermissionFlagsBits.SendMessages), ['Administrator']);
+  assert.deepEqual(newDangerous(PermissionFlagsBits.BanMembers, PermissionFlagsBits.BanMembers), []);
+  const w = new Window();
+  assert.deepEqual([w.add('k', 10, 0), w.add('k', 10, 5000), w.add('k', 10, 16_000)], [1, 2, 1]);
+});

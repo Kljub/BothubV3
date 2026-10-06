@@ -125,6 +125,11 @@
       "icon": "🧹"
     },
     {
+      "key": "anticontrol",
+      "category": "security",
+      "icon": "🛡️"
+    },
+    {
       "key": "reaction-roles",
       "category": "messages",
       "icon": "📌"

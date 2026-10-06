@@ -18687,6 +18687,185 @@
           }
         ]
       }
+    },
+    {
+      "module": "anticontrol",
+      "group": "AntiControl",
+      "name": "lockdown",
+      "title": "Lockdown",
+      "description": "Locks or unlocks the server (channels read-only, invites paused)",
+      "graph": {
+        "schemaVersion": 1,
+        "nodes": [
+          {
+            "id": "trigger",
+            "type": "trigger.slash",
+            "typeVersion": 1,
+            "config": {
+              "command_name": "lockdown",
+              "description": "Locks or unlocks the server (channels read-only, invites paused)",
+              "permissions": {
+                "allowed_roles": [
+                  {
+                    "id": "moderation:moderator"
+                  }
+                ],
+                "banned_roles": [],
+                "required_permissions": [],
+                "banned_channels": [],
+                "hide_without_permission": false
+              }
+            },
+            "position": {
+              "x": 120,
+              "y": 240
+            }
+          },
+          {
+            "id": "option_mode",
+            "type": "option.choice",
+            "typeVersion": 1,
+            "config": {
+              "name": "mode",
+              "description": "on or off",
+              "required": true,
+              "variable": "mode",
+              "choices": "on\noff"
+            },
+            "position": {
+              "x": 120,
+              "y": 110
+            }
+          },
+          {
+            "id": "option_minutes",
+            "type": "option.number",
+            "typeVersion": 1,
+            "config": {
+              "name": "minutes",
+              "description": "How long (empty: until /lockdown off)",
+              "required": false,
+              "variable": "minutes"
+            },
+            "position": {
+              "x": 380,
+              "y": 110
+            }
+          },
+          {
+            "id": "step1",
+            "type": "action.lockdown",
+            "typeVersion": 1,
+            "config": {
+              "mode": "{option_mode}",
+              "minutes": "{option_minutes}",
+              "reason": "by {user.name}",
+              "variable": "lock"
+            },
+            "position": {
+              "x": 440,
+              "y": 240
+            }
+          },
+          {
+            "id": "step2",
+            "type": "action.send_message",
+            "typeVersion": 1,
+            "config": {
+              "message": {
+                "mode": "normal",
+                "content": "{lock}"
+              },
+              "target": "reply"
+            },
+            "position": {
+              "x": 760,
+              "y": 240
+            }
+          },
+          {
+            "id": "error",
+            "type": "utility.error_handler",
+            "typeVersion": 1,
+            "config": {
+              "variable": "error"
+            },
+            "position": {
+              "x": 120,
+              "y": 520
+            }
+          },
+          {
+            "id": "error_reply",
+            "type": "action.send_message",
+            "typeVersion": 1,
+            "config": {
+              "message": {
+                "mode": "normal",
+                "content": "❌ {error}"
+              },
+              "target": "reply",
+              "ephemeral": true
+            },
+            "position": {
+              "x": 440,
+              "y": 520
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": {
+              "node": "option_mode",
+              "port": "option"
+            },
+            "to": {
+              "node": "trigger",
+              "port": "options"
+            }
+          },
+          {
+            "from": {
+              "node": "option_minutes",
+              "port": "option"
+            },
+            "to": {
+              "node": "trigger",
+              "port": "options"
+            }
+          },
+          {
+            "from": {
+              "node": "trigger",
+              "port": "next"
+            },
+            "to": {
+              "node": "step1",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "step1",
+              "port": "next"
+            },
+            "to": {
+              "node": "step2",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "error",
+              "port": "next"
+            },
+            "to": {
+              "node": "error_reply",
+              "port": "in"
+            }
+          }
+        ]
+      }
     }
   ]
 }

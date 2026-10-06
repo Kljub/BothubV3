@@ -1,0 +1,409 @@
+{
+  "module": "anticontrol",
+  "fields": [
+    {
+      "key": "s_general",
+      "type": "section"
+    },
+    {
+      "key": "logChannel",
+      "type": "channel",
+      "channelTypes": [
+        "text"
+      ],
+      "hint": true
+    },
+    {
+      "key": "trustedRoles",
+      "type": "roles",
+      "max": 10,
+      "hint": true
+    },
+    {
+      "key": "trustedUsers",
+      "type": "words",
+      "max": 50,
+      "maxLength": 25,
+      "hint": true
+    },
+    {
+      "key": "quarantineRole",
+      "type": "role",
+      "hint": true
+    },
+    {
+      "key": "s_raid",
+      "type": "section"
+    },
+    {
+      "key": "raidEnabled",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "raidJoins",
+      "type": "number",
+      "min": 2,
+      "max": 200,
+      "default": 8,
+      "showIf": {
+        "raidEnabled": [
+          "true"
+        ]
+      },
+      "hint": true
+    },
+    {
+      "key": "raidSeconds",
+      "type": "number",
+      "min": 5,
+      "max": 600,
+      "default": 15,
+      "showIf": {
+        "raidEnabled": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "raidAction",
+      "type": "select",
+      "options": [
+        "none",
+        "timeout",
+        "kick",
+        "ban",
+        "quarantine"
+      ],
+      "default": "none",
+      "showIf": {
+        "raidEnabled": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "lockdownMinutes",
+      "type": "number",
+      "min": 0,
+      "max": 10080,
+      "default": 15,
+      "showIf": {
+        "raidEnabled": [
+          "true"
+        ]
+      },
+      "hint": true
+    },
+    {
+      "key": "lockChannels",
+      "type": "channels",
+      "max": 50,
+      "channelTypes": [
+        "text",
+        "announcement",
+        "forum"
+      ],
+      "hint": true,
+      "showIf": {
+        "raidEnabled": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "pauseInvites",
+      "type": "bool",
+      "default": true,
+      "showIf": {
+        "raidEnabled": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "s_join",
+      "type": "section"
+    },
+    {
+      "key": "ageEnabled",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "minAccountDays",
+      "type": "number",
+      "min": 0,
+      "max": 365,
+      "default": 3,
+      "showIf": {
+        "ageEnabled": [
+          "true"
+        ]
+      },
+      "hint": true
+    },
+    {
+      "key": "ageAction",
+      "type": "select",
+      "options": [
+        "none",
+        "timeout",
+        "kick",
+        "ban",
+        "quarantine"
+      ],
+      "default": "kick",
+      "showIf": {
+        "ageEnabled": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "riskEnabled",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "riskThreshold",
+      "type": "number",
+      "min": 10,
+      "max": 100,
+      "default": 60,
+      "showIf": {
+        "riskEnabled": [
+          "true"
+        ]
+      },
+      "hint": true
+    },
+    {
+      "key": "riskAction",
+      "type": "select",
+      "options": [
+        "none",
+        "timeout",
+        "kick",
+        "ban",
+        "quarantine"
+      ],
+      "default": "quarantine",
+      "showIf": {
+        "riskEnabled": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "staffNames",
+      "type": "words",
+      "max": 30,
+      "maxLength": 40,
+      "hint": true,
+      "showIf": {
+        "riskEnabled": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "botEnabled",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "botAction",
+      "type": "select",
+      "options": [
+        "kick",
+        "ban",
+        "none"
+      ],
+      "default": "kick",
+      "showIf": {
+        "botEnabled": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "s_messages",
+      "type": "section"
+    },
+    {
+      "key": "scamEnabled",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "scamAction",
+      "type": "select",
+      "options": [
+        "none",
+        "timeout",
+        "kick",
+        "ban",
+        "quarantine"
+      ],
+      "default": "timeout",
+      "showIf": {
+        "scamEnabled": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "scamDomains",
+      "type": "words",
+      "max": 200,
+      "maxLength": 100,
+      "hint": true,
+      "showIf": {
+        "scamEnabled": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "inviteEnabled",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "inviteAction",
+      "type": "select",
+      "options": [
+        "none",
+        "timeout",
+        "kick",
+        "ban",
+        "quarantine"
+      ],
+      "default": "none",
+      "showIf": {
+        "inviteEnabled": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "allowedInvites",
+      "type": "words",
+      "max": 50,
+      "maxLength": 32,
+      "hint": true,
+      "showIf": {
+        "inviteEnabled": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "mentionEnabled",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "maxMentions",
+      "type": "number",
+      "min": 3,
+      "max": 50,
+      "default": 8,
+      "showIf": {
+        "mentionEnabled": [
+          "true"
+        ]
+      },
+      "hint": true
+    },
+    {
+      "key": "mentionAction",
+      "type": "select",
+      "options": [
+        "none",
+        "timeout",
+        "kick",
+        "ban",
+        "quarantine"
+      ],
+      "default": "timeout",
+      "showIf": {
+        "mentionEnabled": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "s_audit",
+      "type": "section"
+    },
+    {
+      "key": "nukeEnabled",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "nukeLimit",
+      "type": "number",
+      "min": 2,
+      "max": 50,
+      "default": 4,
+      "showIf": {
+        "nukeEnabled": [
+          "true"
+        ]
+      },
+      "hint": true
+    },
+    {
+      "key": "nukeSeconds",
+      "type": "number",
+      "min": 5,
+      "max": 600,
+      "default": 30,
+      "showIf": {
+        "nukeEnabled": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "nukeAction",
+      "type": "select",
+      "options": [
+        "strip",
+        "kick",
+        "ban",
+        "none"
+      ],
+      "default": "strip",
+      "showIf": {
+        "nukeEnabled": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "webhookEnabled",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "permEnabled",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "permRevert",
+      "type": "bool",
+      "default": false,
+      "hint": true,
+      "showIf": {
+        "permEnabled": [
+          "true"
+        ]
+      }
+    }
+  ]
+}
