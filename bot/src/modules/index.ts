@@ -17,6 +17,7 @@ import { ModuleTimers } from './timers.js';
 import { messageReward, syncCurrencies } from './economy.js';
 import { afkMessage } from './afk.js';
 import { boostChange, boostMessage } from './boost.js';
+import { autoMemberAdd, autoMemberRemove, autoMemberUpdate, autoMessage, autoReaction, autoVoice } from './automations.js';
 import { rolePrefix } from './server-auto.js';
 import { thanksMessage } from './thanks.js';
 import { linkfixMessage } from './linkfix.js';
@@ -82,6 +83,7 @@ export function bindModules(client: Client, ctx: ModuleContext, timezone: () => 
     guard('thanks', thanksMessage(ctx, msg));
     guard('welcome-first', welcomeFirstMessage(ctx, msg));
     guard('boost', boostMessage(ctx, msg));
+    guard('automations', autoMessage(ctx, msg));
   });
   client.on(Events.MessageUpdate, (old, msg) => {
     // Link previews arrive with an edit: the media filter checks them then.
@@ -94,6 +96,7 @@ export function bindModules(client: Client, ctx: ModuleContext, timezone: () => 
   client.on(Events.GuildMemberUpdate, (before, after) => {
     guard('welcome-rules', onMemberUpdate(ctx, before, after));
     guard('boost', boostChange(ctx, before, after));
+    guard('automations', autoMemberUpdate(ctx, before, after));
     // Role Prefix: roles or name changed.
     if (before.partial || before.roles.cache.size !== after.roles.cache.size || before.displayName !== after.displayName || ![...before.roles.cache.keys()].every((r) => after.roles.cache.has(r))) {
       guard('role-prefix', rolePrefix(ctx, after));
@@ -104,17 +107,20 @@ export function bindModules(client: Client, ctx: ModuleContext, timezone: () => 
     const join = inviteJoin(ctx, m);
     guard('invite-join', join);
     guard('member-add', join.catch(() => null).then((info) => onMemberAdd(ctx, m, info)));
+    guard('automations', autoMemberAdd(ctx, m));
   });
   client.on(Events.GuildMemberRemove, (m) => {
     guard('member-remove', onMemberRemove(ctx, m));
     guard('invite-leave', inviteLeave(ctx, m));
     guard('leveling-leave', levelingLeave(ctx, m));
+    guard('automations', autoMemberRemove(ctx, m));
   });
   client.on(Events.GuildBanAdd, (ban) => guard('ban', onBan(ctx, ban)));
   client.on(Events.MessageReactionAdd, (r, u) => {
     guard('star-add', onStarReaction(ctx, r, u));
     guard('reaction-role-add', reactionRoles(ctx, r, u, true));
     guard('suggestion-vote', suggestionVote(ctx, r, u));
+    guard('automations', autoReaction(ctx, r, u));
   });
   client.on(Events.MessageReactionRemove, (r, u) => {
     guard('star-remove', onStarReaction(ctx, r, u));
@@ -123,5 +129,6 @@ export function bindModules(client: Client, ctx: ModuleContext, timezone: () => 
   client.on(Events.VoiceStateUpdate, (before, after) => {
     guard('leveling-voice', levelingVoice(ctx, before, after));
     guard('temp-voice', tempVoice(ctx, before, after));
+    guard('automations', autoVoice(ctx, before, after));
   });
 }

@@ -75,6 +75,11 @@
       "icon": "🎨"
     },
     {
+      "key": "automations",
+      "category": "utility",
+      "icon": "🤖"
+    },
+    {
       "key": "automod",
       "category": "security",
       "icon": "🤖"

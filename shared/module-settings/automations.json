@@ -1,0 +1,224 @@
+{
+  "module": "automations",
+  "fields": [
+    {
+      "key": "rules",
+      "type": "list",
+      "max": 50,
+      "titleField": "name",
+      "hint": true,
+      "item": [
+        {
+          "key": "name",
+          "type": "text",
+          "max": 60,
+          "required": true
+        },
+        {
+          "key": "enabled",
+          "type": "bool",
+          "default": true
+        },
+        {
+          "key": "s_when",
+          "type": "section"
+        },
+        {
+          "key": "trigger",
+          "type": "select",
+          "options": [
+            "member_join",
+            "member_leave",
+            "role_added",
+            "role_removed",
+            "boost",
+            "message",
+            "reaction_added",
+            "voice_join",
+            "voice_leave"
+          ],
+          "default": "member_join"
+        },
+        {
+          "key": "triggerRole",
+          "type": "role",
+          "showIf": {
+            "trigger": [
+              "role_added",
+              "role_removed"
+            ]
+          },
+          "hint": true
+        },
+        {
+          "key": "words",
+          "type": "words",
+          "max": 50,
+          "maxLength": 100,
+          "showIf": {
+            "trigger": [
+              "message"
+            ]
+          },
+          "hint": true
+        },
+        {
+          "key": "emojis",
+          "type": "emojis",
+          "max": 10,
+          "showIf": {
+            "trigger": [
+              "reaction_added"
+            ]
+          },
+          "hint": true
+        },
+        {
+          "key": "channels",
+          "type": "channels",
+          "max": 25,
+          "channelTypes": [
+            "text",
+            "announcement",
+            "voice",
+            "forum"
+          ],
+          "showIf": {
+            "trigger": [
+              "message",
+              "reaction_added",
+              "voice_join",
+              "voice_leave"
+            ]
+          },
+          "hint": true
+        },
+        {
+          "key": "onlyRole",
+          "type": "role",
+          "hint": true
+        },
+        {
+          "key": "ignoreBots",
+          "type": "bool",
+          "default": true
+        },
+        {
+          "key": "s_then",
+          "type": "section"
+        },
+        {
+          "key": "action",
+          "type": "select",
+          "options": [
+            "send_message",
+            "dm",
+            "reply",
+            "add_role",
+            "remove_role",
+            "react",
+            "delete_message",
+            "timeout"
+          ],
+          "default": "send_message",
+          "hint": true
+        },
+        {
+          "key": "actionChannel",
+          "type": "channel",
+          "channelTypes": [
+            "text",
+            "announcement"
+          ],
+          "showIf": {
+            "action": [
+              "send_message"
+            ]
+          },
+          "hint": true
+        },
+        {
+          "key": "actionMessage",
+          "type": "message",
+          "showIf": {
+            "action": [
+              "send_message",
+              "dm",
+              "reply"
+            ]
+          },
+          "default": {
+            "mode": "text",
+            "content": "{user.mention} …"
+          },
+          "vars": [
+            "user",
+            "user.mention",
+            "user.name",
+            "user.id",
+            "user.avatar",
+            "server",
+            "server.id",
+            "members",
+            "channel",
+            "channel.id",
+            "message.content",
+            "message.link",
+            "role",
+            "role.id",
+            "emoji",
+            "rule"
+          ]
+        },
+        {
+          "key": "actionRole",
+          "type": "role",
+          "showIf": {
+            "action": [
+              "add_role",
+              "remove_role"
+            ]
+          }
+        },
+        {
+          "key": "actionEmojis",
+          "type": "emojis",
+          "max": 5,
+          "showIf": {
+            "action": [
+              "react"
+            ]
+          }
+        },
+        {
+          "key": "timeoutMinutes",
+          "type": "number",
+          "min": 1,
+          "max": 40320,
+          "default": 10,
+          "showIf": {
+            "action": [
+              "timeout"
+            ]
+          }
+        },
+        {
+          "key": "delaySeconds",
+          "type": "number",
+          "min": 0,
+          "max": 3600,
+          "default": 0,
+          "hint": true
+        },
+        {
+          "key": "cooldownSeconds",
+          "type": "number",
+          "min": 0,
+          "max": 86400,
+          "default": 0,
+          "hint": true
+        }
+      ]
+    }
+  ]
+}

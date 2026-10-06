@@ -626,3 +626,28 @@ test('boost: a boost seen twice (system message and "boosting since") counts onc
   assert.equal(seenBoost('b:g:other', 30_000), false);
   assert.equal(seenBoost('b:g:u', 200_000), false); // two minutes later: a new boost
 });
+
+test('automations: trigger, role, words, emoji, channel and member filters', async () => {
+  const { ruleMatches, wordsMatch } = await import('./automations.js');
+  const g = '100000000000000001';
+  const ref = (id: string) => ({ id, guild: g });
+  const base = { guildId: g, isBot: false, memberRoles: ['r1'] };
+  assert.equal(wordsMatch('Hello World', []), true);
+  assert.equal(wordsMatch('Hello World', ['world']), true);
+  assert.equal(wordsMatch('Hello', ['bye', ' ']), false);
+  const rule = { enabled: true, trigger: 'role_added' as const, triggerRole: ref('r9'), ignoreBots: true };
+  assert.equal(ruleMatches(rule, { ...base, trigger: 'role_added', roleId: 'r9' }), true);
+  assert.equal(ruleMatches(rule, { ...base, trigger: 'role_added', roleId: 'r8' }), false, 'other role');
+  assert.equal(ruleMatches(rule, { ...base, trigger: 'role_removed', roleId: 'r9' }), false, 'other trigger');
+  assert.equal(ruleMatches({ ...rule, enabled: false }, { ...base, trigger: 'role_added', roleId: 'r9' }), false, 'rule off');
+  const msg = { enabled: true, trigger: 'message' as const, words: ['help'], channels: [ref('c1')], onlyRole: ref('r1') };
+  assert.equal(ruleMatches(msg, { ...base, trigger: 'message', channelId: 'c1', text: 'I need HELP' }), true);
+  assert.equal(ruleMatches(msg, { ...base, trigger: 'message', channelId: 'c2', text: 'help' }), false, 'other channel');
+  assert.equal(ruleMatches(msg, { ...base, trigger: 'message', channelId: 'c1', text: 'hi' }), false, 'no word');
+  assert.equal(ruleMatches(msg, { ...base, memberRoles: [], trigger: 'message', channelId: 'c1', text: 'help' }), false, 'role missing');
+  assert.equal(ruleMatches(msg, { ...base, isBot: true, trigger: 'message', channelId: 'c1', text: 'help' }), false, 'bots ignored');
+  const react = { enabled: true, trigger: 'reaction_added' as const, emojis: ['👍', '<:pepe:123456789012345678>'] };
+  assert.equal(ruleMatches(react, { ...base, trigger: 'reaction_added', emoji: { id: null, name: '👍' } }), true);
+  assert.equal(ruleMatches(react, { ...base, trigger: 'reaction_added', emoji: { id: '123456789012345678', name: 'pepe' } }), true);
+  assert.equal(ruleMatches(react, { ...base, trigger: 'reaction_added', emoji: { id: null, name: '👎' } }), false);
+});

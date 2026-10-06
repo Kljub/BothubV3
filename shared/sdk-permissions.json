@@ -1113,6 +1113,28 @@
       "category": "utility"
     },
     {
+      "key": "modules.automations.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "automations",
+      "scope": "module",
+      "category": "utility"
+    },
+    {
       "key": "modules.transcripts.read",
       "group": "modules",
       "risk": "medium",
