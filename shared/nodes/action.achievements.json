@@ -1,0 +1,70 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.achievements",
+  "version": 1,
+  "category": "action",
+  "group": "leveling",
+  "order": 900,
+  "color": "orange",
+  "icon": "🏆",
+  "labelKey": "builder.node.action_achievements.label",
+  "descriptionKey": "builder.node.action_achievements.description",
+  "module": "achievements",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": "",
+      "labelKey": "builder.result.achievements.0"
+    },
+    {
+      "suffix": ".unlocked",
+      "labelKey": "builder.result.achievements.1"
+    },
+    {
+      "suffix": ".total",
+      "labelKey": "builder.result.achievements.2"
+    },
+    {
+      "suffix": ".messages",
+      "labelKey": "builder.result.achievements.3"
+    },
+    {
+      "suffix": ".voice",
+      "labelKey": "builder.result.achievements.4"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "user": {
+        "type": "string",
+        "maxLength": 100,
+        "default": "{user.id}",
+        "x-ref": "member",
+        "x-labelKey": "builder.cfg.user",
+        "x-hintKey": "builder.cfg.ref_hint"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  }
+}

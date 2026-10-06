@@ -688,3 +688,29 @@ test('game price tracker: deals cheapest first, target and lowest-ever alerts on
   assert.equal(priceAlert(3.99, 3.99, null, { best: 4.99 }, true), 'low');
   assert.equal(priceAlert(3.99, 3.99, null, { best: 4.99 }, false), null);
 });
+
+test('achievements: unlocks once, daily challenges per day the same for all, streak', async () => {
+  const { challengesOf, newlyUnlocked, newlyDone, load, achievementsText, dailyText } = await import('./achievements.js');
+  const pool = [1, 2, 3, 4, 5, 6].map((i) => ({ _id: `c${i}`, name: `C${i}`, metric: 'messages' as const, goal: i * 10, coins: 5 }));
+  const a = challengesOf(pool, '2026-10-06', 'g1', 3);
+  assert.equal(a.length, 3);
+  assert.deepEqual(challengesOf(pool, '2026-10-06', 'g1', 3), a, 'same day, same server: same challenges');
+  assert.notDeepEqual(challengesOf(pool, '2026-10-07', 'g1', 3).map((c) => c._id), a.map((c) => c._id), 'another day: others');
+  const repo = { db: { prepare: () => ({ get: () => undefined, run: () => undefined }) } };
+  const ctx = { getState: () => undefined, repo, db: repo.db } as never;
+  const m = load(ctx, 'g1', 'u1', '2026-10-06');
+  m.total.messages = 120;
+  m.day.counts.messages = 25;
+  const list = [
+    { _id: 'a1', name: 'Talker', description: '', emoji: '💬', metric: 'messages' as const, goal: 100, role: null, coins: 10, hidden: false },
+    { _id: 'a2', name: 'Veteran', description: '', emoji: '', metric: 'days' as const, goal: 365, role: null, coins: 0, hidden: true },
+  ];
+  assert.deepEqual(newlyUnlocked(m, list, { days: 10, level: 0 }).map((x) => x.name), ['Talker']);
+  m.unlocked.push('a1');
+  assert.deepEqual(newlyUnlocked(m, list, { days: 10, level: 0 }), [], 'not twice');
+  assert.match(achievementsText(m, list, { days: 10, level: 0 }), /💬 \*\*Talker\*\* ✅/);
+  assert.doesNotMatch(achievementsText(m, list, { days: 10, level: 0 }), /Veteran/, 'hidden until unlocked');
+  const todays = [{ _id: 'x', name: 'Ten', metric: 'messages' as const, goal: 10, coins: 0 }, { _id: 'y', name: 'Fifty', metric: 'messages' as const, goal: 50, coins: 0 }];
+  assert.deepEqual(newlyDone(m, todays).map((c) => c.name), ['Ten']);
+  assert.match(dailyText(m, todays, 0), /⬜ \*\*Fifty\*\* — ▰+▱+ 25\/50 messages/);
+});

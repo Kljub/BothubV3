@@ -1,0 +1,154 @@
+{
+  "module": "achievements",
+  "fields": [
+    {
+      "key": "channel",
+      "type": "channel",
+      "channelTypes": [
+        "text",
+        "announcement"
+      ],
+      "hint": true
+    },
+    {
+      "key": "dm",
+      "type": "bool",
+      "default": false,
+      "hint": true
+    },
+    {
+      "key": "achievements",
+      "type": "list",
+      "max": 100,
+      "titleField": "name",
+      "hint": true,
+      "unique": [
+        "name"
+      ],
+      "item": [
+        {
+          "key": "name",
+          "type": "text",
+          "max": 60,
+          "required": true
+        },
+        {
+          "key": "description",
+          "type": "text",
+          "max": 200
+        },
+        {
+          "key": "emoji",
+          "type": "text",
+          "max": 64
+        },
+        {
+          "key": "metric",
+          "type": "select",
+          "options": [
+            "messages",
+            "voice",
+            "reactions",
+            "commands",
+            "days",
+            "level"
+          ],
+          "default": "messages"
+        },
+        {
+          "key": "goal",
+          "type": "number",
+          "min": 1,
+          "max": 10000000,
+          "default": 100
+        },
+        {
+          "key": "coins",
+          "type": "number",
+          "min": 0,
+          "max": 10000000,
+          "default": 0,
+          "hint": true
+        },
+        {
+          "key": "role",
+          "type": "role"
+        },
+        {
+          "key": "hidden",
+          "type": "bool",
+          "default": false,
+          "hint": true
+        }
+      ]
+    },
+    {
+      "key": "s_daily",
+      "type": "section"
+    },
+    {
+      "key": "dailyEnabled",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "dailyCount",
+      "type": "number",
+      "min": 1,
+      "max": 5,
+      "default": 3,
+      "hint": true
+    },
+    {
+      "key": "streakCoins",
+      "type": "number",
+      "min": 0,
+      "max": 1000000,
+      "default": 0,
+      "hint": true
+    },
+    {
+      "key": "challenges",
+      "type": "list",
+      "max": 50,
+      "titleField": "name",
+      "hint": true,
+      "unique": [
+        "name"
+      ],
+      "item": [
+        {
+          "key": "name",
+          "type": "text",
+          "max": 60,
+          "required": true
+        },
+        {
+          "key": "metric",
+          "type": "select",
+          "options": [
+            "messages",
+            "voice",
+            "reactions",
+            "commands"
+          ],
+          "default": "messages"
+        },
+        {
+          "key": "goal",
+          "type": "number",
+          "min": 1,
+          "max": 100000,
+          "default": 20
+        },
+        {
+          "key": "coins",
+          "type": "number",
+          "min": 0,
+          "max": 1000000,
+          "default": 0
+        }
+      ]
+    }
+  ]
+}

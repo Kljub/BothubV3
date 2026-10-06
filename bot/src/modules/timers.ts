@@ -11,6 +11,7 @@ import { pollFeeds } from './feeds.js';
 import { lotteryDraw, payroll } from './economy.js';
 import { postFreeGames } from './freegames.js';
 import { watchPrices } from './pricetracker.js';
+import { flushAchievements } from './achievements.js';
 import { autoPurge, dayNight } from './server-auto.js';
 import { welcomeTick } from './members.js';
 import { handover } from '../core/handover.js';
@@ -100,6 +101,7 @@ export class ModuleTimers {
       if (Math.floor(now / 600_000) !== Math.floor((now - 30_000) / 600_000)) await this.statChannels(guilds);
       await pollFeeds(this.ctx, guilds, now);
       await welcomeTick(this.ctx, guilds, now);
+      await flushAchievements(this.ctx, guilds, now);
       await twitchAlertsTick(this.ctx, guilds);
       const local = localTime(now, this.timezone());
       await this.birthdays(guilds, local);

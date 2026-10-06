@@ -17,6 +17,7 @@ import { ModuleTimers } from './timers.js';
 import { messageReward, syncCurrencies } from './economy.js';
 import { afkMessage } from './afk.js';
 import { boostChange, boostMessage } from './boost.js';
+import { achCommand, achMessage, achReaction, achVoice } from './achievements.js';
 import { autoMemberAdd, autoMemberRemove, autoMemberUpdate, autoMessage, autoReaction, autoVoice } from './automations.js';
 import { rolePrefix } from './server-auto.js';
 import { thanksMessage } from './thanks.js';
@@ -60,6 +61,7 @@ export function bindModules(client: Client, ctx: ModuleContext, timezone: () => 
   client.on(Events.InteractionCreate, (i) => {
     guard('interaction', onModuleInteraction(ctx, i));
     guard('welcome-button', welcomeButtonRoute(ctx, i));
+    achCommand(ctx, i);
   });
   client.on(Events.GuildCreate, (g) => {
     guard('invites', cacheInvites(ctx, g));
@@ -84,6 +86,7 @@ export function bindModules(client: Client, ctx: ModuleContext, timezone: () => 
     guard('welcome-first', welcomeFirstMessage(ctx, msg));
     guard('boost', boostMessage(ctx, msg));
     guard('automations', autoMessage(ctx, msg));
+    achMessage(ctx, msg);
   });
   client.on(Events.MessageUpdate, (old, msg) => {
     // Link previews arrive with an edit: the media filter checks them then.
@@ -121,6 +124,7 @@ export function bindModules(client: Client, ctx: ModuleContext, timezone: () => 
     guard('reaction-role-add', reactionRoles(ctx, r, u, true));
     guard('suggestion-vote', suggestionVote(ctx, r, u));
     guard('automations', autoReaction(ctx, r, u));
+    achReaction(ctx, r, u);
   });
   client.on(Events.MessageReactionRemove, (r, u) => {
     guard('star-remove', onStarReaction(ctx, r, u));
@@ -130,5 +134,6 @@ export function bindModules(client: Client, ctx: ModuleContext, timezone: () => 
     guard('leveling-voice', levelingVoice(ctx, before, after));
     guard('temp-voice', tempVoice(ctx, before, after));
     guard('automations', autoVoice(ctx, before, after));
+    achVoice(ctx, before, after);
   });
 }

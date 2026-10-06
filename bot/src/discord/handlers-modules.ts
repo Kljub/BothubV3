@@ -15,6 +15,7 @@ import { afkOf, clearAfk, setAfk } from '../modules/afk.js';
 import { bookmark, bookmarkLines, bookmarksOf, removeBookmark } from '../modules/bookmarks.js';
 import { giveThanks, thanksOf, thanksRank, thanksTop, ThanksError } from '../modules/thanks.js';
 import type { DiscordData } from './handlers.js';
+import * as ach from '../modules/achievements.js';
 
 function guildOf(run: Run): Guild {
   const guild = (run.data as unknown as DiscordData).guild;
@@ -41,6 +42,12 @@ async function econ(fn: () => unknown): Promise<void> {
     if (err instanceof Error && err.message === 'economy.unknown_currency') throw new GraphError('error.run.economy', { message: 'Unknown currency.' });
     throw err;
   }
+}
+
+/** The member of an achievements block: the "user" field, or the member who asked when it is empty. */
+function achUser(run: Run, node: GraphNode): string {
+  const raw = run.str(node, 'user').replace(/[<@!>]/g, '').trim();
+  return /^\d{15,21}$/.test(raw) ? raw : snowflake(run.vars.get('user.id') ?? '', 'user');
 }
 
 function limitOf(run: Run, node: GraphNode): number {
@@ -248,6 +255,39 @@ export function moduleHandlers(repo: Repo, botId: number): Map<string, Handler> 
       'action.bookmark_remove',
       (node, run) => {
         if (!removeBookmark(ctx, guildOf(run).id, userOf(run, node), Math.trunc(Number(run.str(node, 'number')) || 0))) throw new GraphError('error.run.economy', { message: 'There is no bookmark with this number. See /bookmarks.' });
+      },
+    ],
+    // --- Achievements ---  (an empty "user" option: the member who asked)
+    [
+      'action.achievements',
+      async (node, run) => {
+        const guild = guildOf(run);
+        const userId = achUser(run, node);
+        const cfg = ctx.config<{ achievements: ach.Achievement[] }>('achievements');
+        const m = ach.current(ctx, guild.id, userId);
+        const member = await guild.members.fetch(userId).catch(() => null);
+        const row = db.prepare('SELECT level FROM leveling_members WHERE bot_id = ? AND guild_id = ? AND user_id = ?').get(botId, guild.id, userId) as { level: number } | undefined;
+        const extra = { days: member?.joinedTimestamp ? Math.floor((Date.now() - member.joinedTimestamp) / 86_400_000) : 0, level: row?.level ?? 0 };
+        const list = (cfg.achievements ?? []).filter((a) => a?.name && a.goal > 0);
+        run.setResult(node, '', ach.achievementsText(m, list, extra));
+        run.setResult(node, '.unlocked', m.unlocked.filter((k) => list.some((a) => (a._id ?? a.name) === k)).length);
+        run.setResult(node, '.total', list.length);
+        run.setResult(node, '.messages', m.total.messages);
+        run.setResult(node, '.voice', m.total.voice);
+      },
+    ],
+    [
+      'action.daily_challenges',
+      async (node, run) => {
+        const guild = guildOf(run);
+        const userId = achUser(run, node);
+        const cfg = ctx.config<{ dailyEnabled: boolean; dailyCount: number; streakCoins: number; challenges: ach.Challenge[] }>('achievements');
+        const todays = cfg.dailyEnabled !== false ? ach.challengesOf(cfg.challenges ?? [], ach.today(), guild.id, cfg.dailyCount ?? 3) : [];
+        const m = ach.current(ctx, guild.id, userId);
+        run.setResult(node, '', todays.length ? ach.dailyText(m, todays, cfg.streakCoins ?? 0) : 'No daily challenges set up.');
+        run.setResult(node, '.done', todays.filter((c) => m.day.done.includes(c._id ?? c.name) || (m.day.counts[c.metric] ?? 0) >= c.goal).length);
+        run.setResult(node, '.total', todays.length);
+        run.setResult(node, '.streak', m.streak);
       },
     ],
     // --- AFK ---
