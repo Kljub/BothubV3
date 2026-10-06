@@ -37,6 +37,13 @@ type settingsField struct {
 	Pattern      string              `json:"pattern"`
 	Hint         bool                `json:"hint"`
 	Required     bool                `json:"required"`
+	// Drop: a list whose entries can be made by dropping image files on it;
+	// File is the image field of an entry, Name the text field that gets the
+	// file name (without extension).
+	Drop *struct {
+		File string `json:"file"`
+		Name string `json:"name"`
+	} `json:"drop"`
 	// permissions: which lists of the block the field shows (default all
 	// four: allowed_roles, banned_roles, required_permissions, banned_channels).
 	Lists []string `json:"lists"`
@@ -50,6 +57,14 @@ type settingsField struct {
 	Dynamic bool `json:"dynamic"`
 	// Accept: what a "file" field takes ("audio").
 	Accept string `json:"accept"`
+}
+
+// Limit is the shown maximum of a list: 0 when it has none ("max": 0).
+func (f settingsField) Limit() int {
+	if f.Max == nil {
+		return 0
+	}
+	return *f.Max
 }
 
 type settingsSchema struct {
@@ -387,7 +402,7 @@ func (s *Server) scopeData(r *http.Request, botID int64, scope settingsScope) (s
 			lv.Items = append(lv.Items, iv)
 		}
 		lv.New = s.buildFields(&v, scope.LabelPrefix, f.Key+".", f.Item, itemDefaults(f.Item))
-		lv.Full = f.Max != nil && len(items) >= *f.Max
+		lv.Full = f.Max != nil && *f.Max > 0 && len(items) >= *f.Max // "max": 0 = no limit
 		v.Lists = append(v.Lists, lv)
 	}
 	return v, nil

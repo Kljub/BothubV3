@@ -5390,5 +5390,6 @@
   "cards.vars": "Variable einfügen",
   "cards.vars_search": "Variablen suchen…",
   "cards.animated": "Animierte Karte (GIF)",
-  "cards.animated_hint": "GIF-Bilder (Hintergrund und Bild-Ebenen) laufen ab, die Karte wird als GIF gesendet. Große Karten werden kleiner gesendet; max. 8 Sekunden."
+  "cards.animated_hint": "GIF-Bilder (Hintergrund und Bild-Ebenen) laufen ab, die Karte wird als GIF gesendet. Große Karten werden kleiner gesendet; max. 8 Sekunden.",
+  "modset.drop.hint": "Bilddateien hierher ziehen: jede wird ein Eintrag, benannt nach dem Dateinamen."
 }

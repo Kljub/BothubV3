@@ -209,7 +209,8 @@ final class ModuleSettings
                 if ($missing || $v === null) {
                     return [];
                 }
-                if (!is_array($v) || !array_is_list($v) || count($v) > ($f['max'] ?? self::LIST_MAX)) {
+                // "max": 0 = no limit (e.g. the emojis of the Emoji Manager).
+                if (!is_array($v) || !array_is_list($v) || (($f['max'] ?? self::LIST_MAX) > 0 && count($v) > ($f['max'] ?? self::LIST_MAX))) {
                     self::fail($path);
                 }
                 $items = [];

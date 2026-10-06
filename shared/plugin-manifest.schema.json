@@ -446,6 +446,16 @@
           "type": "string",
           "pattern": "^[a-z][a-zA-Z0-9_]{0,31}$"
         },
+        "drop": {
+          "type": "object",
+          "description": "list: image files dropped on the list become entries; file = the image field, name = the text field that gets the file name without extension.",
+          "required": ["file", "name"],
+          "additionalProperties": false,
+          "properties": {
+            "file": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9_]{0,31}$" },
+            "name": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9_]{0,31}$" }
+          }
+        },
         "unique": {
           "type": "array",
           "maxItems": 5,

@@ -26,9 +26,10 @@
 {{range .Lists}}
 {{$l := .}}
 <section class="box">
-  <header class="box-head"><h2>{{t $l.Field.Label}} <span class="badge-soft">{{len $l.Items}}{{with $l.Field.Max}}/{{.}}{{end}}</span></h2></header>
-  <div class="box-body">
+  <header class="box-head"><h2>{{t $l.Field.Label}} <span class="badge-soft">{{len $l.Items}}{{with $l.Field.Limit}}/{{.}}{{end}}</span></h2></header>
+  <div class="box-body"{{with $l.Field.Drop}}{{if and $v.Files (not $l.Full)}} data-drop-files data-drop-upload="{{$v.Files}}" data-drop-post="{{$v.URL $l.Field.Key -1}}" data-drop-file="{{.File}}" data-drop-name="{{.Name}}"{{end}}{{end}}>
     {{if $l.Field.Hint}}<p class="hint hint-top">{{t (printf "%s_hint" $l.Field.Label)}}</p>{{end}}
+    {{with $l.Field.Drop}}{{if and $v.Files (not $l.Full)}}<div class="modset-dropzone" data-drop-zone><span>⬇️ {{t "modset.drop.hint"}}</span><span class="hint" data-drop-status></span></div>{{end}}{{end}}
     {{range $l.Items}}
     <details class="modset-item">
       <summary>{{with .Thumb}}<img class="modset-thumb" src="{{.}}" alt="" loading="lazy">{{end}}<strong>{{.Title}}</strong></summary>

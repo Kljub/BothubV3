@@ -262,3 +262,60 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => apply(document));
   else apply(document);
 })();
+
+// Lists with "drop" in their schema (e.g. the emojis of the Emoji Manager):
+// image files dropped on the list each become a new entry. The file is
+// uploaded like an image field, the entry's name is the file name without
+// its extension (lower case, only a-z 0-9 _ -).
+(() => {
+  const csrfToken = () => document.querySelector('meta[name="csrf-token"]')?.content || '';
+  const nameOf = (file) => file.name.replace(/\.[^.]+$/, '').toLowerCase().replace(/[^a-z0-9_-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 32) || 'emoji';
+  const zoneOf = (ev) => ev.target.closest?.('[data-drop-files]');
+  document.addEventListener('dragover', (ev) => {
+    const box = zoneOf(ev);
+    if (!box || ![...(ev.dataTransfer?.types || [])].includes('Files')) return;
+    ev.preventDefault();
+    box.classList.add('is-dropping');
+  });
+  document.addEventListener('dragleave', (ev) => {
+    const box = zoneOf(ev);
+    if (box && !box.contains(ev.relatedTarget)) box.classList.remove('is-dropping');
+  });
+  document.addEventListener('drop', async (ev) => {
+    const box = zoneOf(ev);
+    if (!box) return;
+    ev.preventDefault();
+    box.classList.remove('is-dropping');
+    const files = [...(ev.dataTransfer?.files || [])].filter((f) => /^image\/(png|gif|webp|jpeg)$/.test(f.type));
+    const status = box.querySelector('[data-drop-status]');
+    const errors = [];
+    let html = null;
+    for (const [i, file] of files.entries()) {
+      if (status) status.textContent = `${i + 1}/${files.length} · ${file.name}`;
+      try {
+        const up = new FormData();
+        up.append('file', file);
+        const res = await fetch(box.dataset.dropUpload, { method: 'POST', body: up, headers: { 'X-CSRF-Token': csrfToken() }, credentials: 'same-origin' });
+        const out = await res.json().catch(() => ({}));
+        if (!res.ok || !out.name) throw new Error(out.error || res.statusText);
+        const form = new URLSearchParams({ [box.dataset.dropName]: nameOf(file), [box.dataset.dropFile]: out.name });
+        const add = await fetch(box.dataset.dropPost, { method: 'POST', body: form, headers: { 'X-CSRF-Token': csrfToken(), 'HX-Request': 'true' }, credentials: 'same-origin' });
+        const text = await add.text();
+        // A refused entry comes back as the error box (HX-Retarget) or an error status.
+        if (!add.ok || add.headers.get('HX-Retarget')) throw new Error(new DOMParser().parseFromString(text, 'text/html').body.textContent.trim().slice(0, 200) || add.statusText);
+        html = text;
+      } catch (err) {
+        errors.push(`${file.name}: ${err.message || err}`);
+      }
+    }
+    // The page shows the new entries (the answer of the last one has them all).
+    const body = document.getElementById('modset-body');
+    if (html && body) {
+      body.innerHTML = html;
+      window.htmx?.process(body);
+    }
+    const target = document.getElementById('modset-error');
+    if (target) target.textContent = errors.join('\n');
+    if (status && !html) status.textContent = '';
+  });
+})();

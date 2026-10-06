@@ -98,6 +98,9 @@ $req = ['fields' => [['key' => 'channel', 'type' => 'channel', 'required' => tru
 check('required top field: sent empty is refused', rejects($req, ['channel' => null, 'sites' => []], 'channel'));
 check('required top field: left out (list entry saved first) passes', ModuleSettings::normalize($req, ['sites' => [['url' => 'https://a.b']]])['channel'] === null);
 check('required list field: still refused', rejects($req, ['sites' => [['url' => '']]], 'sites.0.url'));
+$many = ['fields' => [['key' => 'items', 'type' => 'list', 'max' => 0, 'item' => [['key' => 'n', 'type' => 'text']]]]];
+check('list max 0: no limit', count(ModuleSettings::normalize($many, ['items' => array_fill(0, 250, ['n' => 'x'])])['items']) === 250);
+check('list without max: 100', rejects(['fields' => [['key' => 'items', 'type' => 'list', 'item' => [['key' => 'n', 'type' => 'text']]]]], ['items' => array_fill(0, 101, ['n' => 'x'])], 'items'));
 $saved = ModuleSettings::normalize($tm, ['messages' => [['name' => 'x', 'channel' => $ref]]]);
 $id = $saved['messages'][0]['_id'] ?? '';
 check('list entry gets a stable id', preg_match('/^[a-z0-9]{12}$/', $id) === 1);

@@ -39,7 +39,10 @@ means nobody. Own card texts: `permblock.<label>.who`, `.<list>`, `.<list>_hint`
 `.<list>_empty`, where `<label>` is the field's label key (e.g.
 `permblock.modset.honeypot.exempt.allowed_roles`).
 
-Any field may have `required: true` (empty values are refused on save). List entries get a
+Any field may have `required: true` (empty values are refused on save). A list with `max: 0` has no limit (without `max`: 100 entries). A list with `drop: {"file": "<image field>", "name": "<text field>"}` takes image files
+dropped on it: each becomes an entry, the text field gets the file name without extension.
+
+List entries get a
 stable `_id` from the API (kept on edits), so the bot can keep state per entry.
 
 List fields may have `unique: ["field", …]`: the API refuses two entries with the same
