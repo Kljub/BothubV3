@@ -750,3 +750,14 @@ test('twitch drops: parsed streams, a post only when Drops start', async () => {
   assert.equal(dropsChange({ live: true, since: t }, false, t + 900_000).state.live, true, 'a short gap does not end it');
   assert.equal(dropsChange({ live: true, since: t }, false, t + 4_000_000).state.live, false);
 });
+
+test('twitch sub roles: the role of the tier and the any-sub role; the others are taken', async () => {
+  const { rolesFor } = await import('./twitchsubs.js');
+  const g = '1';
+  const ref = (id: string) => ({ id, guild: g });
+  const cfg = { tier1Role: ref('r1'), tier2Role: ref('r2'), tier3Role: ref('r3'), anySubRole: ref('rs') };
+  assert.deepEqual(rolesFor('2000', cfg, g), { give: ['r2', 'rs'], take: ['r1', 'r3'] });
+  assert.deepEqual(rolesFor(null, cfg, g), { give: [], take: ['r1', 'r2', 'r3', 'rs'] });
+  assert.deepEqual(rolesFor('1000', { tier1Role: ref('r1') }, g), { give: ['r1'], take: [] });
+  assert.deepEqual(rolesFor('3000', { anySubRole: ref('rs') }, g), { give: ['rs'], take: [] });
+});

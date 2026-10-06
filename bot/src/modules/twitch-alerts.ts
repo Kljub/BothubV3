@@ -10,6 +10,7 @@ import { decrypt, encrypt } from '../core/secrets.js';
 import type { Db } from '../core/db.js';
 import { lookupTwitch, twitchVars } from '../discord/twitch-lookup.js';
 import { appToken, getJson } from './feeds.js';
+import { syncSubRoles } from './twitchsubs.js';
 import { log } from '../core/log.js';
 import { baseVars, buildMessage, idIn, idsIn, type MessageConfig, type ModuleContext } from './context.js';
 import { send, warn } from './guard.js';
@@ -200,6 +201,8 @@ class Connection {
       payload.allowedMentions = { roles };
     } else payload.allowedMentions = { parse: [] };
     await send(this.ctx, 'twitch-alerts', channel, payload);
+    // A new sub: the sub roles follow at once (Twitch lists it a moment later).
+    if (type.startsWith('channel.subscri')) setTimeout(() => void syncSubRoles(this.ctx, this.guilds()).catch(() => undefined), 30_000).unref();
   }
 }
 

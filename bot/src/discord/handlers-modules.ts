@@ -17,6 +17,7 @@ import { giveThanks, thanksOf, thanksRank, thanksTop, ThanksError } from '../mod
 import type { DiscordData } from './handlers.js';
 import * as ach from '../modules/achievements.js';
 import { lockdown, unlock } from '../modules/anticontrol.js';
+import { linkTwitch, unlinkTwitch } from '../modules/twitchsubs.js';
 
 function guildOf(run: Run): Guild {
   const guild = (run.data as unknown as DiscordData).guild;
@@ -81,8 +82,8 @@ export function daysUntil(month: number, day: number, now: Date): number {
   return Math.round((next - today) / 86_400_000);
 }
 
-export function moduleHandlers(repo: Repo, botId: number): Map<string, Handler> {
-  const ctx = new ModuleContext(botId, repo);
+export function moduleHandlers(repo: Repo, botId: number, secret: (key: string) => string | null = () => null, secretKey: (() => Buffer) | null = null): Map<string, Handler> {
+  const ctx = new ModuleContext(botId, repo, secret, secretKey);
   const db = repo.db;
   // Economy roles after a change by a block.
   const syncMember = async (run: Run) => {
@@ -256,6 +257,23 @@ export function moduleHandlers(repo: Repo, botId: number): Map<string, Handler> 
       'action.bookmark_remove',
       (node, run) => {
         if (!removeBookmark(ctx, guildOf(run).id, userOf(run, node), Math.trunc(Number(run.str(node, 'number')) || 0))) throw new GraphError('error.run.economy', { message: 'There is no bookmark with this number. See /bookmarks.' });
+      },
+    ],
+    // --- Twitch sub roles: link the member's Twitch account ---
+    [
+      'action.twitch_link',
+      async (node, run) => {
+        const guild = guildOf(run);
+        const userId = snowflake(run.vars.get('user.id') ?? '', 'user');
+        if (run.str(node, 'mode') === 'unlink') {
+          const had = unlinkTwitch(ctx, guild.id, userId);
+          run.setResult(node, '', had ? 'Your Twitch account is no longer linked.' : 'No Twitch account was linked.');
+          run.setResult(node, '.linked', 'false');
+          return;
+        }
+        const out = await linkTwitch(ctx, guild.id, userId, run.str(node, 'login'));
+        run.setResult(node, '', out.text);
+        run.setResult(node, '.linked', String(out.linked));
       },
     ],
     // --- AntiControl: lock or unlock the server by hand ---

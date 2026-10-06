@@ -1,0 +1,71 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.twitch_link",
+  "version": 1,
+  "category": "action",
+  "group": "api",
+  "order": 46,
+  "color": "purple",
+  "icon": "🔗",
+  "labelKey": "builder.node.action_twitch_link.label",
+  "descriptionKey": "builder.node.action_twitch_link.description",
+  "module": "twitch-alerts",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": "",
+      "labelKey": "builder.result.twitch_link.0"
+    },
+    {
+      "suffix": ".linked",
+      "labelKey": "builder.result.twitch_link.1"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "mode": {
+        "type": "string",
+        "enum": [
+          "link",
+          "unlink"
+        ],
+        "default": "link",
+        "x-labelKey": "builder.cfg.twitch_link_mode",
+        "x-enumKey": "builder.enum.twitch_link_mode"
+      },
+      "login": {
+        "type": "string",
+        "maxLength": 100,
+        "x-labelKey": "builder.cfg.twitch_link_login",
+        "x-hintKey": "builder.cfg.twitch_link_login_hint",
+        "x-showIf": {
+          "mode": [
+            "link"
+          ]
+        }
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  }
+}

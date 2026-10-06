@@ -296,6 +296,34 @@
           "true"
         ]
       }
+    },
+    {
+      "key": "s_subroles",
+      "type": "section"
+    },
+    {
+      "key": "tier1Role",
+      "type": "role",
+      "hint": true
+    },
+    {
+      "key": "tier2Role",
+      "type": "role"
+    },
+    {
+      "key": "tier3Role",
+      "type": "role"
+    },
+    {
+      "key": "anySubRole",
+      "type": "role",
+      "hint": true
+    },
+    {
+      "key": "subRolesRemove",
+      "type": "bool",
+      "default": true,
+      "hint": true
     }
   ]
 }
