@@ -61,6 +61,34 @@
         "login",
         "channel"
       ]
+    },
+    {
+      "key": "dropsGames",
+      "type": "list",
+      "max": 25,
+      "titleField": "game",
+      "hint": true,
+      "item": [
+        {
+          "key": "game",
+          "type": "text",
+          "max": 100,
+          "required": true
+        },
+        {
+          "key": "channel",
+          "type": "channel",
+          "channelTypes": [
+            "text",
+            "announcement"
+          ],
+          "required": true
+        },
+        {
+          "key": "role",
+          "type": "role"
+        }
+      ]
     }
   ]
 }

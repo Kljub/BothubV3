@@ -33,6 +33,7 @@ import { trackLink } from './music.js';
 import { acrIdentify, icyTitle, RecognizeError, recordSample, splitStreamTitle, type Song } from './recognize.js';
 import { freeGames, freeGamesText, gameEmbed, gameSales, gameSalesText, platformsOf, type FreeGamesConfig } from '../modules/freegames.js';
 import { dealsText, findGame, gamePrices, usd } from '../modules/pricetracker.js';
+import { dropsOf, dropsText } from '../modules/twitchdrops.js';
 import { deleteGiveaway, endGiveaway, giveawayPayload, listGiveaways, loadGiveaway, saveGiveaway, type Giveaway } from '../modules/giveaway.js';
 
 /** What a run knows about where it runs (run.data). */
@@ -1058,6 +1059,34 @@ export function discordHandlers(repo: Repo, mod?: Moderation, secret: (key: stri
         if (run.raw(node, 'embeds') === undefined || run.bool(node, 'embeds')) {
           const embeds = games.slice(0, 10).map(gameEmbed);
           await answer(run, embeds.length ? { content: `🎮 **Free games right now (${games.length})**`, embeds } : { content: 'No free games right now.' });
+        }
+      },
+    ],
+    [
+      // Twitch drops: the biggest streams of a game with Drops (twitch.tv website interface).
+      'action.twitch_drops',
+      async (node, run) => {
+        run.countDiscordCall();
+        const name = run.str(node, 'game').trim();
+        let d;
+        try {
+          d = name ? await dropsOf(name) : null;
+        } catch (err) {
+          throw new GraphError('error.run.module_failed', { message: `Twitch could not be asked: ${(err as Error).message}` });
+        }
+        if (!d) {
+          run.setResult(node, '', name);
+          if (run.raw(node, 'reply') === undefined || run.bool(node, 'reply')) await answer(run, { content: `❌ No Twitch category "${name.slice(0, 80)}".` });
+          return 'not_found';
+        }
+        run.setResult(node, '', d.game);
+        run.setResult(node, '.count', d.streams.length);
+        run.setResult(node, '.streams', dropsText(d));
+        if (run.raw(node, 'reply') === undefined || run.bool(node, 'reply')) {
+          const embed = new EmbedBuilder().setColor(0x9146ff).setTitle(`🎁 Twitch Drops — ${d.game}`.slice(0, 256)).setDescription(dropsText(d).slice(0, 4096))
+            .setURL(`https://www.twitch.tv/directory/category/${encodeURIComponent(d.game.toLowerCase().replace(/\s+/g, '-'))}?filter=drops`);
+          if (d.image) embed.setThumbnail(d.image);
+          await answer(run, { embeds: [embed] });
         }
       },
     ],

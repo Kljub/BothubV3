@@ -736,3 +736,17 @@ test('anticontrol: scam links and look-alikes, invites, mentions, join risk, dan
   const w = new Window();
   assert.deepEqual([w.add('k', 10, 0), w.add('k', 10, 5000), w.add('k', 10, 16_000)], [1, 2, 1]);
 });
+
+test('twitch drops: parsed streams, a post only when Drops start', async () => {
+  const { parseDrops, dropsChange, dropsText } = await import('./twitchdrops.js');
+  const d = parseDrops({ data: { game: { id: '1', displayName: 'Rust', boxArtURL: 'https://x/b.jpg', streams: { edges: [{ node: { title: 'drops on', viewersCount: 1200, broadcaster: { login: 'a', displayName: 'A' } } }] } } } })!;
+  assert.deepEqual([d.game, d.streams.length, d.streams[0]!.viewers], ['Rust', 1, 1200]);
+  assert.match(dropsText(d), /\*\*\[A\]\(https:\/\/twitch\.tv\/a\)\*\* · 1,200 viewers/);
+  assert.equal(parseDrops({ data: { game: null } }), null);
+  const t = 1_000_000_000;
+  assert.equal(dropsChange(undefined, true, t).post, false, 'first check');
+  assert.equal(dropsChange({ live: false, since: t }, true, t).post, true);
+  assert.equal(dropsChange({ live: true, since: t }, true, t + 900_000).post, false, 'still live');
+  assert.equal(dropsChange({ live: true, since: t }, false, t + 900_000).state.live, true, 'a short gap does not end it');
+  assert.equal(dropsChange({ live: true, since: t }, false, t + 4_000_000).state.live, false);
+});

@@ -1,0 +1,74 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.twitch_drops",
+  "version": 1,
+  "category": "action",
+  "group": "api",
+  "order": 45,
+  "color": "purple",
+  "icon": "🎁",
+  "labelKey": "builder.node.action_twitch_drops.label",
+  "descriptionKey": "builder.node.action_twitch_drops.description",
+  "module": "twitch-notifs",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    },
+    {
+      "name": "not_found",
+      "type": "flow",
+      "labelKey": "builder.port.not_found"
+    }
+  ],
+  "results": [
+    {
+      "suffix": "",
+      "labelKey": "builder.result.twitch_drops.0"
+    },
+    {
+      "suffix": ".count",
+      "labelKey": "builder.result.twitch_drops.1"
+    },
+    {
+      "suffix": ".streams",
+      "labelKey": "builder.result.twitch_drops.2"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "game"
+    ],
+    "properties": {
+      "game": {
+        "type": "string",
+        "maxLength": 100,
+        "x-labelKey": "builder.cfg.twitch_drops_game",
+        "x-hintKey": "builder.cfg.twitch_drops_game_hint"
+      },
+      "reply": {
+        "type": "boolean",
+        "default": true,
+        "x-labelKey": "builder.cfg.game_sales_reply",
+        "x-hintKey": "builder.cfg.game_sales_reply_hint"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  }
+}

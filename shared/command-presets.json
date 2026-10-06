@@ -18866,6 +18866,120 @@
           }
         ]
       }
+    },
+    {
+      "module": "twitch-notifs",
+      "group": "Twitch",
+      "name": "twitch-drops",
+      "title": "Twitch Drops",
+      "description": "Shows the streams of a game with Twitch Drops",
+      "graph": {
+        "schemaVersion": 1,
+        "nodes": [
+          {
+            "id": "trigger",
+            "type": "trigger.slash",
+            "typeVersion": 1,
+            "config": {
+              "command_name": "twitch-drops",
+              "description": "Shows the streams of a game with Twitch Drops"
+            },
+            "position": {
+              "x": 120,
+              "y": 240
+            }
+          },
+          {
+            "id": "step1",
+            "type": "action.twitch_drops",
+            "typeVersion": 1,
+            "config": {
+              "game": "{option_game}",
+              "reply": true,
+              "variable": "drops"
+            },
+            "position": {
+              "x": 440,
+              "y": 240
+            }
+          },
+          {
+            "id": "error",
+            "type": "utility.error_handler",
+            "typeVersion": 1,
+            "config": {
+              "variable": "error"
+            },
+            "position": {
+              "x": 120,
+              "y": 520
+            }
+          },
+          {
+            "id": "error_reply",
+            "type": "action.send_message",
+            "typeVersion": 1,
+            "config": {
+              "message": {
+                "mode": "normal",
+                "content": "Failed: {error}"
+              },
+              "target": "reply"
+            },
+            "position": {
+              "x": 440,
+              "y": 520
+            }
+          },
+          {
+            "id": "option_game",
+            "type": "option.text",
+            "typeVersion": 1,
+            "config": {
+              "name": "game",
+              "description": "Name of the game (Twitch category)",
+              "required": true,
+              "variable": "game"
+            },
+            "position": {
+              "x": 120,
+              "y": 110
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": {
+              "node": "trigger",
+              "port": "next"
+            },
+            "to": {
+              "node": "step1",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "error",
+              "port": "next"
+            },
+            "to": {
+              "node": "error_reply",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "option_game",
+              "port": "option"
+            },
+            "to": {
+              "node": "trigger",
+              "port": "options"
+            }
+          }
+        ]
+      }
     }
   ]
 }

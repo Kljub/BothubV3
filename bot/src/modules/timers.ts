@@ -13,6 +13,7 @@ import { postFreeGames } from './freegames.js';
 import { watchPrices } from './pricetracker.js';
 import { flushAchievements } from './achievements.js';
 import { anticontrolTick } from './anticontrol.js';
+import { watchDrops } from './twitchdrops.js';
 import { autoPurge, dayNight } from './server-auto.js';
 import { welcomeTick } from './members.js';
 import { handover } from '../core/handover.js';
@@ -113,6 +114,7 @@ export class ModuleTimers {
       await dayNight(this.ctx, guilds, local);
       if (Math.floor(now / 300_000) !== Math.floor((now - 30_000) / 300_000)) await autoPurge(this.ctx, guilds, now);
       if (Math.floor(now / 7_200_000) !== Math.floor((now - 30_000) / 7_200_000)) await watchPrices(this.ctx, guilds);
+      if (Math.floor(now / 900_000) !== Math.floor((now - 30_000) / 900_000)) await watchDrops(this.ctx, guilds);
       if (this.ctx.enabled('free-games')) {
         const check = Math.floor(now / 1_800_000) !== Math.floor((now - 30_000) / 1_800_000);
         for (const g of guilds) await postFreeGames(this.ctx, g, local, check);

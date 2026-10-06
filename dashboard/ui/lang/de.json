@@ -5565,5 +5565,17 @@
   "modset.anticontrol.nukeAction.strip": "Alle Rollen wegnehmen",
   "modset.anticontrol.nukeAction.kick": "Kicken",
   "modset.anticontrol.nukeAction.ban": "Bannen",
-  "modset.anticontrol.nukeAction.none": "Nur melden"
+  "modset.anticontrol.nukeAction.none": "Nur melden",
+  "modset.twitch-notifs.dropsGames": "Twitch Drops Tracker",
+  "modset.twitch-notifs.dropsGames_hint": "Spiele, deren Drops angekündigt werden: alle 15 Minuten geprüft; ein Post, wenn Streams mit Drops starten (mit den größten davon). /twitch-drops zeigt sie für jedes Spiel. Nutzt Twitchs Website-Schnittstelle (keine offizielle API, kann aufhören zu funktionieren).",
+  "modset.twitch-notifs.dropsGames.game": "Spiel (Twitch-Kategorie)",
+  "modset.twitch-notifs.dropsGames.channel": "Kanal",
+  "modset.twitch-notifs.dropsGames.role": "Rolle pingen (optional)",
+  "builder.node.action_twitch_drops.label": "Twitch-Drops",
+  "builder.node.action_twitch_drops.description": "Die größten Streams eines Spiels mit Twitch-Drops gerade.",
+  "builder.cfg.twitch_drops_game": "Spiel",
+  "builder.cfg.twitch_drops_game_hint": "Name der Twitch-Kategorie, z. B. {option_game}.",
+  "builder.result.twitch_drops.0": "Spiel",
+  "builder.result.twitch_drops.1": "Streams mit Drops",
+  "builder.result.twitch_drops.2": "Streams (Zeilen)"
 }

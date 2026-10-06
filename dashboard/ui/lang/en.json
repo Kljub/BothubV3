@@ -5565,5 +5565,17 @@
   "modset.anticontrol.nukeAction.strip": "Take all roles",
   "modset.anticontrol.nukeAction.kick": "Kick",
   "modset.anticontrol.nukeAction.ban": "Ban",
-  "modset.anticontrol.nukeAction.none": "Only report"
+  "modset.anticontrol.nukeAction.none": "Only report",
+  "modset.twitch-notifs.dropsGames": "Twitch Drops Tracker",
+  "modset.twitch-notifs.dropsGames_hint": "Games whose Drops are announced: checked every 15 minutes; a post when streams with Drops start (with the biggest of them). /twitch-drops shows them for any game. Uses Twitch's website interface (not an official API, may stop working).",
+  "modset.twitch-notifs.dropsGames.game": "Game (Twitch category)",
+  "modset.twitch-notifs.dropsGames.channel": "Channel",
+  "modset.twitch-notifs.dropsGames.role": "Role to ping (optional)",
+  "builder.node.action_twitch_drops.label": "Twitch drops",
+  "builder.node.action_twitch_drops.description": "The biggest streams of a game with Twitch Drops right now.",
+  "builder.cfg.twitch_drops_game": "Game",
+  "builder.cfg.twitch_drops_game_hint": "Twitch category name, e.g. {option_game}.",
+  "builder.result.twitch_drops.0": "Game",
+  "builder.result.twitch_drops.1": "Streams with Drops",
+  "builder.result.twitch_drops.2": "Streams (lines)"
 }
