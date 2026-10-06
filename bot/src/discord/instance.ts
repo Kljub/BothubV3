@@ -172,7 +172,7 @@ export class BotInstance {
       },
     };
     this.moderation = new Moderation(botId, deps.repo, () => this.client);
-    const handlers = new Map<string, Handler>([...coreHandlers(core), ...discordHandlers(deps.repo, this.moderation, core.secret), ...moduleHandlers(deps.repo, botId)]);
+    const handlers = new Map<string, Handler>([...coreHandlers(core), ...discordHandlers(deps.repo, this.moderation, core.secret, deps.secretKey), ...moduleHandlers(deps.repo, botId)]);
     // Own copy of the definitions: plugin blocks exist only for this bot.
     this.engine = { defs: new Map(deps.defs), handlers, limits: deps.limits, match: matchState, lookup: (name, run) => lookupVariable(core, name, run) ?? this.liveVar(name) };
   }

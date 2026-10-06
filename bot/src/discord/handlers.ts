@@ -20,6 +20,9 @@ import { parseDuration, snowflake, snowflakes } from '../graph/util.js';
 import type { CaseAction, ModCase, Repo } from '../core/repo.js';
 import { buildMessage, hasBody } from './message.js';
 import { cardVars, renderCard } from '../cards/cards.js';
+import { lookupResults, lookupTwitch, twitchVars } from './twitch-lookup.js';
+import { appToken, getJson } from '../modules/feeds.js';
+import { twitchUserToken } from '../modules/twitch-alerts.js';
 import { actionName, type CaseHandle, type Moderation } from './moderation.js';
 import { ModuleContext } from '../modules/context.js';
 import { clock, findTracks, musicOf, MusicError, type LoopMode } from './music.js';
@@ -528,7 +531,7 @@ function musicHandlers(secret: (key: string) => string | null): [string, Handler
   ];
 }
 
-export function discordHandlers(repo: Repo, mod?: Moderation, secret: (key: string) => string | null = () => null): Map<string, Handler> {
+export function discordHandlers(repo: Repo, mod?: Moderation, secret: (key: string) => string | null = () => null, secretKey?: () => Buffer): Map<string, Handler> {
   /** Module helpers report problems as text: a run error with that text. */
   const check = (problem: string | null): void => {
     if (problem) throw new GraphError('error.run.module_failed', { message: problem });
@@ -910,6 +913,26 @@ export function discordHandlers(repo: Repo, mod?: Moderation, secret: (key: stri
       },
     ],
     ...musicHandlers(secret),
+    [
+      // Twitch lookup: profile of a channel ({Var.followers}, {twitch_name} …).
+      'action.twitch_lookup',
+      async (node, run) => {
+        const login = run.str(node, 'channel').trim().replace(/^https?:\/\/(www\.)?twitch\.tv\//i, '').replace(/^@/, '').split(/[/?#]/)[0]!.toLowerCase();
+        if (!/^[a-z0-9_]{2,25}$/.test(login)) throw new GraphError('error.twitch.login', { value: login });
+        const id = secret('TWITCH_CLIENT_ID');
+        const sec = secret('TWITCH_CLIENT_SECRET');
+        if (!id || !sec) throw new GraphError('error.twitch.not_configured');
+        const app = await appToken('https://id.twitch.tv/oauth2/token', id, sec);
+        if (!app) throw new GraphError('error.twitch.refused');
+        const user = secretKey ? ((await twitchUserToken(repo.db, data(run).botId, secretKey, id, sec).catch(() => null)) ?? null) : null;
+        const p = await lookupTwitch(login, { clientId: id, appToken: app, userToken: user }, (url, headers) => getJson(url, { headers }));
+        if (!p) {
+          throw new GraphError('error.twitch.not_found', { value: login });
+        }
+        for (const [suffix, value] of Object.entries(lookupResults(p))) run.setResult(node, suffix, value);
+        for (const [name, value] of Object.entries(twitchVars(p))) run.vars.set(name, value);
+      },
+    ],
     [
       'action.ticket_panel',
       async (node, run) => {

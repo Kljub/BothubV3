@@ -196,7 +196,7 @@ export function target(guilds: Guild[], channelRef: unknown, roleRefs: unknown):
   return { guild, channel, roles: idsIn(roleRefs, guild.id) };
 }
 
-async function getJson(url: string, init: RequestInit = {}): Promise<{ status: number; body: unknown; headers: Headers } | null> {
+export async function getJson(url: string, init: RequestInit = {}): Promise<{ status: number; body: unknown; headers: Headers } | null> {
   const res = await fetch(url, { ...init, headers: { 'User-Agent': UA, Accept: 'application/json', ...(init.headers ?? {}) }, signal: AbortSignal.timeout(TIMEOUT) }).catch(() => null);
   if (!res) return null;
   const body = res.status === 204 || res.status === 304 ? null : await res.json().catch(() => null);
@@ -224,7 +224,7 @@ export function recovered(ctx: ModuleContext, module: string, guildId: string, s
 /** App access tokens (client credentials), per client ID. */
 const tokens = new Map<string, { token: string; until: number }>();
 
-async function appToken(url: string, clientId: string, clientSecret: string): Promise<string | null> {
+export async function appToken(url: string, clientId: string, clientSecret: string): Promise<string | null> {
   const hit = tokens.get(url + clientId);
   if (hit && Date.now() < hit.until) return hit.token;
   const body = new URLSearchParams({ client_id: clientId, client_secret: clientSecret, grant_type: 'client_credentials' });

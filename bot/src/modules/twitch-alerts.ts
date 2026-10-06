@@ -7,6 +7,9 @@
 
 import type { Guild } from 'discord.js';
 import { decrypt, encrypt } from '../core/secrets.js';
+import type { Db } from '../core/db.js';
+import { lookupTwitch, twitchVars } from '../discord/twitch-lookup.js';
+import { appToken, getJson } from './feeds.js';
 import { log } from '../core/log.js';
 import { baseVars, buildMessage, idIn, idsIn, type MessageConfig, type ModuleContext } from './context.js';
 import { send, warn } from './guard.js';
@@ -166,6 +169,19 @@ class Connection {
     }
   }
 
+  /** {twitch_name}, {twitch_follower} … of the user of the event (follower, subscriber, cheerer, raider). */
+  private async userVars(type: string, ev: Record<string, unknown>, vars: Record<string, string>): Promise<Record<string, string>> {
+    const login = String(type === 'channel.raid' ? ev.from_broadcaster_user_login ?? '' : ev.user_login ?? '');
+    const extra = { sub: vars.tier ? `Tier ${vars.tier}` : undefined, bits: vars.bits };
+    const a = login && /^[A-Za-z0-9_]{2,25}$/.test(login) ? await this.auth() : null;
+    const id = this.ctx.secret('TWITCH_CLIENT_ID');
+    const secret = this.ctx.secret('TWITCH_CLIENT_SECRET');
+    const app = a && id && secret ? await appToken('https://id.twitch.tv/oauth2/token', id, secret) : null;
+    if (!a || !app) return {};
+    const p = await lookupTwitch(login, { clientId: a.clientId, appToken: app, userToken: a.token }, (url, headers) => getJson(url, { headers })).catch(() => null);
+    return p ? twitchVars(p, extra) : {};
+  }
+
   private async post(type: string, ev: Record<string, unknown>): Promise<void> {
     const cfg = this.ctx.config<AlertsConfig>('twitch-alerts');
     const alert = alertFor(type, ev, cfg, this.login);
@@ -176,7 +192,7 @@ class Connection {
       warn(this.ctx, 'WAR-2008', { module: 'twitch-alerts', problem: 'the alert channel is missing or the bot cannot write there' });
       return;
     }
-    const payload = buildMessage(alert.message, { ...baseVars(guild, null), ...alert.vars });
+    const payload = buildMessage(alert.message, { ...baseVars(guild, null), ...(await this.userVars(type, ev, alert.vars)), ...alert.vars });
     if (!payload) return;
     const roles = idsIn(cfg.mentionRoles, guild.id);
     if (roles.length) {
@@ -211,11 +227,21 @@ export async function twitchAlertsTick(ctx: ModuleContext, guilds: Guild[]): Pro
   conn.open();
 }
 
-/** A valid user token: refreshed (and stored again) when it ends within 10 minutes. */
 async function userToken(ctx: ModuleContext, key: () => Buffer, clientId: string, clientSecret: string): Promise<{ token: string; clientId: string } | null> {
-  const row = ctx.db.prepare('SELECT access_enc, refresh_enc, expires_at FROM bot_twitch_auth WHERE bot_id = ?').get(ctx.botId) as AuthRow | undefined;
+  const token = await twitchUserToken(ctx.db, ctx.botId, key, clientId, clientSecret);
+  if (token === undefined) warn(ctx, 'WAR-2008', { module: 'twitch-alerts', problem: 'Twitch did not renew the sign-in: sign in with Twitch again' });
+  return token ? { token, clientId } : null;
+}
+
+/**
+ * The user token of the bot's signed-in Twitch channel, refreshed (and
+ * stored again) when it ends within 10 minutes. null: no channel signed in;
+ * undefined: Twitch refused to renew it.
+ */
+export async function twitchUserToken(db: Db, botId: number, key: () => Buffer, clientId: string, clientSecret: string): Promise<string | null | undefined> {
+  const row = db.prepare('SELECT access_enc, refresh_enc, expires_at FROM bot_twitch_auth WHERE bot_id = ?').get(botId) as AuthRow | undefined;
   if (!row) return null;
-  if (Date.parse(row.expires_at) - Date.now() > 10 * 60_000) return { token: decrypt(key(), row.access_enc), clientId };
+  if (Date.parse(row.expires_at) - Date.now() > 10 * 60_000) return decrypt(key(), row.access_enc);
   const res = await fetch('https://id.twitch.tv/oauth2/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -223,14 +249,11 @@ async function userToken(ctx: ModuleContext, key: () => Buffer, clientId: string
     signal: AbortSignal.timeout(10_000),
   }).catch(() => null);
   const body = res?.ok ? ((await res.json().catch(() => null)) as { access_token?: string; refresh_token?: string; expires_in?: number } | null) : null;
-  if (!body?.access_token || !body.refresh_token) {
-    warn(ctx, 'WAR-2008', { module: 'twitch-alerts', problem: 'Twitch did not renew the sign-in: sign in with Twitch again' });
-    return null;
-  }
-  ctx.db
+  if (!body?.access_token || !body.refresh_token) return undefined;
+  db
     .prepare("UPDATE bot_twitch_auth SET access_enc = ?, refresh_enc = ?, expires_at = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE bot_id = ?")
-    .run(encrypt(key(), body.access_token), encrypt(key(), body.refresh_token), new Date(Date.now() + Math.max(60, body.expires_in ?? 3600) * 1000).toISOString(), ctx.botId);
-  return { token: body.access_token, clientId };
+    .run(encrypt(key(), body.access_token), encrypt(key(), body.refresh_token), new Date(Date.now() + Math.max(60, body.expires_in ?? 3600) * 1000).toISOString(), botId);
+  return body.access_token;
 }
 
 /** Closes the connection of a bot (bot stopped). */

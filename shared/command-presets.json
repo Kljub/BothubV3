@@ -18085,6 +18085,200 @@
           }
         ]
       }
+    },
+    {
+      "module": "twitch-notifs",
+      "group": "Twitch",
+      "name": "twitch-lookup",
+      "title": "Twitch Lookup",
+      "description": "Shows the profile of a Twitch channel",
+      "graph": {
+        "schemaVersion": 1,
+        "nodes": [
+          {
+            "id": "trigger",
+            "type": "trigger.slash",
+            "typeVersion": 1,
+            "config": {
+              "command_name": "twitch-lookup",
+              "description": "Shows the profile of a Twitch channel"
+            },
+            "position": {
+              "x": 120,
+              "y": 240
+            }
+          },
+          {
+            "id": "option_channel",
+            "type": "option.text",
+            "typeVersion": 1,
+            "config": {
+              "name": "channel",
+              "description": "Twitch name or link",
+              "required": true,
+              "variable": "channel"
+            },
+            "position": {
+              "x": 120,
+              "y": 110
+            }
+          },
+          {
+            "id": "step1",
+            "type": "action.twitch_lookup",
+            "typeVersion": 1,
+            "config": {
+              "channel": "{option_channel}",
+              "variable": "twitch"
+            },
+            "position": {
+              "x": 440,
+              "y": 240
+            }
+          },
+          {
+            "id": "step2",
+            "type": "action.send_message",
+            "typeVersion": 1,
+            "config": {
+              "message": {
+                "mode": "normal",
+                "content": "",
+                "embeds": [
+                  {
+                    "title": "{twitch} {twitch.live}",
+                    "url": "{twitch.url}",
+                    "color": "#9146ff",
+                    "thumbnail_url": "{twitch.avatar}",
+                    "description": "{twitch.description}",
+                    "fields": [
+                      {
+                        "name": "Followers",
+                        "value": "{twitch.followers}",
+                        "inline": true
+                      },
+                      {
+                        "name": "Affiliate",
+                        "value": "{twitch.affiliate}",
+                        "inline": true
+                      },
+                      {
+                        "name": "Subs possible",
+                        "value": "{twitch.subs}",
+                        "inline": true
+                      },
+                      {
+                        "name": "Last stream",
+                        "value": "{twitch.last_stream}",
+                        "inline": true
+                      },
+                      {
+                        "name": "Language",
+                        "value": "{twitch.language}",
+                        "inline": true
+                      },
+                      {
+                        "name": "On Twitch since",
+                        "value": "{twitch.created}",
+                        "inline": true
+                      },
+                      {
+                        "name": "Category",
+                        "value": "{twitch.game}",
+                        "inline": true
+                      },
+                      {
+                        "name": "Latest video",
+                        "value": "{twitch.last_video}",
+                        "inline": false
+                      }
+                    ],
+                    "footer": {
+                      "text": "twitch.tv/{twitch.login}"
+                    }
+                  }
+                ]
+              },
+              "target": "reply"
+            },
+            "position": {
+              "x": 760,
+              "y": 240
+            }
+          },
+          {
+            "id": "error",
+            "type": "utility.error_handler",
+            "typeVersion": 1,
+            "config": {
+              "variable": "error"
+            },
+            "position": {
+              "x": 120,
+              "y": 520
+            }
+          },
+          {
+            "id": "error_reply",
+            "type": "action.send_message",
+            "typeVersion": 1,
+            "config": {
+              "message": {
+                "mode": "normal",
+                "content": "❌ {error}"
+              },
+              "target": "reply",
+              "ephemeral": true
+            },
+            "position": {
+              "x": 440,
+              "y": 520
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": {
+              "node": "option_channel",
+              "port": "option"
+            },
+            "to": {
+              "node": "trigger",
+              "port": "options"
+            }
+          },
+          {
+            "from": {
+              "node": "trigger",
+              "port": "next"
+            },
+            "to": {
+              "node": "step1",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "step1",
+              "port": "next"
+            },
+            "to": {
+              "node": "step2",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "error",
+              "port": "next"
+            },
+            "to": {
+              "node": "error_reply",
+              "port": "in"
+            }
+          }
+        ]
+      }
     }
   ]
 }

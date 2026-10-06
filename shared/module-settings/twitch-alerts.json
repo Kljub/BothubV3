@@ -9,7 +9,6 @@
         "text",
         "announcement"
       ],
-      "required": true,
       "hint": true
     },
     {
@@ -36,7 +35,16 @@
         "user",
         "user.login",
         "channel",
-        "channel.url"
+        "channel.url",
+        "twitch_name",
+        "twitch_link",
+        "twitch_follower",
+        "twitch_sub",
+        "twitch_bits",
+        "twitch_since",
+        "twitch_last_stream",
+        "twitch_language",
+        "twitch_is_affiliate"
       ],
       "default": {
         "mode": "text",
@@ -71,7 +79,16 @@
         "tier",
         "months",
         "streak",
-        "message"
+        "message",
+        "twitch_name",
+        "twitch_link",
+        "twitch_follower",
+        "twitch_sub",
+        "twitch_bits",
+        "twitch_since",
+        "twitch_last_stream",
+        "twitch_language",
+        "twitch_is_affiliate"
       ],
       "default": {
         "mode": "embed",
@@ -104,7 +121,16 @@
         "tier",
         "months",
         "streak",
-        "message"
+        "message",
+        "twitch_name",
+        "twitch_link",
+        "twitch_follower",
+        "twitch_sub",
+        "twitch_bits",
+        "twitch_since",
+        "twitch_last_stream",
+        "twitch_language",
+        "twitch_is_affiliate"
       ],
       "default": {
         "mode": "embed",
@@ -136,7 +162,16 @@
         "channel.url",
         "count",
         "tier",
-        "total"
+        "total",
+        "twitch_name",
+        "twitch_link",
+        "twitch_follower",
+        "twitch_sub",
+        "twitch_bits",
+        "twitch_since",
+        "twitch_last_stream",
+        "twitch_language",
+        "twitch_is_affiliate"
       ],
       "default": {
         "mode": "embed",
@@ -184,7 +219,16 @@
         "channel",
         "channel.url",
         "bits",
-        "message"
+        "message",
+        "twitch_name",
+        "twitch_link",
+        "twitch_follower",
+        "twitch_sub",
+        "twitch_bits",
+        "twitch_since",
+        "twitch_last_stream",
+        "twitch_language",
+        "twitch_is_affiliate"
       ],
       "default": {
         "mode": "text",
@@ -230,7 +274,16 @@
         "raider.url",
         "viewers",
         "channel",
-        "channel.url"
+        "channel.url",
+        "twitch_name",
+        "twitch_link",
+        "twitch_follower",
+        "twitch_sub",
+        "twitch_bits",
+        "twitch_since",
+        "twitch_last_stream",
+        "twitch_language",
+        "twitch_is_affiliate"
       ],
       "default": {
         "mode": "embed",

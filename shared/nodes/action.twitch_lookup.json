@@ -1,0 +1,120 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.twitch_lookup",
+  "version": 1,
+  "category": "action",
+  "group": "api",
+  "order": 40,
+  "color": "purple",
+  "icon": "💜",
+  "labelKey": "builder.node.action_twitch_lookup.label",
+  "descriptionKey": "builder.node.action_twitch_lookup.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": "",
+      "labelKey": "builder.result.twitch_lookup.name"
+    },
+    {
+      "suffix": ".login",
+      "labelKey": "builder.result.twitch_lookup.login"
+    },
+    {
+      "suffix": ".id",
+      "labelKey": "builder.result.twitch_lookup.id"
+    },
+    {
+      "suffix": ".url",
+      "labelKey": "builder.result.twitch_lookup.url"
+    },
+    {
+      "suffix": ".avatar",
+      "labelKey": "builder.result.twitch_lookup.avatar"
+    },
+    {
+      "suffix": ".description",
+      "labelKey": "builder.result.twitch_lookup.description"
+    },
+    {
+      "suffix": ".created",
+      "labelKey": "builder.result.twitch_lookup.created"
+    },
+    {
+      "suffix": ".followers",
+      "labelKey": "builder.result.twitch_lookup.followers"
+    },
+    {
+      "suffix": ".affiliate",
+      "labelKey": "builder.result.twitch_lookup.affiliate"
+    },
+    {
+      "suffix": ".partner",
+      "labelKey": "builder.result.twitch_lookup.partner"
+    },
+    {
+      "suffix": ".subs",
+      "labelKey": "builder.result.twitch_lookup.subs"
+    },
+    {
+      "suffix": ".live",
+      "labelKey": "builder.result.twitch_lookup.live"
+    },
+    {
+      "suffix": ".last_stream",
+      "labelKey": "builder.result.twitch_lookup.last_stream"
+    },
+    {
+      "suffix": ".game",
+      "labelKey": "builder.result.twitch_lookup.game"
+    },
+    {
+      "suffix": ".title",
+      "labelKey": "builder.result.twitch_lookup.title"
+    },
+    {
+      "suffix": ".language",
+      "labelKey": "builder.result.twitch_lookup.language"
+    },
+    {
+      "suffix": ".last_video",
+      "labelKey": "builder.result.twitch_lookup.last_video"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "channel"
+    ],
+    "properties": {
+      "channel": {
+        "type": "string",
+        "maxLength": 100,
+        "x-labelKey": "builder.cfg.twitch_channel",
+        "x-hintKey": "builder.cfg.twitch_channel_hint",
+        "x-placeholder": "{option_channel}"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "default": "twitch",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  }
+}
