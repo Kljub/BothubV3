@@ -45,7 +45,7 @@
         {{/* Blurred until hovered; a click copies it. */}}
         {{with .ApplicationID}}<button type="button" class="mono muted bot-card-app" data-copy="{{.}}" data-copy-done="{{t "bots.id_copied"}}" title="{{t "bots.id_copy"}}">{{.}}</button>{{end}}
       </div>
-      <span class="bot-card-badge"{{with uptime .}} title="{{t "bot.uptime" "time" .}}"{{end}}>{{template "status_badge" .Status}}</span>
+      <span class="bot-card-badge"{{with uptime .}} data-tip="{{t "bot.uptime" "time" .}}" tabindex="0"{{end}}>{{template "status_badge" .Status}}</span>
     </header>
     {{with .StatusErrorKey}}<p class="status-text status-text-error">{{t .}}</p>
     {{else}}<p class="status-text status-text-{{.Status}}">{{t (printf "bot.status_text.%s" .Status)}}</p>{{end}}

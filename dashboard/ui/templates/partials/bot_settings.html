@@ -39,7 +39,7 @@
         <button type="submit" class="btn btn-sm" data-save-own>{{t "action.save"}}</button>
       </form>
       {{with .Discriminator}}<span class="badge-soft mono" title="{{t "bot.discriminator"}}">#{{.}}</span>{{end}}
-      <span class="badge-soft badge-soft-{{.Status}}"><span class="badge-dot" aria-hidden="true"></span>{{t (printf "bot.status.%s" .Status)}}</span>
+      <span class="badge-soft badge-soft-{{.Status}}"{{with uptime .}} data-tip="{{t "bot.uptime" "time" .}}" tabindex="0"{{end}}><span class="badge-dot" aria-hidden="true"></span>{{t (printf "bot.status.%s" .Status)}}</span>
     </div>
   </div>
   <div class="settings-head-actions">
