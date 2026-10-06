@@ -34,6 +34,8 @@ export class ModuleContext {
     readonly repo: Repo,
     /** Global secret (Admin → API / Secrets), e.g. the Twitch client ID; null when not set. */
     readonly secret: (key: string) => string | null = () => null,
+    /** Key of the encrypted values (Twitch Alerts tokens); null in tests. */
+    readonly secretKey: (() => Buffer) | null = null,
   ) {}
 
   get db(): Db {

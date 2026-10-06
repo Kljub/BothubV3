@@ -1,0 +1,28 @@
+{{/* Twitch Alerts: sign in with the Twitch channel (internal/web/twitchauth.go). */}}
+{{define "twitch_auth"}}
+<section class="box twitch-auth">
+  <header class="box-head"><h2>{{t "twitch.title"}}</h2></header>
+  <div class="box-body">
+    {{if eq .Notice "connected"}}<div class="alert alert-success">{{t "twitch.notice.connected"}}</div>{{end}}
+    {{if eq .Notice "denied"}}<div class="alert alert-warning">{{t "twitch.notice.denied"}}</div>{{end}}
+    {{if eq .Notice "expired"}}<div class="alert alert-warning">{{t "twitch.notice.expired"}}</div>{{end}}
+    {{if eq .Notice "failed"}}<div class="alert alert-danger">{{t "twitch.notice.failed"}}</div>{{end}}
+    {{if .Status.Connected}}
+    <div class="twitch-auth-row">
+      <span class="twitch-auth-who"><span class="badge-soft badge-soft-running"><span class="badge-dot" aria-hidden="true"></span>{{t "twitch.connected"}}</span> <strong>{{.Status.DisplayName}}</strong> <span class="muted">twitch.tv/{{.Status.Login}}</span></span>
+      <a class="btn btn-sm" href="/bots/twitch/connect">{{t "twitch.reconnect"}}</a>
+      <form method="post" action="/bots/twitch/disconnect" class="inline-form">
+        <input type="hidden" name="csrf_token" value="{{$.CSRF}}">
+        <button type="submit" class="btn btn-sm btn-danger-soft">{{t "twitch.disconnect"}}</button>
+      </form>
+    </div>
+    {{else if .Status.Configured}}
+    <p class="hint">{{t "twitch.hint"}}</p>
+    <a class="btn btn-primary" href="/bots/twitch/connect">{{t "twitch.connect"}}</a>
+    {{else}}
+    <div class="alert alert-warning">{{t "twitch.not_configured"}}</div>
+    {{end}}
+    <p class="hint twitch-auth-redirect">{{t "twitch.redirect_hint"}} <code class="mono">{{.RedirectURL}}</code></p>
+  </div>
+</section>
+{{end}}

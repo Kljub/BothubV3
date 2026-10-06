@@ -263,6 +263,11 @@ func (s *Server) handleModuleItem(kind string) authHandler {
 				}
 				data["MsgBuilder"] = mb
 			}
+			if info.Key == "twitch-alerts" {
+				tv := s.twitchAuthView(r, bot.ID)
+				tv.CSRF = p.CSRF
+				data["TwitchAuth"] = tv
+			}
 			if info.Key == "member-stats" {
 				ms, err := s.memberStatsView(r, p, bot.ID)
 				if err != nil {

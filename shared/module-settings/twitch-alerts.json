@@ -1,0 +1,248 @@
+{
+  "module": "twitch-alerts",
+  "integration": "twitch",
+  "fields": [
+    {
+      "key": "channel",
+      "type": "channel",
+      "channelTypes": [
+        "text",
+        "announcement"
+      ],
+      "required": true,
+      "hint": true
+    },
+    {
+      "key": "mentionRoles",
+      "type": "roles",
+      "max": 5
+    },
+    {
+      "key": "s_follow",
+      "type": "section"
+    },
+    {
+      "key": "followEnabled",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "followMessage",
+      "type": "message",
+      "vars": [
+        "server",
+        "server.id",
+        "members",
+        "user",
+        "user.login",
+        "channel",
+        "channel.url"
+      ],
+      "default": {
+        "mode": "text",
+        "content": "💜 **{user}** just followed {channel}!"
+      },
+      "showIf": {
+        "followEnabled": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "s_subs",
+      "type": "section"
+    },
+    {
+      "key": "subEnabled",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "subMessage",
+      "type": "message",
+      "vars": [
+        "server",
+        "server.id",
+        "members",
+        "user",
+        "user.login",
+        "channel",
+        "channel.url",
+        "tier",
+        "months",
+        "streak",
+        "message"
+      ],
+      "default": {
+        "mode": "embed",
+        "title": "⭐ New subscriber!",
+        "description": "**{user}** subscribed with Tier {tier}.",
+        "color": "#9146ff"
+      },
+      "showIf": {
+        "subEnabled": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "resubEnabled",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "resubMessage",
+      "type": "message",
+      "vars": [
+        "server",
+        "server.id",
+        "members",
+        "user",
+        "user.login",
+        "channel",
+        "channel.url",
+        "tier",
+        "months",
+        "streak",
+        "message"
+      ],
+      "default": {
+        "mode": "embed",
+        "title": "⭐ Resub!",
+        "description": "**{user}** subscribed for {months} months (Tier {tier}).\n{message}",
+        "color": "#9146ff"
+      },
+      "showIf": {
+        "resubEnabled": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "giftEnabled",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "giftMessage",
+      "type": "message",
+      "vars": [
+        "server",
+        "server.id",
+        "members",
+        "user",
+        "user.login",
+        "channel",
+        "channel.url",
+        "count",
+        "tier",
+        "total"
+      ],
+      "default": {
+        "mode": "embed",
+        "title": "🎁 Gift subs!",
+        "description": "**{user}** gifted {count} Tier {tier} subs!",
+        "color": "#9146ff"
+      },
+      "showIf": {
+        "giftEnabled": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "s_bits",
+      "type": "section"
+    },
+    {
+      "key": "bitsEnabled",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "bitsMinimum",
+      "type": "number",
+      "min": 1,
+      "max": 1000000,
+      "default": 1,
+      "showIf": {
+        "bitsEnabled": [
+          "true"
+        ]
+      },
+      "hint": true
+    },
+    {
+      "key": "bitsMessage",
+      "type": "message",
+      "vars": [
+        "server",
+        "server.id",
+        "members",
+        "user",
+        "user.login",
+        "channel",
+        "channel.url",
+        "bits",
+        "message"
+      ],
+      "default": {
+        "mode": "text",
+        "content": "💎 **{user}** cheered {bits} bits! {message}"
+      },
+      "showIf": {
+        "bitsEnabled": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "s_raid",
+      "type": "section"
+    },
+    {
+      "key": "raidEnabled",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "raidMinimum",
+      "type": "number",
+      "min": 1,
+      "max": 100000,
+      "default": 1,
+      "showIf": {
+        "raidEnabled": [
+          "true"
+        ]
+      },
+      "hint": true
+    },
+    {
+      "key": "raidMessage",
+      "type": "message",
+      "vars": [
+        "server",
+        "server.id",
+        "members",
+        "raider",
+        "raider.login",
+        "raider.url",
+        "viewers",
+        "channel",
+        "channel.url"
+      ],
+      "default": {
+        "mode": "embed",
+        "title": "🚨 Raid!",
+        "description": "**{raider}** is raiding {channel} with {viewers} viewers!\n{raider.url}",
+        "color": "#9146ff"
+      },
+      "showIf": {
+        "raidEnabled": [
+          "true"
+        ]
+      }
+    }
+  ]
+}

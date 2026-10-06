@@ -40,6 +40,7 @@ final class InternalRouter
         private readonly ?CoworkStore $cowork = null,
         private readonly ?InstanceSettings $settings = null,
         private readonly ?CardStore $cards = null,
+        private readonly ?TwitchAuthStore $twitch = null,
     ) {
     }
 
@@ -179,6 +180,19 @@ final class InternalRouter
             if ($this->templates !== null && preg_match('#^/internal/bots/(\d+)/message-templates(?:/(\d+)(/send)?)?$#', $path, $m)) {
                 $this->bots->find((int) $m[1]) ?? throw ApiError::notFound();
                 return $this->templateRoute($method, (int) $m[1], isset($m[2]) && $m[2] !== '' ? (int) $m[2] : null, isset($m[3]), $body, $bodyObject);
+            }
+            if ($this->twitch !== null && preg_match('#^/internal/bots/(\d+)/twitch-auth$#', $path, $m)) {
+                $bot = $this->bots->find((int) $m[1]) ?? throw ApiError::notFound();
+                $owner = (int) ($bot['ownerId'] ?? 1);
+                return match ($method) {
+                    'GET' => [200, $this->twitch->status((int) $m[1], $owner)],
+                    'POST' => [200, $this->twitch->connect((int) $m[1], $owner, $body)],
+                    'DELETE' => (function () use ($m) {
+                        $this->twitch->disconnect((int) $m[1]);
+                        return [204, null];
+                    })(),
+                    default => throw new ApiError(405, 'error.method_not_allowed'),
+                };
             }
             if ($this->cards !== null && preg_match('#^/internal/bots/(\d+)/cards/(\d+)/send$#', $path, $m)) {
                 $this->bots->find((int) $m[1]) ?? throw ApiError::notFound();

@@ -339,6 +339,35 @@ func (c *Client) MemberStats(ctx context.Context, s Session, botID int64, days i
 	return out, err
 }
 
+// TwitchAuth: the Twitch channel of Twitch Alerts (never its tokens).
+type TwitchAuth struct {
+	Configured  bool     `json:"configured"`
+	ClientID    string   `json:"clientId"`
+	Scopes      []string `json:"scopes"`
+	Connected   bool     `json:"connected"`
+	Login       string   `json:"login"`
+	DisplayName string   `json:"displayName"`
+	ConnectedAt *string  `json:"connectedAt"`
+}
+
+func (c *Client) TwitchAuthStatus(ctx context.Context, s Session, botID int64) (TwitchAuth, error) {
+	var out TwitchAuth
+	_, err := c.do(ctx, s, http.MethodGet, fmt.Sprintf("/api/v1/bots/%d/twitch-auth", botID), nil, &out)
+	return out, err
+}
+
+// TwitchConnect trades the code of Twitch's sign-in for the channel's tokens (stored by the API).
+func (c *Client) TwitchConnect(ctx context.Context, s Session, botID int64, code, redirectURI string) (TwitchAuth, error) {
+	var out TwitchAuth
+	_, err := c.do(ctx, s, http.MethodPost, fmt.Sprintf("/api/v1/bots/%d/twitch-auth", botID), map[string]string{"code": code, "redirectUri": redirectURI}, &out)
+	return out, err
+}
+
+func (c *Client) TwitchDisconnect(ctx context.Context, s Session, botID int64) error {
+	_, err := c.do(ctx, s, http.MethodDelete, fmt.Sprintf("/api/v1/bots/%d/twitch-auth", botID), nil, nil)
+	return err
+}
+
 // BotStatsBetween returns the stats of a bot for a custom time range.
 func (c *Client) BotStatsBetween(ctx context.Context, s Session, botID int64, from, to time.Time, guild string) (BotStats, error) {
 	var out BotStats

@@ -237,6 +237,11 @@
       "icon": "🟣"
     },
     {
+      "key": "twitch-alerts",
+      "category": "social",
+      "icon": "💜"
+    },
+    {
       "key": "youtube-notifs",
       "category": "social",
       "icon": "▶️"

@@ -651,3 +651,23 @@ test('automations: trigger, role, words, emoji, channel and member filters', asy
   assert.equal(ruleMatches(react, { ...base, trigger: 'reaction_added', emoji: { id: '123456789012345678', name: 'pepe' } }), true);
   assert.equal(ruleMatches(react, { ...base, trigger: 'reaction_added', emoji: { id: null, name: '👎' } }), false);
 });
+
+test('twitch alerts: subscriptions by settings, messages by event', async () => {
+  const { alertFor, wantedSubscriptions } = await import('./twitch-alerts.js');
+  assert.deepEqual(wantedSubscriptions({}, '42').map((s) => s.type), ['channel.follow', 'channel.subscribe', 'channel.subscription.message', 'channel.subscription.gift', 'channel.cheer', 'channel.raid']);
+  assert.deepEqual(wantedSubscriptions({ followEnabled: false, bitsEnabled: false }, '42').map((s) => s.type), ['channel.subscribe', 'channel.subscription.message', 'channel.subscription.gift', 'channel.raid']);
+  assert.deepEqual(wantedSubscriptions({}, '42')[0]!.condition, { broadcaster_user_id: '42', moderator_user_id: '42' });
+  assert.deepEqual(wantedSubscriptions({}, '42')[5]!.condition, { to_broadcaster_user_id: '42' });
+  const m = (content: string) => ({ mode: 'text' as const, content });
+  const cfg = { followMessage: m('f'), subMessage: m('s'), resubMessage: m('r'), giftMessage: m('g'), bitsMessage: m('b'), bitsMinimum: 100, raidMessage: m('raid'), raidMinimum: 5 };
+  assert.equal(alertFor('channel.follow', { user_name: 'Anna', user_login: 'anna' }, cfg, 'kljub')!.vars.user, 'Anna');
+  assert.equal(alertFor('channel.subscribe', { user_name: 'A', tier: '2000', is_gift: true }, cfg, 'kljub'), null, 'gifted subs come with the gift event');
+  assert.equal(alertFor('channel.subscribe', { user_name: 'A', tier: '2000', is_gift: false }, cfg, 'kljub')!.vars.tier, '2');
+  const resub = alertFor('channel.subscription.message', { user_name: 'A', tier: '1000', cumulative_months: 7, streak_months: 3, message: { text: 'hi' } }, cfg, 'kljub')!;
+  assert.deepEqual([resub.vars.months, resub.vars.streak, resub.vars.message], ['7', '3', 'hi']);
+  assert.equal(alertFor('channel.subscription.gift', { user_name: 'X', is_anonymous: true, total: 5, tier: '1000' }, cfg, 'kljub')!.vars.user, 'Anonymous');
+  assert.equal(alertFor('channel.cheer', { user_name: 'A', bits: 50 }, cfg, 'kljub'), null, 'below the minimum');
+  assert.equal(alertFor('channel.cheer', { user_name: 'A', bits: 500, message: 'Cheer500 gg' }, cfg, 'kljub')!.vars.bits, '500');
+  assert.equal(alertFor('channel.raid', { from_broadcaster_user_name: 'R', from_broadcaster_user_login: 'r', viewers: 3 }, cfg, 'kljub'), null);
+  assert.equal(alertFor('channel.raid', { from_broadcaster_user_name: 'R', from_broadcaster_user_login: 'r', viewers: 30 }, cfg, 'kljub')!.vars['raider.url'], 'https://twitch.tv/r');
+});

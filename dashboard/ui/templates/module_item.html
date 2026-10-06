@@ -34,6 +34,7 @@
   {{else}}
   {{template "module_header" $d.Header}}
   {{with $d.Moderation}}{{template "moderation_settings" .}}{{end}}
+  {{with $d.TwitchAuth}}{{template "twitch_auth" .}}{{end}}
   {{with $d.Settings}}
   <div id="modset-error"></div>
   <div id="modset-body">{{template "module_settings" .}}</div>

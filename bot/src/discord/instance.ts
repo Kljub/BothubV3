@@ -158,7 +158,7 @@ export class BotInstance {
     readonly botId: number,
     private readonly deps: InstanceDeps,
   ) {
-    this.modules = new ModuleContext(botId, deps.repo, (key) => (deps.secretKey ? secretValue(deps.repo, deps.secretKey, botId, key) : null));
+    this.modules = new ModuleContext(botId, deps.repo, (key) => (deps.secretKey ? secretValue(deps.repo, deps.secretKey, botId, key) : null), deps.secretKey ?? null);
     const vars = deps.repo.varStore(botId);
     const core = {
       vars,

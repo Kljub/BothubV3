@@ -12,6 +12,7 @@ import { lotteryDraw, payroll } from './economy.js';
 import { postFreeGames } from './freegames.js';
 import { autoPurge, dayNight } from './server-auto.js';
 import { welcomeTick } from './members.js';
+import { stopTwitchAlerts, twitchAlertsTick } from './twitch-alerts.js';
 
 // ---------- pure helpers ----------
 
@@ -85,6 +86,7 @@ export class ModuleTimers {
 
   stop(): void {
     clearInterval(this.timer);
+    stopTwitchAlerts(this.ctx.botId);
   }
 
   async tick(client: Client, now = Date.now()): Promise<void> {
@@ -96,6 +98,7 @@ export class ModuleTimers {
       if (Math.floor(now / 600_000) !== Math.floor((now - 30_000) / 600_000)) await this.statChannels(guilds);
       await pollFeeds(this.ctx, guilds, now);
       await welcomeTick(this.ctx, guilds, now);
+      await twitchAlertsTick(this.ctx, guilds);
       const local = localTime(now, this.timezone());
       await this.birthdays(guilds, local);
       await this.qotd(guilds, local);

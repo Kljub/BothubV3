@@ -80,3 +80,9 @@
 /* Stats module (member_stats.html): 7 / 30 / 90 days switch. */
 .seg-links { display: inline-flex; gap: 6px; }
 .member-stats .overview-charts { margin-top: 8px; }
+
+/* Twitch Alerts sign-in box (twitch_auth.html). */
+.twitch-auth-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.twitch-auth-who { display: inline-flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+.twitch-auth-redirect { margin-top: 12px; }
+.twitch-auth-redirect code { user-select: all; }

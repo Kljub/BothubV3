@@ -404,6 +404,10 @@ func main() {
 	mux.HandleFunc("GET /api/v1/bots/{id}/presence", s.auth(s.withBot(s.viaPHP(s.getPresence))))
 	mux.HandleFunc("PATCH /api/v1/bots/{id}/presence", s.auth(s.withBot(s.viaPHP(s.patchPresence))))
 	mux.HandleFunc("GET /api/v1/bots/{id}/stats", s.auth(s.withBot(s.viaPHP(s.botStats))))
+	// Twitch Alerts: the channel's sign-in (PHP API only; tokens stay there).
+	mux.HandleFunc("GET /api/v1/bots/{id}/twitch-auth", s.auth(s.withBot(s.viaPHP(phpRequired))))
+	mux.HandleFunc("POST /api/v1/bots/{id}/twitch-auth", s.auth(s.withBot(s.viaPHP(phpRequired))))
+	mux.HandleFunc("DELETE /api/v1/bots/{id}/twitch-auth", s.auth(s.withBot(s.viaPHP(phpRequired))))
 	// Stats module: paths of Welcomer, Leaver and Boost (PHP API only).
 	mux.HandleFunc("GET /api/v1/bots/{id}/member-stats", s.auth(s.withBot(s.viaPHP(phpRequired))))
 	mux.HandleFunc("GET /api/v1/bots/{id}/logs", s.auth(s.withBot(s.viaPHP(s.listLogs))))

@@ -1971,6 +1971,28 @@
       "category": "social"
     },
     {
+      "key": "modules.twitch-alerts.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "twitch-alerts",
+      "scope": "module",
+      "category": "social"
+    },
+    {
       "key": "modules.youtube-notifs.read",
       "group": "modules",
       "risk": "medium",
