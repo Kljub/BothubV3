@@ -69,3 +69,16 @@ test('cards: an animated GIF in an animated card gives a GIF; otherwise a PNG', 
   assert.equal(cardFile(moving, 'card-1'), 'card-1.gif');
   assert.ok(new GifReader(new Uint8Array(moving)).numFrames() >= 2);
 });
+
+test('cards: pictures that cannot be drawn are named with the reason', async () => {
+  const { renderDesign } = await import('./cards.js');
+  const problems: string[] = [];
+  const design = { width: 200, height: 100, layers: [
+    { id: 'a', type: 'image', x: 0, y: 0, w: 50, h: 50, url: 'asset:7' },
+    { id: 'b', type: 'image', x: 50, y: 0, w: 50, h: 50, url: 'asset:8' },
+  ] };
+  await renderDesign(design, {}, (id) => (id === 8 ? Buffer.from('not a picture') : null), problems);
+  assert.equal(problems.length, 2);
+  assert.match(problems[0]!, /^asset:7: not among the pictures/);
+  assert.match(problems[1]!, /^asset:8: cannot be read/);
+});

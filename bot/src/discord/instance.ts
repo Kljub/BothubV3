@@ -511,9 +511,12 @@ export class BotInstance {
     });
     // Sample values (boosts, level, …) for what a test has no real value for.
     const r = await cardRenderer();
-    const png = await renderCard(this.deps.repo.db, this.botId, cardId, { ...r.SAMPLE_VARS, ...vars });
+    const problems: string[] = [];
+    const png = await renderCard(this.deps.repo.db, this.botId, cardId, { ...r.SAMPLE_VARS, ...vars }, problems);
     if (!png) throw new GraphError('error.card.unknown');
-    await channel.send({ content: '🖼️ Card Designer test', files: [{ attachment: png, name: cardFile(png) }] });
+    // The test names pictures that could not be drawn (and why).
+    const note = problems.length ? `\n⚠️ Not drawn:\n${problems.map((p) => `• ${p}`).join('\n')}`.slice(0, 1500) : '';
+    await channel.send({ content: `🖼️ Card Designer test${note}`, files: [{ attachment: png, name: cardFile(png) }], allowedMentions: { parse: [] } });
   }
 
   async sendTemplate(templateId: number, target: string): Promise<void> {

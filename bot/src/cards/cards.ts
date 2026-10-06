@@ -136,22 +136,29 @@ const MAX_GIF_BYTES = 9.5 * 1024 * 1024;
  * Draws a design: a PNG, or with "animated" on and an animated GIF in it, a
  * GIF (the result starts with "GIF8"). "asset:<id>" pictures come from loadAsset.
  */
-export async function renderDesign(design: Design, vars: Record<string, string>, loadAsset: (id: number) => Buffer | null = () => null): Promise<Buffer> {
+export async function renderDesign(design: Design, vars: Record<string, string>, loadAsset: (id: number) => Buffer | null = () => null, problems: string[] = []): Promise<Buffer> {
   const r = await cardRenderer();
   const { width, height, animated } = r.normalize(design);
   const cache = new Map<string, Promise<unknown>>();
-  const decode = async (data: Buffer | null) => {
-    if (!data) return null;
+  // Pictures that could not be drawn, with the reason (shown with a test).
+  const decode = async (url: string, data: Buffer | null) => {
+    if (!data) {
+      problems.push(`${url}: ${url.startsWith('asset:') ? 'not among the pictures of this bot' : 'not loaded (public https picture only)'}`);
+      return null;
+    }
     if (animated && isGif(data)) {
       const anim = gifFrames(data);
       if (anim) return anim;
     }
-    return loadImage(data).catch(() => null);
+    return loadImage(data).catch((err) => {
+      problems.push(`${url}: cannot be read (${String((err as Error).message ?? err).slice(0, 80)}; ${data.length} bytes, starts ${data.subarray(0, 4).toString('hex')})`);
+      return null;
+    });
   };
   const load = (url: string): Promise<unknown> => {
     if (!cache.has(url)) {
       const asset = /^asset:(\d+)$/.exec(url);
-      cache.set(url, asset ? decode(loadAsset(Number(asset[1]))) : fetchBytes(url).then(decode));
+      cache.set(url, asset ? decode(url, loadAsset(Number(asset[1]))) : fetchBytes(url).then((b) => decode(url, b)));
     }
     return cache.get(url)!;
   };
@@ -217,7 +224,7 @@ export function cardVars(m: { guildName: string; guildId: string; members: numbe
 }
 
 /** Draws a card of the bot by ID; null when the card does not exist or drawing failed. */
-export async function renderCard(db: Db, botId: number, cardId: number, vars: Record<string, string>): Promise<Buffer | null> {
+export async function renderCard(db: Db, botId: number, cardId: number, vars: Record<string, string>, problems: string[] = []): Promise<Buffer | null> {
   const row = db.prepare('SELECT design FROM bot_cards WHERE id = ? AND bot_id = ?').get(cardId, botId) as { design: string } | undefined;
   if (!row) return null;
   const asset = (id: number): Buffer | null => {
@@ -225,7 +232,9 @@ export async function renderCard(db: Db, botId: number, cardId: number, vars: Re
     return img ? Buffer.from(img.data) : null;
   };
   try {
-    return await renderDesign(JSON.parse(row.design) as Design, vars, asset);
+    const out = await renderDesign(JSON.parse(row.design) as Design, vars, asset, problems);
+    if (problems.length) log.warn('card pictures not drawn', { botId, cardId, problems });
+    return out;
   } catch (err) {
     log.warn('card render failed', { botId, cardId, err: String(err) });
     return null;
