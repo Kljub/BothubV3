@@ -82,3 +82,16 @@ test('cards: pictures that cannot be drawn are named with the reason', async () 
   assert.match(problems[0]!, /^asset:7: not among the pictures/);
   assert.match(problems[1]!, /^asset:8: cannot be read/);
 });
+
+test('cards: a PNG the canvas library refuses is read by the second decoder', async () => {
+  const { pngFallback } = await import('./cards.js');
+  const { createCanvas } = await import('@napi-rs/canvas');
+  const c = createCanvas(4, 3);
+  c.getContext('2d').fillStyle = '#00ff00';
+  c.getContext('2d').fillRect(0, 0, 4, 3);
+  const png = pngFallback(c.toBuffer('image/png'));
+  assert.equal(png.image?.width, 4);
+  assert.deepEqual([...png.image!.getContext('2d').getImageData(1, 1, 1, 1).data], [0, 255, 0, 255]);
+  assert.deepEqual(pngFallback(Buffer.from('GIF89a')), {});
+  assert.match(pngFallback(Buffer.from('89504e470d0a1a0a00', 'hex')).error ?? '', /^pngjs:/);
+});

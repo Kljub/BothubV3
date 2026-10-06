@@ -1,4 +1,4 @@
-// Types of the two small GIF libraries (CommonJS, no own types): only what
+// Types of the small picture libraries (CommonJS, no own types): only what
 // cards.ts uses. Imported as default export (import gifenc from 'gifenc').
 declare module 'omggif' {
   export class GifReader {
@@ -25,4 +25,8 @@ declare module 'gifenc' {
     applyPalette(rgba: Uint8ClampedArray | Uint8Array, palette: Palette, format?: string): Uint8Array;
   };
   export default gifenc;
+}
+declare module 'pngjs' {
+  const pngjs: { PNG: { sync: { read(buf: Buffer, opts?: { checkCRC?: boolean }): { width: number; height: number; data: Buffer } } } };
+  export default pngjs;
 }

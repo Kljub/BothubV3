@@ -13,6 +13,7 @@ import { pathToFileURL } from 'node:url';
 import { createCanvas, GlobalFonts, ImageData, loadImage, type Canvas, type Image } from '@napi-rs/canvas';
 import omggif from 'omggif';
 import gifenc from 'gifenc';
+import pngjs from 'pngjs';
 
 const { GifReader } = omggif;
 const { GIFEncoder, applyPalette, quantize } = gifenc;
@@ -151,7 +152,10 @@ export async function renderDesign(design: Design, vars: Record<string, string>,
       if (anim) return anim;
     }
     return loadImage(data).catch((err) => {
-      problems.push(`${url}: cannot be read (${String((err as Error).message ?? err).slice(0, 80)}; ${data.length} bytes, starts ${data.subarray(0, 4).toString('hex')})`);
+      // Some PNGs the canvas library refuses: a second decoder (pngjs) tries.
+      const png = pngFallback(data);
+      if (png.image) return png.image;
+      problems.push(`${url}: cannot be read (${String((err as Error).message ?? err).slice(0, 80)}${png.error ? `; ${png.error}` : ''}; ${data.length} bytes, starts ${data.subarray(0, 4).toString('hex')})`);
       return null;
     });
   };
@@ -202,6 +206,20 @@ async function encodeGif(
   }
   gif.finish();
   return Buffer.from(gif.bytes());
+}
+
+/** A PNG decoded without the canvas library (pngjs, CRC not checked). */
+export function pngFallback(data: Buffer): { image?: Canvas; error?: string } {
+  if (data.subarray(0, 4).toString('hex') !== '89504e47') return {};
+  try {
+    const png = pngjs.PNG.sync.read(data, { checkCRC: false });
+    if (png.width * png.height > 40_000_000) return { error: 'too large' };
+    const c = createCanvas(png.width, png.height);
+    c.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(png.data.buffer, png.data.byteOffset, png.data.length), png.width, png.height), 0, 0);
+    return { image: c };
+  } catch (err) {
+    return { error: `pngjs: ${String((err as Error).message ?? err).slice(0, 80)}` };
+  }
 }
 
 /** File name of a drawn card: card.gif or card.png. */
