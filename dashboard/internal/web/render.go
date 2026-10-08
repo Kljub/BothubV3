@@ -88,6 +88,53 @@ var baseFuncs = template.FuncMap{
 		return formatDuration(max(time.Since(*b.StartedAt), 0))
 	},
 	"cdnSize": cdnSize,
+	// Replaced per request (locale); here so the templates parse.
+	"botLight": func(api.Bot) statusLight { return statusLight{} },
+}
+
+// statusLight: colour and hover text of a bot's status light in the sidebar.
+type statusLight struct {
+	Class string // running (green), warning (yellow), error (red), stopped (grey)
+	Tip   string
+}
+
+// botLight: green "Online: 2h 5m", yellow "Warning: …" (a warning in the
+// last hour or starting), red "Error: …" (the bot failed, or an error in the
+// last hour), grey "Offline".
+func (s *Server) botLight(b api.Bot, locale string) statusLight {
+	problem := func() string {
+		p := b.LastProblem
+		if p == nil {
+			return ""
+		}
+		if p.Key == "" && p.Code != nil {
+			return s.i18n.T(locale, "log.code."+*p.Code, flatten(p.Params)...)
+		}
+		return s.i18n.T(locale, p.Key, flatten(p.Params)...)
+	}
+	switch b.Status {
+	case api.BotRunning:
+		if b.LastProblem != nil && b.LastProblem.Level == "error" {
+			return statusLight{"error", s.i18n.T(locale, "bot.light.error", "message", problem())}
+		}
+		if b.LastProblem != nil {
+			return statusLight{"warning", s.i18n.T(locale, "bot.light.warning", "message", problem())}
+		}
+		up := ""
+		if b.StartedAt != nil {
+			up = formatDuration(max(time.Since(*b.StartedAt), 0))
+		}
+		return statusLight{"running", s.i18n.T(locale, "bot.light.online", "time", up)}
+	case api.BotStarting, api.BotStopping:
+		return statusLight{"warning", s.i18n.T(locale, "bot.status."+b.Status)}
+	case "error":
+		msg := problem()
+		if b.StatusErrorKey != nil {
+			msg = s.i18n.T(locale, *b.StatusErrorKey)
+		}
+		return statusLight{"error", s.i18n.T(locale, "bot.light.error", "message", msg)}
+	}
+	return statusLight{"stopped", s.i18n.T(locale, "bot.status.stopped")}
 }
 
 // cdnSize asks the Discord CDN for an image in the given size (a power of
@@ -154,6 +201,7 @@ func (s *Server) render(w http.ResponseWriter, status int, page, name string, da
 		"bytes":       func(b int64) string { return formatBytes(b, locale) },
 		"clientI18n":  func() template.JS { return s.clientI18n(locale) },
 		"pickerTexts": func() template.JS { return s.pickerTexts(locale) },
+		"botLight":    func(b api.Bot) statusLight { return s.botLight(b, locale) },
 	})
 
 	data.Locales = s.i18n.Locales()

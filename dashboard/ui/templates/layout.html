@@ -43,7 +43,7 @@
             <span class="bot-switch-name">{{.Name}}</span>
             <span class="bot-switch-status">{{t (printf "bot.status.%s" .Status)}}</span>
           </span>
-          <span class="status-dot status-dot-{{.Status}}" aria-hidden="true"{{with uptime .}} title="{{t "bot.uptime" "time" .}}"{{end}}></span>
+          {{with botLight .}}<span class="status-dot status-dot-{{.Class}}" role="img" aria-label="{{.Tip}}" title="{{.Tip}}"></span>{{end}}
           {{else}}
           <span class="avatar avatar-fallback" aria-hidden="true">?</span>
           <span class="bot-switch-text"><span class="bot-switch-name muted">{{t "sidebar.select_bot"}}</span></span>
@@ -53,7 +53,7 @@
         <ul class="bot-switch-list">
           <li class="bot-switch-add"><button type="button" data-open-dialog="add-bot-dialog"><span class="bot-switch-plus" aria-hidden="true">+</span><span>{{t "bots.add.title"}}</span></button></li>
           {{range $.Bots}}
-          <li><a href="/select-bot/{{.ID}}">{{template "avatar" .}}<span>{{.Name}}</span><span class="status-dot status-dot-{{.Status}}" aria-hidden="true"{{with uptime .}} title="{{t "bot.uptime" "time" .}}"{{end}}></span></a></li>
+          <li><a href="/select-bot/{{.ID}}">{{template "avatar" .}}<span>{{.Name}}</span>{{with botLight .}}<span class="status-dot status-dot-{{.Class}}" role="img" aria-label="{{.Tip}}" title="{{.Tip}}"></span>{{end}}</a></li>
           {{end}}
         </ul>
       </details>

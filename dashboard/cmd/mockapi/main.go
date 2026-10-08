@@ -46,7 +46,27 @@ type bot struct {
 	BannerURL *string `json:"bannerUrl,omitempty"`
 	Presence  string  `json:"presence,omitempty"`
 	Verified  bool    `json:"verified,omitempty"` // Discord's Verified Bot badge
-	token     string
+	// Newest warning or error of the last hour (PHP API only).
+	LastProblem *botProblem `json:"lastProblem,omitempty"`
+	token       string
+}
+
+type botProblem struct {
+	Level  string     `json:"level"`
+	Code   *string    `json:"code"`
+	Key    string     `json:"key"`
+	Params anyObjectT `json:"params"`
+	At     string     `json:"at"`
+}
+
+// anyObjectT: a JSON object; anything else (PHP's [] for empty) reads as {}.
+type anyObjectT map[string]any
+
+func (o *anyObjectT) UnmarshalJSON(b []byte) error {
+	m := map[string]any{}
+	_ = json.Unmarshal(b, &m)
+	*o = m
+	return nil
 }
 
 type guild struct {

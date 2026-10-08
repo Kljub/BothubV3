@@ -12,8 +12,9 @@
 .badge-plugin { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 10px; font-weight: 700; line-height: 1.5; vertical-align: middle; color: #1a1a1a; background: #a3e635; }
 .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex: none; }
 .status-dot-running { background: var(--green); }
-.status-dot-stopped { background: var(--red); }
-.status-dot-error { background: var(--yellow); }
+.status-dot-stopped { background: var(--muted); }
+.status-dot-error { background: var(--red); }
+.status-dot-warning { background: var(--yellow); }
 .badge {
   display: inline-flex; align-items: center; gap: 5px;
   padding: 3px 10px;

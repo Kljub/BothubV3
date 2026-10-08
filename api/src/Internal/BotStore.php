@@ -20,7 +20,10 @@ final class BotStore
         b.token_enc IS NOT NULL AS token_set, b.autostart, b.created_at, b.started_at, b.owner_id,
         (SELECT json_group_array(json_object('userId', m.user_id, 'role', m.role, 'permissions', json(m.permissions))) FROM bot_members m WHERE m.bot_id = b.id) AS members,
         (SELECT COUNT(*) FROM bot_guilds g WHERE g.bot_id = b.id AND g.left_at IS NULL) AS guild_count,
-        (SELECT json_extract(p.presence, '$.status') FROM bot_profiles p WHERE p.bot_id = b.id) AS presence_status";
+        (SELECT json_extract(p.presence, '$.status') FROM bot_profiles p WHERE p.bot_id = b.id) AS presence_status,
+        (SELECT json_object('level', l.level, 'code', l.code, 'key', l.key, 'params', json(COALESCE(l.params, '{}')), 'at', l.at) FROM logs l
+          WHERE l.bot_id = b.id AND l.level IN ('warning', 'error') AND l.at >= strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-1 hour')
+          ORDER BY l.at DESC LIMIT 1) AS last_problem";
 
     /** $owner: the signed-in user; a new bot belongs to them and uses their secrets. */
     public function __construct(private readonly PDO $pdo, private readonly SecretBox $box, private readonly ?PluginStore $plugins = null, private readonly int $owner = 1)
@@ -290,6 +293,17 @@ final class BotStore
         $this->pdo->prepare('DELETE FROM bot_members WHERE bot_id = ? AND user_id = ?')->execute([$botId, $userId]);
     }
 
+    /** The newest warning or error; params always an object (empty: {}). */
+    private static function problem(mixed $raw): ?array
+    {
+        $p = is_string($raw) ? json_decode($raw, true) : null;
+        if (!is_array($p)) {
+            return null;
+        }
+        $p['params'] = (object) (is_array($p['params'] ?? null) ? $p['params'] : []);
+        return $p;
+    }
+
     private static function json(array $r): array
     {
         return [
@@ -308,6 +322,8 @@ final class BotStore
             'ownerId' => (int) $r['owner_id'],
             'members' => json_decode((string) ($r['members'] ?? '[]'), true) ?: [],
             // Status the bot shows on Discord (online, idle, dnd, invisible), set under Bot settings.
+            // Newest warning or error of the last hour (status light in the sidebar).
+            'lastProblem' => self::problem($r['last_problem'] ?? null),
             'presence' => in_array($r['presence_status'] ?? null, ['online', 'idle', 'dnd', 'invisible'], true) ? $r['presence_status'] : 'online',
         ];
     }

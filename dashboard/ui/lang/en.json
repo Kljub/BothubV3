@@ -5715,5 +5715,8 @@
   "vars.item.bot_plugin_usage": "Plugin uses",
   "vars.item.bot_plugin_usage_hint": "Plugin uses in the last 30 days.",
   "vars.item.bot_plugin_top": "Most used plugins",
-  "vars.item.bot_plugin_top_hint": "The 10 most used plugins, one per line."
+  "vars.item.bot_plugin_top_hint": "The 10 most used plugins, one per line.",
+  "bot.light.online": "Online: {time}",
+  "bot.light.warning": "Warning: {message}",
+  "bot.light.error": "Error: {message}"
 }

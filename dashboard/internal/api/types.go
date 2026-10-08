@@ -76,6 +76,15 @@ type Bot struct {
 	BannerURL *string `json:"bannerUrl,omitempty"`
 	Presence  string  `json:"presence,omitempty"`
 	Verified  bool    `json:"verified,omitempty"` // Discord's Verified Bot badge
+	// Newest warning or error of the last hour (status light in the sidebar).
+	LastProblem *BotProblem `json:"lastProblem,omitempty"`
+}
+
+type BotProblem struct {
+	Level  string         `json:"level"` // warning, error
+	Code   *string        `json:"code"`
+	Key    string         `json:"key"`
+	Params map[string]any `json:"params"`
 }
 
 // Transitioning reports whether the bot is between two stable states.
