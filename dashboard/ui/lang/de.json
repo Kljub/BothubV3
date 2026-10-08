@@ -5689,5 +5689,14 @@
   "cards.effect.bats": "Fledermäuse",
   "cards.effect.eggs": "Ostereier",
   "cards.effect.lights": "Lichterkette",
-  "cards.effect.hearts": "Herzen"
+  "cards.effect.hearts": "Herzen",
+  "update.progress": "Update-Fortschritt",
+  "update.downloading": "Update wird heruntergeladen",
+  "update.downloaded": "Update heruntergeladen",
+  "update.installing": "Wird installiert",
+  "update.installed": "Installiert",
+  "update.eta": "Ca. {time} verbleibend",
+  "update.eta_unknown": "Restzeit wird berechnet …",
+  "update.failed_short": "Update fehlgeschlagen: siehe Log unten",
+  "update.badge": "Update verfügbar"
 }

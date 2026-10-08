@@ -5689,5 +5689,14 @@
   "cards.effect.bats": "Bats",
   "cards.effect.eggs": "Easter eggs",
   "cards.effect.lights": "Fairy lights",
-  "cards.effect.hearts": "Hearts"
+  "cards.effect.hearts": "Hearts",
+  "update.progress": "Update progress",
+  "update.downloading": "Downloading the update",
+  "update.downloaded": "Update downloaded",
+  "update.installing": "Installing",
+  "update.installed": "Installed",
+  "update.eta": "About {time} left",
+  "update.eta_unknown": "Working out the time left …",
+  "update.failed_short": "Update failed: see the log below",
+  "update.badge": "Update available"
 }

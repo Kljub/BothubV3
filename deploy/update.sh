@@ -29,7 +29,7 @@ wait_key() {
 }
 
 step building
-docker compose build || exit 1
+docker compose --progress plain build || exit 1
 
 handover=0
 if docker compose ps --status running --services 2>/dev/null | grep -qx bot; then

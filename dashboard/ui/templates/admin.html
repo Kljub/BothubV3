@@ -719,6 +719,15 @@
 {{end}}
 
 
+{{define "update_badge_fragment"}}{{template "update_badge" .Data}}{{end}}
+
+{{/* Bottom of the admin sidebar: white "Update available" button with the new version in gold. */}}
+{{define "update_badge"}}{{with .NewVersion}}
+<button type="button" class="update-badge" data-dialog-section hx-get="/admin/server_settings" hx-target="#admin-panel">
+  <span>⬆ {{t "update.badge"}}</span><span class="update-badge-version mono">{{.}}</span>
+</button>
+{{end}}{{end}}
+
 {{define "update_box_fragment"}}{{template "update_box" .Data}}{{end}}
 
 {{/* Updates from the git repository (internal/web/update.go). */}}
@@ -743,6 +752,24 @@ docker compose up -d --build</pre>
     {{end}}
   {{end}}
   {{with .Info.Run}}
+  {{with .Progress}}{{if or $.Running (eq .Phase "done") (eq .Phase "failed")}}
+  <div class="update-progress update-progress-{{.Phase}}" role="group" aria-label="{{t "update.progress"}}">
+    <div class="update-progress-row">
+      <span>{{if eq .DownloadPercent 100}}{{t "update.downloaded"}}{{else}}{{t "update.downloading"}} …{{end}}</span>
+      <span class="update-progress-val">{{with .Received}}<strong>{{.}}</strong>{{end}}{{with .Speed}} · {{.}}{{end}} <span class="muted">{{.DownloadPercent}} %</span> ⬇</span>
+    </div>
+    <progress class="update-bar update-bar-download" max="100" value="{{.DownloadPercent}}">{{.DownloadPercent}} %</progress>
+    <div class="update-progress-row">
+      <span>{{if eq .InstallPercent 100}}{{t "update.installed"}}{{else}}{{t "update.installing"}} …{{end}}</span>
+      <span class="update-progress-val muted">{{.InstallPercent}} %</span>
+    </div>
+    <progress class="update-bar update-bar-install" max="100" value="{{.InstallPercent}}">{{.InstallPercent}} %</progress>
+    <div class="update-progress-foot">
+      <span class="muted">{{if $.Eta}}{{t "update.eta" "time" $.Eta}}{{else if eq .Phase "done"}}{{t "update.done"}}{{else if eq .Phase "failed"}}{{t "update.failed_short"}}{{else}}{{t "update.eta_unknown"}}{{end}}</span>
+      {{with .Step}}<span class="mono muted update-step">{{.}}</span>{{end}}
+    </div>
+  </div>
+  {{end}}{{end}}
   <div class="update-run">
     <strong>{{if or (eq .Status "running") (eq .Status "created")}}⏳ {{t "update.running"}}{{else if eq .ExitCode 0}}✅ {{t "update.done"}}{{else}}❌ {{t "update.failed" "code" .ExitCode}}{{end}}</strong>
     {{with .FinishedAt}}{{if ne . "0001-01-01T00:00:00Z"}}<span class="muted"> · {{.}}</span>{{end}}{{end}}

@@ -29,6 +29,8 @@ var restartPolicies = []string{"unless-stopped", "always", "no"}
 type updateState struct {
 	checkedAt time.Time
 	behind    int
+	current   string // commit here and the newest one of the last check
+	remote    string
 	day       string // the local date of the last automatic check
 }
 
@@ -89,6 +91,9 @@ func (s *store) autoUpdateTick(now time.Time) {
 	if due {
 		s.updateState.day = now.Format("2006-01-02")
 	}
+	// Without automatic updates a quiet check every 6 hours still shows
+	// "Update available" in the admin sidebar.
+	quiet := !due && now.Sub(s.updateState.checkedAt) > 6*time.Hour
 	s.mu.Unlock()
 
 	ctx, cancel := context.WithTimeout(context.Background(), updateTimeout)
@@ -96,11 +101,22 @@ func (s *store) autoUpdateTick(now time.Time) {
 	if err := s.updater.applyRestartPolicy(ctx, set.RestartPolicy); err != nil {
 		slog.Warn("mockapi: restart policy not applied", "err", err)
 	}
-	if !due {
+	if !due && !quiet {
 		return
 	}
 	res := s.checkForUpdates(ctx)
 	s.mu.Lock()
+	if res.Error == "" {
+		s.updateState.current, s.updateState.remote = res.Current, res.Remote
+	}
+	if !due {
+		s.updateState.checkedAt = now
+		if res.Error == "" {
+			s.updateState.behind = res.Behind
+		}
+		s.mu.Unlock()
+		return
+	}
 	s.updateState.checkedAt, s.updateState.behind = now, res.Behind
 	if res.Error != "" {
 		s.addServerLog(now, "warning", "", "log.server.update_check_failed", "api", "auto", map[string]any{"reason": truncate(res.Error, 200)}, nil)

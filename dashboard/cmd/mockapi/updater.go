@@ -199,18 +199,21 @@ func (s *store) getUpdate(w http.ResponseWriter, r *http.Request, _ string) {
 		State struct {
 			Status   string `json:"Status"`
 			ExitCode int    `json:"ExitCode"`
+			Started  string `json:"StartedAt"`
 			Finished string `json:"FinishedAt"`
 		}
 	}
 	out := map[string]any{"configured": true, "hostDir": s.updater.hostDir, "repo": strings.TrimSuffix(s.updater.repo, ".git"), "branch": s.updater.branch, "dockerDesktop": s.updater.dockerDesktop(r.Context())}
 	s.mu.Lock()
 	if !s.updateState.checkedAt.IsZero() {
-		out["lastCheck"] = map[string]any{"at": s.updateState.checkedAt, "behind": s.updateState.behind}
+		out["lastCheck"] = map[string]any{"at": s.updateState.checkedAt, "behind": s.updateState.behind, "current": s.updateState.current, "remote": s.updateState.remote}
 	}
 	s.mu.Unlock()
 	if code, err := s.updater.docker(r.Context(), http.MethodGet, "/containers/"+updaterName+"/json", nil, &info); err == nil && code == 200 {
 		logs, _ := s.updater.logs(r.Context(), updaterName)
-		out["run"] = map[string]any{"status": info.State.Status, "exitCode": info.State.ExitCode, "finishedAt": info.State.Finished, "log": logs}
+		started, _ := time.Parse(time.RFC3339Nano, info.State.Started)
+		out["run"] = map[string]any{"status": info.State.Status, "exitCode": info.State.ExitCode, "finishedAt": info.State.Finished, "log": logs,
+			"progress": parseUpdateProgress(logs, started, time.Now(), info.State.Status, info.State.ExitCode)}
 	}
 	writeJSON(w, 200, out)
 }
@@ -227,6 +230,7 @@ func (s *store) checkUpdate(w http.ResponseWriter, r *http.Request, _ string) {
 	if res.Error == "" {
 		s.mu.Lock()
 		s.updateState.checkedAt, s.updateState.behind = time.Now(), res.Behind
+		s.updateState.current, s.updateState.remote = res.Current, res.Remote
 		s.mu.Unlock()
 	}
 	writeJSON(w, 200, res)
@@ -287,7 +291,7 @@ func (s *store) startUpdate(ctx context.Context, actor string) error {
 	if code, err := s.updater.docker(ctx, http.MethodGet, "/containers/"+updaterName+"/json", nil, &info); err == nil && code == 200 && info.State.Running {
 		return errUpdateRunning
 	}
-	if _, _, err := s.updater.run(ctx, updaterName, `echo "Update by `+strings.ReplaceAll(actor, `"`, "")+` at $(date -u +%FT%TZ)"; echo "from $SRC ($REF)"; git pull --ff-only "$SRC" "$REF" && if [ -f deploy/update.sh ]; then sh deploy/update.sh; else echo "--- rebuilding ---" && docker compose up -d --build --remove-orphans && echo "--- done ---"; fi`, false); err != nil {
+	if _, _, err := s.updater.run(ctx, updaterName, `echo "Update by `+strings.ReplaceAll(actor, `"`, "")+` at $(date -u +%FT%TZ)"; echo "from $SRC ($REF)"; git pull --ff-only --progress "$SRC" "$REF" && if [ -f deploy/update.sh ]; then sh deploy/update.sh; else echo "--- rebuilding ---" && docker compose --progress plain build && echo "--- restarting ---" && docker compose up -d --remove-orphans && echo "--- done ---"; fi`, false); err != nil {
 		return err
 	}
 	s.mu.Lock()

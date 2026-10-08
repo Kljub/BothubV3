@@ -2,7 +2,6 @@ package web
 
 import (
 	"testing"
-	"time"
 
 	"github.com/Kljub/BothubV3/dashboard/internal/api"
 )
@@ -19,10 +18,13 @@ func TestNewestFirst(t *testing.T) {
 func TestUpdateAvailable(t *testing.T) {
 	behind := func(n int) *api.UpdateCheck { return &api.UpdateCheck{Behind: n} }
 	last := api.UpdateInfo{}
-	last.LastCheck = &struct {
-		At     time.Time `json:"at"`
-		Behind int       `json:"behind"`
-	}{Behind: 2}
+	last.LastCheck = &api.UpdateLastCheck{Behind: 2, Remote: "b2c3d4e"}
+	if v := (updateView{Info: last}); v.NewVersion() != "b2c3d4e" {
+		t.Errorf("new version = %q", v.NewVersion())
+	}
+	if clockDuration(514) != "08:34" || clockDuration(3723) != "1:02:03" || clockDuration(-1) != "" {
+		t.Error("clockDuration")
+	}
 	for name, c := range map[string]struct {
 		v    updateView
 		want bool
