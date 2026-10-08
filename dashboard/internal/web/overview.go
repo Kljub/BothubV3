@@ -25,6 +25,38 @@ type memoryPanel struct {
 	From, To string
 }
 
+// storagePanel: the data folder over time (chart like memory) and the disk.
+type storagePanel struct {
+	Range        string
+	Ranges       []string
+	Stats        api.StorageStats
+	AverageLabel string
+	Chart        lineChart
+}
+
+func (s *Server) storagePanel(st api.StorageStats, rng, locale string) storagePanel {
+	pts := make([]chartPoint, len(st.Series))
+	for i, v := range st.Series {
+		pts[i] = chartPoint{T: v.T, V: v.Bytes}
+	}
+	return storagePanel{Range: rng, Ranges: statRanges, Stats: st, AverageLabel: formatBytes(st.AverageBytes, locale),
+		Chart: buildLineChart(pts, st.AverageBytes, rng, locale, func(v int64) string { return formatBytes(v, locale) })}
+}
+
+// handleOverviewStorage re-renders the storage panel (range buttons, polling).
+func (s *Server) handleOverviewStorage(w http.ResponseWriter, r *http.Request, p Page) {
+	rng := r.URL.Query().Get("range")
+	if !slices.Contains(statRanges, rng) {
+		rng = "24h"
+	}
+	stats, err := s.api.OverviewStats(r.Context(), session(r), rng)
+	if err != nil {
+		s.fail(w, r, p, err)
+		return
+	}
+	s.render(w, http.StatusOK, "admin", "storage_panel_fragment", withData(p, s.storagePanel(stats.Storage, rng, p.Locale)))
+}
+
 func (s *Server) handleOverview(w http.ResponseWriter, r *http.Request, p Page) {
 	sess := session(r)
 	tiles, err := s.api.OverviewStats(r.Context(), sess, "24h")

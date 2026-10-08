@@ -5698,5 +5698,6 @@
   "update.eta": "Ca. {time} verbleibend",
   "update.eta_unknown": "Restzeit wird berechnet …",
   "update.failed_short": "Update fehlgeschlagen: siehe Log unten",
-  "update.badge": "Update verfügbar"
+  "update.badge": "Update verfügbar",
+  "overview.storage.collecting": "Daten werden gesammelt: das Diagramm beginnt nach ein paar Messungen (alle 5 Minuten)."
 }

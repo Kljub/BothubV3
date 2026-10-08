@@ -38,27 +38,62 @@
 {{end}}
 {{end}}
 
-{{/* Storage: the data folder by part and the disk it is on. */}}
+{{define "storage_panel_fragment"}}{{template "storage_panel" .Data}}{{end}}
+
+{{/* Storage: the data folder over time (like memory), its parts and the disk it is on. */}}
 {{define "storage_panel"}}
-<section class="chart-panel admin-storage">
+<section id="storage-panel" class="chart-panel admin-storage" hx-get="/overview/storage?range={{.Range}}" hx-trigger="every 60s" hx-swap="outerHTML">
   <header class="chart-header">
     <div>
       <h3>{{t "overview.storage.title"}}</h3>
-      <p class="muted chart-subtitle">{{t "overview.storage.subtitle" "used" (bytes .Used)}}</p>
+      <p class="muted chart-subtitle">{{t "overview.storage.subtitle" "used" (bytes .Stats.Used)}} · {{t "overview.memory_peak" "peak" (bytes .Stats.PeakBytes)}}</p>
+    </div>
+    <div class="segmented" role="group" aria-label="{{t "overview.range.label"}}">
+      {{range .Ranges}}
+      <button type="button" class="segment" hx-get="/overview/storage?range={{.}}" hx-target="#storage-panel" hx-swap="outerHTML"
+        aria-pressed="{{if eq . $.Range}}true{{else}}false{{end}}">{{t (printf "overview.range.%s" .)}}</button>
+      {{end}}
     </div>
   </header>
-  {{if .DiskTotalBytes}}
-  <div class="storage-bar" role="img" aria-label="{{t "overview.storage.disk" "free" (bytes .DiskFreeBytes) "total" (bytes .DiskTotalBytes)}}">
-    <span class="storage-bar-fill storage-pct-{{.DiskUsedPct}}"></span>
+  {{with .Chart}}
+  {{if .Empty}}
+  <p class="muted">{{t "overview.storage.collecting"}}</p>
+  {{else}}
+  <div class="chart" data-chart-points="{{.Points}}">
+    <svg viewBox="0 0 {{.W}} {{.H}}" role="img" aria-label="{{t "overview.storage.title"}}">
+      <g class="chart-grid">
+        {{range .YTicks}}<line x1="{{$.Chart.Left}}" x2="{{$.Chart.Right}}" y1="{{.Pos}}" y2="{{.Pos}}"/>{{end}}
+      </g>
+      <g class="chart-axis" aria-hidden="true">
+        {{range .YTicks}}<text x="{{sub $.Chart.Left 8}}" y="{{.Pos}}" text-anchor="end" dominant-baseline="middle">{{.Label}}</text>{{end}}
+        {{range $i, $tick := .XTicks}}<text x="{{$tick.Pos}}" y="{{add $.Chart.Bot 18}}" text-anchor="{{if eq $i 0}}start{{else if eq $i 4}}end{{else}}middle{{end}}">{{$tick.Label}}</text>{{end}}
+      </g>
+      <path class="chart-area" d="{{.Area}}"/>
+      <line class="chart-avg" x1="{{.Left}}" x2="{{.Right}}" y1="{{.AvgY}}" y2="{{.AvgY}}"/>
+      <text class="chart-avg-label" x="{{sub .Right 4}}" y="{{sub .AvgY 6}}" text-anchor="end">{{t "overview.chart.average"}} {{$.AverageLabel}}</text>
+      <path class="chart-line" d="{{.Line}}"/>
+      <line class="chart-crosshair" x1="0" x2="0" y1="{{.Top}}" y2="{{.Bot}}" visibility="hidden"/>
+      <circle class="chart-dot" r="5" cx="0" cy="0" visibility="hidden"/>
+      <rect class="chart-hit" x="{{.Left}}" y="{{.Top}}" width="{{sub .Right .Left}}" height="{{sub .Bot .Top}}"/>
+    </svg>
+    <div class="chart-tooltip" role="status" hidden></div>
   </div>
-  <p class="hint">{{t "overview.storage.disk" "free" (bytes .DiskFreeBytes) "total" (bytes .DiskTotalBytes)}} · {{.DiskUsedPct}} %</p>
   {{end}}
+  {{end}}
+  {{with .Stats}}
   <ul class="service-list">
     <li><span class="muted">{{t "overview.storage.database"}}</span> <span class="num">{{bytes .DatabaseBytes}}</span></li>
     <li><span class="muted">{{t "overview.storage.plugins"}}</span> <span class="num">{{bytes .PluginsBytes}}</span></li>
     <li><span class="muted">{{t "overview.storage.redis"}}</span> <span class="num">{{bytes .RedisBytes}}</span></li>
     <li><span class="muted">{{t "overview.storage.other"}}</span> <span class="num">{{bytes .OtherBytes}}</span></li>
   </ul>
+  {{if .DiskTotalBytes}}
+  <div class="storage-bar" role="img" aria-label="{{t "overview.storage.disk" "free" (bytes .DiskFreeBytes) "total" (bytes .DiskTotalBytes)}}">
+    <span class="storage-bar-fill storage-pct-{{.DiskUsedPct}}"></span>
+  </div>
+  <p class="hint">{{t "overview.storage.disk" "free" (bytes .DiskFreeBytes) "total" (bytes .DiskTotalBytes)}} · {{.DiskUsedPct}} %</p>
+  {{end}}
+  {{end}}
 </section>
 {{end}}
 

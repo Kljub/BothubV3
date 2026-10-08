@@ -97,6 +97,7 @@ type store struct {
 	security         securityPolicy   // Security Policies (policies.go)
 	discrims         map[int64]string // bot ID -> discriminator of the bot user
 	mem              memSampler       // memory of the overview (memstats.go)
+	storage          storageHistory   // data folder over time (storage.go)
 	registerLimit    registerLimiter
 	bots             map[int64]*bot
 	nextID           int64
@@ -191,6 +192,7 @@ func main() {
 	s.loadRegistration()
 	s.loadSecurity()
 	go s.runMemorySampler()
+	go s.runStorageSampler()
 	s.loadSMTP()
 	s.updater = newUpdater()
 	go s.runAutoUpdates()
@@ -1116,7 +1118,7 @@ func (s *store) overviewStats(w http.ResponseWriter, r *http.Request, _ string) 
 	writeJSON(w, 200, map[string]any{
 		"bots":    map[string]int{"total": total, "online": online},
 		"memory":  s.memoryStats(r.Context(), rng, from, to),
-		"storage": storageStats(),
+		"storage": s.storage.stats(rng, from, to),
 	})
 }
 

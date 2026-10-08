@@ -124,6 +124,11 @@ type StorageStats struct {
 	OtherBytes     int64 `json:"otherBytes"`
 	DiskTotalBytes int64 `json:"diskTotalBytes"`
 	DiskFreeBytes  int64 `json:"diskFreeBytes"`
+	// History of the data folder (chart like memory).
+	Range        string         `json:"range"`
+	AverageBytes int64          `json:"averageBytes"`
+	PeakBytes    int64          `json:"peakBytes"`
+	Series       []MemorySample `json:"series"`
 }
 
 // Used: everything in the data folder.

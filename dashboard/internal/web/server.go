@@ -185,6 +185,7 @@ func (s *Server) routes() http.Handler {
 	mux.Handle("GET /overview/tiles", auth(s.handleOverviewTiles))
 	mux.Handle("GET /overview/bots", auth(s.handleBotGrid))
 	mux.Handle("GET /overview/memory", auth(s.handleOverviewMemory))
+	mux.Handle("GET /overview/storage", auth(s.handleOverviewStorage))
 	mux.Handle("GET /bots", auth(s.handleBot))
 	mux.Handle("GET /bots/{section}", auth(s.handleBot))
 	mux.Handle("GET /bots/modules/{key}", auth(s.handleModuleItem("modules")))

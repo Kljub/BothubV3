@@ -5698,5 +5698,6 @@
   "update.eta": "About {time} left",
   "update.eta_unknown": "Working out the time left …",
   "update.failed_short": "Update failed: see the log below",
-  "update.badge": "Update available"
+  "update.badge": "Update available",
+  "overview.storage.collecting": "Collecting data: the chart starts after a few measurements (every 5 minutes)."
 }
