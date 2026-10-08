@@ -387,6 +387,7 @@
     for (const node of graph.nodes) world.append(renderNode(node));
     applyView();
     renderInspector();
+    decorateRun();
     if (activePanel === 'variables') renderPanel();
   }
 
@@ -889,6 +890,8 @@
     }
     vars.append(chips);
     body.append(vars);
+    const note = lastRunNote(node);
+    if (note) body.append(note);
     inspector.append(body);
     inspector.scrollTop = scroll;
   }
@@ -2106,6 +2109,10 @@
     panelBody.replaceChildren();
     if (activePanel === 'nodes') return renderPalette();
     if (activePanel === 'variables') return renderVariables();
+    if (activePanel === 'errors') {
+      if (runs === null) loadRuns();
+      return renderRuns();
+    }
     panelBody.append(el('h3', 'bpanel-title', t('builder.rail.' + activePanel)), el('p', 'muted', t('builder.panel.soon')));
   }
 
@@ -2821,6 +2828,329 @@
     testing = false;
   }
 
+  // ---------- playbacks (runs the bot recorded) ----------
+  // The ⚠ rail panel lists the last runs of this command; opening one plays
+  // it on the canvas block by block (step, speed), follows up to 4
+  // variables, shows the reason and fix of a failed block, and the block's
+  // settings with the values of that run under its settings.
+
+  let runs = null;
+  let openRun = null;
+  let lastRun = null;
+  let playAt = -1;
+  let playTimer = null;
+  let playSpeed = 1;
+  const follow = [];
+  const RUN_SPEEDS = [0.5, 1, 2, 4];
+
+  async function getJSON(url) {
+    const res = await fetch(url, { credentials: 'same-origin' });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) throw new Error(data?.error?.key || 'builder.runs.failed');
+    return data;
+  }
+
+  async function loadRuns() {
+    if (!meta.runsUrl) return;
+    try {
+      runs = (await getJSON(meta.runsUrl)).items || [];
+    } catch {
+      runs = [];
+    }
+    // The newest run fills "Last run values" under the block settings.
+    if (runs.length && lastRun?.id !== runs[0].id) {
+      lastRun = await getJSON(`${meta.runUrl}/${runs[0].id}`).catch(() => null);
+      if (!openRun) renderInspector();
+    }
+    if (activePanel === 'errors') renderPanel();
+  }
+
+  async function openPlayback(id) {
+    stopPlay();
+    try {
+      openRun = await getJSON(`${meta.runUrl}/${id}`);
+    } catch (err) {
+      toast(t(err.message));
+      return;
+    }
+    playAt = -1;
+    activePanel = 'errors';
+    root.querySelectorAll('[data-panel]').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.panel === 'errors')));
+    renderPanel();
+    render();
+    const failed = openRun.error_node && nodeById(openRun.error_node);
+    if (failed) focusNode(failed);
+  }
+
+  function closePlayback() {
+    stopPlay();
+    openRun = null;
+    playAt = -1;
+    renderPanel();
+    render();
+  }
+
+  function runSteps() {
+    return openRun?.steps || [];
+  }
+
+  // Variables after step i (-1 = at the start).
+  function varsAt(i) {
+    const v = { ...(openRun?.start_vars || {}) };
+    const steps = runSteps();
+    for (let k = 0; k <= i && k < steps.length; k++) Object.assign(v, steps[k].vars || {});
+    return v;
+  }
+
+  function stepLabel(step) {
+    const node = nodeById(step.node);
+    const def = defs[step.type] || (node && defs[node.type]);
+    if (node?.label) return node.label;
+    if (def) return def.compact && node ? stateLabel(node).join(' ') : t(def.labelKey);
+    return step.type || step.node;
+  }
+
+  function runHint(run) {
+    const h = run?.error_hint;
+    if (!h) return { text: run?.error_text || '', fix: '' };
+    const local = (meta.runErrors || {})[h.key];
+    const fill = (s) => String(s).replace(/\{([a-z]+)\}/g, (m, n) => (h.params && n in h.params ? h.params[n] : m));
+    return local ? { text: fill(local.text), fix: fill(local.fix) } : { text: h.text, fix: h.fix };
+  }
+
+  function runWhen(run) {
+    const d = new Date(run.time);
+    return Number.isNaN(d.getTime()) ? '' : d.toLocaleString([], { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+
+  function stepTo(i) {
+    const steps = runSteps();
+    playAt = Math.max(-1, Math.min(steps.length - 1, i));
+    decorateRun();
+    renderPlaybackState();
+    if (playAt >= 0) renderInspector();
+  }
+
+  function stopPlay() {
+    clearInterval(playTimer);
+    playTimer = null;
+    root.querySelector('[data-run-play]')?.replaceChildren(document.createTextNode('▶'));
+  }
+
+  function togglePlay() {
+    if (playTimer) return stopPlay();
+    const steps = runSteps();
+    if (!steps.length) return;
+    if (playAt >= steps.length - 1) stepTo(-1);
+    root.querySelector('[data-run-play]')?.replaceChildren(document.createTextNode('⏸'));
+    playTimer = setInterval(() => {
+      if (playAt >= runSteps().length - 1) return stopPlay();
+      stepTo(playAt + 1);
+    }, 700 / playSpeed);
+  }
+
+  // Canvas: blocks passed so far green/red, the current one yellow, the failed one with a tag.
+  function decorateRun() {
+    world.querySelectorAll('.bnode').forEach((n) => n.classList.remove('sim-active', 'sim-ok', 'sim-error', 'run-failed'));
+    world.querySelectorAll('.brun-tag').forEach((n) => n.remove());
+    if (!openRun) return;
+    const steps = runSteps();
+    const box = (id) => world.querySelector(`[data-node="${CSS.escape(id)}"]`);
+    for (let k = 0; k <= playAt; k++) box(steps[k].node)?.classList.add(steps[k].status === 'error' ? 'sim-error' : 'sim-ok');
+    if (playAt >= 0) box(steps[playAt].node)?.classList.add('sim-active');
+    const showFail = playAt < 0 || playAt >= steps.length - 1;
+    if (showFail && !openRun.ok && openRun.error_node) {
+      const b = box(openRun.error_node);
+      if (b) {
+        b.classList.add('run-failed');
+        b.append(el('span', `brun-tag${openRun.fixed ? ' brun-tag-fixed' : ''}`, openRun.fixed ? `✓ ${t('builder.runs.fixed')}` : t('builder.runs.failed_tag')));
+      }
+    }
+  }
+
+  // Updates the step list, the counter and the followed variables without rebuilding the panel.
+  function renderPlaybackState() {
+    const steps = runSteps();
+    panelBody.querySelectorAll('[data-step]').forEach((li) => li.classList.toggle('brun-step-current', Number(li.dataset.step) === playAt));
+    panelBody.querySelector('[data-step]')?.parentElement?.querySelector('.brun-step-current')?.scrollIntoView({ block: 'nearest' });
+    const counter = panelBody.querySelector('[data-run-counter]');
+    if (counter) counter.textContent = t('builder.runs.step_of', { n: String(playAt + 1), total: String(steps.length) });
+    const fol = panelBody.querySelector('[data-run-follow]');
+    if (fol) renderFollow(fol);
+  }
+
+  function renderFollow(box) {
+    box.replaceChildren();
+    const v = varsAt(playAt);
+    for (const name of follow) {
+      const chip = el('span', 'brun-follow-chip');
+      chip.append(el('span', 'mono', name), el('strong', 'mono', name in v ? (v[name] === '' ? '""' : v[name]) : '—'));
+      const x = el('button', 'icon-btn icon-btn-plain', '×');
+      x.type = 'button';
+      x.setAttribute('aria-label', t('builder.close'));
+      x.addEventListener('click', () => { follow.splice(follow.indexOf(name), 1); renderFollow(box); });
+      chip.append(x);
+      box.append(chip);
+    }
+    if (follow.length < 4) {
+      const pick = el('select', 'brun-follow-pick');
+      pick.setAttribute('aria-label', t('builder.runs.follow'));
+      pick.append(new Option(`+ ${t('builder.runs.follow')}`, ''));
+      const names = Object.keys(varsAt(runSteps().length - 1)).filter((n) => !follow.includes(n)).sort();
+      for (const n of names) pick.append(new Option(n, n));
+      pick.addEventListener('change', () => {
+        if (pick.value) follow.push(pick.value);
+        renderFollow(box);
+      });
+      box.append(pick);
+    }
+  }
+
+  function renderRuns() {
+    panelBody.append(el('h3', 'bpanel-title', t('builder.rail.errors')));
+    if (openRun) return renderPlayback();
+    const head = el('div', 'brun-head');
+    head.append(el('p', 'muted', t('builder.runs.hint')));
+    const refresh = el('button', 'btn btn-sm', t('builder.runs.refresh'));
+    refresh.type = 'button';
+    refresh.addEventListener('click', () => { runs = null; renderPanel(); loadRuns(); });
+    head.append(refresh);
+    panelBody.append(head);
+    if (runs === null) {
+      panelBody.append(el('p', 'muted', t('builder.runs.loading')));
+      return;
+    }
+    if (!runs.length) {
+      panelBody.append(el('p', 'muted', t('builder.runs.empty')));
+      return;
+    }
+    const list = el('ul', 'brun-list');
+    for (const r of runs) {
+      const item = el('li', `brun-item${r.ok ? '' : ' brun-item-error'}`);
+      const b = el('button', 'brun-open');
+      b.type = 'button';
+      b.append(el('span', 'brun-icon', r.ok ? '✓' : '✗'));
+      const txt = el('span', 'brun-text');
+      txt.append(el('strong', '', runWhen(r)), el('span', 'muted', [r.user_name, t(`errors.source.${r.source || ''}`)].filter(Boolean).join(' · ')));
+      if (!r.ok) txt.append(el('span', 'brun-reason', runHint(r).text || t('errors.unknown')));
+      b.append(txt);
+      if (r.fixed) b.append(el('span', 'brun-badge brun-badge-ok', t('builder.runs.fixed')));
+      if (r.muted) b.append(el('span', 'brun-badge', '🔕'));
+      b.addEventListener('click', () => openPlayback(r.id));
+      item.append(b);
+      list.append(item);
+    }
+    panelBody.append(list);
+  }
+
+  function renderPlayback() {
+    const r = openRun;
+    const back = el('button', 'btn btn-sm brun-back', `← ${t('builder.runs.all')}`);
+    back.type = 'button';
+    back.addEventListener('click', closePlayback);
+    panelBody.append(back);
+    const info = el('div', 'brun-info');
+    info.append(el('strong', '', `${r.ok ? '✓' : '✗'} ${runWhen(r)}`));
+    info.append(el('span', 'muted', [r.user_name && `👤 ${r.user_name}`, r.guild_name && `🏠 ${r.guild_name}`, r.channel_name && `#${r.channel_name}`, t(`errors.source.${r.source || ''}`)].filter(Boolean).join(' · ')));
+    panelBody.append(info);
+
+    if (!r.ok) {
+      const h = runHint(r);
+      const box = el('div', 'brun-error');
+      const node = r.error_node && nodeById(r.error_node);
+      box.append(el('strong', '', node ? t('builder.runs.block_failed', { block: stepLabel({ node: node.id, type: node.type }) }) : t('errors.unknown')));
+      if (h.text) box.append(el('p', '', h.text));
+      if (h.fix) box.append(el('p', 'brun-fix', `🔧 ${h.fix}`));
+      if (r.error_text && r.error_text !== h.text) box.append(el('p', 'hint mono', r.error_text));
+      if (r.fixed) box.append(el('p', 'brun-fixed', `✓ ${t('builder.runs.fixed_hint')}`));
+      if (node) {
+        const show = el('button', 'btn btn-sm', t('builder.runs.show_block'));
+        show.type = 'button';
+        show.addEventListener('click', () => { selected = { kind: 'node', id: node.id }; focusNode(node); render(); });
+        box.append(show);
+      }
+      panelBody.append(box);
+    }
+    for (const w of r.warnings || []) {
+      const node = nodeById(w.node);
+      panelBody.append(el('p', 'brun-warning', `⚠ ${node ? stepLabel({ node: node.id, type: node.type }) + ': ' : ''}${w.text}`));
+    }
+
+    const controls = el('div', 'brun-controls');
+    const btn = (label, title, fn, attr) => {
+      const b = el('button', 'builder-icon-btn', label);
+      b.type = 'button';
+      b.title = title;
+      b.setAttribute('aria-label', title);
+      if (attr) b.setAttribute(attr, '');
+      b.addEventListener('click', fn);
+      controls.append(b);
+    };
+    btn('⏮', t('builder.runs.start'), () => { stopPlay(); stepTo(-1); });
+    btn('◀', t('builder.runs.prev'), () => { stopPlay(); stepTo(playAt - 1); });
+    btn('▶', t('builder.runs.play'), togglePlay, 'data-run-play');
+    btn('▶|', t('builder.runs.next'), () => { stopPlay(); stepTo(playAt + 1); });
+    btn('⏭', t('builder.runs.end'), () => { stopPlay(); stepTo(runSteps().length - 1); });
+    const speed = el('select', 'brun-speed');
+    speed.setAttribute('aria-label', t('builder.runs.speed'));
+    for (const s of RUN_SPEEDS) speed.append(new Option(`${s}×`, String(s), s === playSpeed, s === playSpeed));
+    speed.addEventListener('change', () => {
+      playSpeed = Number(speed.value) || 1;
+      if (playTimer) { stopPlay(); togglePlay(); }
+    });
+    controls.append(speed);
+    panelBody.append(controls);
+    const counter = el('span', 'muted brun-counter', '');
+    counter.setAttribute('data-run-counter', '');
+    panelBody.append(counter);
+
+    panelBody.append(el('h4', 'brun-sub', t('builder.runs.follow_title')));
+    const fol = el('div', 'brun-follow');
+    fol.setAttribute('data-run-follow', '');
+    panelBody.append(fol);
+
+    panelBody.append(el('h4', 'brun-sub', t('builder.runs.steps')));
+    const list = el('ol', 'brun-steps');
+    runSteps().forEach((s, i) => {
+      const li = el('li', `brun-step brun-step-${s.status}`);
+      li.dataset.step = String(i);
+      const line = el('button', 'brun-step-btn');
+      line.type = 'button';
+      line.append(el('span', '', `${s.status === 'error' ? '✗' : '✓'} ${stepLabel(s)}`));
+      if (typeof s.t === 'number') line.append(el('span', 'muted mono', `${s.t} ms`));
+      line.addEventListener('click', () => { stopPlay(); stepTo(i); });
+      li.append(line);
+      if (s.log) li.append(el('div', 'brun-log mono', `📝 ${s.log}`));
+      if (s.message && s.status === 'error') li.append(el('div', 'brun-msg', s.message));
+      list.append(li);
+    });
+    panelBody.append(list);
+    renderPlaybackState();
+  }
+
+  // "Last run values": the settings of the selected block as the run had them.
+  function lastRunNote(node) {
+    const run = openRun || lastRun;
+    if (!run) return null;
+    const steps = run.steps || [];
+    let step = null;
+    const upto = openRun && playAt >= 0 ? playAt : steps.length - 1;
+    for (let k = upto; k >= 0; k--) if (steps[k]?.node === node.id) { step = steps[k]; break; }
+    if (!step || (!step.values && !step.vars && !step.log)) return null;
+    const box = el('div', `brun-note${step.status === 'error' ? ' brun-note-error' : ''}`);
+    box.append(el('strong', '', `${t('builder.runs.last_values')} · ${runWhen(run)}`));
+    const add = (k, v) => {
+      const row = el('div', 'brun-note-row');
+      row.append(el('span', 'muted', k), el('span', 'mono', v === '' ? '""' : v));
+      box.append(row);
+    };
+    for (const [k, v] of Object.entries(step.values || {})) add(k, v);
+    for (const [k, v] of Object.entries(step.vars || {})) add(`{${k}}`, v);
+    if (step.log) add('📝', step.log);
+    if (step.status === 'error' && step.message) add('✗', step.message);
+    return box;
+  }
+
   // ---------- top bar ----------
 
   let savedSnapshot = JSON.stringify(graph);
@@ -3093,6 +3423,9 @@
   updateLastSaved();
   updateProblems();
   resumeWork();
+  // Opened from the Errors page (?run=…): play that run; else load the runs for "Last run values".
+  if (meta.openRun) openPlayback(meta.openRun);
+  loadRuns();
 
   function resumeWork() {
     const r = readResume();

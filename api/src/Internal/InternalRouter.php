@@ -41,6 +41,7 @@ final class InternalRouter
         private readonly ?InstanceSettings $settings = null,
         private readonly ?CardStore $cards = null,
         private readonly ?TwitchAuthStore $twitch = null,
+        private readonly ?RunStore $runs = null,
     ) {
     }
 
@@ -189,6 +190,32 @@ final class InternalRouter
                     'POST' => [200, $this->twitch->connect((int) $m[1], $owner, $body)],
                     'DELETE' => (function () use ($m) {
                         $this->twitch->disconnect((int) $m[1]);
+                        return [204, null];
+                    })(),
+                    default => throw new ApiError(405, 'error.method_not_allowed'),
+                };
+            }
+            // Playbacks and errors: ?command=…&errors=1&muted=1&limit=…; one run; dismiss, dismiss all, mute.
+            if ($this->runs !== null && preg_match('#^/internal/bots/(\d+)/runs(?:/(\d+))?(?:/(dismiss|mute))?$|^/internal/bots/(\d+)/runs/dismiss-all$#', $path, $m)) {
+                $botId = (int) ($m[1] !== '' ? $m[1] : $m[4]);
+                $this->bots->find($botId) ?? throw ApiError::notFound();
+                $rid = isset($m[2]) && $m[2] !== '' ? (int) $m[2] : null;
+                $action = $m[3] ?? '';
+                if (isset($m[4]) && $m[4] !== '') {
+                    if ($method !== 'POST') {
+                        throw new ApiError(405, 'error.method_not_allowed');
+                    }
+                    return [200, ['dismissed' => $this->runs->dismissAll($botId, $body['command_id'] ?? null)]];
+                }
+                return match (true) {
+                    $rid === null && $method === 'GET' => [200, ['items' => $this->runs->list($botId, $query['command'] ?? null, ($query['errors'] ?? '') === '1', ($query['muted'] ?? '') === '1', $query['limit'] ?? null)]],
+                    $rid !== null && $action === '' && $method === 'GET' => [200, $this->runs->get($botId, $rid)],
+                    $rid !== null && $action === 'dismiss' && $method === 'POST' => (function () use ($botId, $rid) {
+                        $this->runs->dismiss($botId, $rid);
+                        return [204, null];
+                    })(),
+                    $rid !== null && $action === 'mute' && $method === 'POST' => (function () use ($botId, $rid, $body) {
+                        $this->runs->mute($botId, $rid, ($body['muted'] ?? true) !== false);
                         return [204, null];
                     })(),
                     default => throw new ApiError(405, 'error.method_not_allowed'),

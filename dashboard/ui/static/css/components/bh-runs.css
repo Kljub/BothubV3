@@ -1,0 +1,56 @@
+/* bh-runs: Errors page and the builder's Playbacks. */
+
+.run-error { padding: 14px 0; border-bottom: 1px solid var(--border-strong); }
+.run-error:last-child { border-bottom: 0; }
+.run-error-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.run-error-when { margin-left: auto; font-size: 12px; }
+.run-error-reason { margin: 6px 0 4px; font-size: 14px; }
+.run-error-fix { margin: 0 0 4px; padding: 8px 10px; border-left: 3px solid var(--accent); border-radius: var(--radius-sm); background: var(--surface-2); font-size: 13px; }
+.run-error-fix span { font-weight: 600; }
+.run-error-fixed .run-error-reason { opacity: .7; }
+.run-error-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.run-errors-empty { padding: 20px 0; text-align: center; }
+
+/* Builder: Playbacks panel, failed block on the canvas, last run values. */
+.bnode.run-failed { border-color: var(--red); box-shadow: 0 0 0 3px color-mix(in srgb, var(--red) 75%, transparent), 0 0 22px color-mix(in srgb, var(--red) 35%, transparent); }
+.brun-tag { position: absolute; top: -10px; right: 10px; padding: 1px 8px; border-radius: 999px; font-size: 10px; font-weight: 700; color: #fff; background: var(--red); pointer-events: none; }
+.brun-tag-fixed { background: var(--green); }
+.brun-head { display: flex; align-items: flex-start; gap: 8px; }
+.brun-head p { flex: 1; margin: 0; font-size: 12px; }
+.brun-list { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.brun-open { display: flex; align-items: flex-start; gap: 8px; width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2); color: var(--text); text-align: left; cursor: pointer; }
+.brun-open:hover { border-color: var(--accent); }
+.brun-icon { flex: none; width: 18px; font-weight: 700; color: var(--green); }
+.brun-item-error .brun-icon { color: var(--red); }
+.brun-text { display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; font-size: 12px; }
+.brun-reason { color: var(--red); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.brun-badge { flex: none; padding: 1px 6px; border-radius: 6px; font-size: 10px; font-weight: 700; background: var(--surface); color: var(--muted); }
+.brun-badge-ok { color: var(--green); background: color-mix(in srgb, var(--green) 15%, transparent); }
+.brun-back { margin-bottom: 8px; }
+.brun-info { display: flex; flex-direction: column; gap: 2px; font-size: 12px; margin-bottom: 8px; }
+.brun-error { padding: 10px; border: 1px solid color-mix(in srgb, var(--red) 50%, transparent); border-radius: var(--radius-sm); background: color-mix(in srgb, var(--red) 8%, transparent); font-size: 12.5px; }
+.brun-error p { margin: 6px 0; }
+.brun-fix { padding-left: 8px; border-left: 3px solid var(--accent); }
+.brun-fixed { color: var(--green); font-weight: 600; }
+.brun-warning { margin: 6px 0; padding: 6px 8px; border-radius: var(--radius-sm); background: color-mix(in srgb, var(--yellow) 12%, transparent); font-size: 12px; }
+.brun-controls { display: flex; align-items: center; gap: 4px; margin: 12px 0 4px; }
+.brun-speed { margin-left: auto; padding: 2px 4px; background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.brun-counter { font-size: 11px; }
+.brun-sub { margin: 14px 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.brun-follow { display: flex; flex-wrap: wrap; gap: 6px; }
+.brun-follow-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 2px 4px 2px 8px; border-radius: 999px; background: var(--surface-2); font-size: 11.5px; }
+.brun-follow-chip strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px; color: var(--accent); }
+.brun-follow-pick { max-width: 100%; padding: 2px 4px; background: var(--surface-2); color: var(--text); border: 1px dashed var(--border); border-radius: 999px; font-size: 11.5px; }
+.brun-steps { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 2px; max-height: 40vh; overflow-y: auto; }
+.brun-step-btn { display: flex; justify-content: space-between; gap: 8px; width: 100%; padding: 4px 6px; border: 0; border-radius: var(--radius-sm); background: none; color: var(--text); font-size: 12px; text-align: left; cursor: pointer; }
+.brun-step-btn:hover { background: var(--surface-2); }
+.brun-step-ok .brun-step-btn > span:first-child { color: var(--green); }
+.brun-step-error .brun-step-btn > span:first-child { color: var(--red); }
+.brun-step-current .brun-step-btn { background: color-mix(in srgb, var(--yellow) 18%, transparent); }
+.brun-log { margin: 0 6px 4px 22px; font-size: 11px; color: var(--muted); white-space: pre-wrap; word-break: break-word; }
+.brun-msg { margin: 0 6px 4px 22px; font-size: 11px; color: var(--red); }
+.brun-note { margin-top: 14px; padding: 10px; border-radius: var(--radius-sm); border: 1px solid color-mix(in srgb, var(--green) 45%, transparent); background: color-mix(in srgb, var(--green) 10%, transparent); font-size: 12px; }
+.brun-note-error { border-color: color-mix(in srgb, var(--red) 45%, transparent); background: color-mix(in srgb, var(--red) 8%, transparent); }
+.brun-note > strong { display: block; margin-bottom: 6px; }
+.brun-note-row { display: grid; grid-template-columns: minmax(70px, 35%) 1fr; gap: 8px; padding: 2px 0; }
+.brun-note-row .mono { word-break: break-word; white-space: pre-wrap; }

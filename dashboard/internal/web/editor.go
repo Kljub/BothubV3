@@ -62,7 +62,7 @@ func (s *Server) prefixTexts(locale string, prefixes ...string) map[string]strin
 func (s *Server) editorTexts(locale string) map[string]string {
 	out := map[string]string{}
 	for _, k := range s.i18n.Keys("en") {
-		if strings.HasPrefix(k, "builder.") || strings.HasPrefix(k, "vars.") || strings.HasPrefix(k, "data.shape.") || strings.HasPrefix(k, "action.") || strings.HasPrefix(k, "error.command.") || strings.HasPrefix(k, "error.graph.") || strings.HasPrefix(k, "error.template.") || strings.HasPrefix(k, "error.auth.") || strings.HasPrefix(k, "error.api.") || strings.HasPrefix(k, "error.csrf.") {
+		if strings.HasPrefix(k, "builder.") || strings.HasPrefix(k, "errors.") || strings.HasPrefix(k, "vars.") || strings.HasPrefix(k, "data.shape.") || strings.HasPrefix(k, "action.") || strings.HasPrefix(k, "error.command.") || strings.HasPrefix(k, "error.graph.") || strings.HasPrefix(k, "error.template.") || strings.HasPrefix(k, "error.auth.") || strings.HasPrefix(k, "error.api.") || strings.HasPrefix(k, "error.csrf.") {
 			out[k] = s.i18n.T(locale, k)
 		}
 	}

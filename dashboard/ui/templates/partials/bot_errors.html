@@ -1,0 +1,49 @@
+{{/* Errors page (internal/web/runerrors.go): failed runs with the block, the reason in plain words and the fix. */}}
+
+{{define "bot_errors_fragment"}}{{template "bot_errors" .Data}}{{end}}
+
+{{define "bot_errors"}}
+<section class="box run-errors" id="bot-errors"
+  hx-get="/bot/{{.BotID}}/errors{{if .WithMuted}}?muted=1{{end}}" hx-trigger="every 30s" hx-swap="outerHTML">
+  <header class="box-head">
+    <h2>{{t "errors.title"}}</h2>
+    <div class="inline-form">
+      <div class="segmented" role="group" aria-label="{{t "logs.filter"}}">
+        <button type="button" class="segment" hx-get="/bot/{{.BotID}}/errors" hx-target="#bot-errors" hx-swap="outerHTML" aria-pressed="{{if .WithMuted}}false{{else}}true{{end}}">{{t "errors.filter.open"}}</button>
+        <button type="button" class="segment" hx-get="/bot/{{.BotID}}/errors?muted=1" hx-target="#bot-errors" hx-swap="outerHTML" aria-pressed="{{if .WithMuted}}true{{else}}false{{end}}">{{t "errors.filter.muted"}}</button>
+      </div>
+      <button type="button" class="btn btn-sm" hx-get="/bot/{{.BotID}}/errors{{if .WithMuted}}?muted=1{{end}}" hx-target="#bot-errors" hx-swap="outerHTML">{{t "logs.refresh"}}</button>
+      {{if .Rows}}<button type="button" class="btn btn-sm" hx-post="/bot/{{.BotID}}/errors/dismiss-all" hx-target="#bot-errors" hx-swap="outerHTML" hx-confirm="{{t "errors.dismiss_all_confirm"}}">{{t "errors.dismiss_all"}}</button>{{end}}
+    </div>
+  </header>
+  <div class="box-body">
+    <p class="muted">{{t "errors.hint"}}</p>
+    {{range .Rows}}
+    <article class="run-error{{if .Fixed}} run-error-fixed{{end}}">
+      <div class="run-error-head">
+        <strong>{{if eq .CommandKind "command"}}/{{end}}{{.CommandName}}</strong>
+        <span class="muted">{{with .ErrorNode}}· {{t "errors.block"}} <code>{{.}}</code>{{end}}</span>
+        {{if .Fixed}}<span class="badge-soft badge-soft-running">✓ {{t "errors.fixed"}}</span>{{end}}
+        {{if .Muted}}<span class="badge-soft">🔕 {{t "errors.muted"}}</span>{{end}}
+        <span class="run-error-when muted mono">{{.When}}</span>
+      </div>
+      <p class="run-error-reason">{{.Reason}}</p>
+      {{with .Fix}}<p class="run-error-fix"><span>🔧 {{t "errors.fix"}}</span> {{.}}</p>{{end}}
+      {{with .Discord}}<p class="hint">{{t "errors.discord_said"}}: <span class="mono">{{.}}</span></p>{{end}}
+      <p class="hint">{{with .UserName}}👤 {{.}}{{end}}{{with .GuildName}} · 🏠 {{.}}{{end}}{{with .ChannelName}} · #{{.}}{{end}} · {{t (printf "errors.source.%s" .Source)}}</p>
+      <div class="run-error-actions">
+        <a class="btn btn-sm btn-primary" href="{{.BuilderURL}}" hx-boost="false">{{t "errors.show_in_builder"}}</a>
+        <button type="button" class="btn btn-sm" hx-post="/bot/{{$.BotID}}/errors/{{.ID}}/dismiss{{if $.WithMuted}}?muted=1{{end}}" hx-target="#bot-errors" hx-swap="outerHTML">{{t "errors.dismiss"}}</button>
+        {{if .Muted}}
+        <button type="button" class="btn btn-sm" hx-post="/bot/{{$.BotID}}/errors/{{.ID}}/unmute?muted=1" hx-target="#bot-errors" hx-swap="outerHTML">{{t "errors.unmute"}}</button>
+        {{else}}
+        <button type="button" class="btn btn-sm" hx-post="/bot/{{$.BotID}}/errors/{{.ID}}/mute{{if $.WithMuted}}?muted=1{{end}}" hx-target="#bot-errors" hx-swap="outerHTML" title="{{t "errors.mute_hint"}}">{{t "errors.mute"}}</button>
+        {{end}}
+      </div>
+    </article>
+    {{else}}
+    <p class="muted run-errors-empty">✨ {{t "errors.empty"}}</p>
+    {{end}}
+  </div>
+</section>
+{{end}}

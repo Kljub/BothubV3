@@ -132,9 +132,14 @@ func (s *Server) handleBuilderPage(w http.ResponseWriter, r *http.Request, p Pag
 			"cardsUrl":       fmt.Sprintf("/api/v1/bots/%d/cards", bot.ID),
 			"dataVarsUrl":    fmt.Sprintf("/api/v1/bots/%d/data/variables", bot.ID),
 			"versionsUrl":    base + "/versions",
-			"updatedAt":      cmd.UpdatedAt,
-			"docsUrl":        "/bots/docs",
-			"backUrl":        backURL,
+			// Playbacks: the runs of this command, one run, the reasons in this language.
+			"runsUrl":   fmt.Sprintf("/api/v1/bots/%d/runs?command=%d&limit=50", bot.ID, cmd.ID),
+			"runUrl":    fmt.Sprintf("/api/v1/bots/%d/runs", bot.ID),
+			"runErrors": localRunTexts(p.Locale),
+			"openRun":   openRunID(r),
+			"updatedAt": cmd.UpdatedAt,
+			"docsUrl":   "/bots/docs",
+			"backUrl":   backURL,
 		}),
 	}))
 }

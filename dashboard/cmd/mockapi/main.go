@@ -345,6 +345,12 @@ func main() {
 	mux.HandleFunc("PUT /api/v1/bots/{id}/commands/{cid}", s.auth(s.withBot(s.viaPHP(s.saveCommand))))
 	mux.HandleFunc("POST /api/v1/bots/{id}/commands/{cid}/simulate", s.auth(s.withBot(s.simulateCommand)))
 	// Card Designer: image cards (PHP API only).
+	// Playbacks and errors (run traces written by the bot).
+	mux.HandleFunc("GET /api/v1/bots/{id}/runs", s.auth(s.withBot(s.viaPHP(phpRequired))))
+	mux.HandleFunc("GET /api/v1/bots/{id}/runs/{rid}", s.auth(s.withBot(s.viaPHP(phpRequired))))
+	mux.HandleFunc("POST /api/v1/bots/{id}/runs/{rid}/dismiss", s.auth(s.withBot(s.viaPHP(phpRequired))))
+	mux.HandleFunc("POST /api/v1/bots/{id}/runs/{rid}/mute", s.auth(s.withBot(s.viaPHP(phpRequired))))
+	mux.HandleFunc("POST /api/v1/bots/{id}/runs/dismiss-all", s.auth(s.withBot(s.viaPHP(phpRequired))))
 	mux.HandleFunc("GET /api/v1/bots/{id}/cards", s.auth(s.withBot(s.viaPHP(phpRequired))))
 	mux.HandleFunc("POST /api/v1/bots/{id}/cards", s.auth(s.withBot(s.viaPHP(phpRequired))))
 	mux.HandleFunc("GET /api/v1/bots/{id}/cards/{cid}", s.auth(s.withBot(s.viaPHP(phpRequired))))

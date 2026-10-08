@@ -14,6 +14,9 @@
 {{else if eq $d.Section "logs"}}
 {{template "bot_logs" $d.Logs}}
 
+{{else if eq $d.Section "errors"}}
+{{template "bot_errors" $d.Errors}}
+
 {{else if eq $d.Section "status"}}
 {{template "bot_status" $d.Presence}}
 

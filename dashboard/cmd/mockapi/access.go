@@ -68,7 +68,7 @@ var botRules = []botRule{
 	{regexp.MustCompile(`^/(members|cowork)(/|$)`), "members.manage"},
 	{regexp.MustCompile(`^/(profile|presence|status)(/|$)`), "profile.edit"},
 	{regexp.MustCompile(`^/guilds(/|$)|^/guild-access(/|$)`), "servers.manage"},
-	{regexp.MustCompile(`^/(commands|command-groups|templates|custom-commands)(/|$)`), "commands.manage"},
+	{regexp.MustCompile(`^/(commands|command-groups|templates|custom-commands|runs)(/|$)`), "commands.manage"},
 	{regexp.MustCompile(`^/(events|timed|webhooks|webhook-key)(/|$)`), "events.manage"},
 	{regexp.MustCompile(`^/modules(/|$)`), "modules.manage"},
 	{regexp.MustCompile(`^/plugins(/|$)`), "plugins.manage"},
@@ -76,7 +76,7 @@ var botRules = []botRule{
 }
 
 var botViewRules = []botRule{
-	{regexp.MustCompile(`^/logs(/|$)`), "logs.view"},
+	{regexp.MustCompile(`^/(logs|runs)(/|$)`), "logs.view"},
 	{regexp.MustCompile(`^/data(/|$)`), "data.view"},
 }
 
