@@ -5699,5 +5699,21 @@
   "update.eta_unknown": "Working out the time left …",
   "update.failed_short": "Update failed: see the log below",
   "update.badge": "Update available",
-  "overview.storage.collecting": "Collecting data: the chart starts after a few measurements (every 5 minutes)."
+  "overview.storage.collecting": "Collecting data: the chart starts after a few measurements (every 5 minutes).",
+  "vars.item.bot_active_users": "Most active members",
+  "vars.item.bot_active_users_hint": "Top 10 active members of the last 30 days, one per line (this server).",
+  "vars.item.bot_active_user_1": "Most active member",
+  "vars.item.bot_active_user_1_hint": "The most active member as mention; .2 … .10 for the others, .1.id for the ID, .1.hours for the active hours, .length for the list size.",
+  "vars.item.bot_active_users_count": "Active members",
+  "vars.item.bot_active_users_count_hint": "How many members were active in the last 30 days.",
+  "vars.item.bot_voice_minutes": "Voice minutes",
+  "vars.item.bot_voice_minutes_hint": "Minutes spent in voice channels in the last 30 days.",
+  "vars.item.bot_commands_usage": "Commands used",
+  "vars.item.bot_commands_usage_hint": "Commands used in the last 30 days.",
+  "vars.item.bot_commands_top": "Most used commands",
+  "vars.item.bot_commands_top_hint": "The 10 most used commands, one per line.",
+  "vars.item.bot_plugin_usage": "Plugin uses",
+  "vars.item.bot_plugin_usage_hint": "Plugin uses in the last 30 days.",
+  "vars.item.bot_plugin_top": "Most used plugins",
+  "vars.item.bot_plugin_top_hint": "The 10 most used plugins, one per line."
 }

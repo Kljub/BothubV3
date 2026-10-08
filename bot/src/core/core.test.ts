@@ -315,3 +315,36 @@ test('every block of the palette has a handler in the bot', () => {
     .map((d) => d.type);
   assert.deepEqual(missing, []);
 });
+
+test('usage variables of the bot overview: top active members, voice, commands, plugins', async () => {
+  const { usageVar, hourOf } = await import('./stats.js');
+  const { repo } = migratedDb();
+  const db = repo.db;
+  db.prepare("INSERT INTO bots (name, autostart) VALUES ('Test', 1)").run();
+  const now = Date.UTC(2026, 9, 8, 12);
+  const h = (ago: number) => hourOf(now - ago * 3_600_000);
+  const addUser = db.prepare('INSERT INTO bot_stat_users (bot_id, guild_id, hour, user_id) VALUES (1, ?, ?, ?)');
+  for (let i = 0; i < 3; i++) addUser.run('g1', h(i), '111111111111111111');
+  addUser.run('g1', h(0), '222222222222222222');
+  addUser.run('g2', h(0), '333333333333333333');
+  const add = db.prepare('INSERT INTO bot_stats (bot_id, guild_id, hour, metric, value) VALUES (1, ?, ?, ?, ?)');
+  add.run('g1', h(1), 'voice_minutes', 45);
+  add.run('g1', h(1), 'commands', 7);
+  add.run('g1', h(1), 'cmd:ping', 5);
+  add.run('g1', h(1), 'cmd:help', 2);
+  add.run('g2', h(1), 'plugin_uses', 4);
+  add.run('g1', h(24 * 40), 'voice_minutes', 999); // older than 30 days
+  const v = (name: string, g: string | null = 'g1') => usageVar(db, 1, g, name, now);
+  assert.equal(v('bot.active_users'), '1. <@111111111111111111> · 3 h\n2. <@222222222222222222> · 1 h');
+  assert.equal(v('bot.Active_Users.1'), '<@111111111111111111>');
+  assert.equal(v('bot.active_users.2.id'), '222222222222222222');
+  assert.equal(v('bot.active_users.5'), '');
+  assert.equal(v('bot.active_users.length'), '2');
+  assert.equal(v('bot.active_users.count', null), '3');
+  assert.equal(v('bot.total_voice_minutes'), '45');
+  assert.equal(v('bot.commands_usage'), '7');
+  assert.equal(v('bot.commands_usage.top'), '1. /ping · 5\n2. /help · 2');
+  assert.equal(v('bot.plugin_usage'), '0');
+  assert.equal(v('bot.plugin_usage', null), '4');
+  assert.equal(v('bot.nope'), undefined);
+});

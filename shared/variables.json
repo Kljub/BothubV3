@@ -118,6 +118,38 @@
           "token": "{bot.memory}"
         },
         {
+          "id": "bot_active_users",
+          "token": "{bot.active_users}"
+        },
+        {
+          "id": "bot_active_user_1",
+          "token": "{bot.active_users.1}"
+        },
+        {
+          "id": "bot_active_users_count",
+          "token": "{bot.active_users.count}"
+        },
+        {
+          "id": "bot_voice_minutes",
+          "token": "{bot.total_voice_minutes}"
+        },
+        {
+          "id": "bot_commands_usage",
+          "token": "{bot.commands_usage}"
+        },
+        {
+          "id": "bot_commands_top",
+          "token": "{bot.commands_usage.top}"
+        },
+        {
+          "id": "bot_plugin_usage",
+          "token": "{bot.plugin_usage}"
+        },
+        {
+          "id": "bot_plugin_top",
+          "token": "{bot.plugin_usage.top}"
+        },
+        {
           "id": "command_name",
           "token": "{command.name}"
         },

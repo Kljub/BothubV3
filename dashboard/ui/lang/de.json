@@ -5699,5 +5699,21 @@
   "update.eta_unknown": "Restzeit wird berechnet …",
   "update.failed_short": "Update fehlgeschlagen: siehe Log unten",
   "update.badge": "Update verfügbar",
-  "overview.storage.collecting": "Daten werden gesammelt: das Diagramm beginnt nach ein paar Messungen (alle 5 Minuten)."
+  "overview.storage.collecting": "Daten werden gesammelt: das Diagramm beginnt nach ein paar Messungen (alle 5 Minuten).",
+  "vars.item.bot_active_users": "Aktivste Mitglieder",
+  "vars.item.bot_active_users_hint": "Top 10 der aktivsten Mitglieder der letzten 30 Tage, eins pro Zeile (dieser Server).",
+  "vars.item.bot_active_user_1": "Aktivstes Mitglied",
+  "vars.item.bot_active_user_1_hint": "Das aktivste Mitglied als Erwähnung; .2 … .10 für die anderen, .1.id für die ID, .1.hours für die aktiven Stunden, .length für die Listengröße.",
+  "vars.item.bot_active_users_count": "Aktive Mitglieder",
+  "vars.item.bot_active_users_count_hint": "Wie viele Mitglieder in den letzten 30 Tagen aktiv waren.",
+  "vars.item.bot_voice_minutes": "Sprachminuten",
+  "vars.item.bot_voice_minutes_hint": "Minuten in Sprachkanälen in den letzten 30 Tagen.",
+  "vars.item.bot_commands_usage": "Genutzte Commands",
+  "vars.item.bot_commands_usage_hint": "In den letzten 30 Tagen genutzte Commands.",
+  "vars.item.bot_commands_top": "Meistgenutzte Commands",
+  "vars.item.bot_commands_top_hint": "Die 10 meistgenutzten Commands, einer pro Zeile.",
+  "vars.item.bot_plugin_usage": "Plugin-Nutzungen",
+  "vars.item.bot_plugin_usage_hint": "Plugin-Nutzungen der letzten 30 Tage.",
+  "vars.item.bot_plugin_top": "Meistgenutzte Plugins",
+  "vars.item.bot_plugin_top_hint": "Die 10 meistgenutzten Plugins, eins pro Zeile."
 }

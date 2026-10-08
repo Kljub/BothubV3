@@ -46,7 +46,7 @@ import { bindEvents, type EventContext } from './events.js';
 import * as eco from '../modules/economy.js';
 import { bindModules, ModuleContext } from '../modules/index.js';
 import { secretValue } from '../core/secrets-global.js';
-import { stats } from '../core/stats.js';
+import { stats, usageVar } from '../core/stats.js';
 import { Bucket, warn } from '../modules/guard.js';
 import { moduleHandlers } from './handlers-modules.js';
 import { extraHandlers } from './handlers-extra.js';
@@ -192,12 +192,17 @@ export class BotInstance {
     this.moderation = new Moderation(botId, deps.repo, () => this.client);
     const handlers = new Map<string, Handler>([...coreHandlers(core), ...discordHandlers(deps.repo, this.moderation, core.secret, deps.secretKey), ...moduleHandlers(deps.repo, botId, core.secret, deps.secretKey ?? null), ...extraHandlers({ repo: deps.repo, secret: core.secret })]);
     // Own copy of the definitions: plugin blocks exist only for this bot.
-    this.engine = { defs: new Map(deps.defs), handlers, limits: deps.limits, match: matchState, lookup: (name, run) => lookupVariable(core, name, run) ?? this.liveVar(name) };
+    this.engine = { defs: new Map(deps.defs), handlers, limits: deps.limits, match: matchState, lookup: (name, run) => lookupVariable(core, name, run) ?? this.liveVar(name, run) };
   }
 
   /** {bot.ping}, {bot.uptime}, {bot.memory}: read when a block uses them, not on every run. */
-  private liveVar(name: string): string | undefined {
+  private liveVar(name: string, run?: Run): string | undefined {
     const c = this.client;
+    if (/^bot\.(active_users|total_voice_minutes|commands_usage|plugin_usage)/i.test(name)) {
+      // The overview's numbers: flushed once a minute, so write what is counted first.
+      stats(this.deps.repo.db).flush();
+      return usageVar(this.deps.repo.db, this.botId, (run?.data as { guild?: { id: string } | null } | undefined)?.guild?.id ?? null, name);
+    }
     if (name === 'bot.ping') return c ? String(Math.max(0, Math.round(c.ws.ping))) : undefined;
     if (name === 'bot.uptime') return c?.uptime ? formatUptime(c.uptime) : undefined;
     if (name === 'bot.memory') return String(Math.round(process.memoryUsage().rss / 1024 / 1024));

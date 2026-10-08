@@ -89,3 +89,53 @@ export function stats(db: Db): StatsCollector {
   }
   return c;
 }
+
+/** Days the bot.* usage variables look back (the overview keeps 35). */
+const VAR_DAYS = 30;
+
+/**
+ * Usage variables from the bot overview (last 30 days; this server, or all
+ * servers in runs without one):
+ *   {bot.active_users}         top 10 active members, one per line ("1. <@id> · 12 h")
+ *   {bot.active_users.1} …     the n-th of them as mention (.1.id: the ID, .1.hours)
+ *   {bot.active_users.length}  how many are in the list (max 10)
+ *   {bot.active_users.count}   all members that were active
+ *   {bot.total_voice_minutes}  minutes spent in voice channels
+ *   {bot.commands_usage}       commands used (.top: the most used, one per line)
+ *   {bot.plugin_usage}         plugin uses (.top: the most used plugins)
+ * Names are case-insensitive ({bot.Active_Users} works too). Unknown: undefined.
+ */
+export function usageVar(db: Db, botId: number, guildId: string | null, name: string, now = Date.now()): string | undefined {
+  const n = name.toLowerCase();
+  if (!n.startsWith('bot.')) return undefined;
+  const key = n.slice(4);
+  const since = hourOf(now - VAR_DAYS * 86_400_000);
+  const where = `bot_id = ? AND hour >= ?${guildId ? ' AND guild_id = ?' : ''}`;
+  const args: (string | number)[] = guildId ? [botId, since, guildId] : [botId, since];
+  const sum = (metric: string): string => {
+    const r = db.prepare(`SELECT COALESCE(SUM(value), 0) AS v FROM bot_stats WHERE ${where} AND metric = ?`).get(...args, metric) as { v: number };
+    return String(r.v);
+  };
+  const top = (prefix: string): string => {
+    const rows = db.prepare(`SELECT substr(metric, ?) AS name, SUM(value) AS v FROM bot_stats WHERE ${where} AND metric LIKE ? GROUP BY metric ORDER BY v DESC LIMIT 10`).all(prefix.length + 1, ...args, `${prefix}%`) as { name: string; v: number }[];
+    return rows.map((r, i) => `${i + 1}. ${prefix === 'cmd:' ? '/' : ''}${r.name} · ${r.v}`).join('\n');
+  };
+  if (key === 'total_voice_minutes') return sum('voice_minutes');
+  if (key === 'commands_usage') return sum('commands');
+  if (key === 'commands_usage.top') return top('cmd:');
+  if (key === 'plugin_usage') return sum('plugin_uses');
+  if (key === 'plugin_usage.top') return top('plugin:');
+  if (!key.startsWith('active_users')) return undefined;
+  if (key === 'active_users.count') {
+    const r = db.prepare(`SELECT COUNT(DISTINCT user_id) AS v FROM bot_stat_users WHERE ${where}`).get(...args) as { v: number };
+    return String(r.v);
+  }
+  const users = db.prepare(`SELECT user_id AS id, COUNT(*) AS hours FROM bot_stat_users WHERE ${where} GROUP BY user_id ORDER BY hours DESC, user_id LIMIT 10`).all(...args) as { id: string; hours: number }[];
+  if (key === 'active_users') return users.map((u, i) => `${i + 1}. <@${u.id}> · ${u.hours} h`).join('\n');
+  if (key === 'active_users.length') return String(users.length);
+  const m = /^active_users\.(\d{1,2})(\.id|\.hours)?$/.exec(key);
+  if (!m) return undefined;
+  const u = users[Number(m[1]) - 1];
+  if (!u) return '';
+  return m[2] === '.id' ? u.id : m[2] === '.hours' ? String(u.hours) : `<@${u.id}>`;
+}
