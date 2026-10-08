@@ -761,3 +761,20 @@ test('twitch sub roles: the role of the tier and the any-sub role; the others ar
   assert.deepEqual(rolesFor('1000', { tier1Role: ref('r1') }, g), { give: ['r1'], take: [] });
   assert.deepEqual(rolesFor('3000', { anySubRole: ref('rs') }, g), { give: ['rs'], take: [] });
 });
+
+test('audit log: events on by default (voice and server off), channel per group, clipped text', async () => {
+  const { eventOn, channelFor, clip } = await import('./auditlog.js');
+  assert.equal(eventOn({}, 'messageDelete'), true);
+  assert.equal(eventOn({}, 'voiceJoin'), false);
+  assert.equal(eventOn({ voiceJoin: true, messageDelete: false }, 'voiceJoin'), true);
+  assert.equal(eventOn({ messageDelete: false }, 'messageDelete'), false);
+  const log = { guild: 'g1', id: '100000000000000001' };
+  const roles = { guild: 'g1', id: '100000000000000002' };
+  assert.equal(channelFor({ logChannel: log, rolesChannel: roles }, 'roles', 'g1'), log.id);
+  assert.equal(channelFor({ logChannel: log, perGroup: true, rolesChannel: roles }, 'roles', 'g1'), roles.id);
+  assert.equal(channelFor({ logChannel: log, perGroup: true }, 'voice', 'g1'), log.id);
+  assert.equal(channelFor({ logChannel: log }, 'roles', 'g2'), null);
+  assert.equal(clip('hi @everyone'), 'hi @​everyone');
+  assert.equal(clip(''), '*(empty)*');
+  assert.equal(clip('abcdef', 4), 'abc…');
+});

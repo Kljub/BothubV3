@@ -1,0 +1,315 @@
+{
+  "module": "auditlog",
+  "fields": [
+    {
+      "key": "s_general",
+      "type": "section"
+    },
+    {
+      "key": "logChannel",
+      "type": "channel",
+      "channelTypes": [
+        "text",
+        "announcement"
+      ],
+      "hint": true
+    },
+    {
+      "key": "perGroup",
+      "type": "bool",
+      "default": false,
+      "hint": true
+    },
+    {
+      "key": "showAvatar",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "newAccountDays",
+      "type": "number",
+      "min": 0,
+      "max": 365,
+      "default": 3,
+      "hint": true
+    },
+    {
+      "key": "ignoredChannels",
+      "type": "channels",
+      "max": 50,
+      "channelTypes": [
+        "text",
+        "announcement",
+        "voice",
+        "forum",
+        "category"
+      ],
+      "hint": true
+    },
+    {
+      "key": "ignoredRoles",
+      "type": "roles",
+      "max": 25,
+      "hint": true
+    },
+    {
+      "key": "s_messages",
+      "type": "section"
+    },
+    {
+      "key": "messagesChannel",
+      "type": "channel",
+      "channelTypes": [
+        "text",
+        "announcement"
+      ],
+      "showIf": {
+        "perGroup": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "messageDelete",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "messageEdit",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "imageDelete",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "bulkDelete",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "invites",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "s_members",
+      "type": "section"
+    },
+    {
+      "key": "membersChannel",
+      "type": "channel",
+      "channelTypes": [
+        "text",
+        "announcement"
+      ],
+      "showIf": {
+        "perGroup": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "memberJoin",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "memberLeave",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "roleAdd",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "roleRemove",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "timeout",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "nickname",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "ban",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "unban",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "s_roles",
+      "type": "section"
+    },
+    {
+      "key": "rolesChannel",
+      "type": "channel",
+      "channelTypes": [
+        "text",
+        "announcement"
+      ],
+      "showIf": {
+        "perGroup": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "roleCreate",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "roleUpdate",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "roleDelete",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "s_channels",
+      "type": "section"
+    },
+    {
+      "key": "channelsChannel",
+      "type": "channel",
+      "channelTypes": [
+        "text",
+        "announcement"
+      ],
+      "showIf": {
+        "perGroup": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "channelCreate",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "channelUpdate",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "channelDelete",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "s_emojis",
+      "type": "section"
+    },
+    {
+      "key": "emojisChannel",
+      "type": "channel",
+      "channelTypes": [
+        "text",
+        "announcement"
+      ],
+      "showIf": {
+        "perGroup": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "emojiCreate",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "emojiUpdate",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "emojiDelete",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "s_voice",
+      "type": "section"
+    },
+    {
+      "key": "voiceChannel",
+      "type": "channel",
+      "channelTypes": [
+        "text",
+        "announcement"
+      ],
+      "showIf": {
+        "perGroup": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "voiceJoin",
+      "type": "bool",
+      "default": false
+    },
+    {
+      "key": "voiceLeave",
+      "type": "bool",
+      "default": false
+    },
+    {
+      "key": "voiceMove",
+      "type": "bool",
+      "default": false
+    },
+    {
+      "key": "s_server",
+      "type": "section"
+    },
+    {
+      "key": "serverChannel",
+      "type": "channel",
+      "channelTypes": [
+        "text",
+        "announcement"
+      ],
+      "showIf": {
+        "perGroup": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "serverUpdate",
+      "type": "bool",
+      "default": false
+    },
+    {
+      "key": "threadCreate",
+      "type": "bool",
+      "default": false
+    },
+    {
+      "key": "threadDelete",
+      "type": "bool",
+      "default": false
+    }
+  ]
+}

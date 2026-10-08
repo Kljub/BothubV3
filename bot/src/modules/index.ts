@@ -19,6 +19,7 @@ import { afkMessage } from './afk.js';
 import { boostChange, boostMessage } from './boost.js';
 import { achCommand, achMessage, achReaction, achVoice } from './achievements.js';
 import { antiAudit, antiAuditWarn, antiJoin, antiMessage } from './anticontrol.js';
+import { bindAuditLog } from './auditlog.js';
 import { autoMemberAdd, autoMemberRemove, autoMemberUpdate, autoMessage, autoReaction, autoVoice } from './automations.js';
 import { rolePrefix } from './server-auto.js';
 import { thanksMessage } from './thanks.js';
@@ -49,6 +50,7 @@ export function bindModules(client: Client, ctx: ModuleContext, timezone: () => 
     levelingVoiceInit(ctx, guilds);
     for (const g of guilds) antiAuditWarn(ctx, g);
   });
+  bindAuditLog(client, ctx);
   ctx.onChange = () => {
     syncCurrencies(ctx);
     if (!client.isReady()) return;
