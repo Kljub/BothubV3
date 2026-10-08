@@ -111,6 +111,20 @@
           "type": "string",
           "maxLength": 500
         },
+        "noteColor": {
+          "description": "Own colour of the helper text (hex), over noteStyle.",
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "noteIcon": {
+          "description": "Own icon (emoji) of the helper text.",
+          "type": "string",
+          "maxLength": 64
+        },
+        "noteMin": {
+          "description": "Helper text folded down to its icon on the canvas.",
+          "type": "boolean"
+        },
         "noteStyle": {
           "description": "Look of the helper text: colour and icon.",
           "type": "string",

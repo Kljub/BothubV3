@@ -5663,5 +5663,12 @@
   "builder.runs.follow": "Follow variable",
   "builder.runs.follow_title": "Followed variables (up to 4)",
   "builder.runs.steps": "Steps",
-  "builder.runs.last_values": "Last run values"
+  "builder.runs.last_values": "Last run values",
+  "builder.opt.note_minimise": "Fold down to the icon",
+  "builder.opt.note_color": "Own colour",
+  "builder.opt.note_icon": "Own icon",
+  "builder.opt.note_reset": "Reset",
+  "builder.cfg.note_color": "Colour",
+  "builder.cfg.note_color_hint": "Any colour as hex code, e.g. #22c55e; empty = the style's colour.",
+  "builder.cfg.note_icon": "Icon"
 }

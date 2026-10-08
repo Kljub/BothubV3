@@ -5663,5 +5663,12 @@
   "builder.runs.follow": "Variable folgen",
   "builder.runs.follow_title": "Verfolgte Variablen (bis 4)",
   "builder.runs.steps": "Schritte",
-  "builder.runs.last_values": "Werte des letzten Laufs"
+  "builder.runs.last_values": "Werte des letzten Laufs",
+  "builder.opt.note_minimise": "Auf das Icon einklappen",
+  "builder.opt.note_color": "Eigene Farbe",
+  "builder.opt.note_icon": "Eigenes Icon",
+  "builder.opt.note_reset": "Zurücksetzen",
+  "builder.cfg.note_color": "Farbe",
+  "builder.cfg.note_color_hint": "Jede Farbe als Hex-Code, z. B. #22c55e; leer = Farbe des Stils.",
+  "builder.cfg.note_icon": "Icon"
 }

@@ -449,6 +449,12 @@
   // Helper texts and Note blocks: colour and icon per style.
   const NOTE_STYLES = { note: '📝', info: 'ℹ️', tip: '💡', warning: '⚠️', danger: '⛔', success: '✅' };
   const noteStyle = (v) => (NOTE_STYLES[v] ? v : 'note');
+  const HEX = /^#[0-9a-f]{6}$/i;
+  // Own colour and icon of helper text / Note block (over the preset style).
+  function noteLook(elem, color, iconText, style) {
+    if (HEX.test(color || '')) elem.style.setProperty('--note', color);
+    return iconText || NOTE_STYLES[noteStyle(style)];
+  }
 
   function renderNode(node) {
     const def = defs[node.type] || { category: 'action', labelKey: node.type, outputs: [], inputs: [] };
@@ -462,6 +468,7 @@
     else if (def.compact) cls.push('bnode-compact', node.type === 'condition.else' ? 'bnode-else' : 'bnode-state');
     const box = el('div', cls.join(' '));
     box.dataset.node = node.id;
+    if (node.type === 'action.note') noteLook(box, node.config.color, '', node.config.style);
     if (selected?.kind === 'node' && selected.id === node.id) box.classList.add('is-selected');
     box.style.left = `${node.position.x}px`;
     box.style.top = `${node.position.y}px`;
@@ -470,13 +477,22 @@
       // Discord-style button preview
       const c = node.config;
       const prev = el('span', `bnode-btnpreview is-${c.style || 'primary'}`);
-      if (c.emoji) prev.append(el('span', '', c.emoji));
-      prev.append(el('span', '', node.label || c.label || t('builder.node.component_button.label')));
+      if (c.emoji) {
+        const m = /^<(a?):(\w{2,32}):(\d{15,21})>$/.exec(String(c.emoji).trim());
+        if (m) {
+          const img = el('img', 'bnode-emoji');
+          img.src = `https://cdn.discordapp.com/emojis/${m[3]}.${m[1] ? 'gif' : 'webp'}?size=32`;
+          img.alt = `:${m[2]}:`;
+          img.referrerPolicy = 'no-referrer';
+          prev.append(img);
+        } else prev.append(el('span', '', c.emoji));
+      }
+      if (node.label || c.label || !c.emoji) prev.append(el('span', '', node.label || c.label || t('builder.node.component_button.label')));
       const cap = el('span', 'bnode-btncap');
       cap.append(icon('pointer'), document.createTextNode(t('builder.node.component_button.label')));
       box.append(prev, cap);
     } else {
-      box.append(el('span', 'bnode-icon', optionState ? (node.type === 'condition.else' ? '?' : isOptionState(node) ? '☰' : '?') : (node.type === 'action.note' ? NOTE_STYLES[noteStyle(node.config.style)] : def.icon || '•')));
+      box.append(el('span', 'bnode-icon', optionState ? (node.type === 'condition.else' ? '?' : isOptionState(node) ? '☰' : '?') : (node.type === 'action.note' ? node.config.icon || NOTE_STYLES[noteStyle(node.config.style)] : def.icon || '•')));
       const text = el('span', 'bnode-text');
       if (def.compact) {
         const [small, big] = stateLabel(node);
@@ -532,8 +548,21 @@
     }
     if (node.note) {
       const style = noteStyle(node.noteStyle);
-      const note = el('div', `bnode-note bnote-${style}`);
-      note.append(el('span', 'bnote-icon', NOTE_STYLES[style]), el('span', '', node.note));
+      const note = el('div', `bnode-note bnote-${style}${node.noteMin ? ' bnote-min' : ''}`);
+      const ic = el('button', 'bnote-icon', noteLook(note, node.noteColor, node.noteIcon, style));
+      ic.type = 'button';
+      ic.title = node.noteMin ? node.note : t('builder.opt.note_minimise');
+      // The icon folds the text away (and back); the text stays as tooltip.
+      ic.addEventListener('pointerdown', (ev) => ev.stopPropagation());
+      ic.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        if (node.noteMin) delete node.noteMin;
+        else node.noteMin = true;
+        refreshNode(node);
+        commit();
+      });
+      note.append(ic);
+      if (!node.noteMin) note.append(el('span', '', node.note));
       box.append(note);
     }
 
@@ -982,8 +1011,47 @@
       });
       looks.append(b);
     }
-    ns.addEventListener('change', () => { looks.hidden = !ns.checked; });
-    note.c.append(area, looks);
+    // Any colour and any emoji, and folded down to its icon.
+    const own = el('div', 'bnote-own');
+    const color = el('input', 'bnote-color');
+    color.type = 'color';
+    color.value = HEX.test(node.noteColor || '') ? node.noteColor : '#facc15';
+    color.title = t('builder.opt.note_color');
+    color.setAttribute('aria-label', color.title);
+    color.addEventListener('input', () => { node.noteColor = color.value; refreshNode(node); scheduleCommit(); });
+    const emo = el('button', 'btn btn-sm', node.noteIcon || t('builder.opt.note_icon'));
+    emo.type = 'button';
+    emo.addEventListener('click', () => openEmojiPicker(emo, (v) => {
+      node.noteIcon = String(v).slice(0, 64);
+      emo.textContent = node.noteIcon;
+      refreshNode(node);
+      commit();
+    }));
+    const reset = el('button', 'btn btn-sm', t('builder.opt.note_reset'));
+    reset.type = 'button';
+    reset.addEventListener('click', () => {
+      delete node.noteColor;
+      delete node.noteIcon;
+      emo.textContent = t('builder.opt.note_icon');
+      refreshNode(node);
+      commit();
+    });
+    const minRow = el('label', 'bnote-minrow');
+    const min = el('input');
+    min.type = 'checkbox';
+    min.checked = !!node.noteMin;
+    min.addEventListener('change', () => {
+      if (min.checked) node.noteMin = true;
+      else delete node.noteMin;
+      refreshNode(node);
+      commit();
+    });
+    minRow.append(min, document.createTextNode(` ${t('builder.opt.note_minimise')}`));
+    own.append(color, emo, reset);
+    own.hidden = !ns.checked;
+    minRow.hidden = !ns.checked;
+    ns.addEventListener('change', () => { looks.hidden = !ns.checked; own.hidden = !ns.checked; minRow.hidden = !ns.checked; });
+    note.c.append(area, looks, own, minRow);
     wrap.append(note.c);
     return wrap;
   }

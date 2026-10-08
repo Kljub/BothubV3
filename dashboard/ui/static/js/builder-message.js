@@ -50,19 +50,28 @@
 
   // toDiscord converts the block's message (plus its buttons and menus) to
   // Discord message JSON.
+  // Button / option emoji as Discord JSON: server emojis (<:name:id>) by ID.
+  function emojiJson(v) {
+    const s = String(v || '').trim();
+    if (!s) return undefined;
+    const m = /^<(a?):(\w{2,32}):(\d{15,21})>$/.exec(s);
+    return m ? clean({ id: m[3], name: m[2], animated: m[1] ? true : undefined }) : { name: s };
+  }
+
   function toDiscord(msg, comps = []) {
     const rows = [];
     const buttons = comps.filter((c) => c.kind === 'button');
     for (let i = 0; i < buttons.length; i += 5) {
       rows.push({ type: 1, components: buttons.slice(i, i + 5).map((b) => clean({
-        type: 2, style: { primary: 1, secondary: 2, success: 3, danger: 4, link: 5 }[b.style] || 1, label: b.label,
-        emoji: b.emoji ? { name: b.emoji } : undefined, url: b.style === 'link' ? b.url : undefined,
+        // Emoji-only buttons have no label (Discord shows none either).
+        type: 2, style: { primary: 1, secondary: 2, success: 3, danger: 4, link: 5 }[b.style] || 1, label: b.label || undefined,
+        emoji: emojiJson(b.emoji), url: b.style === 'link' ? b.url : undefined,
         custom_id: b.style === 'link' ? undefined : b.id, disabled: b.disabled || undefined,
       })) });
     }
     for (const m of comps.filter((c) => c.kind === 'menu')) {
       rows.push({ type: 1, components: [clean({ type: 3, custom_id: m.id, placeholder: m.placeholder, min_values: m.min, max_values: m.max,
-        options: (m.options || []).map((o) => clean({ label: o.label, value: o.value || o.label, description: o.description, emoji: o.emoji ? { name: o.emoji } : undefined })) })] });
+        options: (m.options || []).map((o) => clean({ label: o.label, value: o.value || o.label, description: o.description, emoji: emojiJson(o.emoji) })) })] });
     }
     if (msg.mode === 'v2') {
       const inner = (msg.components || []).map((c) => {
@@ -408,7 +417,7 @@
       det.addEventListener('toggle', () => { if (det.open) openEmbeds.add(i); else openEmbeds.delete(i); });
       const sum = el('summary', 'bmsg-embed-head');
       const sw = el('span', 'bmsg-swatch');
-      sw.style.background = e.color || '#1e1f22';
+      sw.style.background = /^#[0-9a-f]{6}$/i.test(e.color || '') ? e.color : '#1e1f22';
       const st = el('span', 'bmsg-embed-title');
       st.append(el('strong', '', t('builder.mb.embed_n', { n: i + 1 })), el('span', '', e.title || e.description || ''));
       const tb = el('span', 'bform-item-tools');
@@ -446,8 +455,15 @@
       const colorWrap = el('div', 'bmsg-color');
       const ci = el('input');
       ci.type = 'color';
-      ci.value = e.color || DEFAULT_COLOR;
-      const ct = input(e.color || '', 7, (v) => { if (/^#[0-9a-f]{6}$/i.test(v)) { ci.value = v; sw.style.background = v; set('color', v); } else if (!v) { sw.style.background = '#1e1f22'; set('color', ''); } }, { mono: true, placeholder: DEFAULT_COLOR });
+      const isHex = (v) => /^#[0-9a-f]{6}$/i.test(v || '');
+      ci.value = isHex(e.color) ? e.color : DEFAULT_COLOR;
+      // A hex code or a variable that holds one ({weather.color}).
+      const ct = input(e.color || '', 64, (v) => {
+        const s = v.trim();
+        if (isHex(s)) { ci.value = s; sw.style.background = s; set('color', s); }
+        else if (!s) { sw.style.background = '#1e1f22'; set('color', ''); }
+        else if (/^\{[A-Za-z0-9_.:-]{1,100}\}$/.test(s)) { sw.style.background = '#1e1f22'; set('color', s); }
+      }, { mono: true, placeholder: DEFAULT_COLOR, vars: true });
       ci.addEventListener('input', () => { ct.input.value = ci.value; sw.style.background = ci.value; set('color', ci.value); });
       colorWrap.append(ci, ct.wrap);
       bodyEl.append(labeled(t('builder.mb.color'), colorWrap));
@@ -669,9 +685,20 @@
       return img;
     }
 
+    // Server emojis show as their picture, like in Discord.
+    function emojiEl(v) {
+      const m = /^<(a?):(\w{2,32}):(\d{15,21})>$/.exec(String(v).trim());
+      if (!m) return el('span', '', v);
+      const img = el('img', 'dmsg-emoji');
+      img.src = `https://cdn.discordapp.com/emojis/${m[3]}.${m[1] ? 'gif' : 'webp'}?size=48`;
+      img.alt = `:${m[2]}:`;
+      img.referrerPolicy = 'no-referrer';
+      return img;
+    }
+
     function embedPreview(e, time) {
       const box = el('div', 'dmsg-embed');
-      box.style.borderLeftColor = e.color || '#1e1f22';
+      box.style.borderLeftColor = /^#[0-9a-f]{6}$/i.test(e.color || '') ? e.color : '#1e1f22';
       const inner = el('div', 'dmsg-embed-inner');
       const col = el('div', 'dmsg-embed-col');
       if (e.author?.name) {
@@ -718,8 +745,8 @@
         const row = el('div', 'dmsg-row');
         for (const b of buttons.slice(i, i + 5)) {
           const btn = el('span', `dmsg-btn is-${b.style || 'primary'}${b.disabled ? ' is-disabled' : ''}`);
-          if (b.emoji) btn.append(el('span', '', b.emoji));
-          btn.append(el('span', '', b.label || '…'));
+          if (b.emoji) btn.append(emojiEl(b.emoji));
+          if (b.label || !b.emoji) btn.append(el('span', '', b.label || '…'));
           if (b.style === 'link') btn.append(icon('external'));
           row.append(btn);
         }

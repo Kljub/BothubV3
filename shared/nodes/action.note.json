@@ -47,6 +47,20 @@
         "default": "note",
         "x-labelKey": "builder.cfg.note_style",
         "x-enumKey": "builder.enum.note_style"
+      },
+      "color": {
+        "type": "string",
+        "pattern": "^(#[0-9a-fA-F]{6})?$",
+        "x-labelKey": "builder.cfg.note_color",
+        "x-hintKey": "builder.cfg.note_color_hint",
+        "x-placeholder": "#facc15",
+        "x-mono": true
+      },
+      "icon": {
+        "type": "string",
+        "maxLength": 64,
+        "x-labelKey": "builder.cfg.note_icon",
+        "x-widget": "emoji"
       }
     }
   }
