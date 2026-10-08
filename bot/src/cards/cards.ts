@@ -26,6 +26,7 @@ interface Renderer {
   drawCard(ctx: unknown, design: Design, opts: { vars: Record<string, string>; loadImage: (url: string) => Promise<unknown>; time?: number }): Promise<void>;
   normalize(design: Design): { width: number; height: number; animated: boolean };
   loopLength(img: unknown): number;
+  effectLoop(design: Design): number;
   SAMPLE_VARS: Record<string, string>;
   FONTS: { family: string; file: string; weights: Record<string, string> }[];
 }
@@ -169,7 +170,7 @@ export async function renderDesign(design: Design, vars: Record<string, string>,
   const canvas = createCanvas(width, height);
   await r.drawCard(canvas.getContext('2d'), design, { vars, loadImage: load, time: 0 });
   if (!animated) return canvas.toBuffer('image/png');
-  const loops = (await Promise.all(cache.values())).map((img) => r.loopLength(img)).filter((n) => n > 0);
+  const loops = [...(await Promise.all(cache.values())).map((img) => r.loopLength(img)), r.effectLoop(design)].filter((n) => n > 0);
   if (!loops.length) return canvas.toBuffer('image/png');
   const duration = Math.min(MAX_LOOP_MS, Math.max(...loops));
   // Big cards are made smaller first, then again while the GIF is too big.

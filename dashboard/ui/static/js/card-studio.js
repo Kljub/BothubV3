@@ -225,7 +225,7 @@
     let animTimer = null;
     function animate() {
       clearTimeout(animTimer);
-      if (!design.animated || !anyAnimated || !root.isConnected) return;
+      if (!design.animated || !(anyAnimated || r.effectLoop(design) > 0) || !root.isConnected) return;
       animTimer = setTimeout(async () => {
         if (!drawing) {
           drawing = true;
@@ -325,6 +325,7 @@
       badge: { text: 'NEW', fill: '#eb459e', color: '#ffffff', font: 'Poppins', weight: 700, w: 160, h: 44 },
       bar: { value: '{level.progress}', fill: '#a78bfa', track: 'rgba(255,255,255,0.15)', w: 500, h: 30 },
       grid: { text: '{leaderboard}', header: false, stripes: true, color: '#ffffff', font: 'Poppins', weight: 600, w: 600, h: 180 },
+      effect: { effect: 'snow', count: 40, scale: 1, speed: 1, w: design.width, h: design.height },
     };
     root.querySelector('[data-cs-add]').addEventListener('click', (e) => {
       const type = e.target.closest('[data-add]')?.dataset.add;
@@ -332,6 +333,7 @@
       begin();
       const d = DEFAULTS[type];
       const l = { id: newId(), type, name: t(`layer.${type}`), ...clone(d), x: Math.round((design.width - d.w) / 2), y: Math.round((design.height - d.h) / 2) };
+      if (type === 'effect') Object.assign(l, { w: design.width, h: design.height, x: 0, y: 0 });
       design.layers.push(l);
       selected = l.id;
       end();
@@ -597,6 +599,16 @@
           field(f, l, 'headColor', t('grid_head_colour'), 'color', { fallback: '#a78bfa' });
           field(f, l, 'stripes', t('grid_stripes'), 'bool', { fallback: true });
         }
+      }
+      if (l.type === 'effect') {
+        const e = group(t('effect'));
+        field(e, l, 'effect', t('effect'), 'select', { options: r.EFFECTS.map((k) => [k, t(`effect.${k}`)]), fallback: 'snow' });
+        field(e, l, 'count', t('effect_count'), 'number', { min: 1, max: 200, fallback: 40 });
+        field(e, l, 'scale', t('effect_scale'), 'range', { min: 0.2, max: 5, fallback: 1 });
+        field(e, l, 'speed', t('effect_speed'), 'number', { min: 1, max: 4, fallback: 1 });
+        field(e, l, 'color', t('colour'), 'color', { fallback: '' });
+        field(e, l, 'color2', t('colour2'), 'color', { fallback: '' });
+        e.append(el('p', 'hint', t('effect_hint')));
       }
       if (l.type === 'shape' || l.type === 'bar') {
         const s = group(t('fill'));

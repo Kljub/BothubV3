@@ -18,7 +18,21 @@ export const FONTS = [
   { family: 'VT323', file: 'VT323', weights: { 400: 'Regular' } },
 ];
 
-export const LAYER_TYPES = ['text', 'avatar', 'image', 'shape', 'badge', 'bar', 'grid'];
+export const LAYER_TYPES = ['text', 'avatar', 'image', 'shape', 'badge', 'bar', 'grid', 'effect'];
+
+/**
+ * Effect layers: many small things drawn by code (no pictures needed). On an
+ * animated card they move in a loop of EFFECT_LOOP ms that joins up
+ * seamlessly; on a still card they stand where they are at the start.
+ */
+export const EFFECTS = ['snow', 'petals', 'leaves', 'sparkles', 'confetti', 'balloons', 'bats', 'eggs', 'lights', 'hearts'];
+export const EFFECT_LOOP = 3000;
+
+/** Length of one loop of the design's effects (ms), 0 without moving effects. */
+export function effectLoop(design) {
+  const d = normalize(design);
+  return d.animated && d.layers.some((l) => l.visible && l.type === 'effect') ? EFFECT_LOOP : 0;
+}
 export const LIMITS = { minSize: 100, maxSize: 2048, maxLayers: 40, maxText: 300 };
 
 /** The weight a font really has nearest to the wanted one. */
@@ -146,6 +160,202 @@ export function frameAt(img, t = 0) {
 /** Length of one loop of an animated picture (ms), 0 for a still one. */
 export function loopLength(img) {
   return img && Array.isArray(img.frames) && img.frames.length > 1 ? img.frames.reduce((n, f) => n + Math.max(20, f.delay || 100), 0) : 0;
+}
+
+// Small seeded random numbers: the same layer looks the same in preview and bot.
+function seeded(seed) {
+  let h = 2166136261;
+  for (const c of String(seed)) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
+  return () => {
+    h += 0x6d2b79f5;
+    let t = h;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const EFFECT_COLORS = {
+  snow: ['#ffffff', '#e0f2fe'],
+  petals: ['#fbcfe8', '#f9a8d4', '#fdf2f8'],
+  leaves: ['#ea580c', '#f59e0b', '#b45309', '#dc2626'],
+  sparkles: ['#fde68a', '#ffffff', '#fbbf24'],
+  confetti: ['#f43f5e', '#3b82f6', '#22c55e', '#eab308', '#a855f7', '#06b6d4'],
+  balloons: ['#ef4444', '#3b82f6', '#22c55e', '#eab308', '#ec4899', '#8b5cf6'],
+  bats: ['#111827', '#1f2937'],
+  eggs: ['#f9a8d4', '#93c5fd', '#fde047', '#86efac', '#c4b5fd'],
+  lights: ['#ef4444', '#22c55e', '#eab308', '#3b82f6', '#ec4899'],
+  hearts: ['#f43f5e', '#fb7185', '#ec4899'],
+};
+
+/** One effect layer at time t: falling, rising, flying or twinkling things. */
+function drawEffect(ctx, l, x, y, w, h, time) {
+  const kind = EFFECTS.includes(l.effect) ? l.effect : 'snow';
+  const rnd = seeded(`${l.id}:${kind}`);
+  const count = Math.round(num(l.count, 1, 200, kind === 'lights' ? 16 : kind === 'balloons' || kind === 'eggs' ? 8 : 40));
+  const scale = num(l.scale, 0.2, 5, 1);
+  const own = [l.color, l.color2].map((c) => color(c, '')).filter(Boolean);
+  const colors = own.length ? own : EFFECT_COLORS[kind];
+  const speed = Math.round(num(l.speed, 1, 4, 1)); // whole loops per animation: the loop stays seamless
+  const p = (((time || 0) % EFFECT_LOOP) + EFFECT_LOOP) % EFFECT_LOOP / EFFECT_LOOP;
+  const TAU = Math.PI * 2;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x, y, w, h);
+  ctx.clip();
+  if (kind === 'lights') {
+    // A string of lights hanging along the top edge; every other bulb glows in turn.
+    ctx.strokeStyle = 'rgba(20,20,20,0.85)';
+    ctx.lineWidth = 2 * scale;
+    ctx.beginPath();
+    for (let i = 0; i <= count; i++) {
+      const lx = x + (w * i) / count;
+      const ly = y + 8 * scale + (i % 2 ? 10 : 0) * scale;
+      if (i) ctx.quadraticCurveTo(lx - w / count / 2, ly + 14 * scale, lx, ly);
+      else ctx.moveTo(lx, ly);
+    }
+    ctx.stroke();
+    for (let i = 0; i < count; i++) {
+      const lx = x + (w * (i + 0.5)) / count;
+      const ly = y + 20 * scale + ((i + 1) % 2 ? 6 : 4) * scale;
+      const on = (Math.floor(p * 4 * speed) + i) % 2 === 0;
+      ctx.fillStyle = colors[i % colors.length];
+      ctx.globalAlpha = on ? 1 : 0.35;
+      if (on) {
+        ctx.shadowColor = colors[i % colors.length];
+        ctx.shadowBlur = 16 * scale;
+      }
+      ctx.beginPath();
+      ctx.ellipse(lx, ly, 6 * scale, 9 * scale, 0, 0, TAU);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+    ctx.restore();
+    return;
+  }
+  for (let i = 0; i < count; i++) {
+    const r0 = rnd();
+    const r1 = rnd();
+    const r2 = rnd();
+    const r3 = rnd();
+    const c = colors[Math.floor(r3 * colors.length) % colors.length];
+    const size = (kind === 'balloons' ? 34 : kind === 'eggs' ? 26 : kind === 'bats' ? 18 : kind === 'sparkles' ? 7 : kind === 'snow' ? 4 : 9) * scale * (0.6 + r2 * 0.8);
+    const span = h + size * 4;
+    const across = w + size * 4;
+    let px = x - size * 2 + r0 * across;
+    let py = y - size * 2 + r1 * span;
+    const phase = r2 * TAU;
+    let angle = 0;
+    let alpha = 1;
+    if (kind === 'snow' || kind === 'petals' || kind === 'leaves' || kind === 'confetti' || kind === 'hearts') {
+      py = y - size * 2 + ((r1 + p * speed * (0.6 + r3 * 0.8 > 1 ? 2 : 1)) % 1) * span;
+      px += Math.sin(p * TAU * speed + phase) * size * 1.5;
+      angle = p * TAU * speed * (r3 > 0.5 ? 1 : -1) + phase;
+    } else if (kind === 'balloons') {
+      py = y - size * 2 + (1 - ((r1 + p * speed) % 1)) * span;
+      px += Math.sin(p * TAU + phase) * size * 0.3;
+    } else if (kind === 'bats') {
+      px = x - size * 2 + ((r0 + p * speed) % 1) * across;
+      py += Math.sin(p * TAU * 2 * speed + phase) * size;
+    } else if (kind === 'sparkles') {
+      alpha = 0.2 + 0.8 * Math.abs(Math.sin(p * TAU * speed + phase));
+    } else if (kind === 'eggs') {
+      // Spread evenly along the box and fully inside it, rocking a little.
+      const sz = Math.min(size, h / 2.6);
+      px = x + (w * (i + 0.5)) / count + (r0 - 0.5) * (w / count) * 0.4;
+      py = y + h - sz * 1.1 - r1 * Math.max(0, h - sz * 2.4);
+      angle = Math.sin(p * TAU * speed + phase) * 0.25;
+    }
+    ctx.save();
+    ctx.globalAlpha *= alpha;
+    ctx.translate(px, py);
+    ctx.rotate(angle);
+    ctx.fillStyle = c;
+    ctx.strokeStyle = c;
+    if (kind === 'snow') {
+      ctx.beginPath();
+      ctx.arc(0, 0, size, 0, TAU);
+      ctx.fill();
+    } else if (kind === 'petals') {
+      ctx.beginPath();
+      ctx.ellipse(0, 0, size, size * 0.55, 0, 0, TAU);
+      ctx.fill();
+    } else if (kind === 'leaves') {
+      ctx.beginPath();
+      ctx.moveTo(0, -size);
+      ctx.quadraticCurveTo(size, 0, 0, size);
+      ctx.quadraticCurveTo(-size, 0, 0, -size);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+      ctx.lineWidth = Math.max(1, size / 8);
+      ctx.beginPath();
+      ctx.moveTo(0, -size);
+      ctx.lineTo(0, size);
+      ctx.stroke();
+    } else if (kind === 'sparkles') {
+      ctx.beginPath();
+      for (let k = 0; k < 8; k++) {
+        const a = (k * Math.PI) / 4;
+        const rad = k % 2 ? size * 0.3 : size;
+        ctx.lineTo(Math.cos(a) * rad, Math.sin(a) * rad);
+      }
+      ctx.closePath();
+      ctx.fill();
+    } else if (kind === 'confetti') {
+      ctx.fillRect(-size / 2, -size / 4, size, size / 2);
+    } else if (kind === 'hearts') {
+      const s = size / 2;
+      ctx.beginPath();
+      ctx.moveTo(0, s * 1.6);
+      ctx.bezierCurveTo(-s * 2.2, 0, -s * 1.1, -s * 1.8, 0, -s * 0.6);
+      ctx.bezierCurveTo(s * 1.1, -s * 1.8, s * 2.2, 0, 0, s * 1.6);
+      ctx.fill();
+    } else if (kind === 'balloons') {
+      ctx.beginPath();
+      ctx.ellipse(0, 0, size * 0.75, size, 0, 0, TAU);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      ctx.beginPath();
+      ctx.ellipse(-size * 0.3, -size * 0.4, size * 0.15, size * 0.25, -0.5, 0, TAU);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(0, size);
+      ctx.quadraticCurveTo(size * 0.3, size * 1.6, 0, size * 2.4);
+      ctx.stroke();
+    } else if (kind === 'bats') {
+      const flap = Math.sin(p * TAU * 6 * speed + phase) * 0.5;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.quadraticCurveTo(-size * 0.6, -size * (0.6 + flap), -size * 1.4, -size * 0.2);
+      ctx.quadraticCurveTo(-size * 0.9, size * 0.05, -size * 0.6, size * 0.35);
+      ctx.quadraticCurveTo(-size * 0.3, size * 0.1, 0, size * 0.4);
+      ctx.quadraticCurveTo(size * 0.3, size * 0.1, size * 0.6, size * 0.35);
+      ctx.quadraticCurveTo(size * 0.9, size * 0.05, size * 1.4, -size * 0.2);
+      ctx.quadraticCurveTo(size * 0.6, -size * (0.6 + flap), 0, 0);
+      ctx.fill();
+    } else if (kind === 'eggs') {
+      const size2 = Math.min(size, h / 2.6);
+      ctx.scale(size2 / size, size2 / size);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, size * 0.72, size, 0, 0, TAU);
+      ctx.fill();
+      ctx.save();
+      ctx.clip();
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.fillRect(-size, -size * 0.12, size * 2, size * 0.24);
+      ctx.fillStyle = 'rgba(0,0,0,0.12)';
+      for (let k = -2; k <= 2; k++) {
+        ctx.beginPath();
+        ctx.arc(k * size * 0.32, size * 0.45, size * 0.08, 0, TAU);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+  ctx.restore();
 }
 
 /** Cover or contain an image into a box. */
@@ -335,6 +545,8 @@ export async function drawCard(ctx, design, opts = {}) {
           });
         });
       }
+    } else if (l.type === 'effect') {
+      drawEffect(ctx, l, x, y, w, h, d.animated ? opts.time : 0);
     } else if (l.type === 'bar') {
       const value = num(fill(l.value, vars), 0, 100, 0);
       const r = num(l.radius, 0, 1000, h / 2);
