@@ -10,7 +10,7 @@
       <button type="button" class="settings-nav-item" data-dialog-section hx-get="/admin/{{.}}" hx-target="#admin-panel"
         {{if eq . "overview"}}aria-current="page"{{end}}>{{template "admin_icon" .}}<span>{{t (printf "admin.nav.%s" .)}}</span></button>
       {{end}}
-      {{if $.Me.IsAdmin}}<div class="update-badge-slot" hx-get="/admin/update/badge" hx-trigger="load, every 10m" hx-swap="innerHTML"></div>{{end}}
+      {{if $.Me.IsAdmin}}<div class="update-badge-slot" hx-get="/admin/update/badge" hx-trigger="load, every 5m, bothub:update-badge from:body" hx-swap="innerHTML"></div>{{end}}
     </nav>
     <section class="settings-content" id="admin-panel" aria-live="polite"></section>
   </div>

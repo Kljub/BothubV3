@@ -23,6 +23,9 @@ import (
 
 const autoUpdateTick = 5 * time.Minute
 
+// quietCheckEvery: how often the gateway looks for new commits on its own.
+const quietCheckEvery = 30 * time.Minute
+
 var restartPolicies = []string{"unless-stopped", "always", "no"}
 
 // updateState is what the last automatic check found.
@@ -91,9 +94,9 @@ func (s *store) autoUpdateTick(now time.Time) {
 	if due {
 		s.updateState.day = now.Format("2006-01-02")
 	}
-	// Without automatic updates a quiet check every 6 hours still shows
-	// "Update available" in the admin sidebar.
-	quiet := !due && now.Sub(s.updateState.checkedAt) > 6*time.Hour
+	// Besides the daily automatic update, a quiet check every 30 minutes
+	// keeps "Update available" in the admin sidebar current.
+	quiet := !due && now.Sub(s.updateState.checkedAt) >= quietCheckEvery
 	s.mu.Unlock()
 
 	ctx, cancel := context.WithTimeout(context.Background(), updateTimeout)

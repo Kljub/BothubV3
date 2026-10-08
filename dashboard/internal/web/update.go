@@ -94,6 +94,8 @@ func (s *Server) updateBox(w http.ResponseWriter, r *http.Request, p Page, check
 		s.failTo(w, r, p, err, "#update-error")
 		return
 	}
+	// The sidebar button follows a check or an update right away.
+	w.Header().Set("HX-Trigger", "bothub:update-badge")
 	s.render(w, http.StatusOK, "admin", "update_box_fragment", withData(p, updateView{Info: info, Check: check, Locale: p.Locale}))
 }
 
