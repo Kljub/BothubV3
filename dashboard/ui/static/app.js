@@ -55,14 +55,54 @@ document.addEventListener('keydown', (event) => {
   });
 });
 
-// Sidebar search filters the navigation entries.
-document.addEventListener('input', (event) => {
+// Sidebar search filters the navigation entries and finds modules and
+// plugins (loaded once from /nav/index): icon in a small box in the colour
+// of the module group, plugins in the plugin colour.
+let navIndex = null;
+async function loadNavIndex() {
+  if (!navIndex) {
+    navIndex = fetch('/nav/index', { credentials: 'same-origin' }).then((r) => (r.ok ? r.json() : [])).catch(() => []);
+  }
+  return navIndex;
+}
+document.addEventListener('input', async (event) => {
   const input = event.target.closest('[data-nav-filter]');
   if (!input) return;
   const query = input.value.trim().toLowerCase();
   document.querySelectorAll('.sidebar-nav .nav-item').forEach((item) => {
     item.hidden = query !== '' && !item.textContent.toLowerCase().includes(query);
   });
+  const nav = document.querySelector('.sidebar-nav');
+  if (!nav) return;
+  let box = nav.querySelector('.nav-results');
+  if (!query) {
+    box?.remove();
+    return;
+  }
+  const words = query.split(/\s+/);
+  const hits = (await loadNavIndex()).filter((h) => words.every((w) => `${h.name} ${h.desc || ''}`.toLowerCase().includes(w))).slice(0, 12);
+  if (input.value.trim().toLowerCase() !== query) return; // typed on meanwhile
+  if (!box) {
+    box = document.createElement('div');
+    box.className = 'nav-results';
+    nav.prepend(box);
+  }
+  box.replaceChildren();
+  for (const h of hits) {
+    const a = document.createElement('a');
+    a.className = `nav-result ${h.group === 'plugin' ? 'nav-result-plugin' : `module-group-${h.group}`}`;
+    a.href = h.url;
+    a.title = h.desc || h.name;
+    const icon = document.createElement('span');
+    icon.className = 'nav-result-icon';
+    icon.textContent = h.icon || '•';
+    const name = document.createElement('span');
+    name.className = 'nav-result-name';
+    name.textContent = h.name;
+    a.append(icon, name);
+    box.append(a);
+  }
+  box.hidden = hits.length === 0;
 });
 
 // Chart hover layer: crosshair, dot and tooltip at the nearest sample.

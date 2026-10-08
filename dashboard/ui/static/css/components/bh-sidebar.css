@@ -120,3 +120,12 @@
 .bot-switch-add button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 8px; border: 0; border-radius: var(--radius-sm); background: none; color: var(--accent); font: inherit; cursor: pointer; text-align: left; }
 .bot-switch-add button:hover { background: var(--surface-2); }
 .bot-switch-plus { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; border: 1px dashed currentColor; font-weight: 700; flex: none; }
+
+/* Sidebar search: modules and plugins found (app.js); group colour from --group. */
+.nav-results { display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.nav-results[hidden] { display: none; }
+.nav-result { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 8px; color: var(--group, var(--accent)); font-size: 13px; font-weight: 600; text-decoration: none; }
+.nav-result:hover { background: color-mix(in srgb, var(--group, var(--accent)) 12%, transparent); }
+.nav-result-plugin { --group: #a855f7; }
+.nav-result-icon { display: grid; place-items: center; flex: none; width: 24px; height: 24px; font-size: 13px; border-radius: 6px; background: color-mix(in srgb, var(--group, var(--accent)) 22%, transparent); border: 1px solid color-mix(in srgb, var(--group, var(--accent)) 45%, transparent); }
+.nav-result-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

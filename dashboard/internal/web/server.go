@@ -194,6 +194,7 @@ func (s *Server) routes() http.Handler {
 	mux.Handle("POST /bots/twitch/disconnect", auth(s.handleTwitchDisconnect))
 	mux.Handle("GET /auth/twitch/callback", auth(s.handleTwitchCallback))
 	mux.Handle("GET /bots/plugins/{key}", auth(s.handleModuleItem("plugins")))
+	mux.Handle("GET /nav/index", auth(s.handleNavIndex))
 	mux.Handle("GET /bots/commands/{name}", auth(s.handleCommandPage))
 	mux.Handle("GET /bots/builder/{cid}", auth(s.handleBuilderPage))
 	mux.Handle("GET /bots/builder/{$}", auth(s.handleBuilderPage))
