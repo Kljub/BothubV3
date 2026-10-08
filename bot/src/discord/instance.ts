@@ -52,6 +52,8 @@ import { moduleHandlers } from './handlers-modules.js';
 import { parsePresence, PresenceRunner } from './presence.js';
 import { isDue, nextRun, type TimedEvent } from '../core/timed.js';
 import { botVars, channelVars, guildVars, userVars, type Vars } from './vars.js';
+import { alertEmbed, failConfig, hintOf, ownerTip, preflight, prepare, reasonText, traceOf, type FailConfig, type TraceContext } from './playback.js';
+import type { Hint, RunErrorTexts } from '../graph/explain.js';
 
 const PRIVILEGED = [GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildPresences, GatewayIntentBits.MessageContent];
 const BASE_INTENTS = [
@@ -91,6 +93,15 @@ export interface InstanceDeps {
   plugins?: PluginManager;
   /** Key for secrets (bot tokens, global secrets); absent in tests. */
   secretKey?: () => Buffer;
+  /** shared/run-errors.json: plain-language reasons of failed blocks. */
+  runErrors?: RunErrorTexts;
+}
+
+interface RunMeta {
+  runKey: string;
+  startVars: Record<string, string>;
+  fail: FailConfig;
+  warnings: { node: string; text: string }[];
 }
 
 interface Pending {
@@ -154,6 +165,9 @@ export class BotInstance {
   private jobsRunning = false;
   private readonly engine: Engine;
   private readonly moderation: Moderation;
+  private readonly runMeta = new WeakMap<Run, RunMeta>();
+  /** Last staff alert per command (one per minute). */
+  private readonly alerted = new Map<number, number>();
 
   constructor(
     readonly botId: number,
@@ -379,6 +393,8 @@ export class BotInstance {
     this.deps.repo.setBotStatus(this.botId, 'running');
     if (ROLE === 'main') this.deps.repo.logUpdate(this.botId, 'log.update.bot_started', { name: user.username });
     this.applyPresence();
+    // The application owner (or team) gets private fix tips when a run fails.
+    await user.client.application?.fetch().catch(() => undefined);
     await this.enforceGuildAccess();
     await this.syncGuilds();
     await this.registerCommands();
@@ -686,6 +702,7 @@ export class BotInstance {
     const hideReplies = hideRepliesOf(s, vars);
     const d = this.data({ runKey, guild: i.guild, channel, member, user: i.user, interaction: i, hideReplies });
     const run = new Run(cmd.graph, this.engine, d as never, vars);
+    this.begin(run, cmd, runKey, i.guild ? preflight(cmd.graph.nodes, i.guild.members.me, channel) : []);
     // Discord waits 3 seconds for an answer: slow blocks (loading games,
     // finding music) get a "thinking …" first; the reply then fills it.
     const defer = setTimeout(() => {
@@ -741,17 +758,82 @@ export class BotInstance {
   /** Discord needs an answer within 3 s; answer when the graph did not. */
   private async finishInteraction(i: RepliableInteraction, run: Run, cmd: CommandRow, result: RunResult, component = false): Promise<void> {
     if (!result.ok) this.logRun(run, result.errorKey === 'error.run.too_many_steps' ? 'WAR-2005' : 'ERR-1005', { reason: reasonOf(result) }, cmd);
+    const source = component ? (i.isStringSelectMenu() ? 'menu' : 'button') : i.isChatInputCommand() ? 'slash' : 'context_menu';
+    const hint = this.afterRun(run, cmd, result, { source, user: i.user, guild: i.guild, channel: i.channel?.isSendable() ? i.channel : null });
+    const fail = this.runMeta.get(run)?.fail ?? failConfig(cmd);
+    // "When it fails": a friendly text, the reason, or nothing; the owner also gets a private fix tip.
+    const failText = result.ok ? '✅' : fail.reply === 'reason' ? `❌ ${reasonText(result, hint)}` : fail.reply === 'none' ? '' : fail.message;
+    const tip = !result.ok && this.isOwner(i.user.id) && !this.muted(cmd, result) ? ownerTip(result, hint) : '';
+    const sendTip = async () => {
+      if (tip) await i.followUp({ content: tip, flags: 64 }).catch(() => undefined);
+    };
     // Deferred ("thinking …") but nothing answered: replace the loading state.
     if (i.deferred && !i.replied && !component) {
-      await i.editReply({ content: result.ok ? '✅' : 'Something went wrong while running this command.' }).catch(() => undefined);
+      if (failText) await i.editReply({ content: failText }).catch(() => undefined);
+      else await i.deleteReply().catch(() => undefined);
+      await sendTip();
       return;
     }
-    if (i.replied || i.deferred) return;
+    if (i.replied || i.deferred) return sendTip();
     if (component && i.isMessageComponent()) {
       await i.deferUpdate().catch(() => undefined);
+      return sendTip();
+    }
+    if (failText || tip) {
+      await i.reply({ content: [failText, tip].filter(Boolean).join('\n\n').slice(0, 2000), flags: 64 }).catch(() => undefined);
       return;
     }
-    await i.reply({ content: result.ok ? '✅' : 'Something went wrong while running this command.', flags: 64 }).catch(() => undefined);
+    // "Nothing": Discord still needs an answer; a hidden one that is removed at once.
+    await i.deferReply({ flags: 64 }).then(() => i.deleteReply()).catch(() => undefined);
+  }
+
+  /** Playback settings of a run (trigger "When it fails", record playbacks). */
+  private begin(run: Run, cmd: CommandRow, runKey: string, warnings: { node: string; text: string }[] = []): void {
+    const fail = prepare(run, cmd);
+    this.runMeta.set(run, { runKey, startVars: fail.record ? run.startVars() : {}, fail, warnings });
+  }
+
+  /** After a run (or a click): saves the playback and alerts the staff channel. */
+  private afterRun(run: Run, cmd: CommandRow, result: RunResult, ctx: TraceContext): Hint | null {
+    const hint = hintOf(result, this.deps.runErrors);
+    const meta = this.runMeta.get(run);
+    if (!meta) return hint;
+    if (meta.fail.record) {
+      try {
+        this.deps.repo.saveTrace(traceOf(this.botId, cmd, meta.runKey, run, result, hint, { ...ctx, warnings: meta.warnings }, meta.startVars));
+      } catch (err) {
+        log.warn('playback not saved', { botId: this.botId, command: cmd.id, err });
+      }
+    }
+    if (!result.ok && meta.fail.channel && !this.muted(cmd, result)) {
+      const last = this.alerted.get(cmd.id) ?? 0;
+      if (Date.now() - last > 60_000) {
+        this.alerted.set(cmd.id, Date.now());
+        void this.client?.channels
+          .fetch(meta.fail.channel)
+          .then(async (ch) => {
+            if (ch?.isSendable()) await ch.send({ embeds: [alertEmbed(cmd, result, hint, ctx)], allowedMentions: { parse: [] } });
+          })
+          .catch(() => undefined);
+      }
+    }
+    return hint;
+  }
+
+  private muted(cmd: CommandRow, result: RunResult): boolean {
+    if (result.ok || !result.errorNode || !result.errorKey) return false;
+    try {
+      return this.deps.repo.errorMuted(cmd.id, result.errorNode.id, result.errorKey);
+    } catch {
+      return false;
+    }
+  }
+
+  /** The bot's owner in the Discord developer portal (or a member of its team). */
+  private isOwner(userId: string): boolean {
+    const o = this.client?.application?.owner;
+    if (!o) return false;
+    return 'members' in o ? o.members.has(userId) : o.id === userId;
   }
 
   /**
@@ -851,8 +933,10 @@ export class BotInstance {
       const runKey = randomUUID().slice(0, 12);
       const vars = { ...this.baseVars(ctx.guild, ctx.channel, ctx.user, ctx.member), ...ctx.vars, 'event.name': ev.name };
       const run = new Run(ev.graph, this.engine, this.data({ runKey, guild: ctx.guild, channel: ctx.channel, member: ctx.member, user: ctx.user, message: ctx.message }) as never, vars);
+      this.begin(run, ev, runKey);
       const result = await this.tracked(run).catch((err: Error) => ({ ok: false, steps: [], errorKey: err.message }) as RunResult);
       this.keepIfInteractive(runKey, run, ev, null);
+      this.afterRun(run, ev, result, { source: 'event', user: ctx.user, guild: ctx.guild, channel: ctx.channel });
       if (!result.ok) this.deps.repo.logCode(this.botId, 'ERR-1008', { event: ev.name, reason: reasonOf(result) });
     }
   }
@@ -901,8 +985,10 @@ export class BotInstance {
         'schedule.next': nextRun(ev, Date.now(), this.timeSettings.timezone),
       };
       const run = new Run(cmd.graph, this.engine, this.data({ runKey, guild }) as never, vars);
+      this.begin(run, cmd, runKey);
       const result = await this.tracked(run).catch((err: Error) => ({ ok: false, steps: [], errorKey: err.message }) as RunResult);
       this.keepIfInteractive(runKey, run, cmd, null);
+      this.afterRun(run, cmd, result, { source: 'timed', user: null, guild, channel: null });
       if (!result.ok) this.deps.repo.logCode(this.botId, 'ERR-1008', { event: cmd.name, reason: reasonOf(result) });
     }
   }
@@ -938,8 +1024,10 @@ export class BotInstance {
       if (!this.mayRun('webhook', `${guild?.id ?? 'none'}:webhook:${call.eventId}`)) return;
       const runKey = randomUUID().slice(0, 12);
       const run = new Run(cmd.graph, this.engine, this.data({ runKey, guild }) as never, { ...vars, 'event.name': cmd.name });
+      this.begin(run, cmd, runKey);
       const result = await this.tracked(run).catch((err: Error) => ({ ok: false, steps: [], errorKey: err.message }) as RunResult);
       this.keepIfInteractive(runKey, run, cmd, null);
+      this.afterRun(run, cmd, result, { source: 'webhook', user: null, guild, channel: null });
       if (!result.ok) this.deps.repo.logCode(this.botId, 'ERR-1008', { event: cmd.name, reason: reasonOf(result) });
     }
   }
@@ -952,8 +1040,10 @@ export class BotInstance {
       const runKey = randomUUID().slice(0, 12);
       const vars = { ...this.baseVars(null, null, null, null), 'event.name': cmd.name };
       const run = new Run(cmd.graph, this.engine, this.data({ runKey }) as never, vars);
+      this.begin(run, cmd, runKey);
       const result = await this.tracked(run).catch((err: Error) => ({ ok: false, steps: [], errorKey: err.message }) as RunResult);
       this.keepIfInteractive(runKey, run, cmd, null);
+      this.afterRun(run, cmd, result, { source: 'timed', user: null, guild: null, channel: null });
       if (!result.ok) this.deps.repo.logCode(this.botId, 'ERR-1008', { event: cmd.name, reason: reasonOf(result) });
     }
   }

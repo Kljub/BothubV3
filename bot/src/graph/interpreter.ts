@@ -57,6 +57,16 @@ export interface Step {
   type: string;
   status: 'ok' | 'error';
   errorKey?: string;
+  /** Playbacks only (run.trace): ms since the run started. */
+  t?: number;
+  /** Playbacks: variables this block set or changed. */
+  vars?: Record<string, string>;
+  /** Playbacks: the block's settings with the variables filled in. */
+  values?: Record<string, string>;
+  /** Playbacks: a line of a Log a Line block. */
+  log?: string;
+  /** Playbacks: the error's own message. */
+  message?: string;
 }
 
 export interface RunResult {
@@ -65,7 +75,13 @@ export interface RunResult {
   errorKey?: string;
   /** The failing block's own message (e.g. a plugin's error text), for the log. */
   errorMessage?: string;
+  /** The block that failed (first failure) and its error params. */
+  errorNode?: GraphNode;
+  errorParams?: Record<string, unknown>;
 }
+
+const TRACE_VALUE = 300;
+const TRACE_KEYS = 40;
 
 const PLACEHOLDER = /\{([A-Za-z0-9_][A-Za-z0-9_.:-]{0,99})\}/g;
 
@@ -82,6 +98,15 @@ export class Run {
   private handlingError = false;
   private loopDepth = 0;
   private stopRequested = false;
+  /** Runs since the last start or continuation: limits count per part. */
+  private partStart = Date.now();
+  private firstError: { node: GraphNode; error: GraphError } | undefined;
+  private pendingLog: string | undefined;
+  private readonly seen = new Map<string, string>();
+  /** Record playbacks (variables and settings per step). */
+  trace = false;
+  /** "When it fails" on the trigger: continue with the next block instead of stopping. */
+  failFlow: 'stop' | 'continue' = 'stop';
 
   constructor(
     readonly graph: Graph,
@@ -98,6 +123,23 @@ export class Run {
       else this.out.set(key, [e]);
     }
     for (const [k, v] of Object.entries(vars)) this.vars.set(k, v);
+    for (const [k, v] of this.vars) this.seen.set(k, v);
+  }
+
+  /** Variables at the start (playbacks), without internal ones. */
+  startVars(): Record<string, string> {
+    const out: Record<string, string> = {};
+    let n = 0;
+    for (const [k, v] of this.vars) {
+      if (k.startsWith('__') || n++ >= 400) continue;
+      out[k] = v.slice(0, TRACE_VALUE);
+    }
+    return out;
+  }
+
+  /** Log a Line: the text shows at this block in the playback. */
+  logLine(text: string): void {
+    this.pendingLog = text.slice(0, 1000);
   }
 
   // ---------- values ----------
@@ -208,25 +250,62 @@ export class Run {
 
   /** Continues a run later, e.g. when a button of its message is clicked. */
   async continueFrom(nodeId: string, port = 'next'): Promise<RunResult> {
+    // A click comes minutes later: run time, steps and Discord calls count anew.
     this.failure = undefined;
+    this.firstError = undefined;
+    this.partStart = Date.now();
+    this.waitedMs = 0;
+    this.stepCount = 0;
+    this.discordCalls = 0;
     return this.finish(await this.walkFrom(nodeId, port));
   }
 
   private finish(err: GraphError | undefined): RunResult {
-    const e = err ?? this.failure;
+    const e = err ?? this.failure ?? this.firstError?.error;
     if (!e) return { ok: true, steps: this.steps };
     const message = typeof e.params.message === 'string' && e.params.message !== e.key ? e.params.message : undefined;
-    return message ? { ok: false, steps: this.steps, errorKey: e.key, errorMessage: message } : { ok: false, steps: this.steps, errorKey: e.key };
+    const out: RunResult = { ok: false, steps: this.steps, errorKey: e.key };
+    if (message) out.errorMessage = message;
+    if (this.firstError) {
+      out.errorNode = this.firstError.node;
+      out.errorParams = this.firstError.error.params;
+    } else out.errorParams = e.params;
+    return out;
   }
 
-  private record(node: GraphNode, status: Step['status'], errorKey?: string): void {
-    this.steps.push(errorKey ? { node: node.id, type: node.type, status, errorKey } : { node: node.id, type: node.type, status });
+  private record(node: GraphNode, status: Step['status'], errorKey?: string, message?: string): void {
+    const step: Step = errorKey ? { node: node.id, type: node.type, status, errorKey } : { node: node.id, type: node.type, status };
+    if (this.trace) {
+      step.t = Date.now() - this.startedAt;
+      const changed: Record<string, string> = {};
+      let n = 0;
+      for (const [k, v] of this.vars) {
+        if (k.startsWith('__') || this.seen.get(k) === v) continue;
+        this.seen.set(k, v);
+        if (n++ < TRACE_KEYS) changed[k] = v.slice(0, TRACE_VALUE);
+      }
+      if (n) step.vars = changed;
+      const values: Record<string, string> = {};
+      n = 0;
+      for (const [k, v] of Object.entries(node.config ?? {})) {
+        if (n >= 16 || k === 'variable' || (typeof v !== 'string' && typeof v !== 'number' && typeof v !== 'boolean')) continue;
+        const s = typeof v === 'string' ? this.render(v) : String(v);
+        if (s === '') continue;
+        values[k] = s.slice(0, TRACE_VALUE);
+        n++;
+      }
+      if (n) step.values = values;
+      if (this.pendingLog !== undefined) step.log = this.pendingLog;
+      if (message) step.message = message.slice(0, 500);
+    }
+    this.pendingLog = undefined;
+    this.steps.push(step);
   }
 
   private checkLimits(): void {
     const { maxSteps, maxRuntimeMs } = this.engine.limits;
     if (++this.stepCount > maxSteps) throw new GraphError('error.run.too_many_steps', { max: maxSteps });
-    if (Date.now() - this.startedAt - this.waitedMs > maxRuntimeMs) throw new GraphError('error.run.timeout', { max: maxRuntimeMs });
+    if (Date.now() - this.partStart - this.waitedMs > maxRuntimeMs) throw new GraphError('error.run.timeout', { max: maxRuntimeMs });
   }
 
   /** Follows the flow from (nodeId, port). Returns a fatal error, if any. */
@@ -308,21 +387,29 @@ export class Run {
   private async fail(node: GraphNode, err: unknown): Promise<GraphNode | undefined | null> {
     // SDK errors carry the plugin's own text in params.message (sdk.plugin.failed): keep it.
     const detail = (err as { params?: { message?: unknown } })?.params?.message;
+    // Discord errors that a block did not wrap keep their code (for the explanation).
+    const code = (err as { code?: unknown })?.code;
     const ge = err instanceof GraphError ? err
-      : new GraphError('error.run.block_failed', { message: typeof detail === 'string' && detail ? detail : err instanceof Error ? err.message : String(err) });
-    this.record(node, 'error', ge.key);
+      : new GraphError('error.run.block_failed', { message: typeof detail === 'string' && detail ? detail : err instanceof Error ? err.message : String(err), ...(typeof code === 'number' ? { code } : {}) });
     const message = typeof ge.params.message === 'string' ? ge.params.message : ge.key;
+    this.record(node, 'error', ge.key, message);
     if (node.paths) {
       this.setResult(node, '.error', message);
       return this.targets(node.id, 'error')[0];
     }
+    if (!this.firstError) this.firstError = { node, error: ge };
     if (this.handlingError) {
       this.failure = ge;
       return null;
     }
     this.failure = ge;
     const handler = this.graph.nodes.find((n) => n.type === 'utility.error_handler');
-    if (!handler) return null;
+    if (!handler) {
+      if (this.failFlow !== 'continue') return null;
+      // "When it fails: continue": the run goes on after the failed block; the error stays.
+      this.failure = undefined;
+      return this.targets(node.id, 'next')[0];
+    }
     this.handlingError = true;
     const v = typeof handler.config.variable === 'string' && handler.config.variable ? handler.config.variable : 'error';
     this.vars.set(v, message);

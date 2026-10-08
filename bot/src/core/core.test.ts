@@ -279,3 +279,23 @@ test('role limits: owner limits from the role, admins have none, activity is tra
   repo.touchBot(5, Date.parse('2026-10-01T10:01:00Z')); // throttled
   assert.equal(repo.lastActive(5), Date.parse('2026-10-01T10:00:00Z'));
 });
+
+test('playbacks: last 10 runs per command, failed ones kept, a click updates its run', () => {
+  const { repo } = migratedDb();
+  const db = repo.db;
+  db.prepare("INSERT INTO bots (name, autostart) VALUES ('Test', 1)").run();
+  db.prepare("INSERT INTO commands (bot_id, name, graph) VALUES (1, 'ping', '{\"schemaVersion\":1,\"nodes\":[],\"edges\":[]}')").run();
+  const base = { botId: 1, commandId: 1, source: 'slash', userId: '1', userName: 'kljub', guildId: null, guildName: null, channelId: null, channelName: null, errorNode: null, errorKey: null, errorHint: null, errorText: null, startVars: { user: 'kljub' }, steps: [{ node: 't', type: 'trigger.slash', status: 'ok' }], warnings: [] };
+  repo.saveTrace({ ...base, runKey: 'bad', ok: false, errorNode: 'n1', errorKey: 'error.run.discord', errorHint: { key: 'discord.50013', text: 'x', fix: 'y', params: {} } });
+  for (let i = 0; i < 15; i++) repo.saveTrace({ ...base, runKey: `ok${i}`, ok: true });
+  const rows = db.prepare('SELECT run_key, ok FROM run_traces ORDER BY id').all() as { run_key: string; ok: number }[];
+  assert.equal(rows.length, 11);
+  assert.equal(rows[0]!.run_key, 'bad');
+  // A click on the run's button: same row, still failed when the first part failed.
+  repo.saveTrace({ ...base, runKey: 'bad', ok: true, source: 'button', steps: [{ node: 't' }, { node: 'b' }] });
+  const bad = db.prepare("SELECT ok, source, error_key, json_array_length(steps) AS n FROM run_traces WHERE run_key = 'bad'").get() as { ok: number; source: string; error_key: string; n: number };
+  assert.deepEqual({ ...bad }, { ok: 0, source: 'button', error_key: 'error.run.discord', n: 2 });
+  assert.equal(repo.errorMuted(1, 'n1', 'error.run.discord'), false);
+  db.prepare("INSERT INTO run_error_mutes (command_id, node_id, error_key) VALUES (1, 'n1', 'error.run.discord')").run();
+  assert.equal(repo.errorMuted(1, 'n1', 'error.run.discord'), true);
+});

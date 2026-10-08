@@ -386,6 +386,8 @@ export function coreHandlers(deps: CoreDeps): Map<string, Handler> {
     ],
     ['action.note', () => undefined],
     ['action.error_log', (node, run) => deps.logError(run, run.str(node, 'content'))],
+    // Log a Line: a note in the playback only (Discord sees nothing).
+    ['action.log_line', (node, run) => run.logLine(run.str(node, 'content'))],
     ['action.set_variable', (node, run) => writeVar(deps, run, scopeOf(run, node), varName(run, node), run.str(node, 'value'))],
     [
       'action.delete_variable',

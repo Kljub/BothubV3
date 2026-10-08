@@ -36,7 +36,28 @@ export interface CommandRow {
   graph: Graph;
 }
 
-export type BotStatus = 'running' | 'stopped' | 'starting' | 'error';
+export interface RunTrace {
+  botId: number;
+  commandId: number;
+  runKey: string;
+  source: string;
+  userId: string | null;
+  userName: string | null;
+  guildId: string | null;
+  guildName: string | null;
+  channelId: string | null;
+  channelName: string | null;
+  ok: boolean;
+  errorNode: string | null;
+  errorKey: string | null;
+  errorHint: unknown;
+  errorText: string | null;
+  startVars: Record<string, string>;
+  steps: unknown[];
+  warnings: { node: string; text: string }[];
+}
+
+export type BotStatus ='running' | 'stopped' | 'starting' | 'error';
 
 export type CaseAction =
   | 'warn' | 'timeout' | 'untimeout' | 'kick' | 'ban' | 'unban' | 'role_add' | 'role_remove'
@@ -246,6 +267,42 @@ export class Repo {
   /** Update entry (i18n key log.update.*), e.g. bot started. */
   logUpdate(botId: number | null, key: string, params: Record<string, unknown> = {}): void {
     this.db.prepare("INSERT INTO logs (bot_id, level, key, params, source) VALUES (?, 'update', ?, ?, 'bot')").run(botId, key, JSON.stringify(params));
+  }
+
+  // ---------- playbacks ----------
+
+  /**
+   * Saves a run for Playbacks and the Errors page; a run continued by a
+   * button click updates its row. Keeps the last 10 runs per command and
+   * failed runs for 7 days.
+   */
+  saveTrace(t: RunTrace): void {
+    const json = (v: unknown, max: number) => {
+      const s = JSON.stringify(v);
+      return s.length <= max ? s : Array.isArray(v) ? '[]' : '{}';
+    };
+    this.db
+      .prepare(
+        `INSERT INTO run_traces (bot_id, command_id, run_key, source, user_id, user_name, guild_id, guild_name, channel_id, channel_name, ok, error_node, error_key, error_hint, error_text, start_vars, steps, warnings)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT (command_id, run_key) DO UPDATE SET ok = MIN(ok, excluded.ok), source = excluded.source,
+           error_node = COALESCE(excluded.error_node, error_node), error_key = COALESCE(excluded.error_key, error_key),
+           error_hint = COALESCE(excluded.error_hint, error_hint), error_text = COALESCE(excluded.error_text, error_text),
+           steps = excluded.steps, dismissed = CASE WHEN excluded.ok = 0 THEN 0 ELSE dismissed END`,
+      )
+      .run(t.botId, t.commandId, t.runKey, t.source, t.userId, t.userName, t.guildId, t.guildName, t.channelId, t.channelName, t.ok ? 1 : 0,
+        t.errorNode, t.errorKey, t.errorHint ? JSON.stringify(t.errorHint) : null, t.errorText, json(t.startVars, 64_000), json(t.steps, 400_000), json(t.warnings, 8_000));
+    this.db
+      .prepare(
+        `DELETE FROM run_traces WHERE command_id = ? AND id NOT IN (SELECT id FROM run_traces WHERE command_id = ? ORDER BY id DESC LIMIT 10)
+           AND (ok = 1 OR at < strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-7 days') OR id NOT IN (SELECT id FROM run_traces WHERE command_id = ? AND ok = 0 ORDER BY id DESC LIMIT 100))`,
+      )
+      .run(t.commandId, t.commandId, t.commandId);
+  }
+
+  /** Muted error (same block, same reason): no alert, no fix tip. */
+  errorMuted(commandId: number, nodeId: string, errorKey: string): boolean {
+    return !!this.db.prepare('SELECT 1 FROM run_error_mutes WHERE command_id = ? AND node_id = ? AND error_key = ?').get(commandId, nodeId, errorKey);
   }
 
   // ---------- variables ----------

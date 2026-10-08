@@ -17,6 +17,7 @@ import { markCleanStop, redisHeartbeatStore, startHeartbeat, type HeartbeatStore
 import { definitions } from './graph/interpreter.js';
 import { handover, ROLE } from './core/handover.js';
 import type { NodeDefinition } from './graph/types.js';
+import type { RunErrorTexts } from './graph/explain.js';
 
 async function main(): Promise<void> {
   const config = loadConfig();
@@ -79,7 +80,7 @@ async function main(): Promise<void> {
 
   // The key is read when a bot starts: the API may create it after us.
   const secretKey = () => loadSecretKey(config.dataDir);
-  manager = new BotManager(repo, { repo, defs, limits, plugins, secretKey }, secretKey);
+  manager = new BotManager(repo, { repo, defs, limits, plugins, secretKey, runErrors: readShared<RunErrorTexts>(config, 'run-errors.json') }, secretKey);
   await manager.startAll();
   await handover.markReady();
   if (ROLE === 'handover') {

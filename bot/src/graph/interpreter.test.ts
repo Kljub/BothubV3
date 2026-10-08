@@ -219,3 +219,68 @@ test('durations and IDs', () => {
   assert.equal(snowflake('<@123456789012345678>', 'user'), '123456789012345678');
   assert.throws(() => snowflake('Kljub', 'user'));
 });
+
+test('playback trace: changed variables, filled settings, log lines, error message', async () => {
+  const said: string[] = [];
+  const t = n('trigger.slash');
+  const setV = n('test.set');
+  const a = n('test.say', { text: 'You have {coins}' });
+  const boom = n('test.boom');
+  const e = engine(said, [['test.log', (node, run) => run.logLine(run.str(node, 'text'))], ['test.set', (_node, run) => void run.vars.set('coins', '5')]]);
+  const lg = n('test.log', { text: 'coins={coins}' });
+  const run = new Run(graph([t, setV, a, lg, boom], [edge(t, 'next', setV), edge(setV, 'next', a), edge(a, 'next', lg), edge(lg, 'next', boom)]), e, {}, { user: 'Kljub' });
+  run.trace = true;
+  assert.deepEqual(run.startVars(), { user: 'Kljub' });
+  const r = await run.start();
+  assert.equal(r.ok, false);
+  assert.equal(r.errorNode?.id, boom.id);
+  const bySay = r.steps.find((s) => s.node === a.id)!;
+  assert.equal(bySay.values?.text, 'You have 5');
+  assert.equal(r.steps.find((s) => s.node === setV.id)!.vars?.coins, '5');
+  assert.equal(r.steps.find((s) => s.node === lg.id)!.log, 'coins=5');
+  assert.equal(r.steps.at(-1)!.status, 'error');
+  assert.ok(typeof r.steps[0]!.t === 'number');
+});
+
+test('without trace the steps stay small', async () => {
+  const t = n('trigger.slash');
+  const a = n('test.say', { text: 'x' });
+  const r = await new Run(graph([t, a], [edge(t, 'next', a)]), engine([]), {}, {}).start();
+  assert.deepEqual(Object.keys(r.steps[1]!).sort(), ['node', 'status', 'type']);
+});
+
+test('fail flow "continue" skips the failed block, the run still counts as failed', async () => {
+  const said: string[] = [];
+  const t = n('trigger.slash');
+  const boom = n('test.boom');
+  const a = n('test.say', { text: 'after' });
+  const run = new Run(graph([t, boom, a], [edge(t, 'next', boom), edge(boom, 'next', a)]), engine(said), {}, {});
+  run.failFlow = 'continue';
+  const r = await run.start();
+  assert.deepEqual(said, ['after']);
+  assert.equal(r.ok, false);
+  assert.equal(r.errorKey, 'error.test.boom');
+  assert.equal(r.errorNode?.id, boom.id);
+});
+
+test('an error port handles the failure: the run is ok', async () => {
+  const t = n('trigger.slash');
+  const boom = n('test.boom', {}, { paths: true });
+  const a = n('test.say', { text: 'handled' });
+  const said: string[] = [];
+  const r = await new Run(graph([t, boom, a], [edge(t, 'next', boom), edge(boom, 'error', a)]), engine(said), {}, {}).start();
+  assert.equal(r.ok, true);
+  assert.deepEqual(said, ['handled']);
+});
+
+test('a click long after the command does not hit the run time limit', async () => {
+  const said: string[] = [];
+  const t = n('trigger.slash');
+  const btn = n('test.say', { text: 'command' });
+  const after = n('test.say', { text: 'after click' });
+  const run = new Run(graph([t, btn, after], [edge(t, 'next', btn), edge(btn, 'next', after)]), { ...engine(said), limits: { ...limits, maxRuntimeMs: 50 } }, {}, {});
+  await new Promise((r) => setTimeout(r, 80));
+  const r = await run.continueFrom(btn.id);
+  assert.equal(r.ok, true, r.errorKey);
+  assert.deepEqual(said, ['after click']);
+});

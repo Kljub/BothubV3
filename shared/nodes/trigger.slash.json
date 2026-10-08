@@ -388,6 +388,54 @@
         "default": "guild",
         "x-labelKey": "builder.cfg.contexts",
         "x-enumKey": "builder.enum.contexts"
+      },
+      "fail_reply": {
+        "type": "string",
+        "enum": [
+          "friendly",
+          "reason",
+          "none"
+        ],
+        "default": "friendly",
+        "x-labelKey": "builder.cfg.fail_reply",
+        "x-hintKey": "builder.cfg.fail_reply_hint",
+        "x-enumKey": "builder.enum.fail_reply"
+      },
+      "fail_message": {
+        "type": "string",
+        "maxLength": 500,
+        "x-labelKey": "builder.cfg.fail_message",
+        "x-placeholder": "Something went wrong while running this command.",
+        "x-showIf": {
+          "fail_reply": [
+            "friendly"
+          ]
+        }
+      },
+      "fail_channel": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.fail_channel",
+        "x-hintKey": "builder.cfg.fail_channel_hint",
+        "x-ref": "channel"
+      },
+      "fail_flow": {
+        "type": "string",
+        "enum": [
+          "stop",
+          "continue"
+        ],
+        "default": "stop",
+        "x-labelKey": "builder.cfg.fail_flow",
+        "x-hintKey": "builder.cfg.fail_flow_hint",
+        "x-enumKey": "builder.enum.fail_flow"
+      },
+      "record_runs": {
+        "type": "boolean",
+        "default": true,
+        "x-labelKey": "builder.cfg.record_runs",
+        "x-hintKey": "builder.cfg.record_runs_hint",
+        "x-advanced": true
       }
     }
   }

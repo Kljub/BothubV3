@@ -158,6 +158,31 @@
         },
         "x-labelKey": "builder.cfg.timed_event",
         "x-hintKey": "builder.cfg.timed_event_hint"
+      },
+      "fail_channel": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.fail_channel",
+        "x-hintKey": "builder.cfg.fail_channel_hint",
+        "x-ref": "channel"
+      },
+      "fail_flow": {
+        "type": "string",
+        "enum": [
+          "stop",
+          "continue"
+        ],
+        "default": "stop",
+        "x-labelKey": "builder.cfg.fail_flow",
+        "x-hintKey": "builder.cfg.fail_flow_hint",
+        "x-enumKey": "builder.enum.fail_flow"
+      },
+      "record_runs": {
+        "type": "boolean",
+        "default": true,
+        "x-labelKey": "builder.cfg.record_runs",
+        "x-hintKey": "builder.cfg.record_runs_hint",
+        "x-advanced": true
       }
     }
   }

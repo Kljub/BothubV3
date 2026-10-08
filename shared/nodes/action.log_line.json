@@ -1,0 +1,40 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.log_line",
+  "version": 1,
+  "category": "action",
+  "group": "other",
+  "order": 845,
+  "color": "grey",
+  "icon": "📝",
+  "labelKey": "builder.node.action_log_line.label",
+  "descriptionKey": "builder.node.action_log_line.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "content": {
+        "type": "string",
+        "maxLength": 1000,
+        "x-labelKey": "builder.cfg.log_line",
+        "x-hintKey": "builder.cfg.log_line_hint",
+        "x-multiline": true
+      }
+    }
+  }
+}

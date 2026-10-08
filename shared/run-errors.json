@@ -1,0 +1,251 @@
+{
+  "$comment": "Plain-language explanations of failed blocks, shown in playbacks, on the Errors page and (English) to the bot owner in Discord. Keys: error.run.* (run errors) and discord.<code>[.<kind>] (Discord API error codes; kind = roles, moderation, message, channel, voice). {placeholders} come from the error params; {block} is the block name. Missing key: the error's own message is shown.",
+  "error.run.not_a_number": {
+    "en": { "text": "The field \"{field}\" got \"{value}\", which is not a number.", "fix": "Check what you put into the field. A variable that is empty or holds text gives this error; use a Comparison block first or a number default." },
+    "de": { "text": "Das Feld \"{field}\" bekam \"{value}\", das ist keine Zahl.", "fix": "Prüfe, was im Feld steht. Eine leere Variable oder Text löst das aus; prüfe vorher mit einem Vergleich-Block oder nutze eine Zahl als Standard." }
+  },
+  "error.run.bad_id": {
+    "en": { "text": "The field \"{field}\" needs a Discord ID, but got \"{value}\".", "fix": "Pick the channel, role or member from the list, or use a variable that holds an ID (e.g. {option_user})." },
+    "de": { "text": "Das Feld \"{field}\" braucht eine Discord-ID, bekam aber \"{value}\".", "fix": "Wähle Kanal, Rolle oder Mitglied aus der Liste oder nutze eine Variable mit einer ID (z. B. {option_user})." }
+  },
+  "error.run.bad_date": {
+    "en": { "text": "\"{value}\" is not a date the bot understands.", "fix": "Use a date like 2026-12-24 or 2026-12-24 18:00." },
+    "de": { "text": "\"{value}\" ist kein Datum, das der Bot versteht.", "fix": "Nutze ein Datum wie 2026-12-24 oder 2026-12-24 18:00." }
+  },
+  "error.run.bad_duration": {
+    "en": { "text": "\"{value}\" is not a duration.", "fix": "Write a duration like 30s, 10m, 2h or 7d." },
+    "de": { "text": "\"{value}\" ist keine Dauer.", "fix": "Schreibe eine Dauer wie 30s, 10m, 2h oder 7d." }
+  },
+  "error.run.bad_url": {
+    "en": { "text": "The address is not usable: {value}", "fix": "Use a full http(s) address, e.g. https://example.com/image.png. A variable inside it must not be empty." },
+    "de": { "text": "Die Adresse ist nicht nutzbar: {value}", "fix": "Nutze eine volle http(s)-Adresse, z. B. https://example.com/bild.png. Eine Variable darin darf nicht leer sein." }
+  },
+  "error.run.bad_regex": {
+    "en": { "text": "\"{value}\" is not a valid search pattern.", "fix": "Check brackets and special characters (. * + ? ( ) [ ]); put a \\ before them to search for the character itself." },
+    "de": { "text": "\"{value}\" ist kein gültiges Suchmuster.", "fix": "Prüfe Klammern und Sonderzeichen (. * + ? ( ) [ ]); ein \\ davor sucht das Zeichen selbst." }
+  },
+  "error.run.bad_variable_name": {
+    "en": { "text": "\"{value}\" cannot be a variable name.", "fix": "Use letters, numbers and _ only, up to 32 characters." },
+    "de": { "text": "\"{value}\" kann kein Variablenname sein.", "fix": "Nutze nur Buchstaben, Zahlen und _, bis 32 Zeichen." }
+  },
+  "error.run.channel_not_found": {
+    "en": { "text": "The channel \"{value}\" was not found.", "fix": "The channel may be deleted, or the bot cannot see it. Pick it again in the block and check that the bot's role has View Channel there." },
+    "de": { "text": "Der Kanal \"{value}\" wurde nicht gefunden.", "fix": "Der Kanal ist evtl. gelöscht oder für den Bot unsichtbar. Wähle ihn im Block neu und prüfe, dass die Bot-Rolle dort Kanal ansehen hat." }
+  },
+  "error.run.member_not_found": {
+    "en": { "text": "The member \"{value}\" is not on this server.", "fix": "They may have left. Check the ID or variable in the block, e.g. use {option_user} only when the option is filled." },
+    "de": { "text": "Das Mitglied \"{value}\" ist nicht auf diesem Server.", "fix": "Es ist evtl. gegangen. Prüfe ID oder Variable im Block, z. B. {option_user} nur, wenn die Option gefüllt ist." }
+  },
+  "error.run.message_not_found": {
+    "en": { "text": "The message \"{value}\" was not found.", "fix": "It may be deleted or in another channel. A message block's variable points to the message it sent; check that block ran first." },
+    "de": { "text": "Die Nachricht \"{value}\" wurde nicht gefunden.", "fix": "Sie ist evtl. gelöscht oder in einem anderen Kanal. Die Variable eines Nachricht-Blocks zeigt auf seine Nachricht; prüfe, dass dieser Block vorher lief." }
+  },
+  "error.run.server_not_found": {
+    "en": { "text": "The bot is not on the server \"{value}\".", "fix": "Invite the bot to that server or pick another one." },
+    "de": { "text": "Der Bot ist nicht auf dem Server \"{value}\".", "fix": "Lade den Bot auf den Server ein oder wähle einen anderen." }
+  },
+  "error.run.not_found": {
+    "en": { "text": "\"{value}\" was not found.", "fix": "Check the ID or variable in the block." },
+    "de": { "text": "\"{value}\" wurde nicht gefunden.", "fix": "Prüfe ID oder Variable im Block." }
+  },
+  "error.run.empty_message": {
+    "en": { "text": "The message would be empty.", "fix": "Give it text, an embed or a file. When the text is only a variable, that variable was empty in this run." },
+    "de": { "text": "Die Nachricht wäre leer.", "fix": "Gib ihr Text, ein Embed oder eine Datei. Besteht der Text nur aus einer Variable, war diese hier leer." }
+  },
+  "error.run.missing_value": {
+    "en": { "text": "The field \"{field}\" is empty.", "fix": "Fill the field. A variable in it was empty in this run." },
+    "de": { "text": "Das Feld \"{field}\" ist leer.", "fix": "Fülle das Feld. Eine Variable darin war in diesem Lauf leer." }
+  },
+  "error.run.no_server": {
+    "en": { "text": "This block needs a server, but the run has none (e.g. a DM or a timed event).", "fix": "Set a default server in the Timed Events settings, or allow the command only on servers." },
+    "de": { "text": "Dieser Block braucht einen Server, der Lauf hat aber keinen (z. B. DM oder Zeitereignis).", "fix": "Setze einen Standard-Server in den Zeitereignis-Einstellungen oder erlaube den Command nur auf Servern." }
+  },
+  "error.run.needs_server": {
+    "en": { "text": "This block works on servers only, not in DMs.", "fix": "Turn off DMs for this command (trigger: Contexts) or put the block behind a check." },
+    "de": { "text": "Dieser Block geht nur auf Servern, nicht in DMs.", "fix": "Schalte DMs für den Command aus (Trigger: Kontexte) oder setze eine Prüfung davor." }
+  },
+  "error.run.no_channel": {
+    "en": { "text": "The run has no channel to send to.", "fix": "Pick a channel in the block; timed events and webhooks have no channel of their own." },
+    "de": { "text": "Der Lauf hat keinen Kanal zum Senden.", "fix": "Wähle im Block einen Kanal; Zeitereignisse und Webhooks haben keinen eigenen Kanal." }
+  },
+  "error.run.no_interaction": {
+    "en": { "text": "This block answers a command or button, but this run started without one.", "fix": "Use Send Message to a channel instead of a reply in events and timed events." },
+    "de": { "text": "Dieser Block antwortet auf einen Command oder Button, der Lauf hat aber keinen.", "fix": "Nutze in Events und Zeitereignissen Nachricht an einen Kanal statt einer Antwort." }
+  },
+  "error.run.not_in_voice": {
+    "en": { "text": "The member is not in a voice channel.", "fix": "Check first with a condition, or tell members to join a voice channel." },
+    "de": { "text": "Das Mitglied ist in keinem Sprachkanal.", "fix": "Prüfe das vorher mit einer Bedingung oder bitte Mitglieder, einem Sprachkanal beizutreten." }
+  },
+  "error.run.not_enough_balance": {
+    "en": { "text": "The member does not have enough money.", "fix": "Check the balance first with Get Balance and a Comparison." },
+    "de": { "text": "Das Mitglied hat nicht genug Geld.", "fix": "Prüfe vorher den Kontostand mit Kontostand holen und einem Vergleich." }
+  },
+  "error.run.division_by_zero": {
+    "en": { "text": "The equation divides by zero.", "fix": "Check the divisor first; an empty variable counts as 0." },
+    "de": { "text": "Die Rechnung teilt durch null.", "fix": "Prüfe den Teiler vorher; eine leere Variable zählt als 0." }
+  },
+  "error.run.value_too_long": {
+    "en": { "text": "The value is longer than {max} characters.", "fix": "Shorten the text or store less in the variable." },
+    "de": { "text": "Der Wert ist länger als {max} Zeichen.", "fix": "Kürze den Text oder speichere weniger in der Variable." }
+  },
+  "error.run.wait_too_long": {
+    "en": { "text": "A wait can last up to {max}.", "fix": "Use a timed event for longer waits." },
+    "de": { "text": "Eine Wartezeit geht bis {max}.", "fix": "Nutze für längere Wartezeiten ein Zeitereignis." }
+  },
+  "error.run.timeout_too_long": {
+    "en": { "text": "A timeout can last up to {max}.", "fix": "Pick a shorter duration." },
+    "de": { "text": "Ein Timeout geht bis {max}.", "fix": "Wähle eine kürzere Dauer." }
+  },
+  "error.run.timeout": {
+    "en": { "text": "The run took longer than {max} ms (waits not counted) and was stopped.", "fix": "Slow blocks (web requests, many Discord calls) add up. Split the work or use fewer calls in a loop." },
+    "de": { "text": "Der Lauf dauerte länger als {max} ms (Wartezeit nicht mitgezählt) und wurde gestoppt.", "fix": "Langsame Blöcke (Web-Anfragen, viele Discord-Aufrufe) summieren sich. Teile die Arbeit auf oder nutze weniger Aufrufe in einer Schleife." }
+  },
+  "error.run.too_many_steps": {
+    "en": { "text": "The run used more than {max} steps and was stopped.", "fix": "A loop probably never ends, or blocks lead back to an earlier block. Check the loop's end." },
+    "de": { "text": "Der Lauf brauchte mehr als {max} Schritte und wurde gestoppt.", "fix": "Vermutlich endet eine Schleife nie oder Blöcke führen zurück. Prüfe das Ende der Schleife." }
+  },
+  "error.run.too_many_discord_calls": {
+    "en": { "text": "The run made more than {max} Discord calls.", "fix": "Each message, role or reaction is one call. Fewer blocks in loops help; one message with all lines beats many messages." },
+    "de": { "text": "Der Lauf machte mehr als {max} Discord-Aufrufe.", "fix": "Jede Nachricht, Rolle oder Reaktion ist ein Aufruf. Weniger Blöcke in Schleifen helfen; eine Nachricht mit allen Zeilen statt vieler." }
+  },
+  "error.run.too_many_loop_rounds": {
+    "en": { "text": "A loop can run up to {max} rounds.", "fix": "Lower the number of rounds or split the list." },
+    "de": { "text": "Eine Schleife hat bis {max} Runden.", "fix": "Senke die Rundenzahl oder teile die Liste." }
+  },
+  "error.run.unsupported_block": {
+    "en": { "text": "This bot cannot run the block \"{type}\".", "fix": "The block's plugin or module is off or removed. Turn it on or delete the block." },
+    "de": { "text": "Dieser Bot kann den Block \"{type}\" nicht ausführen.", "fix": "Plugin oder Modul des Blocks ist aus oder entfernt. Schalte es ein oder lösche den Block." }
+  },
+  "error.run.url_not_allowed": {
+    "en": { "text": "Requests to \"{value}\" are not allowed.", "fix": "Local and private addresses are blocked. Use a public address." },
+    "de": { "text": "Anfragen an \"{value}\" sind nicht erlaubt.", "fix": "Lokale und private Adressen sind gesperrt. Nutze eine öffentliche Adresse." }
+  },
+  "error.run.unknown_secret": {
+    "en": { "text": "The secret \"{value}\" does not exist or is not shared with this bot.", "fix": "Create it under Secrets, or share it with this bot." },
+    "de": { "text": "Das Secret \"{value}\" gibt es nicht oder es ist nicht mit diesem Bot geteilt.", "fix": "Lege es unter Secrets an oder teile es mit diesem Bot." }
+  },
+  "error.run.unknown_data_variable": {
+    "en": { "text": "There is no stored variable \"{value}\".", "fix": "Create it on the Variables page first." },
+    "de": { "text": "Es gibt keine gespeicherte Variable \"{value}\".", "fix": "Lege sie zuerst auf der Variablen-Seite an." }
+  },
+  "error.run.module_not_set_up": {
+    "en": { "text": "The module \"{module}\" is not set up.", "fix": "Open the module page and save its settings." },
+    "de": { "text": "Das Modul \"{module}\" ist nicht eingerichtet.", "fix": "Öffne die Modulseite und speichere die Einstellungen." }
+  },
+  "error.run.missing_permissions": {
+    "en": { "text": "Discord refused: the bot is missing a permission here.", "fix": "Give the bot's role the permission this block needs, and check the channel's own permission overrides." },
+    "de": { "text": "Discord lehnte ab: dem Bot fehlt hier eine Berechtigung.", "fix": "Gib der Bot-Rolle die nötige Berechtigung und prüfe die Berechtigungen des Kanals selbst." }
+  },
+  "discord.50013.roles": {
+    "en": { "text": "Discord refused: the bot cannot give or take this role.", "fix": "The bot needs Manage Roles, and its own role must be ABOVE the role in Server Settings → Roles (drag it up). Managed roles (bots, boosts) cannot be given at all." },
+    "de": { "text": "Discord lehnte ab: der Bot kann diese Rolle nicht geben oder nehmen.", "fix": "Der Bot braucht Rollen verwalten, und seine Rolle muss ÜBER der Rolle stehen (Servereinstellungen → Rollen, nach oben ziehen). Verwaltete Rollen (Bots, Boosts) gehen gar nicht." }
+  },
+  "discord.50013.moderation": {
+    "en": { "text": "Discord refused: the bot cannot act on this member.", "fix": "The bot needs the matching permission (Kick, Ban or Timeout Members), and its highest role must be above the member's highest role. Nobody can act on the server owner." },
+    "de": { "text": "Discord lehnte ab: der Bot kann bei diesem Mitglied nichts tun.", "fix": "Der Bot braucht die passende Berechtigung (Kicken, Bannen oder Timeout), und seine höchste Rolle muss über der des Mitglieds stehen. Den Server-Eigentümer kann niemand bestrafen." }
+  },
+  "discord.50013.message": {
+    "en": { "text": "Discord refused: the bot may not post here.", "fix": "Look at the channel's permission overrides (Edit Channel → Permissions): the bot needs View Channel and Send Messages, plus Embed Links for embeds and Attach Files for images. A channel override beats the server role." },
+    "de": { "text": "Discord lehnte ab: der Bot darf hier nicht schreiben.", "fix": "Sieh in die Kanal-Berechtigungen (Kanal bearbeiten → Berechtigungen): der Bot braucht Kanal ansehen und Nachrichten senden, dazu Links einbetten für Embeds und Dateien anhängen für Bilder. Eine Kanal-Ausnahme schlägt die Serverrolle." }
+  },
+  "discord.50013.channel": {
+    "en": { "text": "Discord refused: the bot cannot change this channel.", "fix": "The bot needs Manage Channels (and Manage Roles to change channel permissions), on the server and in the channel's own overrides." },
+    "de": { "text": "Discord lehnte ab: der Bot kann diesen Kanal nicht ändern.", "fix": "Der Bot braucht Kanäle verwalten (und Rollen verwalten für Kanal-Berechtigungen), auf dem Server und in den Kanal-Ausnahmen." }
+  },
+  "discord.50013.voice": {
+    "en": { "text": "Discord refused: the bot cannot do this in the voice channel.", "fix": "The bot needs Connect and Speak there, or Move/Mute/Deafen Members for those blocks. Check the voice channel's own overrides." },
+    "de": { "text": "Discord lehnte ab: der Bot kann das im Sprachkanal nicht.", "fix": "Der Bot braucht dort Verbinden und Sprechen, bzw. Mitglieder verschieben/stummschalten. Prüfe die Ausnahmen des Sprachkanals." }
+  },
+  "discord.50013": {
+    "en": { "text": "Discord refused: the bot is missing a permission for this.", "fix": "Give the bot's role the permission this block needs and check the channel's own overrides. Roles and members the bot acts on must be below its highest role." },
+    "de": { "text": "Discord lehnte ab: dem Bot fehlt dafür eine Berechtigung.", "fix": "Gib der Bot-Rolle die nötige Berechtigung und prüfe die Kanal-Ausnahmen. Rollen und Mitglieder müssen unter der höchsten Bot-Rolle stehen." }
+  },
+  "discord.50001": {
+    "en": { "text": "Discord refused: the bot cannot see this channel.", "fix": "Give the bot View Channel in the channel's permission overrides (private channels and categories often hide it)." },
+    "de": { "text": "Discord lehnte ab: der Bot sieht diesen Kanal nicht.", "fix": "Gib dem Bot Kanal ansehen in den Kanal-Berechtigungen (private Kanäle und Kategorien verstecken ihn oft)." }
+  },
+  "discord.10062": {
+    "en": { "text": "The answer came too late: Discord waits 3 seconds for the first reply.", "fix": "Put the reply before slow blocks (web requests, waits), or reply first and edit the message later." },
+    "de": { "text": "Die Antwort kam zu spät: Discord wartet 3 Sekunden auf die erste Antwort.", "fix": "Setze die Antwort vor langsame Blöcke (Web-Anfragen, Warten) oder antworte zuerst und bearbeite die Nachricht später." }
+  },
+  "discord.40060": {
+    "en": { "text": "This command was already answered.", "fix": "A command has one reply. Further messages: use Send Message to the channel, or edit the reply." },
+    "de": { "text": "Dieser Command wurde schon beantwortet.", "fix": "Ein Command hat eine Antwort. Weitere Nachrichten: Nachricht an den Kanal senden oder die Antwort bearbeiten." }
+  },
+  "discord.50035.emoji": {
+    "en": { "text": "Discord cannot read an emoji in this block.", "fix": "Use a normal emoji (😀) or a server emoji written as <:name:id> from a server the bot is on. Copy it with \\:name: in Discord." },
+    "de": { "text": "Discord kann ein Emoji in diesem Block nicht lesen.", "fix": "Nutze ein normales Emoji (😀) oder ein Server-Emoji als <:name:id> von einem Server, auf dem der Bot ist. Mit \\:name: in Discord kopieren." }
+  },
+  "discord.50035.length": {
+    "en": { "text": "A text is too long for Discord.", "fix": "Messages hold 2000 characters, embed descriptions 4096, titles 256, button labels 80. A variable may have made it longer." },
+    "de": { "text": "Ein Text ist zu lang für Discord.", "fix": "Nachrichten fassen 2000 Zeichen, Embed-Beschreibungen 4096, Titel 256, Button-Texte 80. Eine Variable hat ihn evtl. verlängert." }
+  },
+  "discord.50035.url": {
+    "en": { "text": "Discord refused an address in this block.", "fix": "Image and link fields need a full https:// address. A variable inside it was probably empty." },
+    "de": { "text": "Discord lehnte eine Adresse in diesem Block ab.", "fix": "Bild- und Link-Felder brauchen eine volle https://-Adresse. Eine Variable darin war vermutlich leer." }
+  },
+  "discord.50035": {
+    "en": { "text": "Discord refused a field of this block: {message}", "fix": "Check the block's fields: empty required texts, too long texts, bad emojis or addresses." },
+    "de": { "text": "Discord lehnte ein Feld dieses Blocks ab: {message}", "fix": "Prüfe die Felder: leere Pflichttexte, zu lange Texte, falsche Emojis oder Adressen." }
+  },
+  "discord.50006": {
+    "en": { "text": "The message would be empty.", "fix": "The text was empty after the variables were filled in. Check the variables in it." },
+    "de": { "text": "Die Nachricht wäre leer.", "fix": "Der Text war nach dem Einsetzen der Variablen leer. Prüfe die Variablen darin." }
+  },
+  "discord.50007": {
+    "en": { "text": "The member does not accept DMs from the bot.", "fix": "They closed DMs or blocked the bot. Use the block's error path to post in a channel instead." },
+    "de": { "text": "Das Mitglied nimmt keine DMs vom Bot an.", "fix": "DMs sind zu oder der Bot ist blockiert. Nutze den Fehler-Pfad des Blocks, um stattdessen in einen Kanal zu schreiben." }
+  },
+  "discord.10003": {
+    "en": { "text": "The channel no longer exists.", "fix": "Pick another channel in the block." },
+    "de": { "text": "Den Kanal gibt es nicht mehr.", "fix": "Wähle im Block einen anderen Kanal." }
+  },
+  "discord.10008": {
+    "en": { "text": "The message no longer exists.", "fix": "It was deleted before this block ran." },
+    "de": { "text": "Die Nachricht gibt es nicht mehr.", "fix": "Sie wurde gelöscht, bevor dieser Block lief." }
+  },
+  "discord.10011": {
+    "en": { "text": "The role no longer exists.", "fix": "Pick the role again in the block." },
+    "de": { "text": "Die Rolle gibt es nicht mehr.", "fix": "Wähle die Rolle im Block neu." }
+  },
+  "discord.10007": {
+    "en": { "text": "The member is not on the server.", "fix": "They left, or the ID is wrong." },
+    "de": { "text": "Das Mitglied ist nicht auf dem Server.", "fix": "Es ist gegangen oder die ID ist falsch." }
+  },
+  "discord.10013": {
+    "en": { "text": "There is no Discord user with this ID.", "fix": "Check the ID or the variable in the block." },
+    "de": { "text": "Es gibt keinen Discord-Nutzer mit dieser ID.", "fix": "Prüfe die ID oder die Variable im Block." }
+  },
+  "discord.10014": {
+    "en": { "text": "The emoji does not exist (or the bot is not on its server).", "fix": "Use an emoji from a server the bot is on." },
+    "de": { "text": "Das Emoji gibt es nicht (oder der Bot ist nicht auf seinem Server).", "fix": "Nutze ein Emoji von einem Server, auf dem der Bot ist." }
+  },
+  "discord.50024": {
+    "en": { "text": "This cannot be done in this kind of channel.", "fix": "E.g. threads need a text or forum channel, voice blocks a voice channel." },
+    "de": { "text": "Das geht in dieser Art Kanal nicht.", "fix": "Z. B. brauchen Threads einen Text- oder Forenkanal, Sprachblöcke einen Sprachkanal." }
+  },
+  "discord.50083": {
+    "en": { "text": "The thread is archived.", "fix": "Open (unarchive) the thread first, e.g. with Edit Thread." },
+    "de": { "text": "Der Thread ist archiviert.", "fix": "Öffne den Thread zuerst wieder, z. B. mit Thread bearbeiten." }
+  },
+  "discord.50034": {
+    "en": { "text": "Discord deletes in bulk only messages younger than 14 days.", "fix": "Older messages have to be deleted one by one." },
+    "de": { "text": "Discord löscht gesammelt nur Nachrichten jünger als 14 Tage.", "fix": "Ältere Nachrichten müssen einzeln gelöscht werden." }
+  },
+  "discord.30005": {
+    "en": { "text": "The server has the most roles Discord allows (250).", "fix": "Delete unused roles first." },
+    "de": { "text": "Der Server hat schon die maximale Rollenzahl (250).", "fix": "Lösche zuerst ungenutzte Rollen." }
+  },
+  "discord.30013": {
+    "en": { "text": "The server has the most channels Discord allows (500).", "fix": "Delete unused channels first." },
+    "de": { "text": "Der Server hat schon die maximale Kanalzahl (500).", "fix": "Lösche zuerst ungenutzte Kanäle." }
+  },
+  "discord.50028": {
+    "en": { "text": "The role cannot be used here.", "fix": "@everyone and managed roles (bots, boosts) cannot be given or taken." },
+    "de": { "text": "Die Rolle kann hier nicht genutzt werden.", "fix": "@everyone und verwaltete Rollen (Bots, Boosts) kann man nicht geben oder nehmen." }
+  },
+  "discord.0": {
+    "en": { "text": "Discord answered with an error: {message}", "fix": "Check the block's fields and the bot's permissions in this channel." },
+    "de": { "text": "Discord antwortete mit einem Fehler: {message}", "fix": "Prüfe die Felder des Blocks und die Bot-Berechtigungen in diesem Kanal." }
+  }
+}
