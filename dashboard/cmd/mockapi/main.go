@@ -48,7 +48,15 @@ type bot struct {
 	Verified  bool    `json:"verified,omitempty"` // Discord's Verified Bot badge
 	// Newest warning or error of the last hour (PHP API only).
 	LastProblem *botProblem `json:"lastProblem,omitempty"`
-	token       string
+	// Privileged intents allowed in the Developer Portal (written by the bot).
+	Intents *botIntents `json:"intents,omitempty"`
+	token   string
+}
+
+type botIntents struct {
+	Presence       bool `json:"presence"`
+	Members        bool `json:"members"`
+	MessageContent bool `json:"messageContent"`
 }
 
 type botProblem struct {

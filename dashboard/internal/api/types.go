@@ -78,6 +78,14 @@ type Bot struct {
 	Verified  bool    `json:"verified,omitempty"` // Discord's Verified Bot badge
 	// Newest warning or error of the last hour (status light in the sidebar).
 	LastProblem *BotProblem `json:"lastProblem,omitempty"`
+	// Privileged intents allowed in the Developer Portal; nil until the bot started once.
+	Intents *BotIntents `json:"intents,omitempty"`
+}
+
+type BotIntents struct {
+	Presence       bool `json:"presence"`
+	Members        bool `json:"members"`
+	MessageContent bool `json:"messageContent"`
 }
 
 type BotProblem struct {

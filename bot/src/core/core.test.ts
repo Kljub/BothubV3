@@ -348,3 +348,10 @@ test('usage variables of the bot overview: top active members, voice, commands, 
   assert.equal(v('bot.plugin_usage', null), '4');
   assert.equal(v('bot.nope'), undefined);
 });
+
+test('privileged intents from the application flags', async () => {
+  const { intentsOf } = await import('../discord/instance.js');
+  assert.deepEqual(intentsOf(0), { presence: false, members: false, messageContent: false });
+  assert.deepEqual(intentsOf((1 << 13) | (1 << 14) | (1 << 19)), { presence: true, members: true, messageContent: true });
+  assert.deepEqual(intentsOf(1 << 15), { presence: false, members: true, messageContent: false });
+});

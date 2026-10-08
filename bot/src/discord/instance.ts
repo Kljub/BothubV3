@@ -68,6 +68,9 @@ const BASE_INTENTS = [
   GatewayIntentBits.GuildScheduledEvents,
   GatewayIntentBits.DirectMessages,
   GatewayIntentBits.AutoModerationExecution,
+  GatewayIntentBits.AutoModerationConfiguration,
+  GatewayIntentBits.GuildMessageTyping,
+  GatewayIntentBits.GuildMessagePolls,
 ];
 /** Buttons and menus keep their run this long. */
 const PENDING_TTL_MS = 15 * 60_000;
@@ -169,6 +172,8 @@ export class BotInstance {
   private readonly engine: Engine;
   private readonly moderation: Moderation;
   private readonly runMeta = new WeakMap<Run, RunMeta>();
+  /** Privileged intents of this bot (Developer Portal); null when unknown. */
+  private intents: { presence: boolean; members: boolean; messageContent: boolean } | null = null;
   /** Last staff alert per command (one per minute). */
   private readonly alerted = new Map<number, number>();
 
@@ -177,7 +182,17 @@ export class BotInstance {
     private readonly deps: InstanceDeps,
   ) {
     this.modules = new ModuleContext(botId, deps.repo, (key) => (deps.secretKey ? secretValue(deps.repo, deps.secretKey, botId, key) : null), deps.secretKey ?? null);
-    const vars = deps.repo.varStore(botId);
+    const store = deps.repo.varStore(botId);
+    // Stored variables that change start "bot_variable_change" (budgets of
+    // mayRun keep an event that changes variables itself from running wild).
+    const vars: typeof store = {
+      ...store,
+      set: (scope, scopeId, name, value) => {
+        const old = store.get(scope, scopeId, name);
+        store.set(scope, scopeId, name, value);
+        if (old !== value) this.variableChanged(scope, scopeId, name, old ?? '', value);
+      },
+    };
     const core = {
       vars,
       secret: (key: string) => (deps.secretKey ? secretValue(deps.repo, deps.secretKey, botId, key) : null),
@@ -221,12 +236,24 @@ export class BotInstance {
     this.deps.repo.setBotStatus(this.botId, 'starting');
     this.reloadGraphs();
     try {
-      this.client = await this.login(token, [...BASE_INTENTS, ...PRIVILEGED]);
+      // Only the privileged intents the Developer Portal allows (one that is
+      // off would otherwise cost all three).
+      const allowed = await privilegedIntents(token);
+      if (allowed) {
+        this.deps.repo.setBotIntents(this.botId, allowed);
+        this.intents = allowed;
+      }
+      const wanted = allowed
+        ? PRIVILEGED.filter((f) => (f === GatewayIntentBits.GuildPresences ? allowed.presence : f === GatewayIntentBits.GuildMembers ? allowed.members : allowed.messageContent))
+        : PRIVILEGED;
+      this.client = await this.login(token, [...BASE_INTENTS, ...wanted]);
     } catch (err) {
       if ((err as { code?: number }).code === 4014 || /disallowed intents/i.test(String((err as Error).message))) {
         // Privileged intents are off in the Discord developer portal: run
         // without member, presence and message content data.
         this.deps.repo.logCode(this.botId, 'WAR-2002', { intent: 'GuildMembers, GuildPresences, MessageContent' });
+        this.intents = { presence: false, members: false, messageContent: false };
+        this.deps.repo.setBotIntents(this.botId, this.intents);
         this.client = await this.login(token, BASE_INTENTS);
       } else {
         const tokenInvalid = /token/i.test(String((err as Error).message)) || (err as { code?: string }).code === 'TokenInvalid';
@@ -370,7 +397,7 @@ export class BotInstance {
   private async login(token: string, intents: GatewayIntentBits[]): Promise<Client> {
     const client = new Client({
       intents,
-      partials: [Partials.Message, Partials.Channel, Partials.Reaction, Partials.User, Partials.GuildMember],
+      partials: [Partials.Message, Partials.Channel, Partials.Reaction, Partials.User, Partials.GuildMember, Partials.GuildScheduledEvent, Partials.ThreadMember],
     });
     claimEvents(client as never, this.botId);
     guardRest(client.rest as never);
@@ -407,6 +434,7 @@ export class BotInstance {
     await this.syncGuilds();
     await this.registerCommands();
     void this.runEvent({ type: 'bot_ready', vars: {}, guild: null, channel: null, member: null, user: null });
+    this.warnMissingIntents();
   }
 
   /** A new server: with closed invites the bot leaves it at once unless it is allowed. */
@@ -840,6 +868,29 @@ export class BotInstance {
     }
   }
 
+  /** Custom events that wait for data an intent that is off never sends. */
+  private warnMissingIntents(): void {
+    const it = this.intents;
+    if (!it) return;
+    const need: [string, boolean, string][] = [['member_status', it.presence, 'Presence Intent'], ['thread_members', it.members, 'Server Members Intent']];
+    for (const [type, on, name] of need) {
+      const list = this.events.get(type) ?? [];
+      if (!on && list.length) {
+        this.deps.repo.logCode(this.botId, 'WAR-2008', { module: 'events', problem: `"${list.map((e) => e.name).join('", "')}" waits for ${type}, but the ${name} is off in the Discord Developer Portal (Bot → Privileged Gateway Intents).` });
+      }
+    }
+  }
+
+  private variableChanged(scope: string, scopeId: string, name: string, old: string, value: string): void {
+    if (!this.client || !this.events.get('bot_variable_change')?.length) return;
+    const guildId = scope === 'global' ? '' : scopeId.split(':')[0]!;
+    const userId = scope === 'user' ? (scopeId.split(':')[1] ?? '') : '';
+    const guild = (guildId ? this.client.guilds.cache.get(guildId) : null) ?? null;
+    const member = guild && userId ? (guild.members.cache.get(userId) ?? null) : null;
+    const user = member?.user ?? (userId ? (this.client.users.cache.get(userId) ?? null) : null);
+    void this.runEvent({ type: 'bot_variable_change', vars: { 'variable.name': name, 'variable.old': old.slice(0, 1000), 'variable.new': value.slice(0, 1000), 'variable.scope': scope }, guild, channel: null, member, user });
+  }
+
   /** The bot's owner in the Discord developer portal (or a member of its team). */
   private isOwner(userId: string): boolean {
     const o = this.client?.application?.owner;
@@ -1148,6 +1199,26 @@ export class BotInstance {
     const command = cmd?.name ?? run.vars.get('command.name') ?? run.vars.get('event.name') ?? '';
     this.deps.repo.logCode(this.botId, code, { command, steps: this.deps.limits.maxSteps, ...params });
   }
+}
+
+/**
+ * Which privileged intents the bot's application has on (Developer Portal,
+ * flags of /applications/@me); null when Discord cannot be asked.
+ */
+export async function privilegedIntents(token: string): Promise<{ presence: boolean; members: boolean; messageContent: boolean } | null> {
+  try {
+    const res = await fetch('https://discord.com/api/v10/applications/@me', { headers: { Authorization: `Bot ${token}` }, signal: AbortSignal.timeout(8000) });
+    if (!res.ok) return null;
+    return intentsOf(Number((await res.json()).flags ?? 0));
+  } catch {
+    return null;
+  }
+}
+
+/** Application flags: GATEWAY_PRESENCE(_LIMITED) 1<<12/13, GUILD_MEMBERS 1<<14/15, MESSAGE_CONTENT 1<<18/19. */
+export function intentsOf(flags: number): { presence: boolean; members: boolean; messageContent: boolean } {
+  const on = (a: number, b: number) => (flags & ((1 << a) | (1 << b))) !== 0;
+  return { presence: on(12, 13), members: on(14, 15), messageContent: on(18, 19) };
 }
 
 /** Log reason of a failed run: the error key, plus the block's own message when there is one. */

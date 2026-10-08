@@ -1,5 +1,5 @@
 {
-  "$comment": "Event types for custom events. Texts: builder.event.<key> and builder.eventcat.<category>. vars are the placeholders the event gives its blocks. \"soon\": true marks types the bot does not emit yet; the builder shows them but they cannot be picked.",
+  "$comment": "Event types for custom events. Texts: builder.event.<key> and builder.eventcat.<category>. vars are the placeholders the event gives its blocks. \"soon\": true marks types the bot does not emit yet; the builder shows them but they cannot be picked. \"intent\" (presence, members) names a privileged intent the event needs; the builder warns when it is off in the Developer Portal.",
   "categories": [
     {
       "key": "member",
@@ -16,7 +16,8 @@
             "{server}",
             "{server.id}",
             "{members}"
-          ]
+          ],
+          "intent": "members"
         },
         {
           "key": "member_leave",
@@ -29,7 +30,8 @@
             "{server}",
             "{server.id}",
             "{members}"
-          ]
+          ],
+          "intent": "members"
         },
         {
           "key": "member_ban",
@@ -67,7 +69,8 @@
             "{role}",
             "{role.id}",
             "{role.name}"
-          ]
+          ],
+          "intent": "members"
         },
         {
           "key": "member_role_remove",
@@ -80,7 +83,8 @@
             "{role}",
             "{role.id}",
             "{role.name}"
-          ]
+          ],
+          "intent": "members"
         },
         {
           "key": "member_update",
@@ -90,7 +94,8 @@
             "{user.name}",
             "{user.mention}",
             "{user.avatar}"
-          ]
+          ],
+          "intent": "members"
         },
         {
           "key": "member_nickname",
@@ -102,7 +107,8 @@
             "{user.avatar}",
             "{old_nickname}",
             "{new_nickname}"
-          ]
+          ],
+          "intent": "members"
         },
         {
           "key": "member_status",
@@ -115,7 +121,7 @@
             "{old_status}",
             "{new_status}"
           ],
-          "soon": true
+          "intent": "presence"
         },
         {
           "key": "member_screening",
@@ -126,7 +132,7 @@
             "{user.mention}",
             "{user.avatar}"
           ],
-          "soon": true
+          "intent": "members"
         },
         {
           "key": "guild_update",
@@ -202,8 +208,7 @@
             "{channel}",
             "{channel.id}",
             "{channel.name}"
-          ],
-          "soon": true
+          ]
         },
         {
           "key": "typing_start",
@@ -216,8 +221,7 @@
             "{channel}",
             "{channel.id}",
             "{channel.name}"
-          ],
-          "soon": true
+          ]
         }
       ]
     },
@@ -270,8 +274,7 @@
             "{channel}",
             "{channel.id}",
             "{channel.name}"
-          ],
-          "soon": true
+          ]
         },
         {
           "key": "reaction_remove_emoji",
@@ -283,8 +286,7 @@
             "{channel}",
             "{channel.id}",
             "{channel.name}"
-          ],
-          "soon": true
+          ]
         }
       ]
     },
@@ -455,8 +457,7 @@
             "{channel}",
             "{channel.id}",
             "{channel.name}"
-          ],
-          "soon": true
+          ]
         },
         {
           "key": "channel_topic",
@@ -474,8 +475,7 @@
             "{channel}",
             "{channel.id}",
             "{channel.name}"
-          ],
-          "soon": true
+          ]
         }
       ]
     },
@@ -524,7 +524,7 @@
             "{user.mention}",
             "{user.avatar}"
           ],
-          "soon": true
+          "intent": "members"
         }
       ]
     },
@@ -604,7 +604,7 @@
             "{boosts}",
             "{boost_level}"
           ],
-          "soon": true
+          "intent": "members"
         },
         {
           "key": "boost_stop",
@@ -617,21 +617,19 @@
             "{boosts}",
             "{boost_level}"
           ],
-          "soon": true
+          "intent": "members"
         },
         {
           "key": "boost_level_up",
           "vars": [
             "{boost_level}"
-          ],
-          "soon": true
+          ]
         },
         {
           "key": "boost_level_down",
           "vars": [
             "{boost_level}"
-          ],
-          "soon": true
+          ]
         }
       ]
     },
@@ -646,8 +644,7 @@
             "{scheduled_event.name}",
             "{scheduled_event.url}",
             "{scheduled_event.start}"
-          ],
-          "soon": true
+          ]
         },
         {
           "key": "scheduled_update",
@@ -655,16 +652,14 @@
             "{scheduled_event.id}",
             "{scheduled_event.name}",
             "{scheduled_event.url}"
-          ],
-          "soon": true
+          ]
         },
         {
           "key": "scheduled_delete",
           "vars": [
             "{scheduled_event.id}",
             "{scheduled_event.name}"
-          ],
-          "soon": true
+          ]
         },
         {
           "key": "scheduled_user_add",
@@ -676,8 +671,7 @@
             "{user.name}",
             "{user.mention}",
             "{user.avatar}"
-          ],
-          "soon": true
+          ]
         },
         {
           "key": "scheduled_user_remove",
@@ -689,8 +683,7 @@
             "{user.name}",
             "{user.mention}",
             "{user.avatar}"
-          ],
-          "soon": true
+          ]
         },
         {
           "key": "scheduled_start",
@@ -698,24 +691,21 @@
             "{scheduled_event.id}",
             "{scheduled_event.name}",
             "{scheduled_event.url}"
-          ],
-          "soon": true
+          ]
         },
         {
           "key": "scheduled_end",
           "vars": [
             "{scheduled_event.id}",
             "{scheduled_event.name}"
-          ],
-          "soon": true
+          ]
         },
         {
           "key": "scheduled_cancel",
           "vars": [
             "{scheduled_event.id}",
             "{scheduled_event.name}"
-          ],
-          "soon": true
+          ]
         }
       ]
     },
@@ -737,8 +727,7 @@
             "{channel}",
             "{channel.id}",
             "{channel.name}"
-          ],
-          "soon": true
+          ]
         },
         {
           "key": "poll_vote_remove",
@@ -754,8 +743,7 @@
             "{channel}",
             "{channel.id}",
             "{channel.name}"
-          ],
-          "soon": true
+          ]
         }
       ]
     },
@@ -778,32 +766,28 @@
             "{channel}",
             "{channel.id}",
             "{channel.name}"
-          ],
-          "soon": true
+          ]
         },
         {
           "key": "automod_rule_create",
           "vars": [
             "{rule.name}",
             "{rule.id}"
-          ],
-          "soon": true
+          ]
         },
         {
           "key": "automod_rule_update",
           "vars": [
             "{rule.name}",
             "{rule.id}"
-          ],
-          "soon": true
+          ]
         },
         {
           "key": "automod_rule_delete",
           "vars": [
             "{rule.name}",
             "{rule.id}"
-          ],
-          "soon": true
+          ]
         }
       ]
     },
@@ -845,15 +829,13 @@
             "{user.name}",
             "{user.mention}",
             "{user.avatar}"
-          ],
-          "soon": true
+          ]
         },
         {
           "key": "bot_updated",
           "vars": [
             "{bot.name}"
-          ],
-          "soon": true
+          ]
         }
       ]
     },
@@ -869,8 +851,7 @@
             "{audit.executor_id}",
             "{audit.target_id}",
             "{audit.reason}"
-          ],
-          "soon": true
+          ]
         }
       ]
     },
@@ -883,8 +864,7 @@
           "vars": [
             "{command.id}",
             "{command.name}"
-          ],
-          "soon": true
+          ]
         }
       ]
     },
@@ -897,24 +877,21 @@
           "vars": [
             "{sticker.id}",
             "{sticker.name}"
-          ],
-          "soon": true
+          ]
         },
         {
           "key": "sticker_update",
           "vars": [
             "{sticker.id}",
             "{sticker.name}"
-          ],
-          "soon": true
+          ]
         },
         {
           "key": "sticker_delete",
           "vars": [
             "{sticker.id}",
             "{sticker.name}"
-          ],
-          "soon": true
+          ]
         },
         {
           "key": "stage_start",
@@ -923,8 +900,7 @@
             "{channel}",
             "{channel.id}",
             "{channel.name}"
-          ],
-          "soon": true
+          ]
         },
         {
           "key": "stage_update",
@@ -933,8 +909,7 @@
             "{channel}",
             "{channel.id}",
             "{channel.name}"
-          ],
-          "soon": true
+          ]
         },
         {
           "key": "stage_end",
@@ -942,8 +917,7 @@
             "{channel}",
             "{channel.id}",
             "{channel.name}"
-          ],
-          "soon": true
+          ]
         }
       ]
     },
@@ -964,8 +938,7 @@
             "{user.name}",
             "{user.mention}",
             "{user.avatar}"
-          ],
-          "soon": true
+          ]
         },
         {
           "key": "music_track_end",
@@ -975,8 +948,7 @@
             "{track.author}",
             "{track.duration}",
             "{queue.size}"
-          ],
-          "soon": true
+          ]
         },
         {
           "key": "music_track_skip",
@@ -991,8 +963,7 @@
             "{user.name}",
             "{user.mention}",
             "{user.avatar}"
-          ],
-          "soon": true
+          ]
         },
         {
           "key": "music_track_error",
@@ -1003,8 +974,7 @@
             "{track.duration}",
             "{queue.size}",
             "{error}"
-          ],
-          "soon": true
+          ]
         },
         {
           "key": "music_queue_add",
@@ -1019,8 +989,7 @@
             "{user.name}",
             "{user.mention}",
             "{user.avatar}"
-          ],
-          "soon": true
+          ]
         },
         {
           "key": "music_queue_remove",
@@ -1035,15 +1004,13 @@
             "{user.name}",
             "{user.mention}",
             "{user.avatar}"
-          ],
-          "soon": true
+          ]
         },
         {
           "key": "music_queue_end",
           "vars": [
             "{queue.size}"
-          ],
-          "soon": true
+          ]
         },
         {
           "key": "music_pause",
@@ -1058,8 +1025,7 @@
             "{user.name}",
             "{user.mention}",
             "{user.avatar}"
-          ],
-          "soon": true
+          ]
         },
         {
           "key": "music_resume",
@@ -1074,8 +1040,7 @@
             "{user.name}",
             "{user.mention}",
             "{user.avatar}"
-          ],
-          "soon": true
+          ]
         },
         {
           "key": "music_stop",
@@ -1085,8 +1050,7 @@
             "{user.name}",
             "{user.mention}",
             "{user.avatar}"
-          ],
-          "soon": true
+          ]
         },
         {
           "key": "music_volume",
@@ -1097,8 +1061,7 @@
             "{user.name}",
             "{user.mention}",
             "{user.avatar}"
-          ],
-          "soon": true
+          ]
         },
         {
           "key": "music_loop",
@@ -1109,8 +1072,7 @@
             "{user.name}",
             "{user.mention}",
             "{user.avatar}"
-          ],
-          "soon": true
+          ]
         },
         {
           "key": "music_filters",
@@ -1121,8 +1083,7 @@
             "{user.name}",
             "{user.mention}",
             "{user.avatar}"
-          ],
-          "soon": true
+          ]
         },
         {
           "key": "music_player_create",
@@ -1130,8 +1091,7 @@
             "{channel}",
             "{channel.id}",
             "{channel.name}"
-          ],
-          "soon": true
+          ]
         },
         {
           "key": "music_player_destroy",
@@ -1139,8 +1099,7 @@
             "{channel}",
             "{channel.id}",
             "{channel.name}"
-          ],
-          "soon": true
+          ]
         },
         {
           "key": "music_voice_join",
@@ -1148,8 +1107,7 @@
             "{channel}",
             "{channel.id}",
             "{channel.name}"
-          ],
-          "soon": true
+          ]
         },
         {
           "key": "music_voice_leave",
@@ -1158,8 +1116,7 @@
             "{channel.id}",
             "{channel.name}",
             "{reason}"
-          ],
-          "soon": true
+          ]
         },
         {
           "key": "music_listener_join",
@@ -1172,8 +1129,7 @@
             "{channel}",
             "{channel.id}",
             "{channel.name}"
-          ],
-          "soon": true
+          ]
         },
         {
           "key": "music_listener_leave",
@@ -1186,8 +1142,7 @@
             "{channel}",
             "{channel.id}",
             "{channel.name}"
-          ],
-          "soon": true
+          ]
         }
       ]
     },

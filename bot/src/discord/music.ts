@@ -173,6 +173,10 @@ class GuildMusic {
     private readonly client: Client,
   ) {}
 
+  guildIdOf(): string {
+    return this.guildId;
+  }
+
   get current(): Track | null {
     return this.queue[this.index] ?? null;
   }
@@ -202,6 +206,7 @@ class GuildMusic {
     this.unsubscribe = this.v().onIdle(this.guildId, () => {
       if (this.replacing) return;
       this.killProc();
+      musicEvent(this.client, this.guildId, 'music_track_end', trackVars(this.current, this.queue.length));
       void this.advance(false);
     });
   }
@@ -234,7 +239,10 @@ class GuildMusic {
       // The player emits Idle for the replaced resource on the next tick.
       setTimeout(() => (this.replacing = false), 250).unref();
     }
-    if (seek === 0) await this.announce(track);
+    if (seek === 0) {
+      musicEvent(this.client, this.guildId, 'music_track_start', trackVars(track, this.queue.length), track.requester);
+      await this.announce(track);
+    }
   }
 
   private async announce(t: Track): Promise<void> {
@@ -249,11 +257,13 @@ class GuildMusic {
     if (next < 0) {
       this.index = this.queue.length; // after the end: "play" starts again from the top
       this.resource = null;
+      musicEvent(this.client, this.guildId, 'music_queue_end', { 'queue.size': String(this.queue.length) });
       this.scheduleLeave();
       return;
     }
     await this.start(next).catch(async (err) => {
       log.warn('music track failed', { guildId: this.guildId, err: String(err) });
+      musicEvent(this.client, this.guildId, 'music_track_error', { ...trackVars(this.queue[next] ?? null, this.queue.length), error: String((err as Error)?.message ?? err).slice(0, 300) });
       // A broken track is skipped (once around the queue at most).
       this.queue.splice(next, 1);
       if (next <= this.index) this.index--;
@@ -373,19 +383,25 @@ class GuildMusic {
     this.index = -1;
   }
 
-  disconnect(): void {
+  disconnect(reason = 'disconnect'): void {
+    const channelId = this.voice()?.state(this.guildId).channelId ?? null;
     this.stop();
     this.cancelLeave();
     this.unsubscribe?.();
     this.unsubscribe = null;
     this.voice()?.leave(this.guildId);
+    if (channelId) {
+      const vars = { channel: `<#${channelId}>`, 'channel.id': channelId, 'channel.name': (this.client.channels.cache.get(channelId) as { name?: string } | undefined)?.name ?? '', reason };
+      musicEvent(this.client, this.guildId, 'music_voice_leave', vars);
+      musicEvent(this.client, this.guildId, 'music_player_destroy', vars);
+    }
   }
 
   private scheduleLeave(): void {
     this.cancelLeave();
     if (!this.autoleave) return;
     this.leaveTimer = setTimeout(() => {
-      if (!this.playing) this.disconnect();
+      if (!this.playing) this.disconnect('autoleave');
     }, this.autoleaveDelay * 1000);
     this.leaveTimer.unref();
   }
@@ -394,6 +410,26 @@ class GuildMusic {
     if (this.leaveTimer) clearTimeout(this.leaveTimer);
     this.leaveTimer = null;
   }
+}
+
+/** Custom event name for music (events.ts turns it into music_* event types). */
+export const MUSIC_EVENT = 'bothubMusic';
+
+export interface MusicEvent {
+  type: string;
+  guildId: string;
+  userId?: string | null;
+  vars: Record<string, string>;
+}
+
+/** Placeholders of a track ({track.title}, …, {queue.size}). */
+export function trackVars(t: Track | null, queueSize: number): Record<string, string> {
+  return { 'track.title': t?.title ?? '', 'track.url': t?.url ?? '', 'track.author': t?.author ?? '', 'track.duration': t ? (t.live ? 'live' : clock(t.duration)) : '', 'queue.size': String(queueSize) };
+}
+
+/** Starts the music_* custom events of a server. */
+export function musicEvent(client: Client, guildId: string, type: string, vars: Record<string, string> = {}, userId: string | null = null): void {
+  client.emit(MUSIC_EVENT as never, { type, guildId, userId, vars } satisfies MusicEvent as never);
 }
 
 export class MusicManager {
@@ -414,14 +450,20 @@ export class MusicManager {
   async join(guildId: string, channelId: string, textChannel: string | null): Promise<void> {
     const v = this.voice();
     if (!v) throw new MusicError('The bot is not running.');
+    const before = v.state(guildId).channelId;
     await v.join(guildId, channelId);
     const g = this.get(guildId);
     if (textChannel) g.textChannel = textChannel;
     g.watch();
+    if (before !== channelId) {
+      const vars = { channel: `<#${channelId}>`, 'channel.id': channelId, 'channel.name': (this.client.channels.cache.get(channelId) as { name?: string } | undefined)?.name ?? '' };
+      if (!before) musicEvent(this.client, guildId, 'music_player_create', vars);
+      musicEvent(this.client, guildId, 'music_voice_join', vars);
+    }
   }
 
   destroyAll(): void {
-    for (const g of this.guilds.values()) g.disconnect();
+    for (const g of this.guilds.values()) g.disconnect('shutdown');
     this.guilds.clear();
   }
 }

@@ -26,7 +26,7 @@ import { appToken, getJson } from '../modules/feeds.js';
 import { twitchUserToken } from '../modules/twitch-alerts.js';
 import { actionName, type CaseHandle, type Moderation } from './moderation.js';
 import { ModuleContext } from '../modules/context.js';
-import { clock, findTracks, musicOf, MusicError, type LoopMode } from './music.js';
+import { clock, findTracks, musicEvent, musicOf, MusicError, trackVars, type LoopMode } from './music.js';
 import { lyricsOf } from './lyrics.js';
 import { createTicket, finishTicket, modmailBlock, modmailClose, modmailReply, reopenTicket, ticketCounts, ticketMember, ticketPanelIndex, ticketPanelPayload, type TicketConfig } from '../modules/support.js';
 import { countClick, findStations, stationLines, stationTrack } from './radio.js';
@@ -349,11 +349,21 @@ function musicHandlers(secret: (key: string) => string | null): [string, Handler
     const guild = await guildOf(run, node);
     return { guild, m: musicOf(data(run).client).get(guild.id) };
   };
+  // Blocks that change the player start the matching music_* event (who did it: {user}).
+  const EVENTS: Record<string, string> = {
+    'action.music_pause': 'music_pause', 'action.music_resume': 'music_resume', 'action.music_stop': 'music_stop',
+    'action.music_volume': 'music_volume', 'action.music_loop': 'music_loop', 'action.music_filter': 'music_filters', 'action.music_clear_filters': 'music_filters',
+  };
   const simple = (type: string, fn: (m: ReturnType<ReturnType<typeof musicOf>['get']>, run: Run, node: GraphNode) => Promise<unknown> | unknown): [string, Handler] => [
     type,
     async (node, run) => {
-      const { m } = await player(run, node);
+      const { guild, m } = await player(run, node);
       await music(run, () => fn(m, run, node));
+      const ev = EVENTS[type];
+      if (ev) {
+        const extra = { volume: String(m.volume), loop_mode: m.loop, filters: m.filters.join(', ') || 'none' };
+        musicEvent(data(run).client, guild.id, ev, { ...trackVars(m.current, m.queue.length), ...extra }, data(run).user?.id ?? null);
+      }
     },
   ];
   return [
@@ -377,6 +387,7 @@ function musicHandlers(secret: (key: string) => string | null): [string, Handler
         const isLink = /^(https?:\/\/|spotify:)/i.test(run.str(node, 'query').trim());
         const list = isLink ? tracks : tracks.slice(0, 1);
         const pos = await music(run, () => m.add(list, run.str(node, 'queue_position') === 'next' ? 'next' : 'end'));
+        for (const t of list.slice(0, 5)) musicEvent(data(run).client, m.guildIdOf(), 'music_queue_add', trackVars(t, m.queue.length), data(run).user?.id ?? null);
         run.setResult(node, '', list.length === 1 ? list[0]!.title : `${list.length} tracks`);
         run.setResult(node, '.title', list.length === 1 ? list[0]!.title : `${list.length} tracks`);
         run.setResult(node, '.position', pos);
@@ -478,7 +489,13 @@ function musicHandlers(secret: (key: string) => string | null): [string, Handler
       const mode = raw === 'song' ? 'track' : raw;
       m.loop = (['off', 'track', 'queue'].includes(mode) ? mode : 'off') as LoopMode;
     }),
-    simple('action.music_remove', (m, run, node) => m.remove(Math.trunc(run.num(node, 'from_position') || 1), Math.max(1, Math.min(100, Math.trunc(run.num(node, 'remove_count') || 1))))),
+    simple('action.music_remove', (m, run, node) => {
+      const from = Math.trunc(run.num(node, 'from_position') || 1);
+      const gone = m.queue.slice(from - 1, from - 1 + Math.max(1, Math.min(100, Math.trunc(run.num(node, 'remove_count') || 1))));
+      const n = m.remove(from, gone.length || 1);
+      for (const t of gone.slice(0, 5)) musicEvent(data(run).client, m.guildIdOf(), 'music_queue_remove', trackVars(t, m.queue.length), data(run).user?.id ?? null);
+      return n;
+    }),
     simple('action.music_seek', (m, run, node) => m.seek(run.str(node, 'seek_mode') === 'relative' ? 'relative' : 'absolute', Math.trunc(run.num(node, 'seek_seconds')))),
     simple('action.music_filter', (m, run, node) => m.setFilter(run.str(node, 'filter') || 'bassboost')),
     simple('action.music_clear_filters', (m) => m.setFilter(null)),

@@ -5719,5 +5719,8 @@
   "bot.light.online": "Online: {time}",
   "bot.light.warning": "Warning: {message}",
   "bot.light.error": "Error: {message}",
-  "builder.event.categories": "Event categories"
+  "builder.event.categories": "Event categories",
+  "builder.event.intent_off_short": "Intent off",
+  "builder.event.intent_off.presence": "The Presence Intent is off in the Discord Developer Portal (your bot → Bot → Privileged Gateway Intents). Discord sends no status changes, so this event never fires. Turn it on and restart the bot.",
+  "builder.event.intent_off.members": "The Server Members Intent is off in the Discord Developer Portal (your bot → Bot → Privileged Gateway Intents). Discord sends no member data for this event. Turn it on and restart the bot."
 }

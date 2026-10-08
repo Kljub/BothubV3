@@ -21,6 +21,8 @@ type EventType struct {
 	Vars []string `json:"vars"`
 	// Soon: the bot does not emit this type yet; shown but not selectable.
 	Soon bool `json:"soon,omitempty"`
+	// Intent: a privileged intent the event needs (presence, members).
+	Intent string `json:"intent,omitempty"`
 }
 
 // LoadEvents reads the event catalog (shared/events.json).

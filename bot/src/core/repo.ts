@@ -139,6 +139,11 @@ export class Repo {
     this.db.prepare('UPDATE bots SET name = ?, application_id = ?, avatar_url = ?, updated_at = ? WHERE id = ?').run(name, applicationId, avatarUrl, now(), id);
   }
 
+  /** Privileged intents the Developer Portal allows (bots.intents, see migration 0045). */
+  setBotIntents(id: number, intents: { presence: boolean; members: boolean; messageContent: boolean }): void {
+    this.db.prepare('UPDATE bots SET intents = ? WHERE id = ?').run(JSON.stringify({ ...intents, at: now() }), id);
+  }
+
   /** Replaces the guild cache: listed guilds are in, all others are left. */
   syncGuilds(botId: number, guilds: { id: string; name: string; iconUrl: string | null; memberCount: number }[]): void {
     write(this.db, () => {

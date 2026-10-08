@@ -707,6 +707,8 @@
 .bvp-field input { flex: 1; min-width: 0; }
 .bevent-item.is-soon { cursor: not-allowed; opacity: 0.55; }
 .bevent-item.is-soon:hover { background: none; }
+.bevent-intent { flex: none; padding: 1px 6px; font-size: 10px; font-weight: 600; color: var(--yellow); border: 1px solid color-mix(in srgb, var(--yellow) 50%, transparent); border-radius: 999px; }
+.bevent-intent-warn { margin: 8px 0; padding: 8px 10px; font-size: 12px; border-radius: 8px; border: 1px solid color-mix(in srgb, var(--yellow) 50%, transparent); background: color-mix(in srgb, var(--yellow) 12%, transparent); }
 .bevent-soon { flex: none; padding: 1px 6px; font-size: 10px; font-weight: 600; color: var(--muted); border: 1px solid var(--border-strong); border-radius: 999px; }
 
 /* Problems list: the node with a problem blinks its outline three times. */

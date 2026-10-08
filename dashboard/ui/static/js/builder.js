@@ -26,7 +26,7 @@
   const tk = (key) => (isEvent && `${key}_event` in TEXT ? `${key}_event` : key);
   const EVENT_CATS = island('builder-events') || [];
   const EVENT_INFO = {};
-  for (const c of EVENT_CATS) for (const e of c.events) EVENT_INFO[e.key] = { cat: c, vars: e.vars || [] };
+  for (const c of EVENT_CATS) for (const e of c.events) EVENT_INFO[e.key] = { cat: c, vars: e.vars || [], intent: e.intent };
   const EVENT_HIDDEN = new Set(['action.send_form', 'condition.subcommand']);
   const csrf = () => document.querySelector('meta[name="csrf-token"]')?.content || '';
 
@@ -1688,6 +1688,8 @@
       renderInspector();
     }));
     const info = EVENT_INFO[node.config[key]];
+    // The intent this event needs is off in the Developer Portal: it would never fire.
+    if (info && intentOff(info.intent)) wrap.append(el('div', 'bevent-intent-warn', `⚠ ${t(`builder.event.intent_off.${info.intent}`)}`));
     if (info?.vars.length) {
       const box = el('div', 'bresults');
       box.append(el('div', 'bwilldo-title', t('builder.event.vars_title')), el('span', 'bfield-hint', t('builder.event.vars_hint')));
@@ -1787,6 +1789,11 @@
   }
 
   // Popup: search and categories on top, the events below.
+  // A privileged intent an event needs is off in the Developer Portal (meta.intents from the bot's last start).
+  function intentOff(intent) {
+    return !!intent && !!meta.intents && meta.intents[intent] === false;
+  }
+
   function openEventPicker(current, onPick) {
     const state = { cat: '', search: '' };
     const overlay = el('div', 'bform');
@@ -1851,6 +1858,11 @@
           b.type = 'button';
           b.append(el('span', '', t(`builder.event.${e.key}`)));
           if (e.soon) b.append(el('span', 'bevent-soon', t('builder.event.soon')));
+          if (intentOff(e.intent)) {
+            const w = el('span', 'bevent-intent', `⚠ ${t('builder.event.intent_off_short')}`);
+            w.title = t(`builder.event.intent_off.${e.intent}`);
+            b.append(w);
+          }
           b.append(el('span', 'bevent-key mono', e.key));
           // Types the bot does not emit yet stay visible but cannot be picked.
           if (e.soon) { b.disabled = true; b.title = t('builder.event.soon_hint'); } else b.addEventListener('click', () => { close(); onPick(e.key); });

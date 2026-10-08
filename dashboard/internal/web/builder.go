@@ -161,6 +161,7 @@ func (s *Server) handleBuilderPage(w http.ResponseWriter, r *http.Request, p Pag
 			"runUrl":    fmt.Sprintf("/api/v1/bots/%d/runs", bot.ID),
 			"runErrors": localRunTexts(p.Locale),
 			"openRun":   openRunID(r),
+			"intents":   bot.Intents,
 			"updatedAt": cmd.UpdatedAt,
 			"docsUrl":   "/bots/docs",
 			"backUrl":   backURL,
