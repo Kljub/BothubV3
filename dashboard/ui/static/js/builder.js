@@ -2585,7 +2585,8 @@
     if (typing) return;
     if (mod && k === 'z' && !ev.shiftKey) { ev.preventDefault(); if (historyAt > 0) restore(historyAt - 1); }
     else if (mod && (k === 'y' || (k === 'z' && ev.shiftKey))) { ev.preventDefault(); if (historyAt < history.length - 1) restore(historyAt + 1); }
-    else if (ev.key === 'Delete' || ev.key === 'Backspace') removeSelected();
+    // Only on the canvas: Backspace on a button of a popup (emoji picker, settings) must not delete the block.
+    else if ((ev.key === 'Delete' || ev.key === 'Backspace') && (ev.target === document.body || canvas.contains(ev.target)) && !ev.target.closest('.bemoji-pop, .bsearch')) removeSelected();
     else if (ev.key === 'Escape' && selected) { selected = null; render(); }
   });
 

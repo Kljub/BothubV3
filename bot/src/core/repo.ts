@@ -444,6 +444,16 @@ export class Repo {
   }
 
   /** Cancels open jobs with this key (Cancel Job block, unban before the temp ban ends). */
+  /** Cancel Job block with a job number. */
+  cancelJobById(botId: number, id: number): number {
+    return Number(this.db.prepare('UPDATE scheduled_jobs SET cancelled_at = ? WHERE bot_id = ? AND id = ? AND done_at IS NULL AND cancelled_at IS NULL').run(now(), botId, id).changes);
+  }
+
+  /** Reset Balance block: every currency of the member on the server back to 0. */
+  resetBalances(botId: number, guildId: string, userId: string): void {
+    this.db.prepare('UPDATE economy_balances SET balance = 0, updated_at = ? WHERE guild_id = ? AND user_id = ? AND currency_id IN (SELECT id FROM economy_currencies WHERE bot_id = ?)').run(now(), guildId, userId, botId);
+  }
+
   cancelJobs(botId: number, key: string): number {
     return Number(this.db.prepare('UPDATE scheduled_jobs SET cancelled_at = ? WHERE bot_id = ? AND key = ? AND done_at IS NULL AND cancelled_at IS NULL').run(now(), botId, key).changes);
   }

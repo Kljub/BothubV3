@@ -80,7 +80,7 @@ async function main(): Promise<void> {
 
   // The key is read when a bot starts: the API may create it after us.
   const secretKey = () => loadSecretKey(config.dataDir);
-  manager = new BotManager(repo, { repo, defs, limits, plugins, secretKey, runErrors: readShared<RunErrorTexts>(config, 'run-errors.json') }, secretKey);
+  manager = new BotManager(repo, { repo, defs, limits, plugins, secretKey, runErrors: readShared<RunErrorTexts>(config, 'run-errors.json'), control: (id, op) => void manager!.enqueue(id, () => (op === 'stop' ? manager!.stop(id) : manager!.start(id))).catch((err) => log.error('bot control failed', { botId: id, err })) }, secretKey);
   await manager.startAll();
   await handover.markReady();
   if (ROLE === 'handover') {

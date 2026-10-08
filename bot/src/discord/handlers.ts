@@ -19,6 +19,7 @@ import type { GraphNode } from '../graph/types.js';
 import { parseDuration, snowflake, snowflakes } from '../graph/util.js';
 import type { CaseAction, ModCase, Repo } from '../core/repo.js';
 import { buildMessage, hasBody } from './message.js';
+import type { VoiceManager } from './voice.js';
 import { cardFile, cardVars, renderCard } from '../cards/cards.js';
 import { lookupResults, lookupTwitch, twitchVars } from './twitch-lookup.js';
 import { appToken, getJson } from '../modules/feeds.js';
@@ -60,6 +61,10 @@ export interface DiscordData {
   hideReplies?: boolean;
   /** A "thinking …" reply being sent for a slow command (instance.ts). */
   deferring?: Promise<unknown>;
+  /** Voice connections of the bot (Join / Leave Voice). */
+  voice?: VoiceManager;
+  /** Stop or restart this bot (Stop Bot / Restart Bot blocks). */
+  control?: (op: 'stop' | 'restart') => void;
   /** custom_id for a button or menu block of this run. */
   customId(component: GraphNode): string;
   /** Messages sent by this run, by block variable ({Var1}). */
@@ -162,7 +167,7 @@ export function attachCards(payload: Record<string, unknown>, files: Map<string,
   for (const [name, png] of files) if (json.includes(`attachment://${name}`)) attach.push({ attachment: png, name });
   if (!attach.length) return;
   if (typeof payload.content === 'string') {
-    payload.content = payload.content.replace(/attachment:\/\/card-[a-z0-9]+\.(png|gif)/g, '').trim();
+    payload.content = payload.content.replace(/attachment:\/\/(card-[a-z0-9]+\.(png|gif)|transcript-[a-z0-9]+\.txt)/g, '').trim();
   }
   payload.files = [...((payload.files as unknown[]) ?? []), ...attach];
 }
@@ -700,8 +705,9 @@ export function discordHandlers(repo: Repo, mod?: Moderation, secret: (key: stri
     [
       'action.add_roles',
       async (node, run) => {
-        const m = await memberOf(run, node);
         const roles = snowflakes(run.str(node, 'roles'), 'roles');
+        if (!roles.length) return; // an empty role variable: nothing to do, not an error
+        const m = await memberOf(run, node);
         await asCase(run, node, m.guild, m.id, 'role_add', run.str(node, 'undo_after'), () => discord(run, () => m.roles.add(roles, reason(run, node))));
         undoAfter(run, node, { op: 'remove_roles', guild: m.guild.id, user: m.id, roles }, `temprole:${m.guild.id}:${m.id}:${roles.join(',')}`);
       },
@@ -709,8 +715,9 @@ export function discordHandlers(repo: Repo, mod?: Moderation, secret: (key: stri
     [
       'action.remove_roles',
       async (node, run) => {
-        const m = await memberOf(run, node);
         const roles = snowflakes(run.str(node, 'roles'), 'roles');
+        if (!roles.length) return; // an empty role variable: nothing to do, not an error
+        const m = await memberOf(run, node);
         await asCase(run, node, m.guild, m.id, 'role_remove', run.str(node, 'undo_after'), () => discord(run, () => m.roles.remove(roles, reason(run, node))));
         undoAfter(run, node, { op: 'add_roles', guild: m.guild.id, user: m.id, roles }, null);
       },

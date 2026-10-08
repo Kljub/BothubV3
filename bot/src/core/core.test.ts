@@ -11,6 +11,7 @@ import { decrypt, encrypt } from './secrets.js';
 import { buildCommands, denied, permissionBit, settingsOf } from '../discord/commands.js';
 import { discordHandlers } from '../discord/handlers.js';
 import { moduleHandlers } from '../discord/handlers-modules.js';
+import { extraHandlers } from '../discord/handlers-extra.js';
 import { coreHandlers } from '../graph/handlers-core.js';
 import type { Graph } from '../graph/types.js';
 
@@ -298,4 +299,19 @@ test('playbacks: last 10 runs per command, failed ones kept, a click updates its
   assert.equal(repo.errorMuted(1, 'n1', 'error.run.discord'), false);
   db.prepare("INSERT INTO run_error_mutes (command_id, node_id, error_key) VALUES (1, 'n1', 'error.run.discord')").run();
   assert.equal(repo.errorMuted(1, 'n1', 'error.run.discord'), true);
+});
+
+test('every block of the palette has a handler in the bot', () => {
+  const handlers = new Map([
+    ...coreHandlers({ vars: { get: () => undefined, set: () => undefined, delete: () => undefined }, logError: () => undefined }),
+    ...discordHandlers({} as Repo),
+    ...moduleHandlers({} as Repo, 1),
+    ...extraHandlers({ repo: {} as Repo, secret: () => null }),
+  ]);
+  const passive = /^(trigger|option|condition|utility|component)\./;
+  const missing = readdirSync(join(shared, 'nodes'))
+    .map((f) => JSON.parse(readFileSync(join(shared, 'nodes', f), 'utf8')) as { type: string; palette?: boolean })
+    .filter((d) => d.palette !== false && !passive.test(d.type) && d.type !== 'action.note' && !handlers.has(d.type))
+    .map((d) => d.type);
+  assert.deepEqual(missing, []);
 });

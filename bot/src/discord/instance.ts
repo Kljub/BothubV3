@@ -49,6 +49,7 @@ import { secretValue } from '../core/secrets-global.js';
 import { stats } from '../core/stats.js';
 import { Bucket, warn } from '../modules/guard.js';
 import { moduleHandlers } from './handlers-modules.js';
+import { extraHandlers } from './handlers-extra.js';
 import { parsePresence, PresenceRunner } from './presence.js';
 import { isDue, nextRun, type TimedEvent } from '../core/timed.js';
 import { botVars, channelVars, guildVars, userVars, type Vars } from './vars.js';
@@ -93,6 +94,8 @@ export interface InstanceDeps {
   plugins?: PluginManager;
   /** Key for secrets (bot tokens, global secrets); absent in tests. */
   secretKey?: () => Buffer;
+  /** Stop Bot / Restart Bot blocks: the bot manager stops or restarts this bot. */
+  control?: (botId: number, op: 'stop' | 'restart') => void;
   /** shared/run-errors.json: plain-language reasons of failed blocks. */
   runErrors?: RunErrorTexts;
 }
@@ -187,7 +190,7 @@ export class BotInstance {
       },
     };
     this.moderation = new Moderation(botId, deps.repo, () => this.client);
-    const handlers = new Map<string, Handler>([...coreHandlers(core), ...discordHandlers(deps.repo, this.moderation, core.secret, deps.secretKey), ...moduleHandlers(deps.repo, botId, core.secret, deps.secretKey ?? null)]);
+    const handlers = new Map<string, Handler>([...coreHandlers(core), ...discordHandlers(deps.repo, this.moderation, core.secret, deps.secretKey), ...moduleHandlers(deps.repo, botId, core.secret, deps.secretKey ?? null), ...extraHandlers({ repo: deps.repo, secret: core.secret })]);
     // Own copy of the definitions: plugin blocks exist only for this bot.
     this.engine = { defs: new Map(deps.defs), handlers, limits: deps.limits, match: matchState, lookup: (name, run) => lookupVariable(core, name, run) ?? this.liveVar(name) };
   }
@@ -608,6 +611,8 @@ export class BotInstance {
       member: null,
       user: null,
       messages: new Map(),
+      voice: this.voice,
+      control: this.deps.control ? (op) => this.deps.control!(this.botId, op) : undefined,
       customId: (component: GraphNode) => `bh:${runKey}:${component.id}`,
       ...rest,
     };
@@ -617,6 +622,7 @@ export class BotInstance {
     return {
       ...botVars(this.client?.user, this.client?.guilds.cache.size ?? 0),
       DEFAULT_SERVER: this.timeSettings.defaultGuildId ?? '',
+      'bot.timezone': this.timeSettings.timezone,
       ...guildVars(guild),
       ...channelVars(channel),
       ...userVars(user, member),
@@ -1073,6 +1079,18 @@ export class BotInstance {
         continue;
       }
       const guild = c.guilds.cache.get(String(p.guild ?? ''));
+      // Undo of Create Role / Create Thread: delete what the block made.
+      if (p.op === 'delete_role' || p.op === 'delete_channel') {
+        try {
+          if (p.op === 'delete_role') await guild?.roles.delete(String(p.role ?? ''), 'Undo after');
+          else await (await c.channels.fetch(String(p.channel ?? '')).catch(() => null))?.delete('Undo after');
+          this.deps.repo.finishJob(job.id);
+        } catch (err) {
+          const code = (err as { code?: number }).code;
+          this.deps.repo.finishJob(job.id, code === 10011 || code === 10003 ? null : 'error.run.discord');
+        }
+        continue;
+      }
       const user = String(p.user ?? '');
       if (!guild || !user) {
         this.deps.repo.finishJob(job.id, 'error.run.server_not_found');

@@ -21,7 +21,9 @@ export function snowflake(text: string, field: string): string {
 
 /** Comma or space separated list of IDs. */
 export function snowflakes(text: string, field: string): string[] {
+  // "<@&1><@&2>" (mentions without a separator) counts as two.
   return text
+    .replace(/></g, '> <')
     .split(/[\s,]+/)
     .filter(Boolean)
     .map((x) => snowflake(x, field));

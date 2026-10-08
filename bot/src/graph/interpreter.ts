@@ -176,6 +176,15 @@ export class Run {
     if (typeof name === 'string' && name !== '') this.vars.set(name + suffix, value === undefined || value === null ? '' : String(value));
   }
 
+  /**
+   * The value of a select menu option (a state of "Which option?"): trimmed
+   * like Discord does, the state's ID when empty. The menu and the check of
+   * the picked options both use it.
+   */
+  optionValue(state: GraphNode): string {
+    return this.str(state, 'value').trim().slice(0, 100) || state.id;
+  }
+
   /** Every Discord API call counts against maxDiscordCallsPerRun. */
   countDiscordCall(): void {
     if (++this.discordCalls > this.engine.limits.maxDiscordCallsPerRun) {
@@ -187,6 +196,16 @@ export class Run {
   async pause(ms: number): Promise<void> {
     await sleep(ms);
     this.waitedMs += ms;
+  }
+
+  /** Waiting for a person (a form): the time does not count as run time. */
+  async waitFor<T>(p: Promise<T>): Promise<T> {
+    const t = Date.now();
+    try {
+      return await p;
+    } finally {
+      this.waitedMs += Date.now() - t;
+    }
   }
 
   // ---------- structure ----------
@@ -444,7 +463,7 @@ export class Run {
           hit = compare(this.subject(cond), String(this.raw(st, 'operator') ?? 'eq'), this.str(st, 'value'));
         } else if (def.conditionKind === 'option') {
           const picked = (this.vars.get('__selected') ?? '').split('\u0000');
-          hit = picked.includes(this.str(st, 'value'));
+          hit = picked.includes(this.optionValue(st));
         } else {
           hit = await this.engine.match(cond, st, this);
         }

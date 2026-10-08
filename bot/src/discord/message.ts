@@ -52,7 +52,13 @@ export function componentEmoji(raw: string): { id?: string; name: string; animat
   if (!v) return undefined;
   const custom = /^<(a?):([A-Za-z0-9_]{2,32}):(\d{15,21})>$/.exec(v);
   if (custom) return { id: custom[3]!, name: custom[2]!, ...(custom[1] ? { animated: true } : {}) };
-  return { name: v };
+  // name:id and a bare ID of a server emoji.
+  const short = /^:?([A-Za-z0-9_]{2,32}):(\d{15,21})$/.exec(v);
+  if (short) return { id: short[2]!, name: short[1]! };
+  if (/^\d{15,21}$/.test(v)) return { id: v, name: 'emoji' };
+  // Anything else must be a real emoji: text like ":smile:" or a variable that
+  // stayed empty would make Discord refuse the whole message.
+  return /^(\p{Extended_Pictographic}|\p{Regional_Indicator}|[0-9#*]️?⃣)/u.test(v) && v.length <= 16 ? { name: v } : undefined;
 }
 
 export function buildMessage(run: Run, node: GraphNode, customId: (component: GraphNode) => string): Record<string, unknown> {
@@ -116,7 +122,15 @@ function componentRows(run: Run, node: GraphNode, customId: (component: GraphNod
   for (const m of parts.filter((p) => p.type === 'component.select_menu' && !p.disabled)) {
     // The options are the states of the Select Menu Option block after it.
     const question = run.targets(m.id, 'next').find((n) => n.type === 'condition.option');
-    const states = question ? run.targets(question.id, 'branches').filter((s) => s.type === 'condition.state') : [];
+    // Discord refuses two options with the same value: the first one wins.
+    const seen = new Set<string>();
+    const states = (question ? run.targets(question.id, 'branches').filter((s) => s.type === 'condition.state') : []).filter((s) => {
+      const v = run.optionValue(s);
+      if (seen.has(v)) return false;
+      seen.add(v);
+      return true;
+    }).slice(0, 25);
+    const max = Math.max(1, Math.min(Number(run.raw(m, 'max_values') ?? 1) || 1, states.length));
     rows.push({
       type: 1,
       components: [
@@ -124,13 +138,13 @@ function componentRows(run: Run, node: GraphNode, customId: (component: GraphNod
           type: 3,
           custom_id: customId(m),
           placeholder: run.str(m, 'placeholder'),
-          min_values: Number(run.raw(m, 'min_values') ?? 1),
-          max_values: Math.min(Number(run.raw(m, 'max_values') ?? 1), Math.max(states.length, 1)),
+          min_values: Math.max(0, Math.min(Number(run.raw(m, 'min_values') ?? 1) || 0, max)),
+          max_values: max,
           disabled: run.bool(m, 'disabled') || undefined,
-          options: states.slice(0, 25).map((s) =>
+          options: states.map((s) =>
             clean({
-              label: run.str(s, 'value').slice(0, 100) || '–',
-              value: run.str(s, 'value').slice(0, 100) || s.id,
+              label: run.str(s, 'value').trim().slice(0, 100) || '–',
+              value: run.optionValue(s),
               description: run.str(s, 'option_description').slice(0, 100),
               emoji: componentEmoji(run.str(s, 'option_emoji')),
             }),
