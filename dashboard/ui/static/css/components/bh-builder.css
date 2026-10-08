@@ -372,7 +372,7 @@
 .bnode-badge-warn { position: absolute; left: 0; bottom: calc(100% + 8px); padding: 2px 10px; font-size: 10px; font-weight: 600; white-space: nowrap; color: var(--yellow); background: var(--bg); border: 1px solid color-mix(in srgb, var(--yellow) 60%, transparent); border-radius: 999px; pointer-events: none; }
 .bnode-badge-err { position: absolute; top: -9px; right: -9px; display: grid; place-items: center; width: 18px; height: 18px; font-size: 11px; font-weight: 800; color: #fff; background: var(--red); border: 2px solid var(--bg); border-radius: 50%; }
 .bnode-compact .bnode-badge-warn { display: none; }
-.bnode-next { position: absolute; top: calc(100% + 22px); z-index: 2; display: grid; place-items: center; width: 22px; height: 22px; padding: 0; font: inherit; font-size: 15px; font-weight: 700; line-height: 1; color: #fff; background: #3b82f6; border: 2px solid var(--bg); border-radius: 50%; box-shadow: 0 0 0 3px color-mix(in srgb, #3b82f6 25%, transparent); transform: translateX(-50%); cursor: pointer; }
+.bnode-next { position: absolute; top: calc(100% + 22px); z-index: 2; display: block; width: 22px; height: 22px; padding: 0; font-size: 0; color: transparent; background: linear-gradient(#fff, #fff) center / 10px 2px no-repeat, linear-gradient(#fff, #fff) center / 2px 10px no-repeat, #3b82f6; border: 2px solid var(--bg); border-radius: 50%; box-shadow: 0 0 0 3px color-mix(in srgb, #3b82f6 25%, transparent); transform: translateX(-50%); cursor: pointer; }
 .bnode-next::before { content: ""; position: absolute; left: 50%; bottom: 100%; width: 1px; height: 14px; background: var(--border-strong); }
 .bnode-next:hover { filter: brightness(1.15); }
 .bpending { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; margin-bottom: 8px; font-size: 12px; color: var(--text); background: color-mix(in srgb, #3b82f6 14%, transparent); border: 1px solid color-mix(in srgb, #3b82f6 40%, transparent); border-radius: 8px; }
@@ -650,10 +650,22 @@
 .bevent-text span { font-size: 11px; color: var(--muted); }
 .bevent-change { flex: none; font-size: 11px; font-weight: 600; color: var(--accent); }
 .bevent-vars { display: flex; flex-wrap: wrap; gap: 6px; }
-.bsetup.bevent-picker { width: min(680px, 100%); height: min(720px, 100%); }
-.bevent-body { flex: 1; min-height: 0; gap: 10px; }
+.bsetup.bevent-picker { width: min(940px, 100%); height: min(720px, 100%); }
+.bevent-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 250px 1fr; gap: 14px; }
 .bevent-body .bpick-search { margin: 0; background: var(--surface); }
-.bevent-cats { display: flex; flex-wrap: wrap; gap: 6px; }
+.bevent-side { display: flex; flex-direction: column; gap: 2px; min-height: 0; overflow-y: auto; padding-right: 10px; border-right: 1px solid var(--border); }
+.bevent-cat { display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 10px; font: inherit; font-size: 13px; color: var(--muted); text-align: left; background: none; border: 0; border-radius: 6px; cursor: pointer; }
+.bevent-cat:hover { color: var(--text); background: var(--surface); }
+.bevent-cat.is-on { color: var(--text); background: color-mix(in srgb, var(--accent) 16%, var(--surface)); }
+.bevent-cat-icon { flex: none; width: 18px; text-align: center; }
+.bevent-cat-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bevent-cat-count { flex: none; padding: 0 6px; font-size: 10px; font-weight: 600; color: var(--muted); background: var(--surface-2); border-radius: 999px; }
+.bevent-main { display: flex; flex-direction: column; gap: 10px; min-height: 0; min-width: 0; }
+@media (max-width: 640px) {
+  .bevent-body { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+  .bevent-side { flex-direction: row; overflow-x: auto; overflow-y: hidden; padding: 0 0 6px; border-right: 0; border-bottom: 1px solid var(--border); }
+  .bevent-cat { width: auto; flex: none; }
+}
 .bevent-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
 .bevent-group { position: sticky; top: 0; padding: 10px 4px 6px; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; background: var(--sidebar); }
 .bevent-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; font: inherit; font-size: 13px; color: var(--text); text-align: left; background: none; border: 1px solid transparent; border-radius: 6px; cursor: pointer; }

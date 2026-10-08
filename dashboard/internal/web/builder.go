@@ -77,6 +77,30 @@ func (s *Server) handleBuilderPage(w http.ResponseWriter, r *http.Request, p Pag
 	// styles stay local.
 	w.Header().Set("Content-Security-Policy", builderCSP)
 	cid, h := commandID(r), hubOf(r)
+	module := r.URL.Query().Get("module")
+	// The address bar shows only /bots/builder/ (builder.js): a reload of
+	// that address opens the command remembered here.
+	cookie := "bothub_builder_" + string(h.Kind)
+	if cid == 0 {
+		c, err := r.Cookie(cookie)
+		var last builderCookie
+		if err == nil {
+			last = parseBuilderCookie(c.Value)
+		}
+		if last.ID == 0 || last.Bot != bot.ID {
+			back := "/bots/modules/command-builder"
+			if h.Event() {
+				back = "/bots/modules/custom-events"
+			}
+			http.Redirect(w, r, back, http.StatusSeeOther)
+			return
+		}
+		cid, module = last.ID, last.Module
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name: cookie, Value: builderCookie{Bot: bot.ID, ID: cid, Module: module}.String(), Path: "/",
+		HttpOnly: true, SameSite: http.SameSiteStrictMode, Secure: r.TLS != nil,
+	})
 	cmd, err := s.api.CustomCommand(r.Context(), session(r), h.Kind, bot.ID, cid)
 	if err != nil {
 		s.fail(w, r, p, err)
@@ -91,7 +115,7 @@ func (s *Server) handleBuilderPage(w http.ResponseWriter, r *http.Request, p Pag
 	var events any
 	if h.Event() {
 		kind, backURL, events = "event", "/bots/modules/custom-events", s.events
-	} else if info, _, found := s.findModule(r.URL.Query().Get("module")); found {
+	} else if info, _, found := s.findModule(module); found {
 		// Opened from a module page (preset copy of a built-in command).
 		backURL = "/bots/modules/" + info.Key
 	}
@@ -142,6 +166,34 @@ func (s *Server) handleBuilderPage(w http.ResponseWriter, r *http.Request, p Pag
 			"backUrl":   backURL,
 		}),
 	}))
+}
+
+// builderCookie: the command the builder had open (bot, command, module
+// it was opened from), so /bots/builder/ without an ID opens it again.
+type builderCookie struct {
+	Bot, ID int64
+	Module  string
+}
+
+func (c builderCookie) String() string {
+	return fmt.Sprintf("%d.%d.%s", c.Bot, c.ID, c.Module)
+}
+
+func parseBuilderCookie(v string) builderCookie {
+	parts := strings.SplitN(v, ".", 3)
+	if len(parts) < 2 {
+		return builderCookie{}
+	}
+	bot, err1 := strconv.ParseInt(parts[0], 10, 64)
+	id, err2 := strconv.ParseInt(parts[1], 10, 64)
+	if err1 != nil || err2 != nil || bot < 1 || id < 1 {
+		return builderCookie{}
+	}
+	c := builderCookie{Bot: bot, ID: id}
+	if len(parts) == 3 && len(parts[2]) <= 64 {
+		c.Module = parts[2]
+	}
+	return c
 }
 
 // pluginPortWords turns a port name of a plugin block into its fallback

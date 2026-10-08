@@ -196,6 +196,8 @@ func (s *Server) routes() http.Handler {
 	mux.Handle("GET /bots/plugins/{key}", auth(s.handleModuleItem("plugins")))
 	mux.Handle("GET /bots/commands/{name}", auth(s.handleCommandPage))
 	mux.Handle("GET /bots/builder/{cid}", auth(s.handleBuilderPage))
+	mux.Handle("GET /bots/builder/{$}", auth(s.handleBuilderPage))
+	mux.Handle("GET /bots/events/builder/{$}", auth(s.handleBuilderPage))
 	mux.Handle("POST /bot/{id}/custom-commands", auth(s.handleCreateCommand))
 	mux.Handle("PUT /bot/{id}/custom-commands/{cid}", auth(s.handleCommandEnabled))
 	mux.Handle("DELETE /bot/{id}/custom-commands/{cid}", auth(s.handleDeleteCommand))

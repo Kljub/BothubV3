@@ -1814,21 +1814,27 @@
     input.type = 'search';
     input.placeholder = t('builder.event.search');
     sw.append(input);
-    const cats = el('div', 'bevent-cats');
+    // Categories in a sidebar on the left, search and events on the right.
+    const cats = el('nav', 'bevent-side');
+    cats.setAttribute('aria-label', t('builder.event.categories'));
     const list = el('div', 'bevent-list');
+    const main = el('div', 'bevent-main');
+    main.append(sw, list);
     const body = el('div', 'bsetup-body bevent-body');
-    body.append(sw, cats, list);
+    body.append(cats, main);
     dialog.append(head, body);
-    const catChip = (key, label) => {
-      const b = el('button', 'bchip', label);
+    const catItem = (key, icon, label, count) => {
+      const b = el('button', 'bevent-cat');
       b.type = 'button';
       b.classList.toggle('is-on', state.cat === key);
       b.setAttribute('aria-pressed', String(state.cat === key));
-      b.addEventListener('click', () => { state.cat = key; fill(); });
+      b.append(el('span', 'bevent-cat-icon', icon), el('span', 'bevent-cat-label', label), el('span', 'bevent-cat-count', String(count)));
+      b.addEventListener('click', () => { state.cat = key; fill(); list.scrollTop = 0; });
       return b;
     };
     const fill = () => {
-      cats.replaceChildren(catChip('', t('builder.event.all')), ...EVENT_CATS.map((c) => catChip(c.key, `${c.icon} ${t(`builder.eventcat.${c.key}`)}`)));
+      const total = EVENT_CATS.reduce((n, c) => n + c.events.length, 0);
+      cats.replaceChildren(catItem('', '✨', t('builder.event.all'), total), ...EVENT_CATS.map((c) => catItem(c.key, c.icon, t(`builder.eventcat.${c.key}`), c.events.length)));
       list.replaceChildren();
       const q = state.search;
       for (const c of EVENT_CATS) {
@@ -3721,4 +3727,6 @@
     render();
   }
   if (new URLSearchParams(location.search).get('setup') === '1') openSetup();
+  // Short address: /bots/builder/ (the dashboard remembers the open command for a reload).
+  if (/\/builder\/\d+\/?$/.test(location.pathname)) window.history.replaceState(window.history.state, '', location.pathname.replace(/\/\d+\/?$/, '/'));
 })();

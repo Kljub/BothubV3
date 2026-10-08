@@ -5718,5 +5718,6 @@
   "vars.item.bot_plugin_top_hint": "The 10 most used plugins, one per line.",
   "bot.light.online": "Online: {time}",
   "bot.light.warning": "Warning: {message}",
-  "bot.light.error": "Error: {message}"
+  "bot.light.error": "Error: {message}",
+  "builder.event.categories": "Event categories"
 }
