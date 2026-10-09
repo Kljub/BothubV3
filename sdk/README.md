@@ -55,7 +55,8 @@ plugin can be switched off; nothing else is set per bot.
 - Storage: 1,000 keys, 16 KB per value, 1 MB per plugin and bot.
 - Discord: 5 messages per 5 seconds; mentions are not pinged.
 - Lifecycle: `onLoad`, `onEnable` when the plugin starts for a bot; `onDisable`,
-  `onUnload` when it stops (1 second, then the process ends).
+  `onUnload` when it stops (1 second, then the process ends); `onConfigChange`
+  after the settings were saved on the dashboard (ctx.config has the new ones).
 - A block that does not answer in time is stopped and the plugin restarted;
   after 3 restarts in 10 minutes the plugin is switched off for the bot.
 

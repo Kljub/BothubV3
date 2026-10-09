@@ -505,6 +505,8 @@ function memberJson(m: GuildMember): Record<string, unknown> {
     joinedAt: m.joinedAt?.toISOString() ?? null, roles: [...m.roles.cache.keys()].filter((r) => r !== m.guild.id),
     // The voice channel the member is in now (null when none), e.g. for a soundboard.
     voiceChannelId: m.voice?.channelId ?? null,
+    // online, idle, dnd or offline (offline also without the Presence intent).
+    status: m.presence?.status ?? 'offline',
   };
 }
 function roleJson(r: Role): Record<string, unknown> {

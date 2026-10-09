@@ -6,7 +6,7 @@ Call a function as `ctx.<area>.<name>(...)`. A call needs its permission declare
 
 **Status:** 145 of 234 calls available.
 
-Events (`discord.events`, `bothub.events`): messageCreate, messageUpdate, messageDelete, reactionAdd, reactionRemove; guildMemberAdd, guildMemberRemove, guildMemberUpdate, guildBanAdd, guildBanRemove; guildCreate, guildDelete, channelCreate, channelDelete, channelUpdate, roleCreate, roleDelete, roleUpdate; voiceStateUpdate; interactionCreate; bot.ready, bot.start, bot.stop, bot.restart, bot.shutdown, plugin.load, plugin.enable, plugin.disable, plugin.unload.
+Events (`discord.events`, `bothub.events`): messageCreate, messageUpdate, messageDelete, reactionAdd, reactionRemove; guildMemberAdd, guildMemberRemove, guildMemberUpdate, guildBanAdd, guildBanRemove, presenceUpdate (online, idle, dnd, offline; also of bots; needs the Presence intent); guildCreate, guildDelete, channelCreate, channelDelete, channelUpdate, roleCreate, roleDelete, roleUpdate; voiceStateUpdate; interactionCreate; bot.ready, bot.start, bot.stop, bot.restart, bot.shutdown, plugin.load, plugin.enable, plugin.disable, plugin.unload.
 
 ## plugin
 

@@ -259,6 +259,21 @@ test('lifecycle hooks run in order', async () => {
   assert.equal(row.value, 'LEDU');
 });
 
+test('onConfigChange: runs after a dashboard save with the new settings, not on start', async () => {
+  const { db, pluginsDir, manager } = setup();
+  const manifest = { id: 'plugin_cfg', name: 'Cfg', version: '1.0.0', sdk: 1, main: 'index.js', permissions: ['storage'], blocks: [] };
+  const code = `export default { onConfigChange: (ctx) => ctx.storage.get('log').then((v) => ctx.storage.set('log', (v ?? '') + ctx.config.get('title'))) };`;
+  install(db, pluginsDir, 'plugin_cfg', { 'bothub-plugin.json': JSON.stringify(manifest), 'index.js': code });
+  await manager.startBot(1);
+  const log = () => (db.prepare("SELECT value FROM plugin_storage WHERE plugin_id = 'plugin_cfg' AND key = 'log'").get() as { value: string } | undefined)?.value;
+  assert.equal(log(), undefined);
+  db.prepare(`INSERT INTO plugin_settings (bot_id, plugin_id, config) VALUES (1, 'plugin_cfg', '{"title":"A"}')`).run();
+  manager.refreshConfig(1, 'plugin_cfg');
+  for (let i = 0; i < 50 && !log(); i++) await new Promise((r) => setTimeout(r, 20));
+  assert.equal(log(), 'A');
+  manager.stopBot(1);
+});
+
 test('module calls: read BotHub modules of the bot when switched on', async () => {
   const { db, pluginsDir, manager } = setup();
   const manifest = { id: 'plugin_mods', name: 'Mods', version: '1.0.0', sdk: 1, main: 'index.js', permissions: ['modules.read'], blocks: [{ name: 'read', definition: {} }] };

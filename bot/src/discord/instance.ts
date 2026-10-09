@@ -129,6 +129,7 @@ const PLUGIN_EVENTS: Record<string, string> = {
   member_update: 'guildMemberUpdate',
   member_ban: 'guildBanAdd',
   member_unban: 'guildBanRemove',
+  member_status: 'presenceUpdate',
   channel_create: 'channelCreate',
   channel_delete: 'channelDelete',
   channel_update: 'channelUpdate',
@@ -410,6 +411,11 @@ export class BotInstance {
     client.on(Events.ShardDisconnect, (e) => this.deps.repo.logCode(this.botId, 'ERR-1006', { code: e.code }));
     client.on(Events.Error, (err) => log.error('discord client error', { botId: this.botId, err }));
     bindEvents(client, (ctx) => {
+      // Status changes of bots go to plugins only (Custom Events see members).
+      if (ctx.type === 'member_status' && ctx.user?.bot) {
+        this.pluginEvent(ctx);
+        return;
+      }
       void this.runEvent(ctx);
       this.pluginEvent(ctx);
       this.countEvent(ctx);

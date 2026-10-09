@@ -140,7 +140,7 @@
     "events": {
       "type": "array",
       "uniqueItems": true,
-      "maxItems": 18,
+      "maxItems": 21,
       "description": "Layer \"Events\": Discord events the plugin handles (handler in events/<event>.js, joined in main). Needs the SDK permission discord.events.",
       "items": {
         "enum": [
@@ -155,6 +155,7 @@
           "guildMemberUpdate",
           "guildBanAdd",
           "guildBanRemove",
+          "presenceUpdate",
           "channelCreate",
           "channelDelete",
           "channelUpdate",

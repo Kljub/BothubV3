@@ -115,8 +115,8 @@ export interface SecretRequest {
 export interface HttpAnswer { status: number; headers: Record<string, string>; json: Json; text: string; base64?: string }
 /** ctx.http.secret with saveAs 'file' and a 2xx answer. */
 export interface SecretFileAnswer { status: number; headers: Record<string, string>; file: StoredFile; /** With fileFrom: the JSON answer without the image. */ json?: Json }
-/** voiceChannelId: the voice channel the member is in now, null when none. */
-export interface MemberInfo { id: Id; name: string; displayName: string; bot: boolean; avatar: string; joinedAt: string | null; roles: Id[]; voiceChannelId: Id | null }
+/** voiceChannelId: the voice channel the member is in now, null when none. status: Discord status (offline without the Presence intent). */
+export interface MemberInfo { id: Id; name: string; displayName: string; bot: boolean; avatar: string; joinedAt: string | null; roles: Id[]; voiceChannelId: Id | null; status: 'online' | 'idle' | 'dnd' | 'offline' }
 export interface RoleInfo { id: Id; name: string; color: string; position: number; managed: boolean; mentionable: boolean; hoist: boolean; members: number }
 /** nsfw: age-restricted channel (channel.get). */
 export interface ChannelInfo { id: Id; name: string; type: string; parentId: Id | null; position?: number; guildId?: Id; topic?: string | null; nsfw?: boolean }
@@ -573,6 +573,8 @@ export interface PluginDefinition {
   onDisable?: Hook;
   /** Last call before the process ends. */
   onUnload?: Hook;
+  /** The settings were saved on the dashboard; ctx.config has the new ones (not called for config.set). */
+  onConfigChange?: Hook;
   /** Handlers of the blocks in bothub-plugin.json "blocks", by name. */
   blocks?: Record<string, BlockHandler>;
   /** Discord events listed in the manifest "events" (permission "discord.events"); called like a block. */

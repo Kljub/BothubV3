@@ -628,7 +628,8 @@
         "guildMemberRemove",
         "guildMemberUpdate",
         "guildBanAdd",
-        "guildBanRemove"
+        "guildBanRemove",
+        "presenceUpdate"
       ]
     },
     {

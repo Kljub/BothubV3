@@ -73,6 +73,7 @@ type Plugin = {
   onEnable?: Hook;
   onDisable?: Hook;
   onUnload?: Hook;
+  onConfigChange?: Hook;
   /** SDK 1.0 name of onEnable. */
   start?: Hook;
   blocks?: Record<string, (ctx: unknown, input: unknown) => unknown>;
@@ -202,6 +203,8 @@ process.on('message', (raw: unknown) => {
         return (plugin.onEnable ?? plugin.start)?.(ctx);
       case 'config':
         if (current && params.config && typeof params.config === 'object' && !Array.isArray(params.config)) current.config = params.config as Record<string, unknown>;
+        // A dashboard save (not config.set of the plugin itself).
+        if (params.changed === true) await plugin.onConfigChange?.(ctx);
         return null;
       case 'event': {
         const fn = (plugin as { events?: Record<string, (c: unknown, p: unknown) => unknown> }).events?.[String(params.name)];

@@ -138,6 +138,12 @@ export class PluginProcess {
     if (this.child?.connected) void this.invoke('config', { config }, this.limits.callTimeoutMs).catch(() => undefined);
   }
 
+  /** Settings saved on the dashboard: the new ones, then the plugin's onConfigChange (time of a block). */
+  configChanged(config: Record<string, unknown>): Promise<unknown> {
+    this.config = config;
+    return this.invoke('config', { config, changed: true }, this.limits.blockTimeoutMs);
+  }
+
   /** Calls onDisable and onUnload (1 s at most), then ends the process. */
   stop(): void {
     this.stopped = true;

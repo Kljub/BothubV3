@@ -113,7 +113,7 @@ export function bindEvents(client: Client, emit: Emit): void {
 
   // --- presence (needs the Presence intent in the Developer Portal) ---
   client.on(Events.PresenceUpdate, (before, after) => {
-    if (!after.guild || !after.member || after.user?.bot) return;
+    if (!after.guild || !after.member) return;
     const old = before?.status ?? 'offline';
     if (old === after.status) return;
     emit({ type: 'member_status', vars: { old_status: old, new_status: after.status }, guild: after.guild, channel: null, member: after.member, user: after.member.user });

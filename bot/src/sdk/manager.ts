@@ -742,10 +742,20 @@ export class PluginManager {
     return Object.assign(out, this.pluginSettings(botId, pluginId));
   }
 
-  /** The settings of a plugin changed (dashboard save): the running plugin reads the new ones. */
+  /**
+   * The settings of a plugin changed (dashboard save): the running plugin
+   * reads the new ones and its onConfigChange runs (on the leading core only,
+   * like tasks, so a handover does not run it twice).
+   */
   refreshConfig(botId: number, pluginId: string): void {
     const p = this.running.get(botId)?.find((x) => x.manifest.id === pluginId);
-    if (p) p.setConfig(this.configOf(botId, pluginId, p.pluginDir));
+    if (!p) return;
+    const config = this.configOf(botId, pluginId, p.pluginDir);
+    if (!handover.isLeader()) {
+      p.setConfig(config);
+      return;
+    }
+    void p.configChanged(config).catch((err) => this.logRunError(botId, p, 'onConfigChange', err));
   }
 
   /** Saved settings of a plugin on a bot (plugin_settings), read per call so a dashboard save counts at once. */
