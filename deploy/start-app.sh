@@ -63,6 +63,16 @@ stop_all() {
 }
 trap 'stop_all 0' TERM INT
 
+# Key of the database encryption (SQLCipher format): BOTHUB_DB_KEY, else
+# KEYS_DIR/db.key, made once here. The bot (group 1000) reads it too.
+if [[ -z "${BOTHUB_DB_KEY:-}" && ! -s "$KEYS_DIR/db.key" ]]; then
+  (umask 077 && php -r 'echo bin2hex(random_bytes(32));' > "$KEYS_DIR/db.key")
+fi
+if [[ -s "$KEYS_DIR/db.key" ]]; then
+  chgrp 1000 "$KEYS_DIR/db.key" 2>/dev/null
+  chmod 640 "$KEYS_DIR/db.key" 2>/dev/null
+fi
+
 # Redis password (written by the redis service): into REDIS_URL of the API,
 # relay and gateway, unless the URL brings one.
 if [[ -s "$KEYS_DIR/redis.pass" && "${REDIS_URL:-}" != *@* ]]; then

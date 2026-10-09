@@ -2,46 +2,100 @@
 // bot only waits until the database has the version in shared/db-schema.json.
 // Write rules (plan.md): WAL, busy_timeout 5000, BEGIN IMMEDIATE, short
 // transactions, no network call inside one. The bot writes runtime data only.
+//
+// Encryption at rest: SQLite3 Multiple Ciphers in the SQLCipher 4 format, the
+// same as the API (api/src/Database/Connection.php). The key: BOTHUB_DB_KEY,
+// else KEYS_DIR/db.key; 64 hex characters are the key itself, other text is
+// hashed with SHA-256. A file that is still plain (the API encrypts it at its
+// start) opens without the key.
 
-import { DatabaseSync } from 'node:sqlite';
-import { existsSync } from 'node:fs';
+import Database from 'better-sqlite3-multiple-ciphers';
+import { createHash } from 'node:crypto';
+import { closeSync, existsSync, openSync, readFileSync, readSync } from 'node:fs';
+import { join } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { log } from './log.js';
 
-export type Db = DatabaseSync;
+export type Db = Database.Database;
+
+const PLAIN_HEADER = 'SQLite format 3\0';
+
+/** The hex key of the database, or null (no key: the database stays plain). */
+export function dbKey(): string | null {
+  let raw = process.env.BOTHUB_DB_KEY ?? '';
+  if (raw.trim() === '') {
+    const file = join(process.env.KEYS_DIR || '/keys', 'db.key');
+    try {
+      raw = readFileSync(file, 'utf8');
+    } catch {
+      return null;
+    }
+  }
+  raw = raw.trim();
+  if (raw === '') return null;
+  if (/^[0-9a-fA-F]{64}$/.test(raw)) return raw.toLowerCase();
+  return createHash('sha256').update(raw).digest('hex');
+}
+
+/** True when the file exists and starts with the plain SQLite header. */
+export function isPlain(path: string): boolean {
+  let fd: number | undefined;
+  try {
+    fd = openSync(path, 'r');
+    const buf = Buffer.alloc(16);
+    return readSync(fd, buf, 0, 16, 0) === 16 && buf.toString('latin1') === PLAIN_HEADER;
+  } catch {
+    return false;
+  } finally {
+    if (fd !== undefined) closeSync(fd);
+  }
+}
 
 export function openDb(path: string): Db {
-  const db = new DatabaseSync(path);
-  db.exec('PRAGMA busy_timeout = 5000');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA synchronous = NORMAL');
-  db.exec('PRAGMA foreign_keys = ON');
+  const db = new Database(path);
+  const key = path === ':memory:' ? null : dbKey();
+  if (key !== null && !isPlain(path)) {
+    db.pragma(`cipher = 'sqlcipher'`);
+    db.pragma('legacy = 4');
+    db.pragma(`hexkey = '${key}'`);
+  }
+  db.pragma('busy_timeout = 5000');
+  db.pragma('journal_mode = WAL');
+  db.pragma('synchronous = NORMAL');
+  db.pragma('foreign_keys = ON');
   return db;
 }
 
 export function schemaVersion(db: Db): number {
-  const row = db.prepare('PRAGMA user_version').get() as { user_version: number } | undefined;
-  return row?.user_version ?? 0;
+  return Number(db.pragma('user_version', { simple: true }) ?? 0);
 }
 
 /**
  * Waits until the API has created the database and migrated it to the
- * expected version. A newer version means this bot build is too old.
+ * expected version. A newer version means this bot build is too old. A
+ * database that cannot be read yet (the API is encrypting it) is tried again.
  */
 export async function waitForSchema(path: string, expected: number, signal?: AbortSignal): Promise<Db> {
   let reported = -1;
   for (;;) {
     signal?.throwIfAborted();
     if (existsSync(path)) {
-      const db = openDb(path);
-      const version = schemaVersion(db);
-      if (version === expected) return db;
-      db.close();
+      let db: Db | undefined;
+      let version = -3;
+      try {
+        db = openDb(path);
+        version = schemaVersion(db);
+      } catch (err) {
+        if (reported !== -3) log.warn('the database cannot be read yet', { error: (err as Error).message });
+        reported = -3;
+      }
+      if (db && version === expected) return db;
+      db?.close();
       if (version > expected) {
         throw new Error(`database schema ${version} is newer than this bot build (${expected}); update the bot`);
       }
-      if (version !== reported) log.info('waiting for database migrations', { version, expected });
-      reported = version;
+      if (version >= 0 && version !== reported) log.info('waiting for database migrations', { version, expected });
+      if (version >= 0) reported = version;
     } else if (reported !== -2) {
       log.info('waiting for the API to create the database', { path });
       reported = -2;

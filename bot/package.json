@@ -12,12 +12,14 @@
     "test": "tsc -p tsconfig.json && node --test \"dist/**/*.test.js\""
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^24.0.0",
     "typescript": "^5.9.0"
   },
   "dependencies": {
     "@discordjs/voice": "^0.19.2",
     "@napi-rs/canvas": "^0.1.100",
+    "better-sqlite3-multiple-ciphers": "^13.0.3",
     "discord.js": "^14.27.0",
     "gifenc": "^1.0.3",
     "omggif": "^1.0.10",

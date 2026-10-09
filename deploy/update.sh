@@ -15,6 +15,9 @@
 #     If not, roll back: the old commit, the database backup, rebuild.
 #  6. When everything runs, stop the second core and remove old images.
 #
+# The first update after the encryption at rest encrypts the database (the
+# app does it at its start); the bots are stopped for that one restart.
+#
 # If the second core does not come up, the update goes on as before (the
 # bots are offline for the restart).
 
@@ -58,9 +61,11 @@ if docker compose ps --status running --services 2>/dev/null | grep -qx app; the
   step "backing up the database"
   name="pre-update-$(date -u +%Y%m%d-%H%M%S).sqlite"
   if docker compose exec -T app php -r '
+    require "/app/src/autoload.php";
     $dir = "/data/backups";
     if (!is_dir($dir)) mkdir($dir, 0700, true);
-    $pdo = new PDO("sqlite:/data/bothub.sqlite");
+    // Through Connection: an encrypted database is backed up encrypted.
+    $pdo = BotHub\Database\Connection::open("/data/bothub.sqlite");
     $pdo->exec("VACUUM INTO " . $pdo->quote($dir . "/" . $argv[1]));
     $old = glob($dir . "/pre-update-*.sqlite");
     sort($old);
@@ -77,10 +82,22 @@ fi
 step building
 docker compose --progress plain build || exit 1
 
+# A database that is still plain gets encrypted once by the new app at its
+# start; no BotCore may hold it open meanwhile, so this update runs without
+# the second core and stops the bots for the restart.
+plain_db=0
+if docker compose exec -T app sh -c 'head -c 15 /data/bothub.sqlite 2>/dev/null' | grep -q '^SQLite format 3'; then
+  plain_db=1
+  step "the database gets encrypted: the bots restart without a second BotCore"
+fi
+
 # --- 3. second BotCore ---
 handover=0
 bot_running=0
-if docker compose ps --status running --services 2>/dev/null | grep -qx bot; then
+if docker compose ps --status running --services 2>/dev/null | grep -qx bot && [ "$plain_db" = 1 ]; then
+  bot_running=1
+  docker compose stop bot >/dev/null 2>&1
+elif docker compose ps --status running --services 2>/dev/null | grep -qx bot; then
   bot_running=1
   step "starting a second BotCore for the switch"
   rc SET bothub:overlap 1 EX 900 >/dev/null

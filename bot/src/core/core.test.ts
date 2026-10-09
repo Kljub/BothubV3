@@ -4,8 +4,8 @@ import { readFileSync, readdirSync, mkdtempSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { randomBytes } from 'node:crypto';
-import { openDb, schemaVersion, waitForSchema } from './db.js';
+import { createHash, randomBytes } from 'node:crypto';
+import { dbKey, isPlain, openDb, schemaVersion, waitForSchema } from './db.js';
 import { Repo, type CommandRow } from './repo.js';
 import { decrypt, encrypt } from './secrets.js';
 import { buildCommands, denied, permissionBit, settingsOf } from '../discord/commands.js';
@@ -19,6 +19,39 @@ import type { Graph } from '../graph/types.js';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const migrations = join(root, 'api', 'migrations');
 const shared = join(root, 'shared');
+
+test('database encryption: a key encrypts a new file, a plain file still opens, the same key reads it', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'bothub-enc-'));
+  const before = process.env.BOTHUB_DB_KEY;
+  try {
+    delete process.env.BOTHUB_DB_KEY;
+    const plainPath = join(dir, 'plain.sqlite');
+    const plain = openDb(plainPath);
+    plain.exec('CREATE TABLE t (v TEXT)');
+    plain.close();
+
+    process.env.BOTHUB_DB_KEY = 'a passphrase';
+    assert.equal(dbKey(), createHash('sha256').update('a passphrase').digest('hex'));
+    // An older, plain file opens without the key until the API encrypts it.
+    assert.ok(isPlain(plainPath));
+    openDb(plainPath).close();
+
+    const path = join(dir, 'enc.sqlite');
+    const db = openDb(path);
+    db.exec("CREATE TABLE t (v TEXT); INSERT INTO t VALUES ('secret')");
+    db.close();
+    assert.ok(!isPlain(path));
+    assert.ok(!readFileSync(path).includes(Buffer.from('secret')));
+    assert.equal(openDb(path).prepare('SELECT v FROM t').get()?.['v' as never], 'secret');
+
+    process.env.BOTHUB_DB_KEY = 'f'.repeat(64);
+    assert.equal(dbKey(), 'f'.repeat(64));
+    assert.throws(() => openDb(path).prepare('SELECT v FROM t').get());
+  } finally {
+    if (before === undefined) delete process.env.BOTHUB_DB_KEY;
+    else process.env.BOTHUB_DB_KEY = before;
+  }
+});
 
 function migratedDb(): { path: string; repo: Repo } {
   const dir = mkdtempSync(join(tmpdir(), 'bothub-bot-'));
