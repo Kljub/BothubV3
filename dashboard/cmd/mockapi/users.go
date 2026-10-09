@@ -164,7 +164,7 @@ func (s *store) createRole(w http.ResponseWriter, r *http.Request, _ string) {
 	writeJSON(w, 201, nr)
 }
 
-func (s *store) updateRole(w http.ResponseWriter, r *http.Request, _ string) {
+func (s *store) updateRole(w http.ResponseWriter, r *http.Request, sid string) {
 	// Every field is optional: each tab of the role editor sends its own.
 	var in struct {
 		Name        *string     `json:"name"`
@@ -206,7 +206,16 @@ func (s *store) updateRole(w http.ResponseWriter, r *http.Request, _ string) {
 	}
 	if ro.Key != "admin" { // admin keeps every permission and has no limits
 		if in.Permissions != nil {
-			ro.Permissions = validPermissions(*in.Permissions)
+			next := validPermissions(*in.Permissions)
+			if !slices.Equal(next, ro.Permissions) {
+				// Other rights: the members of the role sign in again.
+				for _, u := range s.users {
+					if u.RoleID == ro.ID {
+						s.endSessionsOf(u.ID, sid)
+					}
+				}
+			}
+			ro.Permissions = next
 		}
 		if in.Limits != nil {
 			ro.Limits = in.Limits.clean()
@@ -216,7 +225,7 @@ func (s *store) updateRole(w http.ResponseWriter, r *http.Request, _ string) {
 	writeJSON(w, 200, ro)
 }
 
-func (s *store) deleteRole(w http.ResponseWriter, r *http.Request, _ string) {
+func (s *store) deleteRole(w http.ResponseWriter, r *http.Request, sid string) {
 	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -233,6 +242,7 @@ func (s *store) deleteRole(w http.ResponseWriter, r *http.Request, _ string) {
 		if u.RoleID == id {
 			u.RoleID = 2 // back to "User"
 			s.persistUser(u)
+			s.endSessionsOf(u.ID, sid)
 		}
 	}
 	s.roles = slices.DeleteFunc(s.roles, func(x *role) bool { return x.ID == id })
@@ -333,8 +343,10 @@ func (s *store) patchUser(w http.ResponseWriter, r *http.Request, sid string) {
 	}
 	for _, u := range s.users {
 		if u.ID == id {
-			if in.RoleID != 0 {
+			if in.RoleID != 0 && in.RoleID != u.RoleID {
 				u.RoleID = in.RoleID
+				// New role (or banned): the next request has to sign in again.
+				s.endSessionsOf(u.ID, sid)
 			}
 			if in.Email != nil {
 				if e := strings.TrimSpace(*in.Email); e == "" {
@@ -346,11 +358,7 @@ func (s *store) patchUser(w http.ResponseWriter, r *http.Request, sid string) {
 			if hash != "" {
 				u.passwordHash = hash
 				// A password set by the admin signs the account out everywhere else.
-				for key, sess := range s.sessions {
-					if sess.userID == u.ID && key != sid {
-						s.dropSession(key)
-					}
-				}
+				s.endSessionsOf(u.ID, sid)
 			}
 			s.persistUser(u)
 			writeJSON(w, 200, u)
@@ -375,11 +383,7 @@ func (s *store) deleteUser(w http.ResponseWriter, r *http.Request, sid string) {
 		return
 	}
 	// Their sessions end with them.
-	for k, sess := range s.sessions {
-		if sess.userID == id {
-			delete(s.sessions, k)
-		}
-	}
+	s.endSessionsOf(id, "")
 	s.phpDelete(fmt.Sprintf("/internal/accounts/users/%d", id))
 	w.WriteHeader(204)
 }

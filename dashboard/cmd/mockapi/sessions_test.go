@@ -232,3 +232,49 @@ func TestRegistration(t *testing.T) {
 		t.Fatal("admin role must not be registerable")
 	}
 }
+
+func TestStatusChangesSignOut(t *testing.T) {
+	s := &store{tickets: map[string]loginTicket{}, sessions: map[string]*sessionData{}}
+	s.srvSettings = defaultServerSettings()
+	s.seedUsers()
+	s.users = append(s.users, &mockUser{ID: 1, Username: "admin", RoleID: 1}, &mockUser{ID: 2, Username: "other", RoleID: 2}, &mockUser{ID: 3, Username: "third", RoleID: 2})
+	start := func(userID int64) string {
+		w := httptest.NewRecorder()
+		s.startSession(w, httptest.NewRequest("POST", "/api/v1/auth/login", nil), 200, userID, sessionOpts{})
+		return sessionKey(w.Result().Cookies()[0].Value)
+	}
+	admin, other, third := start(1), start(2), start(3)
+	patch := func(path, body string, h authed) int {
+		r := httptest.NewRequest("PATCH", path, strings.NewReader(body))
+		r.Header.Set("Content-Type", "application/json")
+		r.SetPathValue("id", path[strings.LastIndex(path, "/")+1:])
+		w := httptest.NewRecorder()
+		h(w, r, admin)
+		return w.Code
+	}
+	// A new role signs the user out, not the admin.
+	if code := patch("/api/v1/admin/users/2", `{"roleId":3}`, s.patchUser); code != 200 {
+		t.Fatalf("patch: %d", code)
+	}
+	if s.sessions[other] != nil || s.sessions[admin] == nil {
+		t.Fatal("role change: user must be signed out, admin not")
+	}
+	// New rights of a role sign its members out.
+	if code := patch("/api/v1/admin/roles/2", `{"permissions":["bots.create"]}`, s.updateRole); code != 200 {
+		t.Fatalf("role: %d", code)
+	}
+	if s.sessions[third] != nil {
+		t.Fatal("new rights: members of the role must sign in again")
+	}
+	// A session of a banned user (user 2 has the role "banned" now) ends at its next request.
+	w := httptest.NewRecorder()
+	s.startSession(w, httptest.NewRequest("POST", "/api/v1/auth/login", nil), 200, 2, sessionOpts{})
+	c := w.Result().Cookies()[0]
+	r := httptest.NewRequest("GET", "/api/v1/auth/me", nil)
+	r.AddCookie(c)
+	w = httptest.NewRecorder()
+	s.auth(func(w http.ResponseWriter, r *http.Request, sid string) { w.WriteHeader(204) })(w, r)
+	if w.Code != 401 || s.sessions[sessionKey(c.Value)] != nil {
+		t.Fatalf("banned session: %d", w.Code)
+	}
+}

@@ -499,8 +499,8 @@ func (s *store) auth(next authed) http.HandlerFunc {
 			key = sessionKey(c.Value)
 			sess = s.sessions[key]
 		}
-		if sess != nil && (s.userByID(sess.userID) == nil || time.Now().After(sess.expiresAt)) {
-			s.dropSession(key) // the user was deleted, or the session ran out
+		if sess != nil && (s.userByID(sess.userID) == nil || time.Now().After(sess.expiresAt) || s.roleKey(s.userByID(sess.userID).RoleID) == "banned") {
+			s.dropSession(key) // the user was deleted or banned, or the session ran out
 			sess = nil
 		}
 		proof := sess != nil && needsDeviceProof(sess, r.URL.Path)

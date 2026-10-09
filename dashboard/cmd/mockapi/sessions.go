@@ -129,6 +129,20 @@ func (s *store) dropSession(key string) {
 	s.phpDelete("/internal/accounts/sessions/" + key)
 }
 
+// endSessionsOf signs a user out everywhere (except keep, e.g. the admin's
+// own session): after a role change, a ban, new rights of their role or a
+// deleted account the next request has to sign in again. Caller holds s.mu.
+func (s *store) endSessionsOf(userID int64, keep string) int {
+	n := 0
+	for key, sess := range s.sessions {
+		if sess.userID == userID && key != keep {
+			s.dropSession(key)
+			n++
+		}
+	}
+	return n
+}
+
 // needsDeviceProof: a device-bound session whose last proof is too old.
 func needsDeviceProof(sess *sessionData, path string) bool {
 	if sess.deviceKey == "" || time.Since(sess.provenAt) < deviceProofWindow {
