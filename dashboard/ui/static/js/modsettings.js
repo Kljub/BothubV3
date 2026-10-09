@@ -135,9 +135,57 @@
     root.querySelectorAll('[data-perm-block]').forEach((h) => enhanceBlock(h, ctx));
   }
 
+  // Sections ("section" fields) fold: the heading opens or closes the fields
+  // up to the next heading. The first section starts open, the others
+  // closed; the choice is kept per module in this browser.
+  const foldKey = (form) => `bothub.modset.fold.${location.pathname}`;
+  function readFolds(form) {
+    try { return JSON.parse(localStorage.getItem(foldKey(form)) || 'null'); } catch { return null; }
+  }
+  function applyFolds(root) {
+    root.querySelectorAll('form.modset-form').forEach((form) => {
+      const heads = [...form.querySelectorAll(':scope > .modset-field > .modset-section, :scope .modset-grid > .modset-field > .modset-section')];
+      if (heads.length < 2) return;
+      const saved = readFolds(form);
+      heads.forEach((h, i) => {
+        const key = h.textContent.trim();
+        const open = saved && key in saved ? saved[key] : i === 0;
+        const field = h.closest('.modset-field');
+        if (!h.querySelector('.modset-fold')) {
+          h.classList.add('modset-section-fold');
+          h.setAttribute('role', 'button');
+          h.tabIndex = 0;
+          h.prepend(Object.assign(document.createElement('span'), { className: 'modset-fold', ariaHidden: 'true' }));
+        }
+        h.setAttribute('aria-expanded', String(open));
+        let el = field.nextElementSibling;
+        while (el && !el.querySelector(':scope > .modset-section')) {
+          el.classList.toggle('modset-folded', !open);
+          el = el.nextElementSibling;
+        }
+      });
+    });
+  }
+  function toggleFold(h) {
+    const form = h.closest('form');
+    const saved = readFolds(form) || {};
+    saved[h.textContent.trim()] = h.getAttribute('aria-expanded') !== 'true';
+    try { localStorage.setItem(foldKey(form), JSON.stringify(saved)); } catch { /* storage blocked: folds still work for now */ }
+    applyFolds(form.parentElement || document);
+  }
+  document.addEventListener('click', (ev) => {
+    const h = ev.target.closest && ev.target.closest('.modset-section-fold');
+    if (h) toggleFold(h);
+  });
+  document.addEventListener('keydown', (ev) => {
+    const h = ev.target.closest && ev.target.closest('.modset-section-fold');
+    if (h && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); toggleFold(h); }
+  });
+
   function apply(root) {
     applyShowIf(root);
     enhance(root);
+    applyFolds(root);
   }
 
   document.addEventListener('change', (ev) => {
