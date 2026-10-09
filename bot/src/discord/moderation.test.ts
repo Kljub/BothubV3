@@ -165,7 +165,7 @@ test('automatic punishment rule: exact count, highest wins', () => {
 });
 
 test('music: yt-dlp lines, queue order, ffmpeg arguments, lyrics titles', async () => {
-  const { trackOf, nextIndex, ffmpegArgs, clock, errorText } = await import('./music.js');
+  const { trackOf, nextIndex, ffmpegArgs, clock, errorText, parseClock, trackLength } = await import('./music.js');
   const { cleanTitle } = await import('./lyrics.js');
   const t = trackOf(JSON.stringify({ id: 'abc', title: 'Song', duration: 185.4, uploader: 'Band', ie_key: 'Youtube', url: 'abc' }), '1');
   assert.deepEqual(t, { title: 'Song', url: 'https://www.youtube.com/watch?v=abc', duration: 185, author: 'Band', requester: '1' });
@@ -180,7 +180,13 @@ test('music: yt-dlp lines, queue order, ffmpeg arguments, lyrics titles', async 
   assert.doesNotMatch(ffmpegArgs('u', 0, []).join(' '), /-ss|-af/);
   assert.equal(clock(185), '3:05');
   assert.equal(clock(3723), '1:02:03');
-  assert.equal(clock(0), 'live');
+  assert.equal(clock(0), '0:00');
+  assert.equal(parseClock('3:05'), 185);
+  assert.equal(parseClock('1:02:03'), 3723);
+  assert.equal(parseClock('soon'), 0);
+  assert.equal(trackLength({ duration: 0, live: true }), 'live');
+  assert.equal(trackLength({ duration: 0 }), '?:??');
+  assert.equal(trackOf(JSON.stringify({ id: 'abc', ie_key: 'Youtube', title: 'X', duration_string: '4:10' }), null)!.duration, 250);
   assert.match(errorText('ERROR: [youtube] abc: Sign in to confirm you’re not a bot'), /bot check/);
   assert.equal(errorText('ERROR: [generic] Unsupported URL: https://x'), 'Unsupported URL: https://x');
   assert.equal(cleanTitle('Rick Astley - Never Gonna Give You Up (Official Music Video) [4K Remaster]'), 'Rick Astley - Never Gonna Give You Up');

@@ -100,7 +100,9 @@ export function trackOf(line: string, requester: string | null): Track | null {
   return {
     title: String(j.title ?? full).slice(0, 200),
     url: full,
-    duration: typeof j.duration === 'number' ? Math.round(j.duration) : 0,
+    // Flat search results sometimes come without "duration", only "duration_string".
+    duration: typeof j.duration === 'number' ? Math.round(j.duration) : parseClock(String(j.duration_string ?? '')),
+    ...(j.live_status === 'is_live' || j.is_live === true ? { live: true } : {}),
     author: String(j.uploader ?? j.channel ?? j.artist ?? '').slice(0, 100),
     requester,
   };
@@ -119,9 +121,21 @@ export async function findTracks(query: string, limit: number, requester: string
   return tracks;
 }
 
-/** "3:05", "1:02:03", "live". */
+/** "3:05" or "1:02:03" -> seconds; 0 when it is not a time. */
+export function parseClock(text: string): number {
+  if (!/^\d+(:\d{1,2}){0,2}$/.test(text.trim())) return 0;
+  return text.trim().split(':').reduce((n, part) => n * 60 + Number(part), 0);
+}
+
+/** Length of a track for lists: "3:05", "live" for streams, "?:??" when unknown. */
+export function trackLength(t: Pick<Track, 'duration' | 'live'>): string {
+  if (t.live) return 'live';
+  return t.duration > 0 ? clock(t.duration) : '?:??';
+}
+
+/** "0:00", "3:05", "1:02:03". */
 export function clock(seconds: number): string {
-  if (!seconds) return 'live';
+  seconds = Math.max(0, seconds || 0);
   const s = Math.floor(seconds % 60);
   const m = Math.floor(seconds / 60) % 60;
   const h = Math.floor(seconds / 3600);
@@ -248,7 +262,7 @@ class GuildMusic {
   private async announce(t: Track): Promise<void> {
     if (!this.textChannel) return;
     const ch = await this.client.channels.fetch(this.textChannel).catch(() => null);
-    if (ch?.isSendable()) await ch.send({ content: t.live ? `📻 Now playing: **${t.title}**${t.author ? ` · ${t.author}` : ''}${t.requester ? ` · requested by <@${t.requester}>` : ''}` : `🎶 Now playing: **${t.title}** (${clock(t.duration)})${t.requester ? ` · requested by <@${t.requester}>` : ''}`, allowedMentions: { parse: [] } }).catch(() => undefined);
+    if (ch?.isSendable()) await ch.send({ content: t.live ? `📻 Now playing: **${t.title}**${t.author ? ` · ${t.author}` : ''}${t.requester ? ` · requested by <@${t.requester}>` : ''}` : `🎶 Now playing: **${t.title}** (${trackLength(t)})${t.requester ? ` · requested by <@${t.requester}>` : ''}`, allowedMentions: { parse: [] } }).catch(() => undefined);
   }
 
   /** After a track: next one (loop modes), or stop and leave later. */
@@ -424,7 +438,7 @@ export interface MusicEvent {
 
 /** Placeholders of a track ({track.title}, …, {queue.size}). */
 export function trackVars(t: Track | null, queueSize: number): Record<string, string> {
-  return { 'track.title': t?.title ?? '', 'track.url': t?.url ?? '', 'track.author': t?.author ?? '', 'track.duration': t ? (t.live ? 'live' : clock(t.duration)) : '', 'queue.size': String(queueSize) };
+  return { 'track.title': t?.title ?? '', 'track.url': t?.url ?? '', 'track.author': t?.author ?? '', 'track.duration': t ? trackLength(t) : '', 'queue.size': String(queueSize) };
 }
 
 /** Starts the music_* custom events of a server. */

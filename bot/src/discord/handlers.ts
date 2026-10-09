@@ -26,7 +26,7 @@ import { appToken, getJson } from '../modules/feeds.js';
 import { twitchUserToken } from '../modules/twitch-alerts.js';
 import { actionName, type CaseHandle, type Moderation } from './moderation.js';
 import { ModuleContext } from '../modules/context.js';
-import { clock, findTracks, musicEvent, musicOf, MusicError, trackVars, type LoopMode } from './music.js';
+import { clock, findTracks, musicEvent, musicOf, MusicError, trackLength, trackVars, type LoopMode } from './music.js';
 import { lyricsOf } from './lyrics.js';
 import { createTicket, finishTicket, modmailBlock, modmailClose, modmailReply, reopenTicket, ticketCounts, ticketMember, ticketPanelIndex, ticketPanelPayload, type TicketConfig } from '../modules/support.js';
 import { countClick, findStations, stationLines, stationTrack } from './radio.js';
@@ -399,7 +399,7 @@ function musicHandlers(secret: (key: string) => string | null): [string, Handler
         run.countDiscordCall();
         const tracks = await music(run, () => findTracks(run.str(node, 'query'), Math.max(1, Math.min(50, Math.trunc(run.num(node, 'limit') || 10))), data(run).user?.id ?? null, spotifyKeys()));
         run.setResult(node, '.count', tracks.length);
-        run.setResult(node, '.list', tracks.map((t, i) => `${i + 1}. [${t.title}](${t.url}) (${clock(t.duration)})`).join('\n'));
+        run.setResult(node, '.list', tracks.map((t, i) => `${i + 1}. [${t.title}](${t.url}) (${trackLength(t)})`).join('\n'));
         run.setResult(node, '[0].title', tracks[0]?.title ?? '');
         run.setResult(node, '[0].url', tracks[0]?.url ?? '');
       },
@@ -507,7 +507,7 @@ function musicHandlers(secret: (key: string) => string | null): [string, Handler
       'action.music_queue',
       async (node, run) => {
         const { m } = await player(run, node);
-        const lines = m.queue.slice(0, 20).map((t, i) => `${i === m.index ? '▶' : `${i + 1}.`} ${trackLink(t)} (${clock(t.duration)})`);
+        const lines = m.queue.slice(0, 20).map((t, i) => `${i === m.index ? '▶' : `${i + 1}.`} ${trackLink(t)} (${trackLength(t)})`);
         if (m.queue.length > 20) lines.push(`… and ${m.queue.length - 20} more`);
         run.setResult(node, '', lines.join('\n') || 'The queue is empty.');
         run.setResult(node, '.count', m.queue.length);
@@ -529,7 +529,7 @@ function musicHandlers(secret: (key: string) => string | null): [string, Handler
         run.setResult(node, '.url', t && !t.stream ? t.url : '');
         run.setResult(node, '.author', t?.author ?? '');
         run.setResult(node, '.position', t ? clock(m.position) : '');
-        run.setResult(node, '.duration', t ? clock(t.duration) : '');
+        run.setResult(node, '.duration', t ? trackLength(t) : '');
         run.setResult(node, '.loop', m.loop);
         run.setResult(node, '.volume', m.volume);
       },
