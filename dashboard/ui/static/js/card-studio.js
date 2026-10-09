@@ -266,7 +266,8 @@
         const li = document.createElement('li');
         li.className = `cs-layer${l.id === selected ? ' is-selected' : ''}${l.visible === false ? ' is-hidden' : ''}`;
         li.dataset.id = l.id;
-        li.innerHTML = '<span class="cs-layer-type"></span><span class="cs-layer-name"></span>';
+        li.draggable = true;
+        li.innerHTML = '<span class="cs-layer-grip" aria-hidden="true">⠿</span><span class="cs-layer-type"></span><span class="cs-layer-name"></span>';
         li.querySelector('.cs-layer-type').textContent = t(`layer.${l.type}`).slice(0, 1);
         li.querySelector('.cs-layer-name').textContent = l.name || l.type;
         const actions = document.createElement('span');
@@ -289,6 +290,52 @@
       bg.querySelector('.cs-layer-name').textContent = t('background');
       layersEl.append(bg);
     }
+
+    // Drag & drop: a layer dropped above another is drawn over it (the list
+    // shows the top layer first, design.layers holds the bottom first).
+    let dragId = null;
+    const clearDrop = () => layersEl.querySelectorAll('.drop-above, .drop-below').forEach((x) => x.classList.remove('drop-above', 'drop-below'));
+    layersEl.addEventListener('dragstart', (e) => {
+      const li = e.target.closest('.cs-layer');
+      if (!li?.dataset.id) return;
+      dragId = li.dataset.id;
+      li.classList.add('is-dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', dragId);
+    });
+    layersEl.addEventListener('dragover', (e) => {
+      const li = e.target.closest('.cs-layer');
+      if (!dragId || !li || li.classList.contains('cs-layer-bg')) return;
+      e.preventDefault();
+      const r = li.getBoundingClientRect();
+      clearDrop();
+      li.classList.add(e.clientY < r.top + r.height / 2 ? 'drop-above' : 'drop-below');
+    });
+    layersEl.addEventListener('dragleave', (e) => {
+      if (!layersEl.contains(e.relatedTarget)) clearDrop();
+    });
+    layersEl.addEventListener('drop', (e) => {
+      const li = e.target.closest('.cs-layer');
+      const above = li?.classList.contains('drop-above');
+      clearDrop();
+      if (!dragId || !li?.dataset.id || li.dataset.id === dragId) return;
+      e.preventDefault();
+      const from = design.layers.findIndex((l) => l.id === dragId);
+      if (from < 0) return;
+      begin();
+      const [moved] = design.layers.splice(from, 1);
+      const to = design.layers.findIndex((l) => l.id === li.dataset.id);
+      // "Above" in the list = drawn later (higher index).
+      design.layers.splice(above ? to + 1 : to, 0, moved);
+      selected = moved.id;
+      end();
+      refresh();
+    });
+    layersEl.addEventListener('dragend', () => {
+      dragId = null;
+      clearDrop();
+      layersEl.querySelectorAll('.is-dragging').forEach((x) => x.classList.remove('is-dragging'));
+    });
 
     layersEl.addEventListener('click', (e) => {
       const li = e.target.closest('.cs-layer');
