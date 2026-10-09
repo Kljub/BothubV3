@@ -355,3 +355,12 @@ test('privileged intents from the application flags', async () => {
   assert.deepEqual(intentsOf((1 << 13) | (1 << 14) | (1 << 19)), { presence: true, members: true, messageContent: true });
   assert.deepEqual(intentsOf(1 << 15), { presence: false, members: true, messageContent: false });
 });
+
+test('redis URL gets the password of KEYS_DIR/redis.pass', async () => {
+  const { redisUrlOf } = await import('./config.js');
+  const pass = () => 'p@ss';
+  assert.equal(redisUrlOf({ REDIS_URL: 'redis://redis:6379', KEYS_DIR: '/keys' }, pass), 'redis://:p%40ss@redis:6379');
+  assert.equal(redisUrlOf({ REDIS_URL: 'redis://:x@redis:6379', KEYS_DIR: '/keys' }, pass), 'redis://:x@redis:6379');
+  assert.equal(redisUrlOf({ REDIS_URL: 'redis://redis:6379' }, pass), 'redis://redis:6379');
+  assert.equal(redisUrlOf({ REDIS_URL: 'redis://redis:6379', KEYS_DIR: '/keys' }, () => null), 'redis://redis:6379');
+});

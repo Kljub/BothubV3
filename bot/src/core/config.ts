@@ -12,12 +12,28 @@ export interface Config {
   consumerName: string;
 }
 
+/** REDIS_URL with the password of KEYS_DIR/redis.pass (written by the redis service), unless the URL has one. */
+export function redisUrlOf(env: NodeJS.ProcessEnv, readPass: (file: string) => string | null = readPassFile): string {
+  const url = env.REDIS_URL || 'redis://127.0.0.1:6379';
+  if (url.includes('@') || !env.KEYS_DIR) return url;
+  const pass = readPass(join(env.KEYS_DIR, 'redis.pass'));
+  return pass ? url.replace(/^redis:\/\//, `redis://:${encodeURIComponent(pass)}@`) : url;
+}
+
+function readPassFile(file: string): string | null {
+  try {
+    return readFileSync(file, 'utf8').trim() || null;
+  } catch {
+    return null;
+  }
+}
+
 export function loadConfig(env = process.env): Config {
   const dataDir = env.DATA_DIR || '/data';
   return {
     dataDir,
     sharedDir: env.SHARED_DIR || '/shared',
-    redisUrl: env.REDIS_URL || 'redis://127.0.0.1:6379',
+    redisUrl: redisUrlOf(env),
     dbPath: join(dataDir, 'bothub.sqlite'),
     consumerName: env.HOSTNAME || 'bot',
   };

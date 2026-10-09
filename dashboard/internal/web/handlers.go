@@ -452,6 +452,7 @@ func (s *Server) handleAdminSection(w http.ResponseWriter, r *http.Request, p Pa
 			return
 		}
 		data["Security"] = sec
+		data["Recovery"] = s.recoveryView(r, p)
 	}
 	// The admin popup loads sections via htmx; a direct visit gets a full page.
 	if isHTMX(r) {

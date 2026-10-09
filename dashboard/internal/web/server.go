@@ -331,6 +331,7 @@ func (s *Server) routes() http.Handler {
 	mux.Handle("POST /admin/invite", auth(s.handleInviteSettings))
 	mux.Handle("POST /admin/registration", auth(s.handleRegistrationSettings))
 	mux.Handle("POST /admin/security", auth(s.handleSecuritySettings))
+	mux.Handle("POST /admin/recovery-key", auth(s.handleNewRecoveryKey))
 	mux.Handle("PUT /bot/{id}/guild-access", auth(s.handleGuildAccess))
 	mux.Handle("GET /admin/sdk-policies", auth(s.handleSdkPolicySearch))
 	mux.Handle("PUT /admin/sdk-policies/{perm}", auth(s.handleSdkPolicy))

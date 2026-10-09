@@ -20,7 +20,7 @@
 
 set -u
 step() { echo "--- $* ---"; }
-rc() { docker compose exec -T redis redis-cli "$@" 2>/dev/null; }
+rc() { docker compose exec -T redis sh -c 'if [ -s /keys/redis.pass ]; then exec redis-cli -a "$(cat /keys/redis.pass)" --no-auth-warning "$@"; else exec redis-cli "$@"; fi' -- "$@" 2>/dev/null; }
 # wait_key <key> <seconds> [old value]: until the key exists (and differs from the old value)
 wait_key() {
   i=0

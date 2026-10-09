@@ -17,6 +17,7 @@ services:
     environment:
       TZ: "${TZ:-UTC}"
       DATA_DIR: "/data"
+      KEYS_DIR: "/keys"
       REDIS_URL: "redis://redis:6379"
       BOTHUB_DEFAULT_LOCALE: "${BOTHUB_DEFAULT_LOCALE:-en}"
       # Shared secret between gateway and API (/internal/*), at least 32
@@ -30,6 +31,7 @@ services:
       WEBAUTHN_ORIGINS: "${WEBAUTHN_ORIGINS:-http://localhost:${DASHBOARD_PORT:-8080}}"
     volumes:
       - ./data:/data
+      - ./keys:/keys
     depends_on:
       redis:
         condition: service_healthy
@@ -48,9 +50,11 @@ services:
     environment:
       TZ: "${TZ:-UTC}"
       DATA_DIR: "/data"
+      KEYS_DIR: "/keys"
       REDIS_URL: "redis://redis:6379"
     volumes:
       - ./data:/data
+      - ./keys:/keys:ro
     depends_on:
       app:
         condition: service_healthy
@@ -61,11 +65,13 @@ services:
     command: ["redis-server", "--appendonly", "yes", "--dir", "/data/redis"]
     volumes:
       - ./data:/data
+      - ./keys:/keys
     # Bypass the image entrypoint: it drops to the redis user, which cannot
     # write to a Windows bind mount. Redis runs as root here.
-    entrypoint: ["sh", "-c", "mkdir -p /data/redis && exec \"$$@\"", "--"]
+    # A password for every client (keys/redis.pass, made once): app and bot read it from /keys.
+    entrypoint: ["sh", "-c", "mkdir -p /data/redis /keys && if [ ! -s /keys/redis.pass ]; then (umask 027 && head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \\n' > /keys/redis.pass) && chgrp 1000 /keys/redis.pass 2>/dev/null; fi; exec \"$$@\" --requirepass \"$$(cat /keys/redis.pass)\"", "--"]
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a \"$$(cat /keys/redis.pass)\" --no-auth-warning ping | grep -q PONG"]
       interval: 5s
       timeout: 3s
       retries: 10

@@ -26,6 +26,7 @@
   {{template "registration_settings" .Registration}}
 {{else if eq .Section "security_policies"}}
   {{template "security_policies" .Security}}
+  {{template "recovery_box" .Recovery}}
 {{else if eq .Section "email"}}
   {{template "email_settings" .}}
 {{else if eq .Section "api_secrets"}}
@@ -820,6 +821,30 @@ docker compose up -d --build</pre>
   <p class="hint">{{t "update.hint"}}</p>
   <p class="hint">🛟 {{t "update.safety"}}</p>
   {{end}}
+</section>
+{{end}}
+
+{{define "recovery_box_fragment"}}{{template "recovery_box" .Data}}{{end}}
+
+{{/* Recovery key (internal/web/recovery.go): gets the admin account back on the server's command line. */}}
+{{define "recovery_box"}}
+<section class="section recovery-box" id="recovery-box">
+  <header class="section-head"><h3>🛟 {{t "recovery.title"}}</h3></header>
+  <div id="recovery-error"></div>
+  <p class="muted">{{t "recovery.intro"}}</p>
+  {{with .NewKey}}
+  <div class="alert alert-warning recovery-new">
+    <strong>{{t "recovery.shown_once"}}</strong>
+    <div class="copy-field copy-field-secret"><code class="mono">{{.}}</code><button type="button" class="btn btn-sm" data-copy="{{.}}" data-copy-done="{{t "module_page.webhooks.copied"}}">{{t "module_page.webhooks.copy"}}</button></div>
+    <p class="hint">{{t "recovery.store_hint"}}</p>
+  </div>
+  {{end}}
+  <p class="hint">{{if .Key.Set}}✅ {{t "recovery.set" "date" .CreatedAt}}{{else}}⚠️ {{t "recovery.none"}}{{end}}</p>
+  <pre class="update-cmd">docker compose exec app start-app recover-admin &lt;RECOVERY-KEY&gt; [username]</pre>
+  <div class="update-actions">
+    <button type="button" class="btn {{if not .Key.Set}}btn-primary{{end}}" hx-post="/admin/recovery-key" hx-target="#recovery-box" hx-swap="outerHTML"
+      {{if .Key.Set}}hx-confirm="{{t "recovery.replace_confirm"}}"{{end}} hx-disabled-elt="this">{{if .Key.Set}}{{t "recovery.replace"}}{{else}}{{t "recovery.create"}}{{end}}</button>
+  </div>
 </section>
 {{end}}
 

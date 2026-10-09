@@ -32,6 +32,12 @@ final class SecretBox
             return new self(self::decodeKey($fromEnv));
         }
         $file = rtrim($dataDir ?? (getenv('DATA_DIR') ?: '/data'), '/') . '/secret.key';
+        // The key lives in KEYS_DIR (its own volume, not next to the database);
+        // an old install may still have it in the data folder.
+        $keys = getenv('KEYS_DIR');
+        if ($dataDir === null && is_string($keys) && $keys !== '' && (is_file(rtrim($keys, '/') . '/secret.key') || !is_file($file))) {
+            $file = rtrim($keys, '/') . '/secret.key';
+        }
         if (!is_file($file)) {
             self::createKeyFile($file);
         }

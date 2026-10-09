@@ -33,7 +33,8 @@ final class RedisConnect
         $redis->setOption(\Redis::OPT_READ_TIMEOUT, $readTimeout > 0 ? $readTimeout : $timeout);
         if (isset($parts['pass'])) {
             $pass = rawurldecode($parts['pass']);
-            $redis->auth(isset($parts['user']) ? [rawurldecode($parts['user']), $pass] : $pass);
+            // redis://:pass@host has an empty user: password only (else AUTH "" pass fails).
+            $redis->auth(isset($parts['user']) && $parts['user'] !== '' ? [rawurldecode($parts['user']), $pass] : $pass);
         }
         $db = (int) ltrim($parts['path'] ?? '', '/');
         if ($db > 0) {

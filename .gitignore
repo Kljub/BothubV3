@@ -1,5 +1,6 @@
 # Runtime data (SQLite, Redis AOF, plugins, uploads, logs)
 /data/
+/keys/
 
 # Local environment
 .env

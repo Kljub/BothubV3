@@ -42,6 +42,7 @@ final class InternalRouter
         private readonly ?CardStore $cards = null,
         private readonly ?TwitchAuthStore $twitch = null,
         private readonly ?RunStore $runs = null,
+        private readonly ?RecoveryKey $recovery = null,
     ) {
     }
 
@@ -151,6 +152,14 @@ final class InternalRouter
                 return match ($method) {
                     'GET' => [200, ['value' => $this->settings->get($m[1])]],
                     'PUT' => [204, $this->settings->put($m[1], $body)],
+                    default => throw new ApiError(405, 'error.method_not_allowed'),
+                };
+            }
+            // Recovery key (Admin → Security): GET status, POST a new key (shown once).
+            if ($this->recovery !== null && $path === '/internal/admin/recovery-key') {
+                return match ($method) {
+                    'GET' => [200, $this->recovery->status()],
+                    'POST' => [201, ['key' => $this->recovery->create($this->actor)]],
                     default => throw new ApiError(405, 'error.method_not_allowed'),
                 };
             }

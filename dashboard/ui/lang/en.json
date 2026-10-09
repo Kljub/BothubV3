@@ -5780,5 +5780,16 @@
   "modset.auditlog.threadCreate": "Thread created",
   "modset.auditlog.threadDelete": "Thread deleted",
   "update.rolled_back": "The new version did not start: rolled back to the previous version and its database backup. See the log below.",
-  "update.safety": "Before an update the database is backed up to data/backups (the last 3 are kept). If the new version does not come up healthy, BotHub goes back to the previous version and that backup on its own."
+  "update.safety": "Before an update the database is backed up to data/backups (the last 3 are kept). If the new version does not come up healthy, BotHub goes back to the previous version and that backup on its own.",
+  "recovery.title": "Recovery key",
+  "recovery.intro": "If the admin account is lost (password, 2FA and passkeys), the owner of the server gets it back with this key on the command line: the account gets a new password, its 2FA, passkeys and sessions are removed. The key works once and gives no access to bots, tokens or other data.",
+  "recovery.shown_once": "Your recovery key: it is shown only now.",
+  "recovery.store_hint": "Keep it offline (password manager, paper). BotHub stores only a hash of it.",
+  "recovery.set": "A recovery key is set up (created {date}).",
+  "recovery.none": "No recovery key yet: without one a lost admin account cannot be got back.",
+  "recovery.create": "Create recovery key",
+  "recovery.replace": "Create a new key",
+  "recovery.replace_confirm": "Create a new recovery key? The old one stops working.",
+  "log.server.recovery_key_created": "Recovery key created by {by}",
+  "log.server.admin_recovered": "Admin account {user} recovered with the recovery key"
 }

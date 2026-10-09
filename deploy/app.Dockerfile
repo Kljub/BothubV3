@@ -28,7 +28,10 @@ COPY --from=go /out/bothub-dashboard /out/bothub-gateway /usr/local/bin/
 COPY deploy/start-app.sh /usr/local/bin/start-app
 RUN chmod +x /app/bin/entrypoint.sh /usr/local/bin/start-app
 
+# The API listens on localhost only: the gateway in this container is its only client.
 ENV SERVER_NAME=":9000" \
+    CADDY_SERVER_EXTRA_DIRECTIVES="bind 127.0.0.1" \
+    KEYS_DIR="/keys" \
     SERVER_ROOT="/app/public" \
     SHARED_DIR="/shared"
 EXPOSE 8080

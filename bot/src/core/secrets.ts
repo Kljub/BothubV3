@@ -1,7 +1,8 @@
 // Bot tokens are stored encrypted (context/decisions.md, "Secrets"):
 // AES-256-GCM, blob = nonce (12 bytes) || ciphertext || tag (16 bytes).
-// Key: ENV BOTHUB_SECRET_KEY (base64, 32 bytes) or /data/secret.key (the
-// API creates it on first start). Only the API and the bot ever see a token
+// Key: ENV BOTHUB_SECRET_KEY (base64, 32 bytes) or KEYS_DIR/secret.key (the
+// API creates it on first start; /keys, its own volume, read-only for the
+// bot). Old installs: /data/secret.key. Only the API and the bot ever see a token
 // in clear text; it is never logged.
 
 import { createDecipheriv, createCipheriv, randomBytes } from 'node:crypto';
@@ -14,8 +15,9 @@ const TAG = 16;
 export function loadSecretKey(dataDir: string, env = process.env): Buffer {
   const fromEnv = env.BOTHUB_SECRET_KEY;
   if (fromEnv) return checkKey(Buffer.from(fromEnv, 'base64'));
-  const file = join(dataDir, 'secret.key');
-  if (!existsSync(file)) throw new Error('no secret key: set BOTHUB_SECRET_KEY or start the API once to create /data/secret.key');
+  const keys = env.KEYS_DIR ? join(env.KEYS_DIR, 'secret.key') : '';
+  const file = keys && existsSync(keys) ? keys : join(dataDir, 'secret.key');
+  if (!existsSync(file)) throw new Error('no secret key: set BOTHUB_SECRET_KEY or start the API once to create /keys/secret.key');
   const raw = readFileSync(file);
   // The file holds 32 raw bytes or their base64 text.
   return checkKey(raw.length === 32 ? raw : Buffer.from(raw.toString('utf8').trim(), 'base64'));

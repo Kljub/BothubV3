@@ -5780,5 +5780,16 @@
   "modset.auditlog.threadCreate": "Thread erstellt",
   "modset.auditlog.threadDelete": "Thread gelöscht",
   "update.rolled_back": "Die neue Version startete nicht: zurück zur vorigen Version und ihrem Datenbank-Backup. Siehe Log unten.",
-  "update.safety": "Vor einem Update wird die Datenbank nach data/backups gesichert (die letzten 3 bleiben). Startet die neue Version nicht gesund, geht BotHub selbst zur vorigen Version und diesem Backup zurück."
+  "update.safety": "Vor einem Update wird die Datenbank nach data/backups gesichert (die letzten 3 bleiben). Startet die neue Version nicht gesund, geht BotHub selbst zur vorigen Version und diesem Backup zurück.",
+  "recovery.title": "Wiederherstellungsschlüssel",
+  "recovery.intro": "Geht der Admin-Account verloren (Passwort, 2FA und Passkeys), holt ihn der Betreiber des Servers mit diesem Schlüssel über die Kommandozeile zurück: der Account bekommt ein neues Passwort, 2FA, Passkeys und Sitzungen werden entfernt. Der Schlüssel funktioniert einmal und gibt keinen Zugriff auf Bots, Tokens oder andere Daten.",
+  "recovery.shown_once": "Dein Wiederherstellungsschlüssel: er wird nur jetzt angezeigt.",
+  "recovery.store_hint": "Bewahre ihn offline auf (Passwortmanager, Papier). BotHub speichert nur einen Hash davon.",
+  "recovery.set": "Ein Wiederherstellungsschlüssel ist eingerichtet (erstellt {date}).",
+  "recovery.none": "Noch kein Wiederherstellungsschlüssel: ohne ihn lässt sich ein verlorener Admin-Account nicht zurückholen.",
+  "recovery.create": "Schlüssel erstellen",
+  "recovery.replace": "Neuen Schlüssel erstellen",
+  "recovery.replace_confirm": "Neuen Wiederherstellungsschlüssel erstellen? Der alte funktioniert dann nicht mehr.",
+  "log.server.recovery_key_created": "Wiederherstellungsschlüssel erstellt von {by}",
+  "log.server.admin_recovered": "Admin-Account {user} mit dem Wiederherstellungsschlüssel zurückgeholt"
 }

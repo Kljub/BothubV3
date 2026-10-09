@@ -259,6 +259,9 @@ func main() {
 	mux.HandleFunc("POST /api/v1/auth/register", s.audited("registered", "", nil, s.register))
 	mux.HandleFunc("GET /api/v1/admin/registration", s.auth(s.getRegistration))
 	mux.HandleFunc("GET /api/v1/admin/security", s.auth(s.getSecurity))
+	// Recovery key: status, a new key (shown once); stored hashed by the API.
+	mux.HandleFunc("GET /api/v1/admin/recovery-key", s.auth(s.adminViaPHP(adminPHPRequired)))
+	mux.HandleFunc("POST /api/v1/admin/recovery-key", s.auth(s.adminViaPHP(adminPHPRequired)))
 	mux.HandleFunc("PUT /api/v1/admin/security", s.auth(s.putSecurity))
 	mux.HandleFunc("PUT /api/v1/admin/registration", s.auth(s.putRegistration))
 	mux.HandleFunc("POST /api/v1/auth/login", s.audited("login", "login_failed", []string{"error.auth.invalid_credentials"}, s.login))
