@@ -13,7 +13,7 @@ import (
 // "[service n/m]", then the switch and restart of the services).
 
 type updateProgress struct {
-	Phase           string  `json:"phase"` // download, install, done, failed
+	Phase           string  `json:"phase"` // download, install, done, failed, rolledback
 	DownloadPercent int     `json:"downloadPercent"`
 	Received        string  `json:"received,omitempty"` // "12.40 MiB"
 	Speed           string  `json:"speed,omitempty"`    // "1.20 MiB/s"
@@ -40,7 +40,7 @@ func parseUpdateProgress(log string, started, now time.Time, status string, exit
 	receiving, deltas := 0, 0
 	pulled := false
 	steps := map[string][2]int{}
-	switching, restarting, done := false, false, false
+	switching, restarting, checking, done, rolledBack := false, false, false, false, false
 	for _, raw := range lines {
 		line := strings.TrimSpace(raw)
 		if m := gitProgress.FindStringSubmatch(line); m != nil {
@@ -82,6 +82,13 @@ func parseUpdateProgress(log string, started, now time.Time, status string, exit
 			case strings.HasPrefix(m[1], "restarting"), strings.HasPrefix(m[1], "stopping"):
 				restarting = true
 				p.Step = m[1]
+			case strings.HasPrefix(m[1], "checking"):
+				checking = true
+				p.Step = m[1]
+			case strings.HasPrefix(m[1], "backing up"), strings.HasPrefix(m[1], "rolling back"), strings.HasPrefix(m[1], "cleaning up"):
+				p.Step = m[1]
+			case m[1] == "rolled back":
+				rolledBack = true
 			case m[1] == "done":
 				done = true
 			}
@@ -109,6 +116,9 @@ func parseUpdateProgress(log string, started, now time.Time, status string, exit
 	if restarting {
 		install = max(install, 90)
 	}
+	if checking {
+		install = max(install, 95)
+	}
 	if done {
 		install = 100
 	}
@@ -120,6 +130,8 @@ func parseUpdateProgress(log string, started, now time.Time, status string, exit
 	if finished {
 		if exitCode == 0 {
 			p.Phase, p.DownloadPercent, p.InstallPercent = "done", 100, 100
+		} else if rolledBack {
+			p.Phase = "rolledback"
 		} else {
 			p.Phase = "failed"
 		}

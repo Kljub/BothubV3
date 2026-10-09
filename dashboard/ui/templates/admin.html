@@ -787,8 +787,8 @@ docker compose up -d --build</pre>
     {{end}}
   {{end}}
   {{with .Info.Run}}
-  {{with .Progress}}{{if or $.Running (eq .Phase "done") (eq .Phase "failed")}}
-  <div class="update-progress update-progress-{{.Phase}}" role="group" aria-label="{{t "update.progress"}}">
+  {{with .Progress}}{{if or $.Running (eq .Phase "done") (eq .Phase "failed") (eq .Phase "rolledback")}}
+  <div class="update-progress update-progress-{{if eq .Phase "rolledback"}}failed{{else}}{{.Phase}}{{end}}" role="group" aria-label="{{t "update.progress"}}">
     <div class="update-progress-row">
       <span>{{if eq .DownloadPercent 100}}{{t "update.downloaded"}}{{else}}{{t "update.downloading"}} …{{end}}</span>
       <span class="update-progress-val">{{with .Received}}<strong>{{.}}</strong>{{end}}{{with .Speed}} · {{.}}{{end}} <span class="muted">{{.DownloadPercent}} %</span> ⬇</span>
@@ -800,7 +800,7 @@ docker compose up -d --build</pre>
     </div>
     <progress class="update-bar update-bar-install" max="100" value="{{.InstallPercent}}">{{.InstallPercent}} %</progress>
     <div class="update-progress-foot">
-      <span class="muted">{{if $.Eta}}{{t "update.eta" "time" $.Eta}}{{else if eq .Phase "done"}}{{t "update.done"}}{{else if eq .Phase "failed"}}{{t "update.failed_short"}}{{else}}{{t "update.eta_unknown"}}{{end}}</span>
+      <span class="muted">{{if $.Eta}}{{t "update.eta" "time" $.Eta}}{{else if eq .Phase "done"}}{{t "update.done"}}{{else if eq .Phase "rolledback"}}{{t "update.rolled_back"}}{{else if eq .Phase "failed"}}{{t "update.failed_short"}}{{else}}{{t "update.eta_unknown"}}{{end}}</span>
       {{with .Step}}<span class="mono muted update-step">{{.}}</span>{{end}}
     </div>
   </div>
@@ -818,6 +818,7 @@ docker compose up -d --build</pre>
     {{end}}
   </div>
   <p class="hint">{{t "update.hint"}}</p>
+  <p class="hint">🛟 {{t "update.safety"}}</p>
   {{end}}
 </section>
 {{end}}

@@ -291,7 +291,7 @@ func (s *store) startUpdate(ctx context.Context, actor string) error {
 	if code, err := s.updater.docker(ctx, http.MethodGet, "/containers/"+updaterName+"/json", nil, &info); err == nil && code == 200 && info.State.Running {
 		return errUpdateRunning
 	}
-	if _, _, err := s.updater.run(ctx, updaterName, `echo "Update by `+strings.ReplaceAll(actor, `"`, "")+` at $(date -u +%FT%TZ)"; echo "from $SRC ($REF)"; git pull --ff-only --progress "$SRC" "$REF" && if [ -f deploy/update.sh ]; then sh deploy/update.sh; else echo "--- rebuilding ---" && docker compose --progress plain build && echo "--- restarting ---" && docker compose up -d --remove-orphans && echo "--- done ---"; fi`, false); err != nil {
+	if _, _, err := s.updater.run(ctx, updaterName, `echo "Update by `+strings.ReplaceAll(actor, `"`, "")+` at $(date -u +%FT%TZ)"; echo "from $SRC ($REF)"; OLD_COMMIT=$(git rev-parse HEAD); export OLD_COMMIT; git pull --ff-only --progress "$SRC" "$REF" && if [ -f deploy/update.sh ]; then sh deploy/update.sh; else echo "--- rebuilding ---" && docker compose --progress plain build && echo "--- restarting ---" && docker compose up -d --remove-orphans && echo "--- done ---"; fi`, false); err != nil {
 		return err
 	}
 	s.mu.Lock()

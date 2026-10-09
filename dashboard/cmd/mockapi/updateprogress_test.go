@@ -24,6 +24,12 @@ func TestUpdateProgress(t *testing.T) {
 	if p.Phase != "done" || p.Percent != 100 {
 		t.Fatalf("done: %+v", p)
 	}
+	if p = parseUpdateProgress(log+"--- checking the new version ---\n", start, start.Add(92*time.Second), "running", 0); p.InstallPercent != 95 {
+		t.Fatalf("checking: %+v", p)
+	}
+	if p = parseUpdateProgress(log+"--- rolling back to abc1234 ---\n--- rolled back ---\n", start, start, "exited", 1); p.Phase != "rolledback" {
+		t.Fatalf("rolled back: %+v", p)
+	}
 	if p = parseUpdateProgress(log, start, start, "exited", 1); p.Phase != "failed" {
 		t.Fatalf("failed: %+v", p)
 	}

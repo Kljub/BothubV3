@@ -5778,5 +5778,7 @@
   "modset.auditlog.voiceMove": "Switched voice channel",
   "modset.auditlog.serverUpdate": "Server changed (name, icon, owner, verification)",
   "modset.auditlog.threadCreate": "Thread created",
-  "modset.auditlog.threadDelete": "Thread deleted"
+  "modset.auditlog.threadDelete": "Thread deleted",
+  "update.rolled_back": "The new version did not start: rolled back to the previous version and its database backup. See the log below.",
+  "update.safety": "Before an update the database is backed up to data/backups (the last 3 are kept). If the new version does not come up healthy, BotHub goes back to the previous version and that backup on its own."
 }

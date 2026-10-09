@@ -1,14 +1,19 @@
 #!/bin/sh
 # Update without offline bots (Admin → Server settings → Updates; run by the
-# updater helper in the repository after "git pull").
+# updater helper in the repository after "git pull"; OLD_COMMIT is the
+# commit before the pull).
 #
-#  1. Build the new images while everything runs.
-#  2. Start a second BotCore from the new image ("handover" role). It logs
+#  1. Back up the database (VACUUM INTO data/backups/pre-update-<time>.sqlite,
+#     the last 3 are kept).
+#  2. Build the new images while everything runs.
+#  3. Start a second BotCore from the new image ("handover" role). It logs
 #     the same bots in; while the flag bothub:overlap is set, every Discord
 #     event is handled by only one core (Redis claim, bot/src/core/handover.ts).
-#  3. Restart the services (the bot service gets the new image). Meanwhile
+#  4. Restart the services (the bot service gets the new image). Meanwhile
 #     the second core answers.
-#  4. When the new bot service runs its bots, stop the second core.
+#  5. Check: the dashboard reports healthy and the new BotCore runs its bots.
+#     If not, roll back: the old commit, the database backup, rebuild.
+#  6. When everything runs, stop the second core and remove old images.
 #
 # If the second core does not come up, the update goes on as before (the
 # bots are offline for the restart).
@@ -27,12 +32,56 @@ wait_key() {
   done
   return 1
 }
+# wait_healthy <service> <seconds>: until Docker reports the service healthy
+wait_healthy() {
+  i=0
+  while [ "$i" -lt "$2" ]; do
+    id=$(docker compose ps -q "$1" 2>/dev/null | head -n 1)
+    if [ -n "$id" ]; then
+      h=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$id" 2>/dev/null)
+      [ "$h" = "healthy" ] || [ "$h" = "running" ] && return 0
+    fi
+    sleep 3
+    i=$((i + 3))
+  done
+  return 1
+}
+cleanup_handover() {
+  docker stop -t 30 bothub-bot-handover >/dev/null 2>&1
+  docker rm -f bothub-bot-handover >/dev/null 2>&1
+  rc DEL bothub:overlap >/dev/null
+}
 
+# --- 1. database backup (the app container has PHP and SQLite) ---
+backup=""
+if docker compose ps --status running --services 2>/dev/null | grep -qx app; then
+  step "backing up the database"
+  name="pre-update-$(date -u +%Y%m%d-%H%M%S).sqlite"
+  if docker compose exec -T app php -r '
+    $dir = "/data/backups";
+    if (!is_dir($dir)) mkdir($dir, 0700, true);
+    $pdo = new PDO("sqlite:/data/bothub.sqlite");
+    $pdo->exec("VACUUM INTO " . $pdo->quote($dir . "/" . $argv[1]));
+    $old = glob($dir . "/pre-update-*.sqlite");
+    sort($old);
+    foreach (array_slice($old, 0, max(0, count($old) - 3)) as $f) unlink($f);
+  ' "$name"; then
+    backup="$name"
+    echo "backup: data/backups/$name"
+  else
+    step "the backup failed: a failed update can roll back the code, not the data"
+  fi
+fi
+
+# --- 2. build ---
 step building
 docker compose --progress plain build || exit 1
 
+# --- 3. second BotCore ---
 handover=0
+bot_running=0
 if docker compose ps --status running --services 2>/dev/null | grep -qx bot; then
+  bot_running=1
   step "starting a second BotCore for the switch"
   rc SET bothub:overlap 1 EX 900 >/dev/null
   docker rm -f bothub-bot-handover >/dev/null 2>&1
@@ -44,17 +93,49 @@ if docker compose ps --status running --services 2>/dev/null | grep -qx bot; the
   fi
 fi
 
+# --- 4. restart ---
 old=$(rc GET bothub:core:ready:main | tr -d '\r')
 step restarting
 docker compose up -d --remove-orphans
 status=$?
 
-if [ "$handover" = 1 ]; then
-  wait_key bothub:core:ready:main 240 "$old" || step "the new BotCore is slow; stopping the second one anyway"
-  step "stopping the second BotCore"
-  docker stop -t 30 bothub-bot-handover >/dev/null 2>&1
+# --- 5. check ---
+step "checking the new version"
+ok=1
+[ "$status" = 0 ] || ok=0
+if [ "$ok" = 1 ] && ! wait_healthy app 180; then
+  echo "the dashboard did not become healthy"
+  ok=0
 fi
-docker rm -f bothub-bot-handover >/dev/null 2>&1
-rc DEL bothub:overlap >/dev/null
+if [ "$ok" = 1 ] && [ "$bot_running" = 1 ] && ! wait_key bothub:core:ready:main 240 "$old"; then
+  echo "the new BotCore did not start its bots"
+  ok=0
+fi
+
+if [ "$ok" = 0 ] && [ -n "${OLD_COMMIT:-}" ]; then
+  step "rolling back to $(echo "$OLD_COMMIT" | cut -c1-7)"
+  docker compose logs --tail 40 app bot 2>/dev/null | tail -n 40
+  git reset -q --hard "$OLD_COMMIT"
+  if [ -n "$backup" ]; then
+    docker compose stop app bot >/dev/null 2>&1
+    docker compose run --rm --no-deps --entrypoint sh app -c "cp /data/backups/$backup /data/bothub.sqlite && rm -f /data/bothub.sqlite-wal /data/bothub.sqlite-shm" \
+      && echo "database restored from data/backups/$backup"
+  fi
+  docker compose --progress plain build && docker compose up -d --remove-orphans
+  wait_healthy app 180 || echo "the old version did not report healthy either: check the containers by hand"
+  cleanup_handover
+  step "rolled back"
+  exit 1
+fi
+
+# --- 6. done ---
+if [ "$handover" = 1 ]; then
+  step "stopping the second BotCore"
+fi
+cleanup_handover
+if [ "$ok" = 1 ]; then
+  step "cleaning up old images"
+  docker image prune -f >/dev/null 2>&1
+fi
 step done
-exit "$status"
+[ "$ok" = 1 ] && exit 0 || exit 1
