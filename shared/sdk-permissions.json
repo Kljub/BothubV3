@@ -626,7 +626,9 @@
       "events": [
         "guildMemberAdd",
         "guildMemberRemove",
-        "guildMemberUpdate"
+        "guildMemberUpdate",
+        "guildBanAdd",
+        "guildBanRemove"
       ]
     },
     {

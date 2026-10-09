@@ -127,6 +127,8 @@ const PLUGIN_EVENTS: Record<string, string> = {
   member_join: 'guildMemberAdd',
   member_leave: 'guildMemberRemove',
   member_update: 'guildMemberUpdate',
+  member_ban: 'guildBanAdd',
+  member_unban: 'guildBanRemove',
   channel_create: 'channelCreate',
   channel_delete: 'channelDelete',
   channel_update: 'channelUpdate',

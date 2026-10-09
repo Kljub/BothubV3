@@ -6,7 +6,7 @@ Call a function as `ctx.<area>.<name>(...)`. A call needs its permission declare
 
 **Status:** 145 of 234 calls available.
 
-Events (`discord.events`, `bothub.events`): messageCreate, messageUpdate, messageDelete, reactionAdd, reactionRemove; guildMemberAdd, guildMemberRemove, guildMemberUpdate; guildCreate, guildDelete, channelCreate, channelDelete, channelUpdate, roleCreate, roleDelete, roleUpdate; voiceStateUpdate; interactionCreate; bot.ready, bot.start, bot.stop, bot.restart, bot.shutdown, plugin.load, plugin.enable, plugin.disable, plugin.unload.
+Events (`discord.events`, `bothub.events`): messageCreate, messageUpdate, messageDelete, reactionAdd, reactionRemove; guildMemberAdd, guildMemberRemove, guildMemberUpdate, guildBanAdd, guildBanRemove; guildCreate, guildDelete, channelCreate, channelDelete, channelUpdate, roleCreate, roleDelete, roleUpdate; voiceStateUpdate; interactionCreate; bot.ready, bot.start, bot.stop, bot.restart, bot.shutdown, plugin.load, plugin.enable, plugin.disable, plugin.unload.
 
 ## plugin
 
@@ -366,8 +366,6 @@ Events (`discord.events`, `bothub.events`): messageCreate, messageUpdate, messag
 | `module.isEnabled()` | modules.read or modules.<module>.read | medium | ✅ |
 | `module.getConfig()` | modules.read or modules.<module>.read | medium | ✅ |
 | `module.list()` | modules.read or modules.<module>.read | medium | ✅ |
-
-`module.get()` and `module.list()` answer `{ id, name, category, enabled, config }`; `category` is the module group: `utility`, `security`, `messages`, `fun`, `ticket`, `social`, `community`, `customization`, `statistics`. Plugins use the same keys as `category` in `bothub.json` (App Store group).
 
 ## plugins
 

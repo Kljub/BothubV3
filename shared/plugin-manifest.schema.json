@@ -153,6 +153,8 @@
           "guildMemberAdd",
           "guildMemberRemove",
           "guildMemberUpdate",
+          "guildBanAdd",
+          "guildBanRemove",
           "channelCreate",
           "channelDelete",
           "channelUpdate",
