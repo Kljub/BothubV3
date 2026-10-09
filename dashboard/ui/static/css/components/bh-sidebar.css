@@ -129,3 +129,4 @@
 .nav-result-plugin { --group: #a855f7; }
 .nav-result-icon { display: grid; place-items: center; flex: none; width: 24px; height: 24px; font-size: 13px; border-radius: 6px; background: color-mix(in srgb, var(--group, var(--accent)) 22%, transparent); border: 1px solid color-mix(in srgb, var(--group, var(--accent)) 45%, transparent); }
 .nav-result-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nav-result-path { font-weight: 500; opacity: .75; }

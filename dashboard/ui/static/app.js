@@ -80,7 +80,15 @@ document.addEventListener('input', async (event) => {
     return;
   }
   const words = query.split(/\s+/);
-  const hits = (await loadNavIndex()).filter((h) => words.every((w) => `${h.name} ${h.desc || ''}`.toLowerCase().includes(w))).slice(0, 12);
+  // A command matches by its name and module ("mod ban"); modules and
+  // plugins also by their description. Name hits come first.
+  const text = (h) => (h.kind === 'command' ? `${h.name} ${h.path || ''}` : `${h.name} ${h.desc || ''}`).toLowerCase();
+  const hits = (await loadNavIndex())
+    .filter((h) => words.every((w) => text(h).includes(w)))
+    .map((h, i) => ({ h, i, rank: h.name.toLowerCase().replace(/^\//, '').startsWith(words[0]) ? 0 : h.name.toLowerCase().includes(words[0]) ? 1 : 2 }))
+    .sort((a, b) => a.rank - b.rank || a.i - b.i)
+    .map((x) => x.h)
+    .slice(0, 15);
   if (input.value.trim().toLowerCase() !== query) return; // typed on meanwhile
   if (!box) {
     box = document.createElement('div');
@@ -98,7 +106,14 @@ document.addEventListener('input', async (event) => {
     icon.textContent = h.icon || '•';
     const name = document.createElement('span');
     name.className = 'nav-result-name';
-    name.textContent = h.name;
+    if (h.path) {
+      // Command: "Module → /command".
+      const path = document.createElement('span');
+      path.className = 'nav-result-path';
+      path.textContent = `${h.path} → `;
+      name.append(path);
+    }
+    name.append(h.name);
     a.append(icon, name);
     box.append(a);
   }
