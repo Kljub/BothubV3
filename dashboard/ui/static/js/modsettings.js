@@ -367,3 +367,30 @@
     if (status && !html) status.textContent = '';
   });
 })();
+
+// Emoji fields ([data-emoji-pick] next to the input): the emoji picker of the
+// dashboard. data-emoji-pick="1" replaces the value, a larger number (or
+// none) adds up to that many emojis. The input event lets the form save.
+document.addEventListener('click', (event) => {
+  const btn = event.target.closest('[data-emoji-pick]');
+  if (!btn || !window.BotHubEmojiPicker) return;
+  event.preventDefault();
+  const wrap = btn.closest('.bemoji-field');
+  const input = wrap?.querySelector('input');
+  if (!input) return;
+  const max = Number(btn.dataset.emojiPick) || 0;
+  const set = (v) => {
+    input.value = v;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+  window.BotHubEmojiPicker.open(wrap, {
+    multi: max !== 1,
+    onPick: (v) => {
+      if (max === 1 || !v) return set(v);
+      const list = input.value.split(/[\s,]+/).filter(Boolean);
+      if (max && list.length >= max) return;
+      set([...list, v].join(' '));
+    },
+  });
+});

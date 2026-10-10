@@ -109,7 +109,7 @@
 {{else if eq .Type "text"}}
   <label class="field">{{t .Label}}
     <span class="modset-var-wrap">
-      {{if .Multiline}}<textarea name="{{.Name}}" rows="3" {{with .Max}}maxlength="{{.}}"{{end}}>{{.Text}}</textarea>{{else}}<input name="{{.Name}}" value="{{.Text}}" {{with .Max}}maxlength="{{.}}"{{end}} {{with .Pattern}}pattern="{{.}}"{{end}}>{{end}}
+      {{if .Multiline}}<textarea name="{{.Name}}" rows="3" {{with .Max}}maxlength="{{.}}"{{end}}>{{.Text}}</textarea>{{else if .Emoji}}<span class="bemoji-field"><input name="{{.Name}}" value="{{.Text}}" {{with .Max}}maxlength="{{.}}"{{end}}><button type="button" class="btn btn-sm bemoji-btn" data-emoji-pick="1" title="{{t "builder.emoji.pick"}}" aria-label="{{t "builder.emoji.pick"}}">{{template "icon_smile"}}</button></span>{{else}}<input name="{{.Name}}" value="{{.Text}}" {{with .Max}}maxlength="{{.}}"{{end}} {{with .Pattern}}pattern="{{.}}"{{end}}>{{end}}
       {{if .Vars}}{{template "modset_var_tool"}}{{end}}
     </span>
     {{if not .Vars}}<span class="hint">{{t "modset.placeholders_hint"}}</span>{{end}}
@@ -118,7 +118,8 @@
 {{else if eq .Type "words"}}
   <label class="field">{{t .Label}}<textarea name="{{.Name}}" rows="3">{{.Text}}</textarea><span class="hint">{{t "modset.words_hint"}}</span></label>
 {{else if eq .Type "emojis"}}
-  <label class="field">{{t .Label}}<input name="{{.Name}}" value="{{.Text}}" placeholder="👍 🎉 <:name:123…>"><span class="hint">{{t "modset.emojis_hint"}}</span></label>
+  {{/* The emoji picker (emoji-picker.js): max 1 replaces, more add up to max. */}}
+  <label class="field">{{t .Label}}<span class="bemoji-field"><input name="{{.Name}}" value="{{.Text}}" placeholder="👍 🎉 <:name:123…>"><button type="button" class="btn btn-sm bemoji-btn" data-emoji-pick="{{with .Max}}{{.}}{{end}}" title="{{t "builder.emoji.pick"}}" aria-label="{{t "builder.emoji.pick"}}">{{template "icon_smile"}}</button></span><span class="hint">{{t "modset.emojis_hint"}}</span></label>
 {{else if or (eq .Type "channel") (eq .Type "channels")}}
   <label class="field">{{t .Label}}
     <select name="{{.Name}}" data-pick="channel" data-channel-types="{{join .ChannelTypes ","}}" {{if eq .Type "channels"}}multiple size="6"{{end}}>

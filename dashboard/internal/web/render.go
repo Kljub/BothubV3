@@ -235,6 +235,13 @@ func inviteURL(appID *string) string {
 var clientKeys = []string{
 	"error.passkey.failed", "error.passkey.expired", "error.passkey.cancelled",
 	"error.passkey.name", "error.csrf.invalid", "error.auth.required",
+	// Emoji picker (static/js/emoji-picker.js).
+	"builder.emoji.pick", "builder.emoji.clear", "builder.emoji.none", "builder.emoji.no_servers", "builder.emoji.no_bot_emojis",
+	"builder.emoji.tab.standard", "builder.emoji.tab.server", "builder.emoji.tab.bot",
+	"builder.emoji.cat.smileys", "builder.emoji.cat.people", "builder.emoji.cat.nature", "builder.emoji.cat.food",
+	"builder.emoji.cat.activities", "builder.emoji.cat.travel", "builder.emoji.cat.objects", "builder.emoji.cat.symbols", "builder.emoji.cat.flags",
+	"builder.emoji.search", "builder.emoji.recent", "builder.emoji.done", "builder.emoji.tone", "builder.emoji.results", "builder.emoji.no_results",
+	"builder.pick.loading", "builder.pick.load_failed",
 }
 
 // clientI18n renders clientKeys as JSON for <script type="application/json">.

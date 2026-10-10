@@ -37,6 +37,8 @@ type settingsField struct {
 	Pattern      string              `json:"pattern"`
 	Hint         bool                `json:"hint"`
 	Required     bool                `json:"required"`
+	// Emoji: a text field that holds one emoji (gets the emoji picker).
+	Emoji bool `json:"emoji"`
 	// Drop: a list whose entries can be made by dropping image files on it;
 	// File is the image field of an entry, Name the text field that gets the
 	// file name (without extension).

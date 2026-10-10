@@ -13,6 +13,7 @@
 <script src="/static/js/permissions.js?v={{.AssetVersion}}" defer></script>
 <script src="/static/js/modsettings.js?v={{.AssetVersion}}" defer></script>
 <script src="/static/js/var-picker.js?v={{.AssetVersion}}" defer></script>
+<script src="/static/js/emoji-picker.js?v={{.AssetVersion}}" defer></script>
 <script src="/static/js/builder-message.js?v={{.AssetVersion}}" defer></script>
 <script src="/static/js/message-page.js?v={{.AssetVersion}}" defer></script>
 <script src="/static/js/tour.js?v={{.AssetVersion}}" defer></script>
@@ -38,6 +39,7 @@
       <details class="bot-switch">
         <summary>
           {{with .SelectedBot}}
+          <span hidden data-emoji-bot="{{.ID}}" data-name="{{.Name}}" data-avatar="{{with .AvatarURL}}{{.}}{{end}}"></span>
           {{template "avatar" .}}
           <span class="bot-switch-text">
             <span class="bot-switch-name">{{.Name}}</span>

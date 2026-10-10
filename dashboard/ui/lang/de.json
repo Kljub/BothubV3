@@ -5821,5 +5821,11 @@
   "error.emoji.upload_too_big": "Der Upload ist zu groß: höchstens 50 Bilder mit je 256 KB auf einmal.",
   "error.emoji.no_files": "Wähle mindestens ein Bild.",
   "builder.emoji.tab.bot": "Bot-Emojis",
-  "builder.emoji.no_bot_emojis": "Noch keine Bot-Emojis (Module → Emoji-Manager)."
+  "builder.emoji.no_bot_emojis": "Noch keine Bot-Emojis (Module → Emoji-Manager).",
+  "builder.emoji.search": "Suchen",
+  "builder.emoji.recent": "Häufig benutzt",
+  "builder.emoji.done": "Fertig",
+  "builder.emoji.tone": "Hautfarbe",
+  "builder.emoji.results": "Ergebnisse",
+  "builder.emoji.no_results": "Kein Emoji gefunden."
 }

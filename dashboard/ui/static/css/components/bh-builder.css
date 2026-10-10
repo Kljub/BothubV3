@@ -723,18 +723,32 @@
 .bemoji-field { position: relative; display: flex; gap: 6px; }
 .bemoji-field input { flex: 1; min-width: 0; }
 .bemoji-btn { flex: none; padding: 0 8px; }
-.bemoji-pop { position: absolute; top: calc(100% + 4px); right: 0; z-index: 30; display: flex; flex-direction: column; width: 320px; max-height: 340px; background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: 10px; box-shadow: 0 12px 30px rgb(0 0 0 / 0.45); }
+.bemoji-pop { position: absolute; top: calc(100% + 4px); right: 0; z-index: 40; display: flex; flex-direction: column; width: 360px; max-width: calc(100vw - 24px); height: 430px; background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: 10px; box-shadow: 0 12px 30px rgb(0 0 0 / 0.45); overflow: hidden; }
 .bemoji-pop.is-up { top: auto; bottom: calc(100% + 4px); }
-.bemoji-tabs { display: flex; gap: 4px; padding: 6px; border-bottom: 1px solid var(--border); }
-.bemoji-tab { padding: 4px 10px; font: inherit; font-size: 12px; font-weight: 600; color: var(--text-2); background: none; border: 0; border-radius: 6px; cursor: pointer; }
-.bemoji-tab:hover, .bemoji-tab.is-active { color: var(--text); background: color-mix(in srgb, var(--text) 8%, transparent); }
-.bemoji-clear { margin-left: auto; }
-.bemoji-body { padding: 6px 8px 8px; overflow-y: auto; }
-.bemoji-cat { margin: 6px 2px 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
-.bemoji-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; }
-.bemoji-item { display: grid; place-items: center; height: 32px; padding: 0; font-size: 20px; line-height: 1; background: none; border: 0; border-radius: 6px; cursor: pointer; }
-.bemoji-item:hover { background: color-mix(in srgb, var(--text) 10%, transparent); }
-.bemoji-item img { width: 24px; height: 24px; object-fit: contain; }
+/* Header: groups, then the servers (icons) and the bot (avatar). */
+.bemoji-nav { display: flex; gap: 2px; padding: 6px 6px 0; overflow-x: auto; scrollbar-width: thin; border-bottom: 1px solid var(--border); flex: none; }
+.bemoji-nav-btn { position: relative; display: grid; place-items: center; flex: none; width: 30px; height: 30px; padding: 0; font-size: 17px; line-height: 1; background: none; border: 0; border-bottom: 2px solid transparent; cursor: pointer; filter: grayscale(1); opacity: 0.6; }
+.bemoji-nav-btn:hover, .bemoji-nav-btn.is-active { filter: none; opacity: 1; }
+.bemoji-nav-btn.is-active { border-bottom-color: var(--accent); }
+.bemoji-nav-btn img { width: 22px; height: 22px; object-fit: cover; }
+.bemoji-nav-btn img.is-round { border-radius: 50%; }
+.bemoji-nav-initial { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; font-size: 11px; font-weight: 700; color: var(--text); background: var(--surface-3, var(--border)); }
+.bemoji-search { position: relative; display: flex; align-items: center; gap: 8px; padding: 8px; flex: none; }
+.bemoji-search-field { display: flex; align-items: center; gap: 6px; flex: 1; padding: 0 8px; height: 32px; border-radius: 6px; background: var(--surface-1, var(--bg)); border: 1px solid var(--border); }
+.bemoji-search-field input { flex: 1; min-width: 0; height: 100%; padding: 0; font: inherit; font-size: 13px; color: var(--text); background: none; border: 0; outline: none; }
+.bemoji-search-icon { font-size: 12px; opacity: 0.6; filter: grayscale(1); }
+.bemoji-tone { display: grid; place-items: center; width: 30px; height: 30px; padding: 0; font-size: 18px; background: none; border: 0; border-radius: 6px; cursor: pointer; }
+.bemoji-tone:hover { background: color-mix(in srgb, var(--text) 10%, transparent); }
+.bemoji-tones { position: absolute; top: 44px; right: 8px; z-index: 2; display: flex; gap: 2px; padding: 4px; background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: 8px; box-shadow: 0 6px 16px rgb(0 0 0 / 0.4); }
+.bemoji-body { flex: 1; min-height: 0; padding: 0 8px 8px; overflow-y: auto; }
+.bemoji-body.is-search > :not(.bemoji-results) { display: none; }
+.bemoji-cat { position: sticky; top: 0; z-index: 1; margin: 0 -8px; padding: 8px 10px 4px; font-size: 12px; font-weight: 700; color: var(--text); background: var(--surface-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bemoji-grid { display: grid; grid-template-columns: repeat(9, 1fr); gap: 2px; }
+.bemoji-grid > .bpick-status { grid-column: 1 / -1; }
+.bemoji-item { display: grid; place-items: center; height: 34px; padding: 0; font-size: 22px; line-height: 1; background: none; border: 0; border-radius: 6px; cursor: pointer; }
+.bemoji-item:hover, .bemoji-item.is-active { background: color-mix(in srgb, var(--text) 10%, transparent); }
+.bemoji-item img { width: 26px; height: 26px; object-fit: contain; }
+.bemoji-foot { display: flex; justify-content: flex-end; gap: 6px; padding: 8px; border-top: 1px solid var(--border); flex: none; }
 .bemoji-guild { width: 100%; margin-bottom: 6px; }
 
 /* "Pick up where you left off": unsaved changes of an earlier visit. */
@@ -762,3 +776,6 @@
 .bnote-look { display: grid; place-items: center; width: 30px; height: 30px; padding: 0; font-size: 15px; background: color-mix(in srgb, var(--note) 14%, var(--surface)); border: 2px solid color-mix(in srgb, var(--note) 40%, transparent); border-radius: 8px; cursor: pointer; }
 .bnote-look[aria-pressed="true"] { border-color: var(--note); box-shadow: 0 0 0 2px color-mix(in srgb, var(--note) 35%, transparent); }
 .dmsg-emoji, .bnode-emoji { width: 18px; height: 18px; object-fit: contain; vertical-align: middle; }
+/* Inside a settings form (label.field) the picker keeps its own look. */
+.bemoji-pop { text-transform: none; letter-spacing: normal; font-weight: 400; text-align: left; }
+.bemoji-pop .bemoji-search-field input { display: block; width: auto; height: 100%; margin: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }

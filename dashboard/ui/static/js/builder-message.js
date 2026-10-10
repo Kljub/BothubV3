@@ -369,6 +369,11 @@
       eb.addEventListener('click', (ev) => {
         ev.stopPropagation();
         closePops();
+        // The emoji picker of the dashboard (bot, server and standard emojis); picks add up.
+        if (window.BotHubEmojiPicker) {
+          window.BotHubEmojiPicker.open(icons, { t, botId: ctx.botId, bot: ctx.bot, multi: true, clear: false, onPick: (e) => insertAt(area.input, e, MAX_CONTENT) });
+          return;
+        }
         const pop = el('div', 'bmsg-pop bmsg-emojis');
         for (const e of EMOJIS) {
           const b = el('button', '', e);

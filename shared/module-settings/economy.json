@@ -28,7 +28,8 @@
         {
           "key": "emoji",
           "type": "text",
-          "max": 64
+          "max": 64,
+          "emoji": true
         },
         {
           "key": "allowNegative",
