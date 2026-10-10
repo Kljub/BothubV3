@@ -248,7 +248,7 @@
         "hosts": {
           "type": "array",
           "uniqueItems": true,
-          "maxItems": 20,
+          "maxItems": 25,
           "description": "Hosts ctx.http.get/post/... may reach (https only, exact host names, no IPs or wildcards; private addresses are refused at run time). Needs the SDK permission http.outbound. Keys belong in endpoints, not here.",
           "items": {
             "type": "string",

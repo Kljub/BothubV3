@@ -11,6 +11,7 @@ leave the feature out.
 | AniSearch | `/launchtoday`: "today" in the bot's time zone | No call for the bot's time zone (bots.timezone) | Setting `timezone` on the plugin page (default Europe/Berlin) |
 | Plex | Edit the member's Plex watchlist | (solved 2026-10-03) New SDK permission `storage.global`: `ctx.globalStorage`, one space per plugin for the whole instance, 10,000 keys, 10 MB | Member tokens live in the plugin's global storage until /plex-unlink. Plain text in the database and readable by the plugin; an encrypted per-user store (or a host call that adds the token) is still open |
 | Potato Pirates | Tell a player that it is their turn | `message.send` never pings, table edits notify nobody | The table shows ➡️ at the player on the turn; turn time limit ends absent turns |
+| Riot Games Stats Tracker | All Riot API servers | (solved 2026-10-10, user decision) `services.hosts` raised from 20 to 25 exact hosts (schema, bot manifest.ts, API PluginStore.php) | The plugin uses 21: api.henrikdev.xyz, 5 regional and 15 server hosts of riotgames.com |
 | (tooling) | `sdk/market` validate does not check command graphs against node ports | The API refuses a bad graph only at install (`error.graph.bad_port`) | Install the zip once locally before a release |
 
 ## Open decision: bot export plugin (user, 2026-10-03)

@@ -80,7 +80,7 @@ export function parseManifest(raw: unknown): Manifest {
   if (!Array.isArray(secrets) || secrets.length > 20 || !secrets.every((e) => typeof e === 'string' && ENDPOINT.test(e))) bad('secrets');
   if ((secrets as string[]).length && !(perms as string[]).some((p) => p === 'secrets.read' || p === 'secrets.use')) bad('secrets');
   const hosts = m.hosts ?? [];
-  if (!Array.isArray(hosts) || hosts.length > 20 || !hosts.every((h) => typeof h === 'string' && HOST.test(h))) bad('hosts');
+  if (!Array.isArray(hosts) || hosts.length > 25 || !hosts.every((h) => typeof h === 'string' && HOST.test(h))) bad('hosts');
   if ((hosts as string[]).length && !(perms as string[]).some((p) => p === 'http.outbound' || p === 'secrets.use')) bad('hosts');
   const webhooks = m.webhooks ?? [];
   if (!Array.isArray(webhooks) || webhooks.length > 10 || !webhooks.every((w) => typeof w === 'string' && BLOCK.test(w))) bad('webhooks');

@@ -480,7 +480,7 @@ final class PluginStore
             in_array($key, $m['secrets'] ?? [], true) && in_array($provider, self::CONNECT_PROVIDERS, true) || $fail('services.connect');
         }
         if (array_key_exists('hosts', $m)) {
-            $list($m['hosts'], 20) && count(array_unique($m['hosts'], SORT_REGULAR)) === count($m['hosts']) || $fail('hosts');
+            $list($m['hosts'], 25) && count(array_unique($m['hosts'], SORT_REGULAR)) === count($m['hosts']) || $fail('hosts');
             foreach ($m['hosts'] as $host) {
                 is_string($host) && preg_match('/^(?=.{4,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z][a-z0-9-]{0,61}[a-z0-9]$/', $host) || $fail('hosts');
             }
