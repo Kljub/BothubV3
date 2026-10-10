@@ -314,7 +314,30 @@ export function extraHandlers({ repo, secret }: ExtraDeps): [string, Handler][] 
     const ids = parent.availableTags.filter((t) => wanted.includes(t.id) || wanted.includes(t.name.toLowerCase())).map((t) => t.id);
     if (wanted.length && !ids.length) throw new GraphError('error.run.not_found', { value: run.str(node, 'tags') });
     const next = add ? [...new Set([...thread.appliedTags, ...ids])].slice(0, 5) : thread.appliedTags.filter((t) => !ids.includes(t));
+    // A closed post takes no tag change: it opens for it and closes again
+    // afterwards (unless "Then" says what to do).
+    const wasClosed = thread.archived;
+    if (wasClosed) await call(run, () => thread.setArchived(false, reason(run, node)));
     await call(run, () => thread.setAppliedTags(next, reason(run, node)));
+    // "Then": e.g. tag a post Resolved and close it in one block.
+    const then = String(run.raw(node, 'then') ?? '');
+    if (then && then !== 'none') await postState(run, node, thread, then);
+    else if (wasClosed) await call(run, () => thread.setArchived(true, reason(run, node)));
+  };
+  // Close (archive), reopen, lock or unlock a forum post (any thread). Locking
+  // an archived post opens it for the change; "close_lock" does both at once.
+  const postState = async (run: Run, node: GraphNode, thread: ThreadChannel, state: string): Promise<void> => {
+    const why = reason(run, node);
+    const lock = state === 'lock' || state === 'close_lock' ? true : state === 'unlock' || state === 'reopen_unlock' ? false : null;
+    const close = state === 'close' || state === 'close_lock' ? true : state === 'reopen' || state === 'reopen_unlock' ? false : null;
+    if (lock === null && close === null) throw new GraphError('error.run.unsupported_operation');
+    if (lock !== null && lock !== thread.locked) {
+      if (thread.archived) await call(run, () => thread.setArchived(false, why));
+      await call(run, () => thread.setLocked(lock, why));
+    }
+    if (close !== null && close !== thread.archived) await call(run, () => thread.setArchived(close, why));
+    run.setResult(node, '.closed', thread.archived ? 'true' : 'false');
+    run.setResult(node, '.locked', thread.locked ? 'true' : 'false');
   };
   const eventInfo = (run: Run, node: GraphNode, ev: GuildScheduledEvent) => {
     run.setResult(node, '.id', ev.id);
@@ -487,6 +510,7 @@ export function extraHandlers({ repo, secret }: ExtraDeps): [string, Handler][] 
     ],
     ['action.forum_add_tags', (node, run) => setTags(node, run, true)],
     ['action.forum_remove_tags', (node, run) => setTags(node, run, false)],
+    ['action.forum_post_state', async (node, run) => postState(run, node, await threadOf(run, node), String(run.raw(node, 'state') ?? 'close'))],
     [
       'action.create_invite',
       async (node, run) => {

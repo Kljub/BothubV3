@@ -40,6 +40,19 @@
         "x-labelKey": "builder.cfg.tags",
         "x-hintKey": "builder.cfg.tags_hint"
       },
+      "then": {
+        "type": "string",
+        "enum": [
+          "none",
+          "close",
+          "lock",
+          "close_lock"
+        ],
+        "default": "none",
+        "x-labelKey": "builder.cfg.post_then",
+        "x-hintKey": "builder.cfg.post_then_hint",
+        "x-enumKey": "builder.enum.post_then"
+      },
       "reason": {
         "type": "string",
         "maxLength": 200,

@@ -1,14 +1,14 @@
 {
   "$schema": "../node-definition.schema.json",
-  "type": "action.forum_remove_tags",
+  "type": "action.forum_post_state",
   "version": 1,
   "category": "action",
   "group": "thread",
-  "order": 550,
+  "order": 545,
   "color": "blue",
   "icon": "▶︎",
-  "labelKey": "builder.node.action_forum_remove_tags.label",
-  "descriptionKey": "builder.node.action_forum_remove_tags.description",
+  "labelKey": "builder.node.action_forum_post_state.label",
+  "descriptionKey": "builder.node.action_forum_post_state.description",
   "inputs": [
     {
       "name": "in",
@@ -24,6 +24,16 @@
       "labelKey": "builder.port.next"
     }
   ],
+  "results": [
+    {
+      "suffix": ".closed",
+      "labelKey": "builder.result.forum_post_state.0"
+    },
+    {
+      "suffix": ".locked",
+      "labelKey": "builder.result.forum_post_state.1"
+    }
+  ],
   "config": {
     "type": "object",
     "additionalProperties": false,
@@ -34,24 +44,19 @@
         "x-labelKey": "builder.cfg.thread",
         "x-hintKey": "builder.cfg.ref_hint"
       },
-      "tags": {
-        "type": "string",
-        "maxLength": 500,
-        "x-labelKey": "builder.cfg.tags",
-        "x-hintKey": "builder.cfg.tags_hint"
-      },
-      "then": {
+      "state": {
         "type": "string",
         "enum": [
-          "none",
           "close",
+          "reopen",
           "lock",
-          "close_lock"
+          "unlock",
+          "close_lock",
+          "reopen_unlock"
         ],
-        "default": "none",
-        "x-labelKey": "builder.cfg.post_then",
-        "x-hintKey": "builder.cfg.post_then_hint",
-        "x-enumKey": "builder.enum.post_then"
+        "default": "close",
+        "x-labelKey": "builder.cfg.post_state",
+        "x-enumKey": "builder.enum.post_state"
       },
       "reason": {
         "type": "string",

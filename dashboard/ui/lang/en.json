@@ -5827,5 +5827,22 @@
   "builder.emoji.done": "Done",
   "builder.emoji.tone": "Skin tone",
   "builder.emoji.results": "Results",
-  "builder.emoji.no_results": "No emoji found."
+  "builder.emoji.no_results": "No emoji found.",
+  "builder.node.action_forum_post_state.label": "Close or Reopen a Forum Post",
+  "builder.node.action_forum_post_state.description": "Close, reopen, lock or unlock a forum post",
+  "builder.cfg.post_state": "What to do",
+  "builder.enum.post_state.close": "Close the post",
+  "builder.enum.post_state.reopen": "Reopen the post",
+  "builder.enum.post_state.lock": "Lock the post (only moderators can write)",
+  "builder.enum.post_state.unlock": "Unlock the post",
+  "builder.enum.post_state.close_lock": "Close and lock",
+  "builder.enum.post_state.reopen_unlock": "Reopen and unlock",
+  "builder.result.forum_post_state.0": "Closed (true/false)",
+  "builder.result.forum_post_state.1": "Locked (true/false)",
+  "builder.cfg.post_then": "Then",
+  "builder.cfg.post_then_hint": "Close or lock the post after the tags changed, e.g. tag it Resolved and close it.",
+  "builder.enum.post_then.none": "Leave the post as it is",
+  "builder.enum.post_then.close": "Close the post",
+  "builder.enum.post_then.lock": "Lock the post",
+  "builder.enum.post_then.close_lock": "Close and lock the post"
 }

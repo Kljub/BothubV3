@@ -5827,5 +5827,22 @@
   "builder.emoji.done": "Fertig",
   "builder.emoji.tone": "Hautfarbe",
   "builder.emoji.results": "Ergebnisse",
-  "builder.emoji.no_results": "Kein Emoji gefunden."
+  "builder.emoji.no_results": "Kein Emoji gefunden.",
+  "builder.node.action_forum_post_state.label": "Forum-Post schließen oder öffnen",
+  "builder.node.action_forum_post_state.description": "Einen Forum-Post schließen, wieder öffnen, sperren oder entsperren",
+  "builder.cfg.post_state": "Was tun",
+  "builder.enum.post_state.close": "Post schließen",
+  "builder.enum.post_state.reopen": "Post wieder öffnen",
+  "builder.enum.post_state.lock": "Post sperren (nur Moderatoren können schreiben)",
+  "builder.enum.post_state.unlock": "Post entsperren",
+  "builder.enum.post_state.close_lock": "Schließen und sperren",
+  "builder.enum.post_state.reopen_unlock": "Öffnen und entsperren",
+  "builder.result.forum_post_state.0": "Geschlossen (true/false)",
+  "builder.result.forum_post_state.1": "Gesperrt (true/false)",
+  "builder.cfg.post_then": "Danach",
+  "builder.cfg.post_then_hint": "Den Post nach der Tag-Änderung schließen oder sperren, z. B. als Gelöst markieren und schließen.",
+  "builder.enum.post_then.none": "Post so lassen",
+  "builder.enum.post_then.close": "Post schließen",
+  "builder.enum.post_then.lock": "Post sperren",
+  "builder.enum.post_then.close_lock": "Post schließen und sperren"
 }
