@@ -2092,7 +2092,10 @@
     if (key === 'variable' || schema['x-mono']) input.classList.add('mono');
     if (input.tagName !== 'SELECT') input.addEventListener('focus', () => { lastField = input; });
     if (schema['x-widget'] === 'emoji') {
-      // Buttons and menu options: pick a standard emoji or one of the server's.
+      // Buttons, menu options and reactions: a standard emoji, one of the
+      // server's or one of the bot's own. x-emojiMulti fields (reactions)
+      // collect several, separated by spaces, and keep the picker open.
+      const multi = Boolean(schema['x-emojiMulti']);
       const row = el('div', 'bemoji-field');
       const pickBtn = el('button', 'btn btn-sm bemoji-btn');
       pickBtn.type = 'button';
@@ -2101,7 +2104,11 @@
       pickBtn.append(icon('smile'));
       pickBtn.addEventListener('click', (ev) => {
         ev.preventDefault();
-        openEmojiPicker(row, (v) => { input.value = v; update(v); });
+        openEmojiPicker(row, (v) => {
+          const next = multi && v ? `${input.value.trim()} ${v}`.trim() : v;
+          input.value = next;
+          update(next);
+        }, { multi });
       });
       row.append(input, pickBtn);
       label.append(row);
@@ -2462,7 +2469,7 @@
     ['flags', '🏁 🚩 🎌 🏴 🏳️ 🏳️‍🌈 🏴‍☠️ 🇩🇪 🇦🇹 🇨🇭 🇬🇧 🇺🇸 🇫🇷 🇮🇹 🇪🇸 🇳🇱 🇵🇱 🇹🇷 🇺🇦 🇷🇺 🇯🇵 🇰🇷 🇨🇳 🇧🇷 🇨🇦 🇦🇺 🇪🇺'],
   ];
 
-  function openEmojiPicker(anchor, onPick) {
+  function openEmojiPicker(anchor, onPick, opts = {}) {
     root.querySelector('.bemoji-pop')?.remove();
     const pop = el('div', 'bemoji-pop');
     pop.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') { ev.stopPropagation(); pop.remove(); } });
@@ -2471,9 +2478,50 @@
     document.addEventListener('pointerdown', outside, true);
     const tabs = el('div', 'bemoji-tabs');
     const body = el('div', 'bemoji-body');
-    const pick = (v) => { onPick(v); close(); };
+    const pick = (v) => { onPick(v); if (!opts.multi || !v) close(); };
+    // A grid of custom emojis ({name, url, text|code}).
+    const customGrid = (items, empty) => {
+      const grid = el('div', 'bemoji-grid');
+      if (!items.length) grid.append(el('p', 'bpick-status', t(empty)));
+      for (const e of items) {
+        const btn = el('button', 'bemoji-item');
+        btn.type = 'button';
+        btn.title = `:${e.name}:`;
+        const img = el('img');
+        img.src = e.url;
+        img.alt = e.name;
+        img.loading = 'lazy';
+        btn.append(img);
+        btn.addEventListener('click', () => pick(e.text || e.code));
+        grid.append(btn);
+      }
+      return grid;
+    };
+    // Bot emojis (Emoji Manager): usable on every server.
+    const botSection = async (into) => {
+      into.replaceChildren(el('p', 'bpick-status', t('builder.pick.loading')));
+      try {
+        into.replaceChildren(customGrid(await load(meta.appEmojisUrl), 'builder.emoji.no_bot_emojis'));
+      } catch {
+        into.replaceChildren(el('p', 'bpick-status', t('builder.pick.load_failed')));
+      }
+    };
+    const showBot = () => {
+      const box = el('div');
+      body.replaceChildren(box);
+      botSection(box);
+    };
     const showStandard = () => {
       body.replaceChildren();
+      // First the bot's own emojis and the server's, then the standard ones.
+      if (meta.appEmojisUrl) {
+        const box = el('div');
+        body.append(el('div', 'bemoji-cat', t('builder.emoji.tab.bot')), box);
+        botSection(box);
+      }
+      const server = el('div');
+      body.append(el('div', 'bemoji-cat', t('builder.emoji.tab.server')), server);
+      serverSection(server);
       for (const [cat, list] of EMOJI_SETS) {
         body.append(el('div', 'bemoji-cat', t(`builder.emoji.cat.${cat}`)));
         const grid = el('div', 'bemoji-grid');
@@ -2486,17 +2534,18 @@
         body.append(grid);
       }
     };
-    const showServer = async () => {
-      body.replaceChildren(el('p', 'bpick-status', t('builder.pick.loading')));
+    // Server emojis: a server picker and its emojis.
+    async function serverSection(into) {
+      into.replaceChildren(el('p', 'bpick-status', t('builder.pick.loading')));
       let guilds;
       try {
         guilds = await load(guildsUrl());
       } catch {
-        body.replaceChildren(el('p', 'bpick-status', t('builder.pick.load_failed')));
+        into.replaceChildren(el('p', 'bpick-status', t('builder.pick.load_failed')));
         return;
       }
       if (!guilds.length) {
-        body.replaceChildren(el('p', 'bpick-status', t('builder.emoji.no_servers')));
+        into.replaceChildren(el('p', 'bpick-status', t('builder.emoji.no_servers')));
         return;
       }
       const sel = el('select', 'bemoji-guild');
@@ -2505,36 +2554,27 @@
         o.value = g.id;
         sel.append(o);
       }
-      const grid = el('div', 'bemoji-grid');
+      const grid = el('div');
       const fill = async () => {
         grid.replaceChildren(el('p', 'bpick-status', t('builder.pick.loading')));
-        let items;
         try {
-          items = await load(guildPart(sel.value, 'emojis'));
+          grid.replaceChildren(customGrid(await load(guildPart(sel.value, 'emojis')), 'builder.emoji.none'));
         } catch {
           grid.replaceChildren(el('p', 'bpick-status', t('builder.pick.load_failed')));
-          return;
-        }
-        grid.replaceChildren();
-        if (!items.length) grid.append(el('p', 'bpick-status', t('builder.emoji.none')));
-        for (const e of items) {
-          const btn = el('button', 'bemoji-item');
-          btn.type = 'button';
-          btn.title = `:${e.name}:`;
-          const img = el('img');
-          img.src = e.url;
-          img.alt = e.name;
-          img.loading = 'lazy';
-          btn.append(img);
-          btn.addEventListener('click', () => pick(e.text));
-          grid.append(btn);
         }
       };
       sel.addEventListener('change', fill);
-      body.replaceChildren(sel, grid);
+      into.replaceChildren(sel, grid);
       fill();
+    }
+    const showServer = () => {
+      const box = el('div');
+      body.replaceChildren(box);
+      serverSection(box);
     };
-    for (const [key, show] of [['standard', showStandard], ['server', showServer]]) {
+    const tabList = [['standard', showStandard], ['server', showServer]];
+    if (meta.appEmojisUrl) tabList.push(['bot', showBot]);
+    for (const [key, show] of tabList) {
       const tb = el('button', 'bemoji-tab', t(`builder.emoji.tab.${key}`));
       tb.type = 'button';
       tb.addEventListener('click', () => {
@@ -2549,6 +2589,8 @@
     tabs.append(clear);
     pop.append(tabs, body);
     anchor.append(pop);
+    // Near the bottom of the window (e.g. low in the block settings) it opens upwards.
+    if (anchor.getBoundingClientRect().bottom + 350 > window.innerHeight) pop.classList.add('is-up'); // room for the full height (340px)
     tabs.querySelector('.bemoji-tab').classList.add('is-active');
     showStandard();
   }

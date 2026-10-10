@@ -5819,5 +5819,7 @@
   "error.emoji.too_big": "Das Bild ist größer als 256 KB.",
   "error.emoji.too_many_files": "Mehr als 50 Dateien auf einmal.",
   "error.emoji.upload_too_big": "Der Upload ist zu groß: höchstens 50 Bilder mit je 256 KB auf einmal.",
-  "error.emoji.no_files": "Wähle mindestens ein Bild."
+  "error.emoji.no_files": "Wähle mindestens ein Bild.",
+  "builder.emoji.tab.bot": "Bot-Emojis",
+  "builder.emoji.no_bot_emojis": "Noch keine Bot-Emojis (Module → Emoji-Manager)."
 }

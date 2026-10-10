@@ -150,6 +150,7 @@ func (s *Server) handleBuilderPage(w http.ResponseWriter, r *http.Request, p Pag
 			"saveUrl":        base,
 			"simulateUrl":    base + "/simulate",
 			"guildsUrl":      fmt.Sprintf("/api/v1/bots/%d/guilds", bot.ID),
+			"appEmojisUrl":   fmt.Sprintf("/api/v1/bots/%d/app-emojis", bot.ID),
 			"templatesUrl":   fmt.Sprintf("/api/v1/bots/%d/message-templates", bot.ID),
 			"timedEventsUrl": fmt.Sprintf("/api/v1/bots/%d/timed-events", bot.ID),
 			"webhooksUrl":    fmt.Sprintf("/api/v1/bots/%d/webhooks", bot.ID),

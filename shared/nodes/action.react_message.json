@@ -52,6 +52,8 @@
         "maxLength": 200,
         "x-labelKey": "builder.cfg.emojis",
         "x-hintKey": "builder.cfg.emojis_hint",
+        "x-widget": "emoji",
+        "x-emojiMulti": true,
         "x-showIf": {
           "reaction_mode": [
             "add",
