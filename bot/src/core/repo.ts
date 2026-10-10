@@ -134,6 +134,30 @@ export class Repo {
       .run(status, errorKey, now(), status, now(), id);
   }
 
+  /**
+   * Whether the bot runs after a restart of the container (column autostart):
+   * start and stop from the dashboard or a block set it, so the bot comes
+   * back the way it was left.
+   */
+  setAutostart(id: number, on: boolean): void {
+    this.db.prepare('UPDATE bots SET autostart = ? WHERE id = ?').run(on ? 1 : 0, id);
+  }
+
+  /**
+   * After a crash or kill the status of bots that were online is still
+   * "running" or "starting". Called at boot: every bot not in `starting`
+   * is stopped now.
+   */
+  resetStaleStatus(starting: number[]): void {
+    const ids = JSON.stringify(starting);
+    this.db
+      .prepare(
+        `UPDATE bots SET status = 'stopped', status_error_key = NULL, started_at = NULL, updated_at = ?
+         WHERE status IN ('running', 'starting') AND id NOT IN (SELECT value FROM json_each(?))`,
+      )
+      .run(now(), ids);
+  }
+
   /** Name, avatar and application ID as Discord reports them after login. */
   setBotIdentity(id: number, name: string, applicationId: string, avatarUrl: string | null): void {
     this.db.prepare('UPDATE bots SET name = ?, application_id = ?, avatar_url = ?, updated_at = ? WHERE id = ?').run(name, applicationId, avatarUrl, now(), id);

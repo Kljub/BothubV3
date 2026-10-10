@@ -9,6 +9,7 @@ import { clearSecretCache } from './secrets-global.js';
 import { log } from './log.js';
 import type { Repo } from './repo.js';
 import { decrypt } from './secrets.js';
+import { ROLE } from './handover.js';
 import { BotInstance, type InstanceDeps, type WebhookCall } from '../discord/instance.js';
 
 export interface BotEvent {
@@ -63,6 +64,8 @@ export class BotManager {
       perOwner.set(b.ownerId, n + 1);
       return true;
     }).map((b) => b.id);
+    // A status "running" left by a crash: the bot is not online after all.
+    if (ROLE === 'main') this.repo.resetStaleStatus(ids);
     await Promise.allSettled(ids.map((id) => this.enqueue(id, () => this.start(id)).catch((err) => log.error('bot start failed', { botId: id, err }))));
     log.info('bots started', { count: this.bots.size, of: ids.length });
   }
@@ -101,6 +104,21 @@ export class BotManager {
   async stop(botId: number): Promise<void> {
     await this.bots.get(botId)?.stop();
     this.bots.delete(botId);
+  }
+
+  /**
+   * Start or stop by the user (dashboard, Stop/Restart block): the choice
+   * is kept in the database, so the bot is in the same state after a
+   * restart of the container. Shutdown and idle stop do not change it.
+   */
+  async control(botId: number, op: 'start' | 'stop' | 'restart'): Promise<void> {
+    if (op === 'stop') {
+      this.repo.setAutostart(botId, false);
+      await this.stop(botId);
+      return;
+    }
+    await this.start(botId);
+    this.repo.setAutostart(botId, true);
   }
 
   /**
@@ -203,8 +221,9 @@ export class BotManager {
         await bot.sendCard(j.cardId, j.target);
         return { ok: true };
       }
-      if (job.type === 'bot.start' || job.type === 'bot.restart') await this.start(id);
-      else if (job.type === 'bot.stop') await this.stop(id);
+      if (job.type === 'bot.start') await this.control(id, 'start');
+      else if (job.type === 'bot.restart') await this.control(id, 'restart');
+      else if (job.type === 'bot.stop') await this.control(id, 'stop');
       else return { ok: false, errorKey: 'error.job.unknown' };
       return { ok: true };
     } catch (err) {

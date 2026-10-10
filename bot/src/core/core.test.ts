@@ -265,6 +265,22 @@ test('bot queues: same bot in order, different bots side by side', async () => {
   assert.deepEqual(log, ['bot3-next', 'bot2-start', 'bot1-start', 'bot1-reload']);
 });
 
+test('start and stop are kept in the database, a stale "running" is reset at boot', async () => {
+  const { BotManager } = await import('./manager.js');
+  const { repo } = migratedDb();
+  const db = repo.db;
+  db.prepare("INSERT INTO bots (name, autostart, status) VALUES ('A', 1, 'running'), ('B', 0, 'starting')").run();
+  const m = new BotManager(repo, {} as never, () => Buffer.alloc(32));
+  assert.deepEqual(await m.handleJob({ type: 'bot.stop', botId: 1 }), { ok: true });
+  const autostart = () => (db.prepare('SELECT autostart FROM bots ORDER BY id').all() as { autostart: number }[]).map((r) => r.autostart);
+  assert.deepEqual(autostart(), [0, 0], 'stopped by the user: stays off after a restart');
+  // No token: the start fails and the choice stays as it was.
+  assert.equal((await m.handleJob({ type: 'bot.start', botId: 2 })).ok, false);
+  assert.deepEqual(autostart(), [0, 0]);
+  await m.startAll();
+  assert.deepEqual((db.prepare('SELECT status FROM bots ORDER BY id').all() as { status: string }[]).map((r) => r.status), ['stopped', 'stopped']);
+});
+
 test('a secret placeholder ([NULL]) has no value', async () => {
   const { secretValue } = await import('./secrets-global.js');
   const repo = (blob: Uint8Array | undefined) => ({ db: { prepare: () => ({ get: () => (blob ? { value_enc: blob } : undefined) }) } }) as never;
