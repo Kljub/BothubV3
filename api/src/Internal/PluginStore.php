@@ -498,7 +498,9 @@ final class PluginStore
             $needs = SdkCatalog::eventPermissions();
             $list($m['events'], count($needs)) && count(array_unique($m['events'], SORT_REGULAR)) === count($m['events']) || $fail('events');
             foreach ($m['events'] as $event) {
-                is_string($event) && isset($needs[$event]) || $fail('events');
+                is_string($event) || $fail('events');
+                // An event this BotHub does not know yet: usually a plugin built for a newer BotHub.
+                isset($needs[$event]) || $fail("events: {$event} is unknown to this BotHub version (update BotHub)");
                 // Each event needs its discord.events.* permission (messages, members, server, voice, interactions).
                 in_array($needs[$event], $perms, true) || $fail("events: {$event} needs permission {$needs[$event]}");
             }
