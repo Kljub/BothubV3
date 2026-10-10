@@ -1,7 +1,6 @@
 package web
 
 import (
-	"context"
 	"net/http"
 	"slices"
 	"strconv"
@@ -22,7 +21,7 @@ func (s *Server) handleBotHeader(w http.ResponseWriter, r *http.Request, p Page)
 	if !ok {
 		return
 	}
-	s.renderBotHeader(w, r, p, id)
+	s.renderBotHeader(w, freshRead(r), p, id)
 }
 
 func (s *Server) renderBotHeader(w http.ResponseWriter, r *http.Request, p Page, id int64) {
@@ -40,21 +39,12 @@ func (s *Server) handleBotPower(w http.ResponseWriter, r *http.Request, p Page) 
 	if !ok {
 		return
 	}
-	actions := map[string]func(context.Context, api.Session, int64) (api.Job, error){
-		"start": s.api.StartBot, "stop": s.api.StopBot, "restart": s.api.RestartBot,
-	}
-	action, ok := actions[r.PathValue("action")]
-	if !ok {
-		s.fail(w, r, p, &api.Error{Status: http.StatusNotFound, Key: "error.not_found"})
-		return
-	}
-	job, err := action(r.Context(), session(r), id)
+	bot, err := s.powerBot(r, id, r.PathValue("action"))
 	if err != nil {
 		s.fail(w, r, p, err)
 		return
 	}
-	s.waitJob(r, job)
-	s.renderBotHeader(w, r, p, id)
+	s.render(w, http.StatusOK, "bot", "bot_header_fragment", withData(p, bot))
 }
 
 func (s *Server) handleBotName(w http.ResponseWriter, r *http.Request, p Page) {

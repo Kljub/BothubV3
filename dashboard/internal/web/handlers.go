@@ -7,7 +7,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/Kljub/BothubV3/dashboard/internal/api"
 )
@@ -285,52 +284,58 @@ func (s *Server) handleBotCard(w http.ResponseWriter, r *http.Request, p Page) {
 	if !ok {
 		return
 	}
-	s.renderBotCard(w, r, p, id)
+	s.renderBotCard(w, freshRead(r), p, id)
 }
 
 func (s *Server) handleStartBot(w http.ResponseWriter, r *http.Request, p Page) {
-	s.botAction(w, r, p, s.api.StartBot)
+	s.botAction(w, r, p, "start")
 }
 
 func (s *Server) handleStopBot(w http.ResponseWriter, r *http.Request, p Page) {
-	s.botAction(w, r, p, s.api.StopBot)
+	s.botAction(w, r, p, "stop")
 }
 
 func (s *Server) handleRestartBotCard(w http.ResponseWriter, r *http.Request, p Page) {
-	s.botAction(w, r, p, s.api.RestartBot)
+	s.botAction(w, r, p, "restart")
 }
 
-func (s *Server) botAction(w http.ResponseWriter, r *http.Request, p Page, action func(context.Context, api.Session, int64) (api.Job, error)) {
+func (s *Server) botAction(w http.ResponseWriter, r *http.Request, p Page, action string) {
 	id, ok := s.botID(w, r, p)
 	if !ok {
 		return
 	}
-	job, err := action(r.Context(), session(r), id)
+	bot, err := s.powerBot(r, id, action)
 	if err != nil {
 		s.fail(w, r, p, err)
 		return
 	}
-	s.waitJob(r, job)
-	s.renderBotCard(w, r, p, id)
+	s.render(w, http.StatusOK, "overview", "bot_card_fragment", withData(p, bot))
 }
 
-// waitJob waits a few seconds for a start/stop job, so the re-rendered card
-// shows the new status (a stop is done at once, a start shows "starting"
-// and the card polls on). A job still queued after that is left running.
-func (s *Server) waitJob(r *http.Request, job api.Job) {
-	deadline := time.Now().Add(5 * time.Second)
-	for job.ID != "" && job.Status == "queued" && time.Now().Before(deadline) {
-		select {
-		case <-r.Context().Done():
-			return
-		case <-time.After(250 * time.Millisecond):
-		}
-		next, err := s.api.Job(r.Context(), session(r), job.ID)
-		if err != nil {
-			return
-		}
-		job = next
+// powerBot sends a start, stop or restart job and returns the bot as it is
+// about to be: "starting" or "stopping" until the bot reports the new status
+// (live update, else the tile polls while it is in between).
+func (s *Server) powerBot(r *http.Request, id int64, action string) (api.Bot, error) {
+	run := map[string]func(context.Context, api.Session, int64) (api.Job, error){
+		"start": s.api.StartBot, "stop": s.api.StopBot, "restart": s.api.RestartBot,
+	}[action]
+	if run == nil {
+		return api.Bot{}, &api.Error{Status: http.StatusNotFound, Key: "error.not_found"}
 	}
+	if _, err := run(r.Context(), session(r), id); err != nil {
+		return api.Bot{}, err
+	}
+	bot, err := s.api.GetBot(r.Context(), session(r), id)
+	if err != nil {
+		return bot, err
+	}
+	switch {
+	case action == "stop" && bot.Status != api.BotStopped:
+		bot.Status, bot.StartedAt = api.BotStopping, nil
+	case action == "restart" || (action == "start" && bot.Status != api.BotRunning):
+		bot.Status, bot.StartedAt, bot.StatusErrorKey = api.BotStarting, nil, nil
+	}
+	return bot, nil
 }
 
 func (s *Server) renderBotCard(w http.ResponseWriter, r *http.Request, p Page, id int64) {

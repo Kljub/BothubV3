@@ -750,9 +750,10 @@ func (s *store) withBot(next botHandler) authed {
 		s.mu.Unlock()
 		if s.php != nil {
 			// Status and name come from the API (the NodeCore writes the status).
-			// Reads take the list of the last second; changes read it fresh.
+			// Reads take the list of the last second; changes and reads after a
+			// live update (X-BotHub-Fresh) read it fresh.
 			refresh := s.syncBotsRecent
-			if r.Method != http.MethodGet && r.Method != http.MethodHead {
+			if r.Method != http.MethodGet && r.Method != http.MethodHead || r.Header.Get("X-BotHub-Fresh") == "1" {
 				refresh = s.syncBotsNow
 			}
 			if err := refresh(r.Context()); err != nil {

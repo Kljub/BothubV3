@@ -82,6 +82,12 @@ func New(baseURL string) (*Client, error) {
 // BaseURL returns the API address, used by the /api reverse proxy.
 func (c *Client) BaseURL() *url.URL { return c.base }
 
+type freshKey struct{}
+
+// Fresh marks calls that must not see the gateway's bot list of the last
+// second (header X-BotHub-Fresh): reads right after a live update.
+func Fresh(ctx context.Context) context.Context { return context.WithValue(ctx, freshKey{}, true) }
+
 // Response is what a call returns besides the decoded body. SetCookies must be
 // relayed to the browser after setup, login and logout.
 type Response struct {
@@ -114,6 +120,9 @@ func (c *Client) doRaw(ctx context.Context, s Session, method, path, contentType
 	}
 	if s.CSRF != "" {
 		req.Header.Set("X-CSRF-Token", s.CSRF)
+	}
+	if ctx.Value(freshKey{}) == true {
+		req.Header.Set("X-BotHub-Fresh", "1")
 	}
 	if c, ok := ctx.Value(clientKey{}).(clientInfo); ok {
 		req.Header.Set("X-BotHub-Client-Agent", c.agent)

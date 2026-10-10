@@ -54,7 +54,7 @@
 {{end}}
 
 {{define "bot_grid"}}
-<div id="bot-grid" hx-get="/overview/bots?page={{.Page}}" hx-trigger="every 10s" hx-swap="outerHTML">
+<div id="bot-grid" hx-get="/overview/bots?page={{.Page}}" hx-trigger="every 30s" hx-swap="outerHTML">
 <div class="reorder-bar" data-reorder-bar hidden>
   <span>{{t "bots.reorder.hint"}}</span>
   <button type="button" class="btn btn-sm" data-reorder-cancel>{{t "action.cancel"}}</button>

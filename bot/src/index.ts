@@ -16,6 +16,7 @@ import { StreamConsumer, STREAM_EVENTS, STREAM_JOBS } from './core/streams.js';
 import { markCleanStop, redisHeartbeatStore, startHeartbeat, type HeartbeatStore } from './core/heartbeat.js';
 import { definitions } from './graph/interpreter.js';
 import { handover, ROLE } from './core/handover.js';
+import { publishLive, startLive, stopLive } from './core/live.js';
 import type { NodeDefinition } from './graph/types.js';
 import type { RunErrorTexts } from './graph/explain.js';
 
@@ -36,6 +37,7 @@ async function main(): Promise<void> {
     }
     await streams?.stop();
     await manager?.stopAll();
+    await stopLive();
     process.exit(0);
   };
   for (const signal of ['SIGINT', 'SIGTERM'] as const) process.on(signal, () => void shutdown(signal));
@@ -51,6 +53,8 @@ async function main(): Promise<void> {
   const defs = definitions(readdirSync(nodeDir).filter((f) => f.endsWith('.json')).map((f) => JSON.parse(readFileSync(join(nodeDir, f), 'utf8')) as NodeDefinition));
   const limits = readShared<GraphLimits>(config, 'graph-limits.json');
   const repo = new Repo(db);
+  await startLive(config.redisUrl);
+  repo.onStatus = (botId, status) => publishLive({ type: 'bot.status', botId, status });
   // Second core of an update (deploy/update.sh) or the normal one: claims and leader lock.
   await handover.start(config.redisUrl);
 

@@ -2,6 +2,7 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"os"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/Kljub/BothubV3/dashboard/internal/api"
 	"github.com/Kljub/BothubV3/dashboard/internal/i18n"
+	"github.com/Kljub/BothubV3/dashboard/internal/live"
 	"github.com/Kljub/BothubV3/dashboard/internal/web"
 	"github.com/Kljub/BothubV3/dashboard/ui"
 )
@@ -60,6 +62,13 @@ func run() error {
 		return err
 	}
 
+	// Live updates: the bot's notes on Redis (bothub:live) go to the open tabs.
+	var hub *live.Hub
+	if u := os.Getenv("REDIS_URL"); u != "" {
+		hub = live.New()
+		go hub.Run(context.Background(), u)
+	}
+
 	srv, err := web.New(web.Config{
 		API:           client,
 		I18n:          bundle,
@@ -70,6 +79,7 @@ func run() error {
 		NodeDefs:      nodeDefs,
 		Events:        events,
 		Docs:          docs,
+		Live:          hub,
 	})
 	if err != nil {
 		return err

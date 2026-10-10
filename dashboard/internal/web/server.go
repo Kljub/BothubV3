@@ -21,6 +21,7 @@ import (
 
 	"github.com/Kljub/BothubV3/dashboard/internal/api"
 	"github.com/Kljub/BothubV3/dashboard/internal/i18n"
+	"github.com/Kljub/BothubV3/dashboard/internal/live"
 )
 
 // Config configures the server.
@@ -34,6 +35,7 @@ type Config struct {
 	NodeDefs      []json.RawMessage        // shared/nodes/*.json for the editor
 	Events        []EventCategory          // shared/events.json for custom events
 	Docs          DocsLibrary              // shared/docs: shipped guides
+	Live          *live.Hub                // live updates from the bot; nil: pages poll
 }
 
 // Server is the dashboard HTTP handler.
@@ -48,6 +50,7 @@ type Server struct {
 	nodeDefs      []json.RawMessage
 	events        []EventCategory
 	docs          DocsLibrary
+	live          *live.Hub
 	self          *selfSampler
 	assetVersion  string
 	mainCSS       []byte // css/bothub.css with ?v=<hash> on every @import
@@ -88,6 +91,7 @@ func New(cfg Config) (*Server, error) {
 		nodeDefs:      cfg.NodeDefs,
 		events:        cfg.Events,
 		docs:          cfg.Docs,
+		live:          cfg.Live,
 		self:          newSelfSampler(),
 		exit: func() {
 			slog.Info("restart requested from the resource overview")
@@ -169,6 +173,7 @@ func (s *Server) routes() http.Handler {
 	// Pages behind login.
 	auth := func(h authHandler) http.Handler { return s.requireAuth(h) }
 	mux.Handle("POST /logout", auth(s.handleLogout))
+	mux.Handle("GET /live", auth(s.handleLive))
 	// Docs: shipped guides, module reference, own articles (editor).
 	mux.Handle("GET /docs", auth(s.handleDocs))
 	mux.Handle("GET /docs/new", auth(s.handleDocEditor))
@@ -456,10 +461,16 @@ func (s *Server) requireAuth(h authHandler) http.Handler {
 // "Cache-Control: no-cache" (and Pragma) only for Ctrl+Shift+R / Ctrl+F5.
 // A normal reload sends "max-age=0"; htmx requests never count.
 func isHardReload(r *http.Request) bool {
-	if r.Method != http.MethodGet || isHTMX(r) {
+	if r.Method != http.MethodGet || isHTMX(r) || isEventStream(r) {
 		return false
 	}
 	return strings.Contains(r.Header.Get("Cache-Control"), "no-cache") || r.Header.Get("Pragma") == "no-cache"
+}
+
+// isEventStream: the browser's EventSource (/live). It sends
+// "Cache-Control: no-cache" too, but is neither a page nor a hard reload.
+func isEventStream(r *http.Request) bool {
+	return strings.Contains(r.Header.Get("Accept"), "text/event-stream")
 }
 
 // dropCookie removes a cookie from the request, so later handlers do not see it.
@@ -606,6 +617,9 @@ func isHTMX(r *http.Request) bool { return r.Header.Get("HX-Request") == "true" 
 // included): a normal load, a boosted link or form (hx-boost on <body>), an
 // htmx history restore, or a redirect() target (X-BotHub-Page).
 func isPageRequest(r *http.Request) bool {
+	if isEventStream(r) {
+		return false
+	}
 	return !isHTMX(r) || r.Header.Get("HX-Boosted") == "true" || r.Header.Get("HX-History-Restore-Request") == "true" || r.Header.Get("X-BotHub-Page") == "1"
 }
 

@@ -946,6 +946,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   }, true);
 })();
 
+// Reloads one bot tile (#bot-<id>); an open "⋯" menu opens again after it.
+function reloadBotCard(id) {
+  const card = document.getElementById(`bot-${id}`);
+  if (!card || !window.htmx) return Promise.resolve();
+  const wasOpen = !!card.querySelector('[data-bot-menu][open]');
+  return htmx.ajax('GET', `/bot/${id}/card`, { target: `#bot-${id}`, swap: 'outerHTML', headers: { 'X-BotHub-Fresh': '1' } }).then(() => {
+    const menu = document.querySelector(`#bot-${id} [data-bot-menu]`);
+    if (menu && wasOpen && !document.querySelector('[data-bot-menu][open]')) {
+      menu.dataset.fresh = '1';
+      menu.open = true;
+    }
+  });
+}
+
 // Bot tile "⋯" menus: one open at a time, closed by a click elsewhere; the
 // tile list does not refresh while a menu is open. Opening a menu reloads
 // its tile first, so status and Start/Stop are current (the menu reopens).
@@ -956,16 +970,7 @@ document.addEventListener('toggle', (e) => {
   if (!(e.target instanceof HTMLElement) || !e.target.matches('[data-bot-menu]') || !e.target.open) return;
   for (const m of document.querySelectorAll('[data-bot-menu][open]')) if (m !== e.target) m.open = false;
   const card = e.target.closest('.bot-card');
-  if (card?.id && !e.target.dataset.fresh && window.htmx) {
-    const id = card.id;
-    htmx.ajax('GET', `/${id.replace('-', '/')}/card`, { target: `#${id}`, swap: 'outerHTML' }).then(() => {
-      const menu = document.querySelector(`#${id} [data-bot-menu]`);
-      if (menu && !document.querySelector('[data-bot-menu][open]')) {
-        menu.dataset.fresh = '1';
-        menu.open = true;
-      }
-    });
-  }
+  if (card?.id && !e.target.dataset.fresh) reloadBotCard(card.id.slice('bot-'.length));
   delete e.target.dataset.fresh;
   // Keep the menu on screen: open it upwards or to the right when there is no room.
   const list = e.target.querySelector('.bot-card-menu-list');
@@ -1115,4 +1120,38 @@ document.addEventListener('drop', (event) => {
   for (const ev of ['htmx:afterSettle', 'htmx:responseError', 'htmx:sendError', 'htmx:timeout']) {
     document.addEventListener(ev, (event) => { if (event.detail?.boosted || ev !== 'htmx:afterSettle') done(); });
   }
+})();
+
+// Live updates (Server-Sent Events from /live): when the bot reports a new
+// status, the tile and the bot header reload and the sidebar shows it at
+// once, without polling. Without Redis /live answers 204 and the browser
+// does not reconnect; the pages poll as before.
+(() => {
+  if (!window.EventSource || !document.querySelector('.sidebar')) return;
+  const live = new EventSource('/live');
+  live.addEventListener('bot', (e) => {
+    let b;
+    try {
+      b = JSON.parse(e.data);
+    } catch {
+      return;
+    }
+    reloadBotCard(b.id);
+    const head = document.getElementById('bot-header');
+    // Not while someone types in it (bot name).
+    if (head && head.dataset.botId === String(b.id) && !head.contains(document.activeElement) && window.htmx) {
+      htmx.ajax('GET', `/bot/${b.id}/header`, { target: '#bot-header', swap: 'outerHTML', headers: { 'X-BotHub-Fresh': '1' } });
+    }
+    for (const el of document.querySelectorAll(`[data-live-bot="${b.id}"]`)) {
+      const text = el.querySelector('.bot-switch-status');
+      if (text) text.textContent = b.label;
+      const dot = el.querySelector('.status-dot');
+      if (dot && b.light) {
+        dot.className = `status-dot status-dot-${b.light}`;
+        dot.title = b.tip;
+        dot.setAttribute('aria-label', b.tip);
+      }
+    }
+  });
+  window.addEventListener('pagehide', () => live.close());
 })();

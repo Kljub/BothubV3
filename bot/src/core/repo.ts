@@ -123,6 +123,9 @@ export class Repo {
     return Math.max(Date.parse(row?.last_active_at ?? '') || 0, Date.parse(row?.started_at ?? '') || 0);
   }
 
+  /** Called after a status change (live updates of the dashboard). */
+  onStatus?: (id: number, status: BotStatus) => void;
+
   setBotStatus(id: number, status: BotStatus, errorKey: string | null = null): void {
     // started_at: set when the bot goes online, cleared when it is not running (uptime on the overview).
     this.db
@@ -132,6 +135,7 @@ export class Repo {
          WHERE id = ?`,
       )
       .run(status, errorKey, now(), status, now(), id);
+    this.onStatus?.(id, status);
   }
 
   /**
@@ -150,12 +154,13 @@ export class Repo {
    */
   resetStaleStatus(starting: number[]): void {
     const ids = JSON.stringify(starting);
-    this.db
+    const reset = this.db
       .prepare(
         `UPDATE bots SET status = 'stopped', status_error_key = NULL, started_at = NULL, updated_at = ?
-         WHERE status IN ('running', 'starting') AND id NOT IN (SELECT value FROM json_each(?))`,
+         WHERE status IN ('running', 'starting') AND id NOT IN (SELECT value FROM json_each(?)) RETURNING id`,
       )
-      .run(now(), ids);
+      .all(now(), ids) as { id: number }[];
+    for (const r of reset) this.onStatus?.(r.id, 'stopped');
   }
 
   /** Name, avatar and application ID as Discord reports them after login. */

@@ -29,7 +29,7 @@
 {{define "bot_header_fragment"}}{{template "bot_header" .Data}}{{end}}
 
 {{define "bot_header"}}
-<section class="box settings-head" id="bot-header"
+<section class="box settings-head" id="bot-header" data-bot-id="{{.ID}}"
   {{if .Transitioning}}hx-get="/bot/{{.ID}}/header" hx-trigger="load delay:1500ms" hx-swap="outerHTML"{{end}}>
   <div class="settings-head-main">
     {{template "avatar" .}}

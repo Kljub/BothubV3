@@ -277,8 +277,11 @@ test('start and stop are kept in the database, a stale "running" is reset at boo
   // No token: the start fails and the choice stays as it was.
   assert.equal((await m.handleJob({ type: 'bot.start', botId: 2 })).ok, false);
   assert.deepEqual(autostart(), [0, 0]);
+  const live: string[] = [];
+  repo.onStatus = (id, status) => live.push(`${id}:${status}`);
   await m.startAll();
   assert.deepEqual((db.prepare('SELECT status FROM bots ORDER BY id').all() as { status: string }[]).map((r) => r.status), ['stopped', 'stopped']);
+  assert.deepEqual(live, ['1:stopped', '2:stopped'], 'the dashboard hears about the reset');
 });
 
 test('a secret placeholder ([NULL]) has no value', async () => {
