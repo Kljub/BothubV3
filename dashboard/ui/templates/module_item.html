@@ -15,6 +15,10 @@
   {{template "module_header_static" $d.Header}}
   <div id="webhooks-error"></div>
   <div id="webhooks-body">{{template "webhooks" $d.Webhooks}}</div>
+  {{else if $d.Emojis}}
+  {{template "module_header_static" $d.Header}}
+  <div id="emoji-error"></div>
+  <div id="emoji-body">{{template "emoji_manager" $d.Emojis}}</div>
   {{else if $d.MsgBuilder}}
   {{template "module_header_static" $d.Header}}
   {{template "message_builder" $d.MsgBuilder}}
@@ -599,3 +603,76 @@
 {{/* Plugin name and description: the plugin's own texts, else the manifest. */}}
 {{define "plugin_name"}}{{$k := printf "plugin.%s.name" .ID}}{{$v := t $k}}{{if ne $v $k}}{{$v}}{{else}}{{.Name}}{{end}}{{end}}
 {{define "plugin_description"}}{{$k := printf "plugin.%s.description" .ID}}{{$v := t $k}}{{if ne $v $k}}{{$v}}{{else}}{{.Description}}{{end}}{{end}}
+
+{{define "emoji_manager_fragment"}}{{template "emoji_manager" .Data}}{{end}}
+
+{{/* Emoji Manager: the bot's own emojis (internal/web/appemojis.go). Receives an emojiView. */}}
+{{define "emoji_manager"}}
+{{with .Notice}}<div class="alert alert-success">{{t . "count" $.Added}}</div>{{end}}
+{{with .Problems}}<div class="alert alert-warning"><strong>{{t "emoji.skipped"}}</strong><ul class="emoji-problems">{{range .}}<li>{{.}}</li>{{end}}</ul></div>{{end}}
+{{with .LoadError}}<div class="alert alert-error">{{.}}</div>{{end}}
+
+<section class="box">
+  <header class="box-head">
+    <h2>{{t "emoji.upload_title"}}</h2>
+    <span class="box-meta emoji-counter{{if .Full}} is-full{{end}}">{{t "emoji.counter" "count" .Count "max" .Max}}</span>
+  </header>
+  <div class="box-body">
+    <p class="muted">{{t "emoji.intro"}}</p>
+    <form class="emoji-upload" hx-post="/bot/{{.BotID}}/emojis" hx-encoding="multipart/form-data" hx-target="#emoji-body" hx-swap="innerHTML" hx-disabled-elt="find button">
+      <label class="emoji-drop">
+        <input type="file" name="files" multiple required accept=".png,.jpg,.jpeg,.gif,.webp,.avif,image/png,image/jpeg,image/gif,image/webp,image/avif" data-emoji-files {{if .Full}}disabled{{end}}>
+        <span class="emoji-drop-text" data-emoji-files-label data-none="{{t "emoji.choose"}}" data-some="{{t "emoji.chosen"}}">{{t "emoji.choose"}}</span>
+        <span class="hint">{{t "emoji.upload_hint"}}</span>
+      </label>
+      <div class="emoji-upload-actions">
+        <button type="submit" class="btn btn-primary btn-sm" {{if .Full}}disabled{{end}}>⬆ {{t "emoji.upload"}}</button>
+        {{with .PortalURL}}<a class="btn btn-sm" href="{{.}}" target="_blank" rel="noopener noreferrer">↗ {{t "emoji.portal"}}</a>{{end}}
+      </div>
+    </form>
+  </div>
+</section>
+
+<section class="box">
+  <header class="box-head">
+    <h2>{{t "emoji.list_title"}}</h2>
+    <input type="search" class="sidebar-search emoji-search" placeholder="{{t "emoji.search"}}" aria-label="{{t "emoji.search"}}" data-emoji-search>
+  </header>
+  <div class="box-body">
+    {{if .Items}}
+    <div class="emoji-grid">
+      {{range .Items}}
+      <div class="emoji-card" data-emoji-item="{{.Name}} {{.ID}}">
+        <img class="emoji-img" src="{{.URL}}" alt=":{{.Name}}:" loading="lazy" width="48" height="48">
+        <div class="emoji-meta">
+          <strong class="emoji-name">:{{.Name}}:</strong>
+          <code class="muted mono emoji-id">{{.ID}}{{if .Animated}} · GIF{{end}}</code>
+        </div>
+        <div class="emoji-actions" data-emoji-panel="actions">
+          <button type="button" class="btn btn-sm" data-copy="{{.Code}}" data-copy-done="{{t "module_page.webhooks.copied"}}">{{t "emoji.copy"}}</button>
+          <button type="button" class="btn btn-sm" data-emoji-open="rename">{{t "emoji.rename"}}</button>
+          <button type="button" class="btn btn-sm btn-danger-soft" data-emoji-open="delete">{{t "emoji.delete"}}</button>
+        </div>
+        <form class="emoji-rename" data-emoji-panel="rename" hidden hx-post="/bot/{{$.BotID}}/emojis/{{.ID}}/rename" hx-target="#emoji-body" hx-swap="innerHTML">
+          <input name="name" value="{{.Name}}" required minlength="2" maxlength="32" pattern="[A-Za-z0-9_]{2,32}" class="mono" aria-label="{{t "emoji.new_name"}}" title="{{t "emoji.name_rule"}}">
+          <button type="submit" class="btn btn-sm btn-primary">{{t "emoji.save"}}</button>
+          <button type="button" class="btn btn-sm" data-emoji-cancel>{{t "emoji.cancel"}}</button>
+        </form>
+        <div class="emoji-confirm" data-emoji-panel="delete" hidden>
+          <p>{{t "emoji.delete_confirm" "name" .Name}}</p>
+          <p class="hint">{{t "emoji.delete_effect"}}</p>
+          <div class="emoji-confirm-actions">
+            <button type="button" class="btn btn-sm btn-danger" hx-delete="/bot/{{$.BotID}}/emojis/{{.ID}}" hx-target="#emoji-body" hx-swap="innerHTML" hx-disabled-elt="this">{{t "emoji.delete_yes"}}</button>
+            <button type="button" class="btn btn-sm" data-emoji-cancel>{{t "emoji.cancel"}}</button>
+          </div>
+        </div>
+      </div>
+      {{end}}
+    </div>
+    <p class="muted" data-emoji-empty hidden>{{t "emoji.no_match"}}</p>
+    {{else if not .LoadError}}
+    <p class="muted">{{t "emoji.none"}}</p>
+    {{end}}
+  </div>
+</section>
+{{end}}

@@ -66,7 +66,7 @@ type botRule struct {
 var botRules = []botRule{
 	{regexp.MustCompile(`^/(start|stop|restart)$`), "bot.control"},
 	{regexp.MustCompile(`^/(members|cowork)(/|$)`), "members.manage"},
-	{regexp.MustCompile(`^/(profile|presence|status)(/|$)`), "profile.edit"},
+	{regexp.MustCompile(`^/(profile|presence|status|app-emojis)(/|$)`), "profile.edit"},
 	{regexp.MustCompile(`^/guilds(/|$)|^/guild-access(/|$)`), "servers.manage"},
 	{regexp.MustCompile(`^/(commands|command-groups|templates|custom-commands|runs)(/|$)`), "commands.manage"},
 	{regexp.MustCompile(`^/(events|timed|webhooks|webhook-key)(/|$)`), "events.manage"},

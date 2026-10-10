@@ -255,6 +255,9 @@ func (s *Server) handleModuleItem(kind string) authHandler {
 				}
 				data["Webhooks"] = hooks
 			}
+			if info.Key == "emoji-manager" {
+				data["Emojis"] = s.emojiData(r, p, bot.ID)
+			}
 			if info.Key == "message-builder" {
 				mb, err := s.msgBuilderView(r, p, bot)
 				if err != nil {

@@ -1023,3 +1023,54 @@ document.addEventListener('htmx:beforeRequest', (e) => {
     if (e.detail.elt?.id === 'bot-grid' && document.querySelector('.bot-grid.is-reordering')) e.preventDefault();
   });
 })();
+
+// Emoji Manager: search by name or ID, rename and delete in place (the
+// panels of one card swap), the number of chosen files on the upload field.
+document.addEventListener('input', (event) => {
+  const input = event.target.closest('[data-emoji-search]');
+  if (!input) return;
+  const q = input.value.trim().toLowerCase();
+  const body = input.closest('.box');
+  let shown = 0;
+  body.querySelectorAll('[data-emoji-item]').forEach((card) => {
+    card.hidden = q !== '' && !card.dataset.emojiItem.toLowerCase().includes(q);
+    if (!card.hidden) shown++;
+  });
+  const empty = body.querySelector('[data-emoji-empty]');
+  if (empty) empty.hidden = shown > 0;
+});
+function emojiPanel(card, name) {
+  card.querySelectorAll('[data-emoji-panel]').forEach((p) => { p.hidden = p.dataset.emojiPanel !== name; });
+  const field = name === 'rename' && card.querySelector('[data-emoji-panel="rename"] input');
+  if (field) { field.focus(); field.select(); }
+}
+document.addEventListener('click', (event) => {
+  const open = event.target.closest('[data-emoji-open]');
+  if (open) emojiPanel(open.closest('[data-emoji-item]'), open.dataset.emojiOpen);
+  const cancel = event.target.closest('[data-emoji-cancel]');
+  if (cancel) emojiPanel(cancel.closest('[data-emoji-item]'), 'actions');
+});
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') return;
+  const card = event.target.closest?.('[data-emoji-item]');
+  if (card && event.target.closest('[data-emoji-panel="rename"]')) emojiPanel(card, 'actions');
+});
+document.addEventListener('change', (event) => {
+  const input = event.target.closest('[data-emoji-files]');
+  if (!input) return;
+  const label = input.parentElement.querySelector('[data-emoji-files-label]');
+  if (label) label.textContent = input.files.length ? label.dataset.some.replace('{count}', input.files.length) : label.dataset.none;
+});
+// Pictures dropped on the upload field go into its file input.
+document.addEventListener('dragover', (event) => {
+  if (event.target.closest?.('.emoji-drop')) event.preventDefault();
+});
+document.addEventListener('drop', (event) => {
+  const zone = event.target.closest?.('.emoji-drop');
+  if (!zone || !event.dataTransfer?.files.length) return;
+  event.preventDefault();
+  const input = zone.querySelector('[data-emoji-files]');
+  if (!input || input.disabled) return;
+  input.files = event.dataTransfer.files;
+  input.dispatchEvent(new Event('change', { bubbles: true }));
+});

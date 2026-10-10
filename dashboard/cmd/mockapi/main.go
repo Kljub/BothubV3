@@ -440,6 +440,11 @@ func main() {
 	mux.HandleFunc("PATCH /api/v1/bots/{id}/profile", s.auth(s.withBot(s.patchProfile)))
 	mux.HandleFunc("POST /api/v1/bots/{id}/profile/sync", s.auth(s.withBot(s.syncProfile)))
 	mux.HandleFunc("PUT /api/v1/bots/{id}/profile/{kind}", s.auth(s.withBot(s.uploadProfile)))
+	// Bot emojis (Emoji Manager): emojis of the application, usable on every server.
+	mux.HandleFunc("GET /api/v1/bots/{id}/app-emojis", s.auth(s.withBot(s.listAppEmojis)))
+	mux.HandleFunc("POST /api/v1/bots/{id}/app-emojis", s.auth(s.withBot(s.createAppEmoji)))
+	mux.HandleFunc("PATCH /api/v1/bots/{id}/app-emojis/{emojiId}", s.auth(s.withBot(s.renameAppEmoji)))
+	mux.HandleFunc("DELETE /api/v1/bots/{id}/app-emojis/{emojiId}", s.auth(s.withBot(s.deleteAppEmoji)))
 	mux.HandleFunc("GET /api/v1/bots/{id}/presence", s.auth(s.withBot(s.viaPHP(s.getPresence))))
 	mux.HandleFunc("PATCH /api/v1/bots/{id}/presence", s.auth(s.withBot(s.viaPHP(s.patchPresence))))
 	mux.HandleFunc("GET /api/v1/bots/{id}/stats", s.auth(s.withBot(s.viaPHP(s.botStats))))

@@ -75,6 +75,11 @@
       "icon": "🎨"
     },
     {
+      "key": "emoji-manager",
+      "category": "utility",
+      "icon": "😀"
+    },
+    {
       "key": "automod",
       "category": "security",
       "icon": "🤖"

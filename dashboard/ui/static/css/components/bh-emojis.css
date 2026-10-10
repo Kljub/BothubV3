@@ -1,0 +1,25 @@
+/* Emoji Manager module page (module_item.html, "emoji_manager"). */
+
+.emoji-counter.is-full { color: var(--red); font-weight: 600; }
+.emoji-upload { display: flex; flex-direction: column; gap: 12px; }
+.emoji-drop { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 22px 16px; border: 1px dashed var(--border); border-radius: var(--radius-md, 10px); text-align: center; cursor: pointer; }
+.emoji-drop:hover, .emoji-drop:focus-within { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 6%, transparent); }
+.emoji-drop input[type="file"] { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.emoji-drop-text { font-weight: 600; }
+.emoji-upload-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.emoji-problems { margin: 6px 0 0; padding-left: 18px; }
+.emoji-search { max-width: 260px; }
+
+.emoji-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.emoji-card { display: grid; grid-template-columns: 48px 1fr; gap: 8px 12px; align-items: center; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-md, 10px); background: var(--surface-2); }
+.emoji-card[hidden] { display: none; }
+.emoji-img { width: 48px; height: 48px; object-fit: contain; }
+.emoji-meta { display: flex; flex-direction: column; min-width: 0; }
+.emoji-name, .emoji-id { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.emoji-id { font-size: 12px; }
+.emoji-actions, .emoji-rename, .emoji-confirm { grid-column: 1 / -1; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.emoji-actions[hidden], .emoji-rename[hidden], .emoji-confirm[hidden] { display: none; }
+.emoji-rename input { flex: 1; min-width: 120px; }
+.emoji-confirm { flex-direction: column; align-items: stretch; gap: 4px; padding: 8px 10px; border-radius: 8px; background: color-mix(in srgb, var(--red) 10%, transparent); }
+.emoji-confirm p { margin: 0; }
+.emoji-confirm-actions { display: flex; gap: 6px; }
