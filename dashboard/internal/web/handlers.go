@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Kljub/BothubV3/dashboard/internal/api"
 )
@@ -304,11 +305,32 @@ func (s *Server) botAction(w http.ResponseWriter, r *http.Request, p Page, actio
 	if !ok {
 		return
 	}
-	if _, err := action(r.Context(), session(r), id); err != nil {
+	job, err := action(r.Context(), session(r), id)
+	if err != nil {
 		s.fail(w, r, p, err)
 		return
 	}
+	s.waitJob(r, job)
 	s.renderBotCard(w, r, p, id)
+}
+
+// waitJob waits a few seconds for a start/stop job, so the re-rendered card
+// shows the new status (a stop is done at once, a start shows "starting"
+// and the card polls on). A job still queued after that is left running.
+func (s *Server) waitJob(r *http.Request, job api.Job) {
+	deadline := time.Now().Add(5 * time.Second)
+	for job.ID != "" && job.Status == "queued" && time.Now().Before(deadline) {
+		select {
+		case <-r.Context().Done():
+			return
+		case <-time.After(250 * time.Millisecond):
+		}
+		next, err := s.api.Job(r.Context(), session(r), job.ID)
+		if err != nil {
+			return
+		}
+		job = next
+	}
 }
 
 func (s *Server) renderBotCard(w http.ResponseWriter, r *http.Request, p Page, id int64) {

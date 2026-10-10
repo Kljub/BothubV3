@@ -947,13 +947,26 @@ document.addEventListener('DOMContentLoaded', async () => {
 })();
 
 // Bot tile "⋯" menus: one open at a time, closed by a click elsewhere; the
-// tile list does not refresh while a menu is open.
+// tile list does not refresh while a menu is open. Opening a menu reloads
+// its tile first, so status and Start/Stop are current (the menu reopens).
 document.addEventListener('click', (e) => {
   for (const m of document.querySelectorAll('[data-bot-menu][open]')) if (!m.contains(e.target)) m.open = false;
 });
 document.addEventListener('toggle', (e) => {
   if (!(e.target instanceof HTMLElement) || !e.target.matches('[data-bot-menu]') || !e.target.open) return;
   for (const m of document.querySelectorAll('[data-bot-menu][open]')) if (m !== e.target) m.open = false;
+  const card = e.target.closest('.bot-card');
+  if (card?.id && !e.target.dataset.fresh && window.htmx) {
+    const id = card.id;
+    htmx.ajax('GET', `/${id.replace('-', '/')}/card`, { target: `#${id}`, swap: 'outerHTML' }).then(() => {
+      const menu = document.querySelector(`#${id} [data-bot-menu]`);
+      if (menu && !document.querySelector('[data-bot-menu][open]')) {
+        menu.dataset.fresh = '1';
+        menu.open = true;
+      }
+    });
+  }
+  delete e.target.dataset.fresh;
   // Keep the menu on screen: open it upwards or to the right when there is no room.
   const list = e.target.querySelector('.bot-card-menu-list');
   if (!list) return;

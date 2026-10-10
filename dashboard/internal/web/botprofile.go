@@ -48,10 +48,12 @@ func (s *Server) handleBotPower(w http.ResponseWriter, r *http.Request, p Page) 
 		s.fail(w, r, p, &api.Error{Status: http.StatusNotFound, Key: "error.not_found"})
 		return
 	}
-	if _, err := action(r.Context(), session(r), id); err != nil {
+	job, err := action(r.Context(), session(r), id)
+	if err != nil {
 		s.fail(w, r, p, err)
 		return
 	}
+	s.waitJob(r, job)
 	s.renderBotHeader(w, r, p, id)
 }
 
