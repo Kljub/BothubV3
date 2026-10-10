@@ -623,6 +623,8 @@ export function discordHandlers(repo: Repo, mod?: Moderation, secret: (key: stri
    */
   async function asCase<T>(run: Run, node: GraphNode, guild: Guild, userId: string, action: CaseAction, duration: string, call: () => Promise<T>): Promise<T> {
     const d = data(run);
+    // A bad duration (e.g. from a command option) fails before the action, not after it.
+    if (duration.trim()) parseDuration(duration);
     const soft = action.startsWith('role_') || action.startsWith('voice_');
     const skip = !mod || (soft && (!d.interaction || d.user?.id === userId));
     const handle = skip ? NO_CASE : await mod.begin({ guild, userId, moderatorId: moderatorOf(run), action, reason: run.str(node, 'reason'), duration });

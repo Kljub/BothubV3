@@ -40,6 +40,26 @@
       "fix": "Schreibe eine Dauer wie 30s, 10m, 2h oder 7d."
     }
   },
+  "error.run.bad_invite": {
+    "en": {
+      "text": "\"{value}\" is not an invite.",
+      "fix": "Use an invite code or link like discord.gg/abc123."
+    },
+    "de": {
+      "text": "\"{value}\" ist keine Einladung.",
+      "fix": "Nutze einen Einladungscode oder Link wie discord.gg/abc123."
+    }
+  },
+  "error.run.unknown_invite": {
+    "en": {
+      "text": "The invite {value} does not exist or has expired.",
+      "fix": "Check the code; expired invites cannot be read."
+    },
+    "de": {
+      "text": "Die Einladung {value} gibt es nicht oder sie ist abgelaufen.",
+      "fix": "Prüfe den Code; abgelaufene Einladungen lassen sich nicht lesen."
+    }
+  },
   "error.run.bad_url": {
     "en": {
       "text": "The address is not usable: {value}",

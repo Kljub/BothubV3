@@ -52,7 +52,7 @@
       "undo_after": {
         "type": "string",
         "maxLength": 20,
-        "pattern": "^[0-9]+[smhd]$",
+        "pattern": "^([0-9]+[smhd]|\\{[A-Za-z0-9_.:-]+\\})$",
         "x-widget": "undo",
         "x-labelKey": "builder.undo.title",
         "x-undoTitleKey": "builder.undo.add_roles",

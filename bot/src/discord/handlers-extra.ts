@@ -3,7 +3,8 @@
 // events, invites, emojis, voice, pages, component edits, transcripts, bot
 // status and control, IFTTT, jobs.
 
-import { randomBytes } from 'node:crypto';
+import { randomBytes, randomInt } from 'node:crypto';
+import { deflateSync } from 'node:zlib';
 import { ActivityType, ChannelType, GuildScheduledEventEntityType, GuildScheduledEventPrivacyLevel, GuildScheduledEventRecurrenceRuleFrequency, GuildScheduledEventStatus, type Guild, type GuildScheduledEvent, type Message, type ThreadChannel } from 'discord.js';
 import type { Repo } from '../core/repo.js';
 import { GraphError, type Handler, type Run } from '../graph/interpreter.js';
@@ -154,6 +155,53 @@ export interface ExtraDeps {
   secret: (key: string) => string | null;
 }
 
+/** A colour from hex (#RGB, #RRGGBB, RRGGBB), rgb(r, g, b) or a number; null when unreadable. */
+export function parseColor(text: string): number | null {
+  const t = text.trim().toLowerCase();
+  let m = /^#?([0-9a-f]{6})$/.exec(t);
+  if (m) return parseInt(m[1]!, 16);
+  m = /^#([0-9a-f]{3})$/.exec(t);
+  if (m) return parseInt([...m[1]!].map((c) => c + c).join(''), 16);
+  m = /^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/.exec(t);
+  if (m) {
+    const [r, g, b] = [m[1], m[2], m[3]].map(Number) as [number, number, number];
+    return r < 256 && g < 256 && b < 256 ? (r << 16) | (g << 8) | b : null;
+  }
+  if (/^\d{1,8}$/.test(t) && Number(t) <= 0xffffff) return Number(t);
+  return null;
+}
+
+const CRC_TABLE = Array.from({ length: 256 }, (_, n) => {
+  let c = n;
+  for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+  return c >>> 0;
+});
+function crc32(buf: Buffer): number {
+  let c = 0xffffffff;
+  for (const b of buf) c = CRC_TABLE[(c ^ b) & 0xff]! ^ (c >>> 8);
+  return (c ^ 0xffffffff) >>> 0;
+}
+
+/** A plain PNG in one colour (preview of Colour Info). */
+export function colorPng(color: number, size = 96): Buffer {
+  const chunk = (type: string, body: Buffer) => {
+    const head = Buffer.alloc(4);
+    head.writeUInt32BE(body.length);
+    const tail = Buffer.alloc(4);
+    tail.writeUInt32BE(crc32(Buffer.concat([Buffer.from(type, 'ascii'), body])));
+    return Buffer.concat([head, Buffer.from(type, 'ascii'), body, tail]);
+  };
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(size, 0);
+  ihdr.writeUInt32BE(size, 4);
+  ihdr[8] = 8; // bit depth
+  ihdr[9] = 2; // RGB
+  const row = Buffer.alloc(1 + size * 3);
+  for (let x = 0; x < size; x++) row.writeUIntBE(color, 1 + x * 3, 3);
+  const raw = Buffer.concat(Array.from({ length: size }, () => row));
+  return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk('IHDR', ihdr), chunk('IDAT', deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]);
+}
+
 export function extraHandlers({ repo, secret }: ExtraDeps): [string, Handler][] {
   const guildOf = async (run: Run, node: GraphNode): Promise<Guild> => {
     const d = data(run);
@@ -284,6 +332,48 @@ export function extraHandlers({ repo, secret }: ExtraDeps): [string, Handler][] 
   const timeZone = (run: Run, node: GraphNode) => run.str(node, 'timezone').trim() || run.vars.get('bot.timezone') || '';
 
   return [
+    [
+      'action.color_info',
+      (node, run) => {
+        const text = run.str(node, 'color').trim();
+        const color = text ? parseColor(text) : randomInt(0, 0x1000000);
+        if (color === null) throw new GraphError('error.run.bad_color', { value: text });
+        const hex = `#${color.toString(16).padStart(6, '0').toUpperCase()}`;
+        run.setResult(node, '', hex);
+        run.setResult(node, '.hex', hex);
+        run.setResult(node, '.rgb', `${color >> 16}, ${(color >> 8) & 0xff}, ${color & 0xff}`);
+        run.setResult(node, '.int', color);
+        // Preview: a small PNG sent with the message ("attachment://card-….png").
+        const d = data(run);
+        d.files ??= new Map();
+        if (d.files.size >= 5) throw new GraphError('error.card.too_many_in_run', { max: 5 });
+        const name = `card-color${d.files.size + 1}.png`;
+        d.files.set(name, colorPng(color));
+        run.setResult(node, '.image', `attachment://${name}`);
+      },
+    ],
+    [
+      'action.invite_info',
+      async (node, run) => {
+        const raw = run.str(node, 'invite').trim();
+        const code = /(?:discord(?:app)?\.com\/invite\/|discord\.gg\/)?([A-Za-z0-9-]{2,40})\/?$/.exec(raw)?.[1];
+        if (!code) throw new GraphError('error.run.bad_invite', { value: raw });
+        run.countDiscordCall();
+        const inv = await data(run).client.fetchInvite(code, { withCounts: true } as never).catch(() => null);
+        if (!inv) throw new GraphError('error.run.unknown_invite', { value: code });
+        run.setResult(node, '', `https://discord.gg/${inv.code}`);
+        run.setResult(node, '.server', inv.guild?.name ?? '');
+        run.setResult(node, '.server_id', inv.guild?.id ?? '');
+        run.setResult(node, '.channel', inv.channel ? `#${inv.channel.name ?? ''}` : '');
+        run.setResult(node, '.channel_id', inv.channelId ?? '');
+        run.setResult(node, '.inviter', inv.inviter ? inv.inviter.username : '');
+        run.setResult(node, '.inviter_id', inv.inviterId ?? '');
+        run.setResult(node, '.uses', inv.uses ?? '');
+        run.setResult(node, '.expires', inv.expiresTimestamp ? `<t:${Math.floor(inv.expiresTimestamp / 1000)}:R>` : '∞');
+        run.setResult(node, '.members', inv.memberCount ?? '');
+        run.setResult(node, '.online', inv.presenceCount ?? '');
+      },
+    ],
     ['action.add_roles_all', (node, run) => rolesToAll(node, run, true)],
     ['action.remove_roles_all', (node, run) => rolesToAll(node, run, false)],
     [

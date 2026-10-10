@@ -77,6 +77,7 @@ test('module presets only use blocks the bot runs', () => {
     ...coreHandlers({ vars: { get: () => undefined, set: () => undefined, delete: () => undefined }, logError: () => undefined }),
     ...discordHandlers({} as Repo),
     ...moduleHandlers({} as Repo, 1),
+    ...extraHandlers({ repo: {} as Repo, secret: () => null }),
   ]);
   const passive = /^(trigger|option|condition|utility)\./;
   for (const p of presets as { module?: string; name: string; graph: Graph }[]) {
@@ -396,4 +397,17 @@ test('redis URL gets the password of KEYS_DIR/redis.pass', async () => {
   assert.equal(redisUrlOf({ REDIS_URL: 'redis://:x@redis:6379', KEYS_DIR: '/keys' }, pass), 'redis://:x@redis:6379');
   assert.equal(redisUrlOf({ REDIS_URL: 'redis://redis:6379' }, pass), 'redis://redis:6379');
   assert.equal(redisUrlOf({ REDIS_URL: 'redis://redis:6379', KEYS_DIR: '/keys' }, () => null), 'redis://redis:6379');
+});
+
+test('colour info: hex, short hex, rgb and numbers; a preview PNG', async () => {
+  const { parseColor, colorPng } = await import('../discord/handlers-extra.js');
+  assert.equal(parseColor('#5865F2'), 0x5865f2);
+  assert.equal(parseColor('5865f2'), 0x5865f2);
+  assert.equal(parseColor('#fff'), 0xffffff);
+  assert.equal(parseColor('rgb(88, 101, 242)'), 0x5865f2);
+  assert.equal(parseColor('255'), 255);
+  assert.equal(parseColor('rgb(300, 0, 0)'), null);
+  assert.equal(parseColor('blue-ish'), null);
+  const png = colorPng(0x5865f2, 8);
+  assert.equal(png.subarray(1, 4).toString('ascii'), 'PNG');
 });

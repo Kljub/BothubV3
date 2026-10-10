@@ -1296,8 +1296,10 @@
     hint.hidden = !sw.checked;
     inp.addEventListener('input', () => {
       const v = inp.value.trim();
-      inp.classList.toggle('is-invalid', Boolean(v) && !/^[0-9]+[smhd]$/.test(v));
-      if (/^[0-9]+[smhd]$/.test(v)) { node.config[key] = v; scheduleCommit(); updateWill(); }
+      // A duration (30s, 10m, 2h, 7d) or a variable that holds one ({option_duration}).
+      const ok = /^([0-9]+[smhd]|\{[A-Za-z0-9_.:-]+\})$/.test(v);
+      inp.classList.toggle('is-invalid', Boolean(v) && !ok);
+      if (ok) { node.config[key] = v; scheduleCommit(); updateWill(); }
     });
     sw.addEventListener('change', () => {
       if (sw.checked) { node.config[key] = inp.value.trim() || '30s'; inp.value = node.config[key]; }

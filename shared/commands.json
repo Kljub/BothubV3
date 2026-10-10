@@ -28,7 +28,7 @@
     { "name": "voiceunmute", "usage": "/voiceunmute @user", "module": "moderation" },
     { "name": "deafen", "usage": "/deafen @user [grund]", "module": "moderation" },
     { "name": "undeafen", "usage": "/undeafen @user", "module": "moderation" },
-    { "name": "temprole", "usage": "/temprole @user @rolle [dauer]", "module": "moderation" },
+    { "name": "temprole", "usage": "/temprole [aktion] @user [dauer] @rolle", "module": "moderation" },
     { "name": "case", "usage": "/case [nummer]", "module": "moderation" },
     { "name": "removecase", "usage": "/removecase [nummer]", "module": "moderation" },
     { "name": "history", "usage": "/history @user", "module": "moderation" },
@@ -36,12 +36,19 @@
     { "name": "note", "usage": "/note @user [text]", "module": "moderation" },
     { "name": "notes", "usage": "/notes @user", "module": "moderation" },
     { "name": "removenote", "usage": "/removenote [nummer]", "module": "moderation" },
+    { "name": "modlogs", "usage": "/modlogs @user", "module": "moderation" },
 
     { "name": "ping", "usage": "/ping", "module": "server-management" },
     { "name": "uptime", "usage": "/uptime", "module": "server-management" },
     { "name": "memory", "usage": "/memory", "module": "server-management" },
     { "name": "serverstats", "usage": "/serverstats", "module": "server-management" },
     { "name": "say", "usage": "/say [text]", "module": "server-management" },
+    { "name": "randomcolor", "usage": "/randomcolor", "module": "server-management" },
+    { "name": "color", "usage": "/color [farbe]", "module": "server-management" },
+    { "name": "membercount", "usage": "/membercount", "module": "server-management" },
+    { "name": "inviteinfo", "usage": "/inviteinfo [einladung]", "module": "server-management" },
+    { "name": "whois", "usage": "/whois [@user]", "module": "server-management" },
+    { "name": "stats", "usage": "/stats", "module": "server-management" },
 
     { "name": "balance", "usage": "/balance [@user]", "module": "economy" },
     { "name": "pay", "usage": "/pay @user [betrag]", "module": "economy" },
@@ -125,6 +132,7 @@
     { "name": "thanks-top", "usage": "/thanks-top", "module": "thanks" },
     { "name": "bookmark", "usage": "Right-click a message → Apps → Bookmark", "module": "bookmarks" },
     { "name": "bookmarks", "usage": "/bookmarks", "module": "bookmarks" },
-    { "name": "bookmark-remove", "usage": "/bookmark-remove [number]", "module": "bookmarks" }
+    { "name": "bookmark-remove", "usage": "/bookmark-remove [number]", "module": "bookmarks" },
+    { "name": "github", "usage": "/github [owner/repo]", "module": "github-notifs" }
   ]
 }

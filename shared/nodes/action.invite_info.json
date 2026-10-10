@@ -1,0 +1,75 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.invite_info",
+  "version": 1,
+  "category": "action",
+  "group": "server",
+  "order": 1150,
+  "color": "orange",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_invite_info.label",
+  "descriptionKey": "builder.node.action_invite_info.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": ".server",
+      "labelKey": "builder.result.invite_info.0"
+    },
+    {
+      "suffix": ".channel",
+      "labelKey": "builder.result.invite_info.1"
+    },
+    {
+      "suffix": ".inviter",
+      "labelKey": "builder.result.invite_info.2"
+    },
+    {
+      "suffix": ".uses",
+      "labelKey": "builder.result.invite_info.3"
+    },
+    {
+      "suffix": ".expires",
+      "labelKey": "builder.result.invite_info.4"
+    },
+    {
+      "suffix": ".members",
+      "labelKey": "builder.result.invite_info.5"
+    },
+    {
+      "suffix": ".online",
+      "labelKey": "builder.result.invite_info.6"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "invite": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.invite_code",
+        "x-hintKey": "builder.cfg.invite_code_hint"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  }
+}

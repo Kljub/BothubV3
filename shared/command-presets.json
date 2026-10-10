@@ -4527,8 +4527,8 @@
       "module": "moderation",
       "group": "Moderation",
       "name": "temprole",
-      "title": "Temp-Role",
-      "description": "Gives a member a role for a while",
+      "title": "Temprole",
+      "description": "Gives or takes a role for a limited time",
       "graph": {
         "schemaVersion": 1,
         "nodes": [
@@ -4538,7 +4538,7 @@
             "typeVersion": 1,
             "config": {
               "command_name": "temprole",
-              "description": "Gives a member a role for a while",
+              "description": "Gives or takes a role for a limited time",
               "hide_replies": true,
               "permissions": {
                 "allowed_roles": [
@@ -4559,6 +4559,22 @@
             "note": "Copied from the Moderation module."
           },
           {
+            "id": "option_action",
+            "type": "option.choice",
+            "typeVersion": 1,
+            "config": {
+              "name": "action",
+              "description": "Give or take the role",
+              "required": true,
+              "variable": "action",
+              "choices": "add\nremove"
+            },
+            "position": {
+              "x": 120,
+              "y": 110
+            }
+          },
+          {
             "id": "option_user",
             "type": "option.user",
             "typeVersion": 1,
@@ -4569,8 +4585,23 @@
               "variable": "user"
             },
             "position": {
-              "x": 120,
+              "x": 410,
               "y": 110
+            }
+          },
+          {
+            "id": "option_duration",
+            "type": "option.text",
+            "typeVersion": 1,
+            "config": {
+              "name": "duration",
+              "description": "How long, e.g. 30m, 2h, 7d",
+              "required": true,
+              "variable": "duration"
+            },
+            "position": {
+              "x": 780,
+              "y": 40
             }
           },
           {
@@ -4584,53 +4615,8 @@
               "variable": "role"
             },
             "position": {
-              "x": 410,
-              "y": 110
-            }
-          },
-          {
-            "id": "option_duration",
-            "type": "option.text",
-            "typeVersion": 1,
-            "config": {
-              "name": "duration",
-              "description": "How long, e.g. 1d or 12h",
-              "required": true,
-              "variable": "duration"
-            },
-            "position": {
               "x": 700,
               "y": 110
-            }
-          },
-          {
-            "id": "step1",
-            "type": "action.add_roles",
-            "typeVersion": 1,
-            "config": {
-              "user": "{option_user}",
-              "roles": "{option_role}",
-              "undo_after": "{option_duration}"
-            },
-            "position": {
-              "x": 440,
-              "y": 240
-            }
-          },
-          {
-            "id": "step2",
-            "type": "action.send_message",
-            "typeVersion": 1,
-            "config": {
-              "message": {
-                "mode": "normal",
-                "content": "<@{option_user}> has <@&{option_role}> for {option_duration}."
-              },
-              "target": "reply"
-            },
-            "position": {
-              "x": 780,
-              "y": 240
             }
           },
           {
@@ -4660,12 +4646,95 @@
               "x": 440,
               "y": 520
             }
+          },
+          {
+            "id": "step1",
+            "type": "condition.comparison",
+            "typeVersion": 1,
+            "config": {
+              "source": "option",
+              "subject": "option_action",
+              "multi": "first"
+            },
+            "position": {
+              "x": 440,
+              "y": 240
+            }
+          },
+          {
+            "id": "step1_add",
+            "type": "condition.state",
+            "typeVersion": 1,
+            "config": {
+              "operator": "eq",
+              "value": "add"
+            },
+            "position": {
+              "x": 440,
+              "y": 360
+            }
+          },
+          {
+            "id": "step1_else",
+            "type": "condition.else",
+            "typeVersion": 1,
+            "config": {},
+            "position": {
+              "x": 700,
+              "y": 360
+            }
+          },
+          {
+            "id": "step1_a",
+            "type": "action.add_roles",
+            "typeVersion": 1,
+            "config": {
+              "user": "{option_user}",
+              "roles": "{option_role}",
+              "undo_after": "{option_duration}",
+              "reason": "Temprole ({option_duration})"
+            },
+            "position": {
+              "x": 440,
+              "y": 470
+            }
+          },
+          {
+            "id": "step1_b",
+            "type": "action.remove_roles",
+            "typeVersion": 1,
+            "config": {
+              "user": "{option_user}",
+              "roles": "{option_role}",
+              "undo_after": "{option_duration}",
+              "reason": "Temprole ({option_duration})"
+            },
+            "position": {
+              "x": 700,
+              "y": 470
+            }
+          },
+          {
+            "id": "step2",
+            "type": "action.send_message",
+            "typeVersion": 1,
+            "config": {
+              "message": {
+                "mode": "normal",
+                "content": "⏳ <@&{option_role}>: {option_action} for <@{option_user}> for {option_duration}; then it is undone."
+              },
+              "target": "reply"
+            },
+            "position": {
+              "x": 1000,
+              "y": 240
+            }
           }
         ],
         "edges": [
           {
             "from": {
-              "node": "option_user",
+              "node": "option_action",
               "port": "option"
             },
             "to": {
@@ -4675,7 +4744,7 @@
           },
           {
             "from": {
-              "node": "option_role",
+              "node": "option_user",
               "port": "option"
             },
             "to": {
@@ -4695,6 +4764,26 @@
           },
           {
             "from": {
+              "node": "option_role",
+              "port": "option"
+            },
+            "to": {
+              "node": "trigger",
+              "port": "options"
+            }
+          },
+          {
+            "from": {
+              "node": "error",
+              "port": "next"
+            },
+            "to": {
+              "node": "error_reply",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
               "node": "trigger",
               "port": "next"
             },
@@ -4706,6 +4795,46 @@
           {
             "from": {
               "node": "step1",
+              "port": "branches"
+            },
+            "to": {
+              "node": "step1_add",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "step1",
+              "port": "branches"
+            },
+            "to": {
+              "node": "step1_else",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "step1_add",
+              "port": "next"
+            },
+            "to": {
+              "node": "step1_a",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "step1_else",
+              "port": "next"
+            },
+            "to": {
+              "node": "step1_b",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "step1_a",
               "port": "next"
             },
             "to": {
@@ -4715,11 +4844,11 @@
           },
           {
             "from": {
-              "node": "error",
+              "node": "step1_b",
               "port": "next"
             },
             "to": {
-              "node": "error_reply",
+              "node": "step2",
               "port": "in"
             }
           }
@@ -19233,6 +19362,1388 @@
             },
             "to": {
               "node": "error_reply",
+              "port": "in"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "module": "moderation",
+      "group": "Moderation",
+      "name": "modlogs",
+      "title": "Modlogs",
+      "description": "Shows the moderation logs of a member",
+      "graph": {
+        "schemaVersion": 1,
+        "nodes": [
+          {
+            "id": "trigger",
+            "type": "trigger.slash",
+            "typeVersion": 1,
+            "config": {
+              "command_name": "modlogs",
+              "description": "Shows the moderation logs of a member",
+              "hide_replies": true,
+              "permissions": {
+                "allowed_roles": [
+                  {
+                    "id": "moderation:moderator"
+                  }
+                ],
+                "banned_roles": [],
+                "required_permissions": [],
+                "banned_channels": [],
+                "hide_without_permission": false
+              }
+            },
+            "position": {
+              "x": 120,
+              "y": 240
+            },
+            "note": "Copied from the Moderation module."
+          },
+          {
+            "id": "option_user",
+            "type": "option.user",
+            "typeVersion": 1,
+            "config": {
+              "name": "user",
+              "description": "The member",
+              "required": true,
+              "variable": "user"
+            },
+            "position": {
+              "x": 120,
+              "y": 110
+            }
+          },
+          {
+            "id": "step1",
+            "type": "action.mod_history",
+            "typeVersion": 1,
+            "config": {
+              "user": "{option_user}",
+              "variable": "history"
+            },
+            "position": {
+              "x": 440,
+              "y": 240
+            }
+          },
+          {
+            "id": "step2",
+            "type": "action.send_message",
+            "typeVersion": 1,
+            "config": {
+              "message": {
+                "mode": "normal",
+                "embeds": [
+                  {
+                    "color": "#ef4444",
+                    "title": "📋 Modlogs",
+                    "description": "<@{option_user}> - {history.count} cases\n\n{history}"
+                  }
+                ]
+              },
+              "target": "reply"
+            },
+            "position": {
+              "x": 780,
+              "y": 240
+            }
+          },
+          {
+            "id": "error",
+            "type": "utility.error_handler",
+            "typeVersion": 1,
+            "config": {
+              "variable": "error"
+            },
+            "position": {
+              "x": 120,
+              "y": 520
+            }
+          },
+          {
+            "id": "error_reply",
+            "type": "action.send_message",
+            "typeVersion": 1,
+            "config": {
+              "message": {
+                "mode": "normal",
+                "content": "Failed: {error}"
+              },
+              "target": "reply"
+            },
+            "position": {
+              "x": 440,
+              "y": 520
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": {
+              "node": "option_user",
+              "port": "option"
+            },
+            "to": {
+              "node": "trigger",
+              "port": "options"
+            }
+          },
+          {
+            "from": {
+              "node": "trigger",
+              "port": "next"
+            },
+            "to": {
+              "node": "step1",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "step1",
+              "port": "next"
+            },
+            "to": {
+              "node": "step2",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "error",
+              "port": "next"
+            },
+            "to": {
+              "node": "error_reply",
+              "port": "in"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "module": "servermanagement",
+      "group": "Servermanagement",
+      "name": "randomcolor",
+      "title": "Random Color",
+      "description": "Makes a random hex colour with a preview",
+      "graph": {
+        "schemaVersion": 1,
+        "nodes": [
+          {
+            "id": "trigger",
+            "type": "trigger.slash",
+            "typeVersion": 1,
+            "config": {
+              "command_name": "randomcolor",
+              "description": "Makes a random hex colour with a preview",
+              "permissions": {
+                "allowed_roles": [
+                  {
+                    "id": "everyone"
+                  }
+                ],
+                "banned_roles": [],
+                "required_permissions": [],
+                "banned_channels": [],
+                "hide_without_permission": false
+              }
+            },
+            "position": {
+              "x": 120,
+              "y": 240
+            }
+          },
+          {
+            "id": "step1",
+            "type": "action.color_info",
+            "typeVersion": 1,
+            "config": {
+              "color": "",
+              "variable": "c"
+            },
+            "position": {
+              "x": 440,
+              "y": 240
+            }
+          },
+          {
+            "id": "reply",
+            "type": "action.send_message",
+            "typeVersion": 1,
+            "config": {
+              "message": {
+                "mode": "normal",
+                "embeds": [
+                  {
+                    "color": "{c}",
+                    "title": "🎨 {c}",
+                    "description": "**Hex:** {c.hex}\n**RGB:** {c.rgb}\n**Number:** {c.int}",
+                    "thumbnail_url": "{c.image}"
+                  }
+                ]
+              },
+              "target": "reply"
+            },
+            "position": {
+              "x": 760,
+              "y": 240
+            }
+          },
+          {
+            "id": "error",
+            "type": "utility.error_handler",
+            "typeVersion": 1,
+            "config": {
+              "variable": "error"
+            },
+            "position": {
+              "x": 120,
+              "y": 760
+            }
+          },
+          {
+            "id": "error_reply",
+            "type": "action.send_message",
+            "typeVersion": 1,
+            "config": {
+              "message": {
+                "mode": "normal",
+                "content": "❌ {error}"
+              },
+              "target": "reply",
+              "ephemeral": true
+            },
+            "position": {
+              "x": 440,
+              "y": 760
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": {
+              "node": "trigger",
+              "port": "next"
+            },
+            "to": {
+              "node": "step1",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "step1",
+              "port": "next"
+            },
+            "to": {
+              "node": "reply",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "error",
+              "port": "next"
+            },
+            "to": {
+              "node": "error_reply",
+              "port": "in"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "module": "servermanagement",
+      "group": "Servermanagement",
+      "name": "color",
+      "title": "Color",
+      "description": "Shows a colour in hex with a preview",
+      "graph": {
+        "schemaVersion": 1,
+        "nodes": [
+          {
+            "id": "trigger",
+            "type": "trigger.slash",
+            "typeVersion": 1,
+            "config": {
+              "command_name": "color",
+              "description": "Shows a colour in hex with a preview",
+              "permissions": {
+                "allowed_roles": [
+                  {
+                    "id": "everyone"
+                  }
+                ],
+                "banned_roles": [],
+                "required_permissions": [],
+                "banned_channels": [],
+                "hide_without_permission": false
+              }
+            },
+            "position": {
+              "x": 120,
+              "y": 240
+            }
+          },
+          {
+            "id": "option_color",
+            "type": "option.text",
+            "typeVersion": 1,
+            "config": {
+              "name": "color",
+              "description": "Hex, rgb(r, g, b) or a number, e.g. #5865F2",
+              "required": true,
+              "variable": "color"
+            },
+            "position": {
+              "x": 120,
+              "y": 40
+            }
+          },
+          {
+            "id": "step1",
+            "type": "action.color_info",
+            "typeVersion": 1,
+            "config": {
+              "color": "{option_color}",
+              "variable": "c"
+            },
+            "position": {
+              "x": 440,
+              "y": 240
+            }
+          },
+          {
+            "id": "reply",
+            "type": "action.send_message",
+            "typeVersion": 1,
+            "config": {
+              "message": {
+                "mode": "normal",
+                "embeds": [
+                  {
+                    "color": "{c}",
+                    "title": "🎨 {c}",
+                    "description": "**Hex:** {c.hex}\n**RGB:** {c.rgb}\n**Number:** {c.int}",
+                    "thumbnail_url": "{c.image}"
+                  }
+                ]
+              },
+              "target": "reply"
+            },
+            "position": {
+              "x": 760,
+              "y": 240
+            }
+          },
+          {
+            "id": "error",
+            "type": "utility.error_handler",
+            "typeVersion": 1,
+            "config": {
+              "variable": "error"
+            },
+            "position": {
+              "x": 120,
+              "y": 760
+            }
+          },
+          {
+            "id": "error_reply",
+            "type": "action.send_message",
+            "typeVersion": 1,
+            "config": {
+              "message": {
+                "mode": "normal",
+                "content": "❌ {error}"
+              },
+              "target": "reply",
+              "ephemeral": true
+            },
+            "position": {
+              "x": 440,
+              "y": 760
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": {
+              "node": "option_color",
+              "port": "option"
+            },
+            "to": {
+              "node": "trigger",
+              "port": "options"
+            }
+          },
+          {
+            "from": {
+              "node": "trigger",
+              "port": "next"
+            },
+            "to": {
+              "node": "step1",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "step1",
+              "port": "next"
+            },
+            "to": {
+              "node": "reply",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "error",
+              "port": "next"
+            },
+            "to": {
+              "node": "error_reply",
+              "port": "in"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "module": "servermanagement",
+      "group": "Servermanagement",
+      "name": "membercount",
+      "title": "Member Count",
+      "description": "Shows the member count of the server",
+      "graph": {
+        "schemaVersion": 1,
+        "nodes": [
+          {
+            "id": "trigger",
+            "type": "trigger.slash",
+            "typeVersion": 1,
+            "config": {
+              "command_name": "membercount",
+              "description": "Shows the member count of the server",
+              "permissions": {
+                "allowed_roles": [
+                  {
+                    "id": "everyone"
+                  }
+                ],
+                "banned_roles": [],
+                "required_permissions": [],
+                "banned_channels": [],
+                "hide_without_permission": false
+              }
+            },
+            "position": {
+              "x": 120,
+              "y": 240
+            }
+          },
+          {
+            "id": "reply",
+            "type": "action.send_message",
+            "typeVersion": 1,
+            "config": {
+              "message": {
+                "mode": "normal",
+                "embeds": [
+                  {
+                    "color": "#5865F2",
+                    "title": "👥 {server.name}",
+                    "description": "**{server.members}** members",
+                    "thumbnail_url": "{server.icon}"
+                  }
+                ]
+              },
+              "target": "reply"
+            },
+            "position": {
+              "x": 440,
+              "y": 240
+            }
+          },
+          {
+            "id": "error",
+            "type": "utility.error_handler",
+            "typeVersion": 1,
+            "config": {
+              "variable": "error"
+            },
+            "position": {
+              "x": 120,
+              "y": 760
+            }
+          },
+          {
+            "id": "error_reply",
+            "type": "action.send_message",
+            "typeVersion": 1,
+            "config": {
+              "message": {
+                "mode": "normal",
+                "content": "❌ {error}"
+              },
+              "target": "reply",
+              "ephemeral": true
+            },
+            "position": {
+              "x": 440,
+              "y": 760
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": {
+              "node": "trigger",
+              "port": "next"
+            },
+            "to": {
+              "node": "reply",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "error",
+              "port": "next"
+            },
+            "to": {
+              "node": "error_reply",
+              "port": "in"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "module": "servermanagement",
+      "group": "Servermanagement",
+      "name": "inviteinfo",
+      "title": "Invite Info",
+      "description": "Shows information about an invite",
+      "graph": {
+        "schemaVersion": 1,
+        "nodes": [
+          {
+            "id": "trigger",
+            "type": "trigger.slash",
+            "typeVersion": 1,
+            "config": {
+              "command_name": "inviteinfo",
+              "description": "Shows information about an invite",
+              "permissions": {
+                "allowed_roles": [
+                  {
+                    "id": "everyone"
+                  }
+                ],
+                "banned_roles": [],
+                "required_permissions": [],
+                "banned_channels": [],
+                "hide_without_permission": false
+              }
+            },
+            "position": {
+              "x": 120,
+              "y": 240
+            }
+          },
+          {
+            "id": "option_invite",
+            "type": "option.text",
+            "typeVersion": 1,
+            "config": {
+              "name": "invite",
+              "description": "Invite code or link",
+              "required": true,
+              "variable": "invite"
+            },
+            "position": {
+              "x": 120,
+              "y": 40
+            }
+          },
+          {
+            "id": "step1",
+            "type": "action.invite_info",
+            "typeVersion": 1,
+            "config": {
+              "invite": "{option_invite}",
+              "variable": "inv"
+            },
+            "position": {
+              "x": 440,
+              "y": 240
+            }
+          },
+          {
+            "id": "reply",
+            "type": "action.send_message",
+            "typeVersion": 1,
+            "config": {
+              "message": {
+                "mode": "normal",
+                "embeds": [
+                  {
+                    "color": "#5865F2",
+                    "title": "✉️ {inv}",
+                    "fields": [
+                      {
+                        "name": "Server",
+                        "value": "{inv.server}",
+                        "inline": true
+                      },
+                      {
+                        "name": "Channel",
+                        "value": "{inv.channel}",
+                        "inline": true
+                      },
+                      {
+                        "name": "Inviter",
+                        "value": "{inv.inviter}",
+                        "inline": true
+                      },
+                      {
+                        "name": "Members",
+                        "value": "{inv.members} ({inv.online} online)",
+                        "inline": true
+                      },
+                      {
+                        "name": "Uses",
+                        "value": "{inv.uses}",
+                        "inline": true
+                      },
+                      {
+                        "name": "Expires",
+                        "value": "{inv.expires}",
+                        "inline": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              "target": "reply"
+            },
+            "position": {
+              "x": 760,
+              "y": 240
+            }
+          },
+          {
+            "id": "error",
+            "type": "utility.error_handler",
+            "typeVersion": 1,
+            "config": {
+              "variable": "error"
+            },
+            "position": {
+              "x": 120,
+              "y": 760
+            }
+          },
+          {
+            "id": "error_reply",
+            "type": "action.send_message",
+            "typeVersion": 1,
+            "config": {
+              "message": {
+                "mode": "normal",
+                "content": "❌ {error}"
+              },
+              "target": "reply",
+              "ephemeral": true
+            },
+            "position": {
+              "x": 440,
+              "y": 760
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": {
+              "node": "option_invite",
+              "port": "option"
+            },
+            "to": {
+              "node": "trigger",
+              "port": "options"
+            }
+          },
+          {
+            "from": {
+              "node": "trigger",
+              "port": "next"
+            },
+            "to": {
+              "node": "step1",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "step1",
+              "port": "next"
+            },
+            "to": {
+              "node": "reply",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "error",
+              "port": "next"
+            },
+            "to": {
+              "node": "error_reply",
+              "port": "in"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "module": "servermanagement",
+      "group": "Servermanagement",
+      "name": "whois",
+      "title": "Whois",
+      "description": "Shows information about a user",
+      "graph": {
+        "schemaVersion": 1,
+        "nodes": [
+          {
+            "id": "trigger",
+            "type": "trigger.slash",
+            "typeVersion": 1,
+            "config": {
+              "command_name": "whois",
+              "description": "Shows information about a user",
+              "permissions": {
+                "allowed_roles": [
+                  {
+                    "id": "everyone"
+                  }
+                ],
+                "banned_roles": [],
+                "required_permissions": [],
+                "banned_channels": [],
+                "hide_without_permission": false
+              }
+            },
+            "position": {
+              "x": 120,
+              "y": 240
+            }
+          },
+          {
+            "id": "option_user",
+            "type": "option.user",
+            "typeVersion": 1,
+            "config": {
+              "name": "user",
+              "description": "The member (you when empty)",
+              "required": false,
+              "variable": "user"
+            },
+            "position": {
+              "x": 120,
+              "y": 40
+            }
+          },
+          {
+            "id": "step1",
+            "type": "action.member_info",
+            "typeVersion": 1,
+            "config": {
+              "user": "{option_user}",
+              "variable": "member"
+            },
+            "position": {
+              "x": 440,
+              "y": 240
+            }
+          },
+          {
+            "id": "reply",
+            "type": "action.send_message",
+            "typeVersion": 1,
+            "config": {
+              "message": {
+                "mode": "normal",
+                "embeds": [
+                  {
+                    "color": "#5865F2",
+                    "title": "👤 {member}",
+                    "thumbnail_url": "{member.avatar}",
+                    "fields": [
+                      {
+                        "name": "Name",
+                        "value": "{member.name}",
+                        "inline": true
+                      },
+                      {
+                        "name": "ID",
+                        "value": "{member.id}",
+                        "inline": true
+                      },
+                      {
+                        "name": "Bot",
+                        "value": "{member.bot}",
+                        "inline": true
+                      },
+                      {
+                        "name": "Account created",
+                        "value": "{member.created}",
+                        "inline": true
+                      },
+                      {
+                        "name": "Joined",
+                        "value": "{member.joined}",
+                        "inline": true
+                      },
+                      {
+                        "name": "Roles ({member.role_count})",
+                        "value": "{member.roles}"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "target": "reply"
+            },
+            "position": {
+              "x": 760,
+              "y": 240
+            }
+          },
+          {
+            "id": "error",
+            "type": "utility.error_handler",
+            "typeVersion": 1,
+            "config": {
+              "variable": "error"
+            },
+            "position": {
+              "x": 120,
+              "y": 760
+            }
+          },
+          {
+            "id": "error_reply",
+            "type": "action.send_message",
+            "typeVersion": 1,
+            "config": {
+              "message": {
+                "mode": "normal",
+                "content": "❌ {error}"
+              },
+              "target": "reply",
+              "ephemeral": true
+            },
+            "position": {
+              "x": 440,
+              "y": 760
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": {
+              "node": "option_user",
+              "port": "option"
+            },
+            "to": {
+              "node": "trigger",
+              "port": "options"
+            }
+          },
+          {
+            "from": {
+              "node": "trigger",
+              "port": "next"
+            },
+            "to": {
+              "node": "step1",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "step1",
+              "port": "next"
+            },
+            "to": {
+              "node": "reply",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "error",
+              "port": "next"
+            },
+            "to": {
+              "node": "error_reply",
+              "port": "in"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "module": "servermanagement",
+      "group": "Servermanagement",
+      "name": "stats",
+      "title": "Stats",
+      "description": "Shows statistics of the bot",
+      "graph": {
+        "schemaVersion": 1,
+        "nodes": [
+          {
+            "id": "trigger",
+            "type": "trigger.slash",
+            "typeVersion": 1,
+            "config": {
+              "command_name": "stats",
+              "description": "Shows statistics of the bot",
+              "permissions": {
+                "allowed_roles": [
+                  {
+                    "id": "everyone"
+                  }
+                ],
+                "banned_roles": [],
+                "required_permissions": [],
+                "banned_channels": [],
+                "hide_without_permission": false
+              }
+            },
+            "position": {
+              "x": 120,
+              "y": 240
+            }
+          },
+          {
+            "id": "reply",
+            "type": "action.send_message",
+            "typeVersion": 1,
+            "config": {
+              "message": {
+                "mode": "normal",
+                "embeds": [
+                  {
+                    "color": "#5865F2",
+                    "title": "📊 {bot.name}",
+                    "fields": [
+                      {
+                        "name": "Servers",
+                        "value": "{bot.servers}",
+                        "inline": true
+                      },
+                      {
+                        "name": "Ping",
+                        "value": "{bot.ping} ms",
+                        "inline": true
+                      },
+                      {
+                        "name": "Uptime",
+                        "value": "{bot.uptime}",
+                        "inline": true
+                      },
+                      {
+                        "name": "Memory",
+                        "value": "{bot.memory}",
+                        "inline": true
+                      },
+                      {
+                        "name": "Active users",
+                        "value": "{bot.active_users.count}",
+                        "inline": true
+                      },
+                      {
+                        "name": "Voice minutes",
+                        "value": "{bot.total_voice_minutes}",
+                        "inline": true
+                      },
+                      {
+                        "name": "Commands used",
+                        "value": "{bot.commands_usage}",
+                        "inline": true
+                      },
+                      {
+                        "name": "Top command",
+                        "value": "{bot.commands_usage.top}",
+                        "inline": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              "target": "reply"
+            },
+            "position": {
+              "x": 440,
+              "y": 240
+            }
+          },
+          {
+            "id": "error",
+            "type": "utility.error_handler",
+            "typeVersion": 1,
+            "config": {
+              "variable": "error"
+            },
+            "position": {
+              "x": 120,
+              "y": 760
+            }
+          },
+          {
+            "id": "error_reply",
+            "type": "action.send_message",
+            "typeVersion": 1,
+            "config": {
+              "message": {
+                "mode": "normal",
+                "content": "❌ {error}"
+              },
+              "target": "reply",
+              "ephemeral": true
+            },
+            "position": {
+              "x": 440,
+              "y": 760
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": {
+              "node": "trigger",
+              "port": "next"
+            },
+            "to": {
+              "node": "reply",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "error",
+              "port": "next"
+            },
+            "to": {
+              "node": "error_reply",
+              "port": "in"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "module": "github-notifs",
+      "group": "GitHub",
+      "name": "github",
+      "title": "GitHub",
+      "description": "Shows information about a GitHub repository",
+      "graph": {
+        "schemaVersion": 1,
+        "nodes": [
+          {
+            "id": "trigger",
+            "type": "trigger.slash",
+            "typeVersion": 1,
+            "config": {
+              "command_name": "github",
+              "description": "Shows information about a GitHub repository",
+              "permissions": {
+                "allowed_roles": [
+                  {
+                    "id": "everyone"
+                  }
+                ],
+                "banned_roles": [],
+                "required_permissions": [],
+                "banned_channels": [],
+                "hide_without_permission": false
+              }
+            },
+            "position": {
+              "x": 120,
+              "y": 240
+            }
+          },
+          {
+            "id": "option_repo",
+            "type": "option.text",
+            "typeVersion": 1,
+            "config": {
+              "name": "repo",
+              "description": "owner/name, e.g. torvalds/linux",
+              "required": true,
+              "variable": "repo"
+            },
+            "position": {
+              "x": 120,
+              "y": 40
+            }
+          },
+          {
+            "id": "step1",
+            "type": "action.api_request",
+            "typeVersion": 1,
+            "config": {
+              "method": "GET",
+              "url": "https://api.github.com/repos/{option_repo}",
+              "headers": "Accept: application/vnd.github+json",
+              "variable": "gh"
+            },
+            "position": {
+              "x": 440,
+              "y": 240
+            }
+          },
+          {
+            "id": "error",
+            "type": "utility.error_handler",
+            "typeVersion": 1,
+            "config": {
+              "variable": "error"
+            },
+            "position": {
+              "x": 120,
+              "y": 760
+            }
+          },
+          {
+            "id": "error_reply",
+            "type": "action.send_message",
+            "typeVersion": 1,
+            "config": {
+              "message": {
+                "mode": "normal",
+                "content": "❌ {error}"
+              },
+              "target": "reply",
+              "ephemeral": true
+            },
+            "position": {
+              "x": 440,
+              "y": 760
+            }
+          },
+          {
+            "id": "step2",
+            "type": "condition.comparison",
+            "typeVersion": 1,
+            "config": {
+              "source": "variable",
+              "subject": "gh.status",
+              "multi": "first"
+            },
+            "position": {
+              "x": 760,
+              "y": 240
+            }
+          },
+          {
+            "id": "step2_ok",
+            "type": "condition.state",
+            "typeVersion": 1,
+            "config": {
+              "operator": "eq",
+              "value": "200"
+            },
+            "position": {
+              "x": 1080,
+              "y": 160
+            }
+          },
+          {
+            "id": "step2_else",
+            "type": "condition.else",
+            "typeVersion": 1,
+            "config": {},
+            "position": {
+              "x": 1080,
+              "y": 360
+            }
+          },
+          {
+            "id": "reply",
+            "type": "action.send_message",
+            "typeVersion": 1,
+            "config": {
+              "message": {
+                "mode": "normal",
+                "embeds": [
+                  {
+                    "color": "#24292f",
+                    "title": "📦 {gh.json.full_name}",
+                    "url": "{gh.json.html_url}",
+                    "description": "{gh.json.description}",
+                    "thumbnail_url": "{gh.json.owner.avatar_url}",
+                    "fields": [
+                      {
+                        "name": "⭐ Stars",
+                        "value": "{gh.json.stargazers_count}",
+                        "inline": true
+                      },
+                      {
+                        "name": "👀 Watchers",
+                        "value": "{gh.json.subscribers_count}",
+                        "inline": true
+                      },
+                      {
+                        "name": "🍴 Forks",
+                        "value": "{gh.json.forks_count}",
+                        "inline": true
+                      },
+                      {
+                        "name": "🐛 Open issues",
+                        "value": "{gh.json.open_issues_count}",
+                        "inline": true
+                      },
+                      {
+                        "name": "💻 Language",
+                        "value": "{gh.json.language}",
+                        "inline": true
+                      },
+                      {
+                        "name": "📜 License",
+                        "value": "{gh.json.license.spdx_id}",
+                        "inline": true
+                      },
+                      {
+                        "name": "🌿 Default branch",
+                        "value": "{gh.json.default_branch}",
+                        "inline": true
+                      },
+                      {
+                        "name": "🕒 Last push",
+                        "value": "{gh.json.pushed_at}",
+                        "inline": true
+                      }
+                    ]
+                  }
+                ]
+              },
+              "target": "reply"
+            },
+            "position": {
+              "x": 1400,
+              "y": 160
+            }
+          },
+          {
+            "id": "reply_missing",
+            "type": "action.send_message",
+            "typeVersion": 1,
+            "config": {
+              "message": {
+                "mode": "normal",
+                "content": "❌ Repository `{option_repo}` not found (GitHub answered {gh.status})."
+              },
+              "target": "reply",
+              "ephemeral": true
+            },
+            "position": {
+              "x": 1400,
+              "y": 360
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": {
+              "node": "option_repo",
+              "port": "option"
+            },
+            "to": {
+              "node": "trigger",
+              "port": "options"
+            }
+          },
+          {
+            "from": {
+              "node": "trigger",
+              "port": "next"
+            },
+            "to": {
+              "node": "step1",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "error",
+              "port": "next"
+            },
+            "to": {
+              "node": "error_reply",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "step1",
+              "port": "next"
+            },
+            "to": {
+              "node": "step2",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "step2",
+              "port": "branches"
+            },
+            "to": {
+              "node": "step2_ok",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "step2",
+              "port": "branches"
+            },
+            "to": {
+              "node": "step2_else",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "step2_ok",
+              "port": "next"
+            },
+            "to": {
+              "node": "reply",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "step2_else",
+              "port": "next"
+            },
+            "to": {
+              "node": "reply_missing",
               "port": "in"
             }
           }

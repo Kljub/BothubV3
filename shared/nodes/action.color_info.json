@@ -1,0 +1,63 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.color_info",
+  "version": 1,
+  "category": "action",
+  "group": "other",
+  "order": 870,
+  "color": "teal",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_color_info.label",
+  "descriptionKey": "builder.node.action_color_info.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": ".hex",
+      "labelKey": "builder.result.color_info.0"
+    },
+    {
+      "suffix": ".rgb",
+      "labelKey": "builder.result.color_info.1"
+    },
+    {
+      "suffix": ".int",
+      "labelKey": "builder.result.color_info.2"
+    },
+    {
+      "suffix": ".image",
+      "labelKey": "builder.result.color_info.3"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "color": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.color_value",
+        "x-hintKey": "builder.cfg.color_value_hint"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  }
+}
