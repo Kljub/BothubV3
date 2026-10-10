@@ -60,6 +60,23 @@ final class Jobs
     }
 
     /**
+     * Task manager rows of a bot's plugins, written by the bot every 5 s
+     * (bothub:plugin-tasks:<botId>, 20 s). Null: the bot does not run or
+     * reports nothing.
+     *
+     * @return array{at: string, tasks: list<array<string, mixed>>}|null
+     */
+    public function pluginTasks(int $botId): ?array
+    {
+        $raw = $this->redis->get('bothub:plugin-tasks:' . $botId);
+        if (!is_string($raw)) {
+            return null;
+        }
+        $data = json_decode($raw, true);
+        return is_array($data) && is_array($data['tasks'] ?? null) ? ['at' => (string) ($data['at'] ?? ''), 'tasks' => array_values($data['tasks'])] : null;
+    }
+
+    /**
      * Stores the bot's answer. Unknown or expired job ids are ignored.
      *
      * @param array<string, mixed> $result entry of bothub:results

@@ -1,0 +1,61 @@
+{{/* Task manager of the bot's plugins: every plugin runs as its own process
+   (task). State, CPU, memory and SDK calls come from the bot every 5 s;
+   a state change arrives live. "End task" kills the process at once,
+   "Restart" starts a new one. A switched-off plugin that still calls the
+   SDK is ended by the bot on its own (reason shown). */}}
+
+{{define "plugin_tasks_fragment"}}{{template "plugin_tasks" .Data}}{{end}}
+
+{{define "plugin_tasks"}}
+<section class="box" id="plugin-tasks" data-bot-id="{{.BotID}}"
+  hx-get="/bot/{{.BotID}}/plugin-tasks" hx-trigger="every 5s" hx-swap="outerHTML">
+  <header class="box-head">
+    <h2>{{t "plugins.tasks.title"}}</h2>
+    <span class="box-meta">{{t "plugins.tasks.meta"}}</span>
+  </header>
+  <div class="box-body">
+    {{if not .Running}}
+    <p class="muted">{{t "plugins.tasks.bot_offline"}}</p>
+    {{else if not .Tasks}}
+    <p class="muted">{{t "plugins.tasks.none"}}</p>
+    {{else}}
+    <div class="task-table">
+      <table class="table">
+        <thead><tr>
+          <th>{{t "plugins.tasks.plugin"}}</th>
+          <th>{{t "plugins.tasks.state"}}</th>
+          <th class="num">{{t "plugins.tasks.cpu"}}</th>
+          <th class="num">{{t "plugins.tasks.memory"}}</th>
+          <th class="num">{{t "plugins.tasks.calls"}}</th>
+          <th class="num">{{t "plugins.tasks.restarts"}}</th>
+          <th>{{t "plugins.tasks.uptime"}}</th>
+          <th></th>
+        </tr></thead>
+        <tbody>
+        {{range .Tasks}}
+          <tr>
+            <td><strong>{{.Name}}</strong> <span class="muted mono">{{.Version}}</span>{{with .PID}}<br><span class="hint mono">PID {{.}}</span>{{end}}</td>
+            <td>
+              <span class="badge-soft badge-soft-{{if eq .State "running"}}running{{else if or (eq .State "starting") (eq .State "restarting")}}error{{else}}stopped{{end}}"><span class="badge-dot" aria-hidden="true"></span>{{t (printf "plugins.tasks.state.%s" .State)}}</span>
+              {{with .Reason}}<br><span class="hint">{{t .}}</span>{{end}}
+            </td>
+            <td class="num">{{pct .CPUPercent}}</td>
+            <td class="num">{{with .MemoryBytes}}{{bytes .}}{{else}}–{{end}}</td>
+            <td class="num" title="{{t "plugins.tasks.calls_total" "count" .Calls}}">{{.CallsPerMinute}}/min</td>
+            <td class="num">{{.Restarts}}</td>
+            <td class="muted">{{with since .StartedAt}}{{.}}{{else}}–{{end}}</td>
+            <td class="num task-actions">
+              {{if or (eq .State "running") (eq .State "starting") (eq .State "restarting")}}
+              <button type="button" class="btn btn-sm btn-outline-danger" hx-post="/bot/{{$.BotID}}/plugin-tasks/{{.PluginID}}/kill" hx-target="#plugin-tasks" hx-swap="outerHTML" hx-confirm="{{t "plugins.tasks.kill_confirm" "name" .Name}}">{{t "plugins.tasks.kill"}}</button>
+              {{end}}
+              <button type="button" class="btn btn-sm" hx-post="/bot/{{$.BotID}}/plugin-tasks/{{.PluginID}}/restart" hx-target="#plugin-tasks" hx-swap="outerHTML">{{t "plugins.tasks.restart"}}</button>
+            </td>
+          </tr>
+        {{end}}
+        </tbody>
+      </table>
+    </div>
+    {{end}}
+  </div>
+</section>
+{{end}}

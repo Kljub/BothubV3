@@ -461,6 +461,8 @@ func main() {
 	mux.HandleFunc("GET /api/v1/bots/{id}/logs", s.auth(s.withBot(s.viaPHP(s.listLogs))))
 	mux.HandleFunc("DELETE /api/v1/bots/{id}/logs", s.auth(s.withBot(s.viaPHP(s.clearLogs))))
 	mux.HandleFunc("GET /api/v1/bots/{id}/plugins", s.auth(s.withBot(s.viaPHP(s.listPlugins))))
+	mux.HandleFunc("GET /api/v1/bots/{id}/plugin-tasks", s.auth(s.withBot(s.viaPHP(phpRequired))))
+	mux.HandleFunc("POST /api/v1/bots/{id}/plugin-tasks/{plugin}/{action}", s.auth(s.withBot(s.viaPHP(phpRequired))))
 	mux.HandleFunc("PATCH /api/v1/bots/{id}/plugins/{plugin}", s.auth(s.withBot(s.viaPHP(s.patchPlugin))))
 	mux.HandleFunc("GET /api/v1/bots/{id}/plugins/{plugin}/config", s.auth(s.withBot(s.viaPHP(phpRequired))))
 	mux.HandleFunc("GET /api/v1/bots/{id}/plugins/{plugin}/options", s.auth(s.withBot(s.viaPHP(phpRequired))))

@@ -1153,5 +1153,15 @@ document.addEventListener('drop', (event) => {
       }
     }
   });
+  live.addEventListener('tasks', (e) => {
+    let b;
+    try {
+      b = JSON.parse(e.data);
+    } catch {
+      return;
+    }
+    const box = document.getElementById('plugin-tasks');
+    if (box && box.dataset.botId === String(b.id) && window.htmx) htmx.ajax('GET', `/bot/${b.id}/plugin-tasks`, { target: '#plugin-tasks', swap: 'outerHTML' });
+  });
   window.addEventListener('pagehide', () => live.close());
 })();

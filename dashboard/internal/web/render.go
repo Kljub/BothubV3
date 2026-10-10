@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"strconv"
 	"strings"
 	"time"
 
@@ -88,6 +89,20 @@ var baseFuncs = template.FuncMap{
 		return formatDuration(max(time.Since(*b.StartedAt), 0))
 	},
 	"cdnSize": cdnSize,
+	// since: "2h 5m" from a time until now ("" for none).
+	"since": func(t *time.Time) string {
+		if t == nil {
+			return ""
+		}
+		return formatDuration(max(time.Since(*t), 0))
+	},
+	// pct: a percentage with one decimal ("–" for none).
+	"pct": func(p *float64) string {
+		if p == nil {
+			return "–"
+		}
+		return strconv.FormatFloat(*p, 'f', 1, 64) + " %"
+	},
 	// Replaced per request (locale); here so the templates parse.
 	"botLight": func(api.Bot) statusLight { return statusLight{} },
 }

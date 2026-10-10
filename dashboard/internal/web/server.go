@@ -272,6 +272,8 @@ func (s *Server) routes() http.Handler {
 	mux.Handle("PUT /bot/{id}/modules/{key}/state", auth(s.handleModuleState))
 	mux.Handle("PUT /bot/{id}/modules/{key}/commands/{name}", auth(s.handleCommandState))
 	mux.Handle("PUT /bot/{id}/plugins/{plugin}", auth(s.handleSetPlugin))
+	mux.Handle("GET /bot/{id}/plugin-tasks", auth(s.handlePluginTasks))
+	mux.Handle("POST /bot/{id}/plugin-tasks/{plugin}/{action}", auth(s.handlePluginTaskAction))
 	mux.Handle("PUT /bot/{id}/plugins/{plugin}/settings", auth(s.handlePluginSettingsSave))
 	mux.Handle("POST /bot/{id}/plugins/{plugin}/files", auth(s.handlePluginFileUpload))
 	mux.Handle("GET /bot/{id}/plugins/{plugin}/files/{name}", auth(s.handlePluginFile))

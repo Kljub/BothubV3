@@ -246,6 +246,55 @@ test('global storage: one space per plugin for every bot, needs storage.global',
   }
 });
 
+test('task manager: a switched-off plugin that still calls the SDK is killed; sync keeps the others, end task and restart', async () => {
+  const { db, pluginsDir, manager, logs } = setup();
+  const busy = (id: string) => ({
+    'bothub-plugin.json': JSON.stringify({ id, name: id, version: '1.0.0', sdk: 1, main: 'index.js', permissions: ['storage'], blocks: [] }),
+    // Keeps calling the SDK on its own, like a plugin with its own timer.
+    'index.js': `export default { onEnable(ctx) { setInterval(() => ctx.storage.get('x').catch(() => undefined), 50); } };`,
+  });
+  install(db, pluginsDir, 'plugin_busy', busy('plugin_busy'));
+  install(db, pluginsDir, 'plugin_calm', busy('plugin_calm'));
+  const state = (id: string) => manager.tasks(1).find((t) => t.pluginId === id);
+  try {
+    await manager.startBot(1);
+    assert.deepEqual(manager.tasks(1).map((t) => [t.pluginId, t.state]), [['plugin_busy', 'running'], ['plugin_calm', 'running']]);
+    const calmPid = state('plugin_calm')!.pid;
+    assert.ok(calmPid);
+
+    // Switched off, but the bot has not synced yet: its next call ends it.
+    db.prepare("INSERT INTO bot_plugin_disabled (bot_id, plugin_id) VALUES (1, 'plugin_busy')").run();
+    await new Promise((r) => setTimeout(r, 300));
+    assert.equal(state('plugin_busy')!.state, 'killed');
+    assert.equal(state('plugin_busy')!.reason, 'sdk.plugin.killed_disabled');
+    assert.ok(logs.some((l) => l.includes('plugin_busy sdk.plugin.killed_disabled')));
+
+    // Sync: the switched-off plugin leaves the list, the other one keeps its process.
+    await manager.startBot(1, true);
+    assert.deepEqual(manager.tasks(1).map((t) => t.pluginId), ['plugin_calm']);
+    assert.equal(state('plugin_calm')!.pid, calmPid, 'not restarted');
+    assert.ok(state('plugin_calm')!.calls > 0);
+
+    // Switched on again: starts without touching the other.
+    db.prepare("DELETE FROM bot_plugin_disabled WHERE plugin_id = 'plugin_busy'").run();
+    await manager.startBot(1, true);
+    assert.equal(state('plugin_busy')!.state, 'running');
+    assert.equal(state('plugin_calm')!.pid, calmPid);
+
+    // End task, then restart.
+    assert.equal(manager.killTask(1, 'plugin_calm'), true);
+    assert.equal(state('plugin_calm')!.state, 'killed');
+    assert.equal(state('plugin_calm')!.reason, 'sdk.plugin.killed_by_user');
+    await manager.restartTask(1, 'plugin_calm');
+    assert.equal(state('plugin_calm')!.state, 'running');
+    assert.notEqual(state('plugin_calm')!.pid, calmPid);
+    db.prepare("INSERT INTO bot_plugin_disabled (bot_id, plugin_id) VALUES (1, 'plugin_calm')").run();
+    await assert.rejects(manager.restartTask(1, 'plugin_calm'), /sdk\.plugin\.disabled/);
+  } finally {
+    manager.stopAll();
+  }
+});
+
 test('lifecycle hooks run in order', async () => {
   const { db, pluginsDir, manager } = setup();
   const manifest = { id: 'plugin_life', name: 'Life', version: '1.0.0', sdk: 1, main: 'index.js', permissions: ['storage'], blocks: [] };

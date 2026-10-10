@@ -16,7 +16,7 @@ import { StreamConsumer, STREAM_EVENTS, STREAM_JOBS } from './core/streams.js';
 import { markCleanStop, redisHeartbeatStore, startHeartbeat, type HeartbeatStore } from './core/heartbeat.js';
 import { definitions } from './graph/interpreter.js';
 import { handover, ROLE } from './core/handover.js';
-import { publishLive, startLive, stopLive } from './core/live.js';
+import { publishLive, startLive, startTaskReports, stopLive } from './core/live.js';
 import type { NodeDefinition } from './graph/types.js';
 import type { RunErrorTexts } from './graph/explain.js';
 
@@ -86,6 +86,8 @@ async function main(): Promise<void> {
   const secretKey = () => loadSecretKey(config.dataDir);
   manager = new BotManager(repo, { repo, defs, limits, plugins, secretKey, runErrors: readShared<RunErrorTexts>(config, 'run-errors.json'), control: (id, op) => void manager!.enqueue(id, () => manager!.control(id, op)).catch((err) => log.error('bot control failed', { botId: id, err })) }, secretKey);
   await manager.startAll();
+  // Task manager of the plugins (dashboard): rows every 5 s; only one core reports.
+  if (ROLE === 'main') startTaskReports(plugins);
   await handover.markReady();
   if (ROLE === 'handover') {
     // Covers the bots while the bot service restarts: no jobs, no heartbeat, no idle stop.

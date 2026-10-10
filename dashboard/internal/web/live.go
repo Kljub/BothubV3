@@ -81,7 +81,7 @@ func (s *Server) handleLive(w http.ResponseWriter, r *http.Request, p Page) {
 				Type  string `json:"type"`
 				BotID int64  `json:"botId"`
 			}
-			if json.Unmarshal(note, &n) != nil || n.Type != "bot.status" || n.BotID <= 0 {
+			if json.Unmarshal(note, &n) != nil || (n.Type != "bot.status" && n.Type != "plugin.tasks") || n.BotID <= 0 {
 				continue
 			}
 			// GetBot answers only for bots of this account: that is the access check.
@@ -91,6 +91,13 @@ func (s *Server) handleLive(w http.ResponseWriter, r *http.Request, p Page) {
 					return
 				}
 				continue
+			}
+			if n.Type == "plugin.tasks" {
+				// A plugin process changed state: the task manager reloads.
+				if _, err := fmt.Fprintf(w, "event: tasks\ndata: {\"id\":%d}\n\n", bot.ID); err != nil {
+					return
+				}
+				break
 			}
 			light := s.botLight(bot, p.Locale)
 			data, _ := json.Marshal(liveBot{bot.ID, bot.Status, s.i18n.T(p.Locale, "bot.status."+bot.Status), light.Class, light.Tip})

@@ -10,6 +10,7 @@
 // manager and never taken from the plugin.
 
 import { fork, type ChildProcess } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { catalog } from './catalog.js';
@@ -35,6 +36,40 @@ export const HOST_FILE = join(dirname(fileURLToPath(import.meta.url)), 'host', '
 
 type Pending = { ok: (v: unknown) => void; fail: (e: Error) => void; timer: NodeJS.Timeout };
 
+/** State of a plugin process in the task manager. */
+export type TaskState = 'starting' | 'running' | 'restarting' | 'stopped' | 'crashed' | 'killed' | 'failed';
+
+/** One row of the task manager (bothub:plugin-tasks:<botId>). */
+export interface TaskInfo {
+  pluginId: string;
+  name: string;
+  version: string;
+  state: TaskState;
+  pid: number | null;
+  startedAt: string | null;
+  restarts: number;
+  calls: number;
+  callsPerMinute: number;
+  memoryBytes: number | null;
+  cpuPercent: number | null;
+  /** Why it is not running: sdk.plugin.killed_disabled, sdk.plugin.too_many_crashes, … */
+  reason: string | null;
+}
+
+/** Memory (RSS) and CPU ticks of a process from /proc (Linux); null elsewhere. */
+function procStats(pid: number): { rss: number; ticks: number } | null {
+  try {
+    const status = readFileSync(`/proc/${pid}/status`, 'utf8');
+    const rss = Number(/VmRSS:\s+(\d+) kB/.exec(status)?.[1] ?? 0) * 1024;
+    const stat = readFileSync(`/proc/${pid}/stat`, 'utf8');
+    // Fields after the name in parentheses: utime and stime are 14 and 15.
+    const fields = stat.slice(stat.lastIndexOf(')') + 2).split(' ');
+    return { rss, ticks: Number(fields[11]) + Number(fields[12]) };
+  } catch {
+    return null;
+  }
+}
+
 export class PluginProcess {
   private child: ChildProcess | undefined;
   private seq = 0;
@@ -43,6 +78,17 @@ export class PluginProcess {
   private windowCalls = 0;
   private restarts: number[] = [];
   private stopped = false;
+  private startedAt: number | undefined;
+  private calls = 0;
+  private callTimes: number[] = [];
+  private cpuSample: { ticks: number; at: number } | undefined;
+  /** Set when the task manager (or the guard) killed the process. */
+  killedReason: string | undefined;
+  /**
+   * Asked before every SDK call: false (the plugin was switched off) kills
+   * the process at once, the call is not run.
+   */
+  guard: () => boolean = () => true;
   /** Permissions the plugin may use (manifest ∩ SDK policy). */
   get permissions(): ReadonlySet<Permission> {
     return this.granted;
@@ -83,6 +129,8 @@ export class PluginProcess {
       serialization: 'json',
     });
     this.child = child;
+    this.startedAt = Date.now();
+    this.cpuSample = undefined;
     // Output of the plugin: kept short, only for the log.
     const tail = (buf: Buffer) => this.onLog('info', 'sdk.plugin.output', { plugin: this.manifest.id, text: buf.toString('utf8').slice(0, 500) });
     child.stdout?.on('data', tail);
@@ -105,6 +153,7 @@ export class PluginProcess {
     const blocks = await this.invoke('init', { pluginDir: this.pluginDir, main: m.main, botId: this.botId, config: this.config, manifest }, this.limits.callTimeoutMs);
     this.blocks = Array.isArray(blocks) ? blocks.filter((b): b is string => typeof b === 'string') : [];
     await this.invoke('start', {}, this.limits.blockTimeoutMs);
+    this.blocksReady = true;
   }
 
   /** A Discord event the plugin listed in "events" (payload: plain JSON). */
@@ -142,6 +191,63 @@ export class PluginProcess {
   configChanged(config: Record<string, unknown>): Promise<unknown> {
     this.config = config;
     return this.invoke('config', { config, changed: true }, this.limits.blockTimeoutMs);
+  }
+
+  /**
+   * Ends the process at once (SIGKILL, no onDisable): the task manager's
+   * "End task", or a call of a plugin that was switched off. It stays off
+   * until it is started again.
+   */
+  kill(reason: string): void {
+    this.stopped = true;
+    this.killedReason = reason;
+    const child = this.child;
+    this.child = undefined;
+    this.startedAt = undefined;
+    for (const [, p] of this.pending) {
+      clearTimeout(p.timer);
+      p.fail(new SdkError('sdk.plugin.killed'));
+    }
+    this.pending.clear();
+    child?.kill('SIGKILL');
+    this.onLog('warning', reason, { plugin: this.manifest.id });
+  }
+
+  get state(): TaskState {
+    if (this.killedReason) return 'killed';
+    if (this.disabledReason) return 'crashed';
+    if (this.child?.connected) return this.startedAt && this.blocksReady ? 'running' : 'starting';
+    if (this.stopped) return 'stopped';
+    return this.restarts.length ? 'restarting' : 'starting';
+  }
+
+  private blocksReady = false;
+
+  /** A row of the task manager; memory and CPU from /proc (Linux). */
+  info(now = Date.now()): TaskInfo {
+    this.callTimes = this.callTimes.filter((t) => now - t < 60_000);
+    const pid = this.child?.connected ? (this.child.pid ?? null) : null;
+    const st = pid ? procStats(pid) : null;
+    let cpu: number | null = null;
+    if (st) {
+      // Clock ticks are 1/100 s: % of one core since the last sample.
+      if (this.cpuSample && now > this.cpuSample.at) cpu = Math.round(((st.ticks - this.cpuSample.ticks) * 10 * 1000) / (now - this.cpuSample.at)) / 10;
+      this.cpuSample = { ticks: st.ticks, at: now };
+    }
+    return {
+      pluginId: this.manifest.id,
+      name: this.manifest.name,
+      version: this.manifest.version,
+      state: this.state,
+      pid,
+      startedAt: pid && this.startedAt ? new Date(this.startedAt).toISOString() : null,
+      restarts: this.restarts.filter((t) => now - t < 600_000).length,
+      calls: this.calls,
+      callsPerMinute: this.callTimes.length,
+      memoryBytes: st ? st.rss : null,
+      cpuPercent: cpu === null ? null : Math.max(0, cpu),
+      reason: this.killedReason ?? this.disabledReason ?? null,
+    };
   }
 
   /** Calls onDisable and onUnload (1 s at most), then ends the process. */
@@ -199,6 +305,20 @@ export class PluginProcess {
   // Replies go to the child that asked, also while it shuts down (onDisable, onUnload).
   private async onCall(child: ChildProcess, id: number, method: unknown, params: unknown): Promise<void> {
     const reply = (body: Record<string, unknown>) => child.connected && child.send({ id, type: 'reply', ...body });
+    // Switched off (dashboard, App Store) but still calling the SDK, also in
+    // its last second after stop(): end the task, the call is not run.
+    if (!this.guard()) {
+      if (this.child === child) this.kill('sdk.plugin.killed_disabled');
+      else if (child.exitCode === null && child.signalCode === null) {
+        child.kill('SIGKILL');
+        this.killedReason = 'sdk.plugin.killed_disabled';
+        this.onLog('warning', 'sdk.plugin.killed_disabled', { plugin: this.manifest.id });
+      }
+      return;
+    }
+    this.calls++;
+    this.callTimes.push(Date.now());
+    if (this.callTimes.length > 5000) this.callTimes = this.callTimes.slice(-2500);
     try {
       // Rate limit per second.
       const now = Date.now();
@@ -231,6 +351,8 @@ export class PluginProcess {
   private onExit(child: ChildProcess, code: number | null): void {
     if (this.child !== child) return;
     this.child = undefined;
+    this.startedAt = undefined;
+    this.blocksReady = false;
     for (const [, p] of this.pending) {
       clearTimeout(p.timer);
       p.fail(new SdkError('sdk.plugin.exited'));

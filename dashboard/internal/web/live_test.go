@@ -77,6 +77,50 @@ func TestLiveStreamsOwnBotsOnly(t *testing.T) {
 	if got[0] != "event: bot" || !strings.Contains(got[1], `"id":12`) || !strings.Contains(got[1], `"light":"stopped"`) || strings.Contains(got[1], "99") {
 		t.Fatalf("events %v", got)
 	}
+	// A plugin process changed: the task manager of that bot reloads.
+	hub.Publish([]byte(`{"type":"plugin.tasks","botId":12}`))
+	for {
+		line, err := r.ReadString('\n')
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.HasPrefix(line, "event:") {
+			if line != "event: tasks\n" {
+				t.Fatalf("event %q", line)
+			}
+			break
+		}
+	}
+}
+
+// The task manager box: rows of the bot's report, actions per state.
+func TestPluginTasksBox(t *testing.T) {
+	fake := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"running":true,"tasks":[
+			{"pluginId":"plugin_a","name":"Alpha","version":"1.0.0","state":"running","pid":41,"restarts":0,"calls":12,"callsPerMinute":3,"memoryBytes":31457280,"cpuPercent":1.25},
+			{"pluginId":"plugin_b","name":"Beta","version":"2.0.0","state":"killed","pid":null,"restarts":0,"calls":0,"callsPerMinute":0,"memoryBytes":null,"cpuPercent":null,"reason":"sdk.plugin.killed_disabled"}]}`))
+	}))
+	defer fake.Close()
+	client, _ := api.New(fake.URL)
+	b, _ := i18n.Load(ui.FS, "lang")
+	s, err := New(Config{API: client, I18n: b, UI: ui.FS, DefaultLocale: "en"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := httptest.NewRequest(http.MethodGet, "/bot/7/plugin-tasks", nil)
+	r.SetPathValue("id", "7")
+	r.Header.Set("HX-Request", "true")
+	w := httptest.NewRecorder()
+	s.handlePluginTasks(w, r, Page{Locale: "en"})
+	body := w.Body.String()
+	for _, want := range []string{"Alpha", "PID 41", "1.2 %", "3/min", "/bot/7/plugin-tasks/plugin_a/kill", "Ended", "it used the SDK although it is switched off"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("missing %q in %s", want, body)
+		}
+	}
+	if strings.Contains(body, "/plugin-tasks/plugin_b/kill") {
+		t.Fatal("an ended task has no End task button")
+	}
 }
 
 // Without Redis /live answers 204: the browser stops reconnecting.

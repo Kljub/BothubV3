@@ -20,7 +20,7 @@ import { cronMatches, parseCron, type Cron } from '../graph/cron.js';
 import { parseDuration } from '../graph/util.js';
 import { catalog } from './catalog.js';
 import { blockType, readManifest, type Permission } from './manifest.js';
-import { PluginProcess, type SdkLimits } from './process.js';
+import { PluginProcess, type SdkLimits, type TaskInfo } from './process.js';
 import { PluginStorage, type StorageLimits } from './storage.js';
 import { pluginVariables } from './variables.js';
 import { ANY_FILE, discordAttachmentUrl, FILE_LIMITS, FILE_NAME, PluginFiles } from './files.js';
@@ -302,8 +302,10 @@ const RESULT_SUFFIX = /^(\.[a-z0-9_]{1,32})?$/;
 
 export class PluginManager {
   private readonly running = new Map<number, PluginProcess[]>();
-  /** Task timers of each bot (services.tasks). */
-  private readonly timers = new Map<number, NodeJS.Timeout[]>();
+  /** Task timers (services.tasks) per bot and plugin. */
+  private readonly timers = new Map<number, Map<string, NodeJS.Timeout[]>>();
+  /** Plugins of a bot that did not start (task manager: "failed" with the reason). */
+  private readonly failed = new Map<number, Map<string, TaskInfo>>();
   /** Last "busy" log per bot and plugin: once a minute at most. */
   private readonly busyLogged = new Map<string, number>();
   /** Interactions the plugins may answer (opaque handles, 15 min). */
@@ -315,40 +317,126 @@ export class PluginManager {
     private readonly deps: PluginDeps,
   ) {}
 
-  /** Starts the enabled plugins of a bot; a broken plugin is logged and skipped. */
-  async startBot(botId: number): Promise<void> {
-    this.stopBot(botId);
-    const rows = this.db
+  /** Enabled plugins of a bot (on for the instance, not off for the bot). */
+  private enabledRows(botId: number, pluginId?: string): Row[] {
+    return this.db
       .prepare(
         `SELECT i.plugin_id, i.version, i.config FROM plugin_installs i
          WHERE i.enabled = 1 AND NOT EXISTS (SELECT 1 FROM bot_plugin_disabled d WHERE d.bot_id = ? AND d.plugin_id = i.plugin_id)
+           AND (? IS NULL OR i.plugin_id = ?)
          ORDER BY i.plugin_id`,
       )
-      .all(botId) as unknown as Row[];
-    const policy = this.options.policy();
-    const list: PluginProcess[] = [];
+      .all(botId, pluginId ?? null, pluginId ?? null) as unknown as Row[];
+  }
+
+  /** Whether a plugin may still run for a bot (the guard of every SDK call). */
+  isEnabled(botId: number, pluginId: string): boolean {
+    return this.enabledRows(botId, pluginId).length > 0;
+  }
+
+  /**
+   * Starts the enabled plugins of a bot; a broken plugin is logged and
+   * skipped. With sync, only the difference is applied (plugin switched on,
+   * off, installed, updated): the other plugins keep running.
+   */
+  async startBot(botId: number, sync = false): Promise<void> {
+    if (!sync || !this.running.has(botId)) this.stopBot(botId);
+    const rows = this.enabledRows(botId);
+    const list = this.running.get(botId) ?? [];
     this.running.set(botId, list);
-    for (const row of rows) {
-      try {
-        const proc = await this.startPlugin(botId, row, policy);
-        list.push(proc);
-        this.scheduleTasks(botId, proc);
-      } catch (err) {
-        if (err instanceof SdkError && err.key === 'sdk.plugin.blocked') {
-          this.deps.log(botId, 'warning', row.plugin_id, `sdk.plugin.blocked ${(err.params.permissions as string[]).join(', ')}`);
-        } else {
-          this.deps.log(botId, 'error', row.plugin_id, err instanceof SdkError ? err.key : String(err));
-        }
-      }
+    const want = new Map(rows.map((r) => [r.plugin_id, r.version]));
+    for (const p of [...list]) {
+      if (want.get(p.manifest.id) === p.manifest.version && p.state !== 'killed' && p.state !== 'crashed') continue;
+      this.dropProcess(botId, p);
     }
+    const failed = new Map<string, TaskInfo>();
+    for (const [id, info] of this.failed.get(botId) ?? []) if (want.get(id) === info.version) failed.set(id, info);
+    this.failed.set(botId, failed);
+    const policy = this.options.policy();
+    for (const row of rows) {
+      if (list.some((p) => p.manifest.id === row.plugin_id)) continue;
+      await this.launch(botId, row, policy);
+    }
+  }
+
+  /** Starts one plugin and its tasks; a failure is logged and kept for the task manager. */
+  private async launch(botId: number, row: Row, policy: ReadonlySet<Permission>): Promise<boolean> {
+    this.failed.get(botId)?.delete(row.plugin_id);
+    try {
+      const proc = await this.startPlugin(botId, row, policy);
+      // The bot may have stopped in the meantime.
+      const list = this.running.get(botId);
+      if (!list) {
+        proc.stop();
+        return false;
+      }
+      list.push(proc);
+      this.scheduleTasks(botId, proc);
+      return true;
+    } catch (err) {
+      const key = err instanceof SdkError ? err.key : String(err);
+      if (err instanceof SdkError && err.key === 'sdk.plugin.blocked') {
+        this.deps.log(botId, 'warning', row.plugin_id, `sdk.plugin.blocked ${(err.params.permissions as string[]).join(', ')}`);
+      } else {
+        this.deps.log(botId, 'error', row.plugin_id, key);
+      }
+      const failed = this.failed.get(botId) ?? new Map<string, TaskInfo>();
+      this.failed.set(botId, failed);
+      failed.set(row.plugin_id, { pluginId: row.plugin_id, name: row.plugin_id, version: row.version, state: 'failed', pid: null, startedAt: null, restarts: 0, calls: 0, callsPerMinute: 0, memoryBytes: null, cpuPercent: null, reason: key.slice(0, 120) });
+      return false;
+    }
+  }
+
+  /** Stops one plugin process (switched off, updated) and its tasks. */
+  private dropProcess(botId: number, p: PluginProcess): void {
+    for (const t of this.timers.get(botId)?.get(p.manifest.id) ?? []) clearInterval(t);
+    this.timers.get(botId)?.delete(p.manifest.id);
+    p.stop();
+    const list = this.running.get(botId) ?? [];
+    const i = list.indexOf(p);
+    if (i >= 0) list.splice(i, 1);
   }
 
   stopBot(botId: number): void {
     this.interactions.dropBot(botId);
-    for (const t of this.timers.get(botId) ?? []) clearInterval(t);
+    for (const list of this.timers.get(botId)?.values() ?? []) for (const t of list) clearInterval(t);
     this.timers.delete(botId);
     for (const p of this.running.get(botId) ?? []) p.stop();
     this.running.delete(botId);
+    this.failed.delete(botId);
+  }
+
+  /** Task manager: every plugin of a running bot with state, memory, CPU and calls. */
+  tasks(botId: number): TaskInfo[] {
+    const now = Date.now();
+    const out = (this.running.get(botId) ?? []).map((p) => p.info(now));
+    for (const f of this.failed.get(botId)?.values() ?? []) if (!out.some((t) => t.pluginId === f.pluginId)) out.push(f);
+    return out.sort((a, b) => a.pluginId.localeCompare(b.pluginId));
+  }
+
+  /** Bots with plugins in the task manager. */
+  botsWithTasks(): number[] {
+    return [...this.running.keys()];
+  }
+
+  /** Task manager "End task": kills the process at once; it stays off until restarted. */
+  killTask(botId: number, pluginId: string): boolean {
+    const p = this.running.get(botId)?.find((x) => x.manifest.id === pluginId);
+    if (!p) return false;
+    for (const t of this.timers.get(botId)?.get(pluginId) ?? []) clearInterval(t);
+    this.timers.get(botId)?.delete(pluginId);
+    p.kill('sdk.plugin.killed_by_user');
+    return true;
+  }
+
+  /** Task manager "Restart": a new process for the plugin (only while it is switched on). */
+  async restartTask(botId: number, pluginId: string): Promise<boolean> {
+    if (!this.running.has(botId)) throw new SdkError('sdk.plugin.not_running');
+    const row = this.enabledRows(botId, pluginId)[0];
+    if (!row) throw new SdkError('sdk.plugin.disabled');
+    const old = this.running.get(botId)?.find((x) => x.manifest.id === pluginId);
+    if (old) this.dropProcess(botId, old);
+    return this.launch(botId, row, this.options.policy());
   }
 
   /**
@@ -414,8 +502,10 @@ export class PluginManager {
       this.deps.log(botId, 'warning', p.manifest.id, 'sdk.policy.off scheduler: tasks do not run');
       return;
     }
-    const list = this.timers.get(botId) ?? [];
-    this.timers.set(botId, list);
+    const byPlugin = this.timers.get(botId) ?? new Map<string, NodeJS.Timeout[]>();
+    this.timers.set(botId, byPlugin);
+    const list = byPlugin.get(p.manifest.id) ?? [];
+    byPlugin.set(p.manifest.id, list);
     // While two cores run (update), only the leader runs plugin tasks.
     const run = (name: string) => (handover.isLeader() ? p.runTask(name).catch((err) => this.logRunError(botId, p, `task ${name}`, err)) : Promise.resolve());
     const crons: { name: string; cron: Cron }[] = [];
@@ -1171,6 +1261,7 @@ export class PluginManager {
       this.options.limits,
       (level, key, params) => this.deps.log(botId, level, manifest.id, `${key} ${JSON.stringify(params).slice(0, 400)}`),
     );
+    proc.guard = () => this.isEnabled(botId, manifest.id);
     await proc.start();
     return proc;
   }

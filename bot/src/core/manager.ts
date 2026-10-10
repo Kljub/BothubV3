@@ -10,6 +10,7 @@ import { log } from './log.js';
 import type { Repo } from './repo.js';
 import { decrypt } from './secrets.js';
 import { ROLE } from './handover.js';
+import { reportTasksNow } from './live.js';
 import { BotInstance, type InstanceDeps, type WebhookCall } from '../discord/instance.js';
 
 export interface BotEvent {
@@ -146,8 +147,12 @@ export class BotManager {
 
   async handleEvent(ev: BotEvent): Promise<void> {
     // Global plugin changes: every running bot restarts its plugins.
+    // Plugin switched on/off, installed or updated: only those change (task
+    // manager), the others keep running. A policy change restarts all.
     if (ev.type === 'sdk.policies.changed' || ev.type === 'plugins.changed') {
-      await Promise.allSettled([...this.bots.values()].filter((b) => b.running).map((b) => b.startPlugins()));
+      const sync = ev.type === 'plugins.changed';
+      await Promise.allSettled([...this.bots.values()].filter((b) => b.running).map((b) => b.startPlugins(sync)));
+      reportTasksNow();
       return;
     }
     const id = ev.botId;
@@ -219,6 +224,19 @@ export class BotManager {
         if (!bot) return { ok: false, errorKey: 'error.bot.not_running' };
         if (typeof j.cardId !== 'number' || typeof j.target !== 'string') return { ok: false, errorKey: 'error.job.invalid' };
         await bot.sendCard(j.cardId, j.target);
+        return { ok: true };
+      }
+      if (job.type === 'plugin.kill' || job.type === 'plugin.restart') {
+        const pluginId = (job as { pluginId?: unknown }).pluginId;
+        const bot = this.bots.get(id);
+        if (!bot?.running) return { ok: false, errorKey: 'error.bot.not_running' };
+        if (typeof pluginId !== 'string') return { ok: false, errorKey: 'error.job.invalid' };
+        // Already in the bot's queue (index.ts): no second enqueue.
+        try {
+          await bot.pluginTask(pluginId, job.type === 'plugin.kill' ? 'kill' : 'restart');
+        } finally {
+          reportTasksNow();
+        }
         return { ok: true };
       }
       if (job.type === 'bot.start') await this.control(id, 'start');

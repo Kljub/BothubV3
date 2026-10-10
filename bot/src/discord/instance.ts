@@ -278,18 +278,39 @@ export class BotInstance {
     await this.startPlugins();
   }
 
-  /** Starts the bot's plugins and adds their blocks (plugin.<id>.<name>) to the engine. */
-  async startPlugins(): Promise<void> {
+  /**
+   * Starts the bot's plugins and adds their blocks (plugin.<id>.<name>) to
+   * the engine. With sync only switched/installed/updated plugins change.
+   */
+  async startPlugins(sync = false): Promise<void> {
     const plugins = this.deps.plugins;
     if (!plugins) return;
-    for (const key of [...this.engine.handlers.keys()]) if (key.startsWith('plugin.')) this.engine.handlers.delete(key);
-    for (const key of [...this.engine.defs.keys()]) if (key.startsWith('plugin.')) this.engine.defs.delete(key);
     try {
-      await plugins.startBot(this.botId);
+      await plugins.startBot(this.botId, sync);
     } catch (err) {
       log.error('plugins failed', { botId: this.botId, err });
-      return;
     }
+    this.pluginBlocks();
+  }
+
+  /** Task manager: end or restart one plugin, then the engine gets its blocks again. */
+  async pluginTask(pluginId: string, op: 'kill' | 'restart'): Promise<void> {
+    const plugins = this.deps.plugins;
+    if (!plugins) throw new Error('error.plugin.unknown');
+    if (op === 'kill') {
+      if (!plugins.killTask(this.botId, pluginId)) throw new Error('error.plugin.not_running');
+    } else {
+      await plugins.restartTask(this.botId, pluginId);
+    }
+    this.pluginBlocks();
+  }
+
+  /** The engine's plugin blocks: those of the running plugins. */
+  private pluginBlocks(): void {
+    const plugins = this.deps.plugins;
+    for (const key of [...this.engine.handlers.keys()]) if (key.startsWith('plugin.')) this.engine.handlers.delete(key);
+    for (const key of [...this.engine.defs.keys()]) if (key.startsWith('plugin.')) this.engine.defs.delete(key);
+    if (!plugins) return;
     for (const [type, def] of plugins.blockDefs(this.botId)) this.engine.defs.set(type, def);
     for (const [type, handler] of plugins.blockHandlers(this.botId)) this.engine.handlers.set(type, handler);
   }

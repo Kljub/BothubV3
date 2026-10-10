@@ -299,6 +299,24 @@ final class InternalRouter
                 default => throw new ApiError(405, 'error.method_not_allowed'),
             };
         }
+        // Task manager of the bot's plugins: the rows the bot reports, end task and restart.
+        if (preg_match('#^/internal/bots/(\d+)/plugin-tasks(?:/([a-z0-9_-]{2,64})/(kill|restart))?$#', $path, $m)) {
+            $id = (int) $m[1];
+            $this->bots->find($id) ?? throw ApiError::notFound();
+            try {
+                $jobs = ($this->jobs)();
+                if (!isset($m[2]) && $method === 'GET') {
+                    $report = $jobs->pluginTasks($id);
+                    return [200, ['running' => $report !== null, 'at' => $report['at'] ?? null, 'tasks' => $report['tasks'] ?? []]];
+                }
+                if (isset($m[2]) && $method === 'POST') {
+                    return [202, $jobs->get($jobs->dispatch('plugin.' . $m[3], ['botId' => $id, 'pluginId' => $m[2]]))];
+                }
+            } catch (\RedisException) {
+                throw new ApiError(503, 'error.redis.unavailable');
+            }
+            throw new ApiError(405, 'error.method_not_allowed');
+        }
         if (preg_match('#^/internal/bots/(\d+)(?:/(token|start|stop|restart))?$#', $path, $m)) {
             $id = (int) $m[1];
             $action = $m[2] ?? '';

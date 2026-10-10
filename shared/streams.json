@@ -85,6 +85,18 @@
           "jobId": "string",
           "botId": "integer"
         },
+        "plugin.kill": {
+          "jobId": "string",
+          "botId": "integer",
+          "pluginId": "string",
+          "$comment": "Task manager \"End task\": the plugin process of the bot is killed at once and stays off until restarted (or the bot restarts)"
+        },
+        "plugin.restart": {
+          "jobId": "string",
+          "botId": "integer",
+          "pluginId": "string",
+          "$comment": "Task manager \"Restart\": a new process for the plugin; only while it is switched on"
+        },
         "core.restart": {
           "jobId": "string",
           "requestedAt": "integer",

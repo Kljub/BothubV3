@@ -71,7 +71,7 @@ var botRules = []botRule{
 	{regexp.MustCompile(`^/(commands|command-groups|templates|custom-commands|runs)(/|$)`), "commands.manage"},
 	{regexp.MustCompile(`^/(events|timed|webhooks|webhook-key)(/|$)`), "events.manage"},
 	{regexp.MustCompile(`^/modules(/|$)`), "modules.manage"},
-	{regexp.MustCompile(`^/plugins(/|$)`), "plugins.manage"},
+	{regexp.MustCompile(`^/(plugins|plugin-tasks)(/|$)`), "plugins.manage"},
 	{regexp.MustCompile(`^/data(/|$)`), "data.manage"},
 }
 

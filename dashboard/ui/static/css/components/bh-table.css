@@ -28,3 +28,9 @@
 .meter-track { fill: var(--surface-2); }
 .meter-fill { fill: var(--blue); }
 .meter-fill-high { fill: var(--red); }
+
+/* Task manager of the plugins: the table scrolls sideways on phones. */
+.task-table { overflow-x: auto; }
+.task-table .table { min-width: 640px; }
+.task-actions { white-space: nowrap; }
+.task-actions .btn + .btn { margin-left: 6px; }
