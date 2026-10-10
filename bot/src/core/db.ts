@@ -7,7 +7,8 @@
 // same as the API (api/src/Database/Connection.php). The key: BOTHUB_DB_KEY,
 // else KEYS_DIR/db.key; 64 hex characters are the key itself, other text is
 // hashed with SHA-256. A file that is still plain (the API encrypts it at its
-// start) opens without the key.
+// start) opens without the key. KEYS_DIR/db.raw: the key is SQLCipher's raw
+// key (x'…', fast); without it the older passphrase form (PBKDF2).
 
 import Database from 'better-sqlite3-multiple-ciphers';
 import { createHash } from 'node:crypto';
@@ -37,6 +38,11 @@ export function dbKey(): string | null {
   return createHash('sha256').update(raw).digest('hex');
 }
 
+/** The database uses the raw key (marker KEYS_DIR/db.raw, written by the API). */
+export function rawKey(): boolean {
+  return existsSync(join(process.env.KEYS_DIR || process.env.DATA_DIR || '/data', 'db.raw'));
+}
+
 /** True when the file exists and starts with the plain SQLite header. */
 export function isPlain(path: string): boolean {
   let fd: number | undefined;
@@ -57,7 +63,8 @@ export function openDb(path: string): Db {
   if (key !== null && !isPlain(path)) {
     db.pragma(`cipher = 'sqlcipher'`);
     db.pragma('legacy = 4');
-    db.pragma(`hexkey = '${key}'`);
+    if (rawKey()) db.pragma(`key = "x'${key}'"`);
+    else db.pragma(`hexkey = '${key}'`);
   }
   db.pragma('busy_timeout = 5000');
   db.pragma('journal_mode = WAL');

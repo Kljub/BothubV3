@@ -1,11 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync, mkdtempSync } from 'node:fs';
+import { readFileSync, readdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { createHash, randomBytes } from 'node:crypto';
-import { dbKey, isPlain, openDb, schemaVersion, waitForSchema } from './db.js';
+import { dbKey, isPlain, openDb, rawKey, schemaVersion, waitForSchema } from './db.js';
 import { Repo, type CommandRow } from './repo.js';
 import { decrypt, encrypt } from './secrets.js';
 import { buildCommands, denied, permissionBit, settingsOf } from '../discord/commands.js';
@@ -23,6 +23,7 @@ const shared = join(root, 'shared');
 test('database encryption: a key encrypts a new file, a plain file still opens, the same key reads it', () => {
   const dir = mkdtempSync(join(tmpdir(), 'bothub-enc-'));
   const before = process.env.BOTHUB_DB_KEY;
+  const keysBefore = process.env.KEYS_DIR;
   try {
     delete process.env.BOTHUB_DB_KEY;
     const plainPath = join(dir, 'plain.sqlite');
@@ -47,9 +48,25 @@ test('database encryption: a key encrypts a new file, a plain file still opens, 
     process.env.BOTHUB_DB_KEY = 'f'.repeat(64);
     assert.equal(dbKey(), 'f'.repeat(64));
     assert.throws(() => openDb(path).prepare('SELECT v FROM t').get());
+
+    // Raw key (marker db.raw in KEYS_DIR): fast to open, and not the passphrase form.
+    process.env.KEYS_DIR = dir;
+    writeFileSync(join(dir, 'db.raw'), 'raw');
+    assert.ok(rawKey());
+    const rawPath = join(dir, 'raw.sqlite');
+    const r = openDb(rawPath);
+    r.exec("CREATE TABLE t (v TEXT); INSERT INTO t VALUES ('raw')");
+    r.close();
+    const t0 = Date.now();
+    assert.equal(openDb(rawPath).prepare('SELECT v FROM t').get()?.['v' as never], 'raw');
+    assert.ok(Date.now() - t0 < 60, 'the raw key opens without the slow key derivation');
+    rmSync(join(dir, 'db.raw'));
+    assert.throws(() => openDb(rawPath).prepare('SELECT v FROM t').get());
   } finally {
     if (before === undefined) delete process.env.BOTHUB_DB_KEY;
     else process.env.BOTHUB_DB_KEY = before;
+    if (keysBefore === undefined) delete process.env.KEYS_DIR;
+    else process.env.KEYS_DIR = keysBefore;
   }
 });
 

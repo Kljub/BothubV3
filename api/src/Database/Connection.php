@@ -16,6 +16,11 @@ use PDO;
  * KEYS_DIR/db.key (made by start-app). Without the key the file, its WAL
  * and its backups are unreadable. A database that is still plain (older
  * installs) opens without the key until bin/encrypt-db.php encrypted it.
+ *
+ * Key format: the key is 32 random bytes, so it is used as SQLCipher's raw
+ * key (x'…', opens in about a millisecond). Databases encrypted before
+ * used it as a passphrase (PBKDF2, about 130 ms per open); bin/encrypt-db.php
+ * switches them once. KEYS_DIR/db.raw marks a database with the raw key.
  */
 final class Connection
 {
@@ -53,12 +58,29 @@ final class Connection
         return $head === self::PLAIN_HEADER;
     }
 
-    /** Sets the cipher and key on a fresh connection. */
-    public static function applyKey(PDO $pdo, string $hexKey): void
+    /** Sets the cipher and key on a fresh connection: raw key, or the older passphrase form. */
+    public static function applyKey(PDO $pdo, string $hexKey, ?bool $raw = null): void
     {
         $pdo->exec("PRAGMA cipher = 'sqlcipher'");
         $pdo->exec('PRAGMA legacy = 4');
-        $pdo->exec("PRAGMA hexkey = '{$hexKey}'");
+        if ($raw ?? self::rawKey()) {
+            $pdo->exec("PRAGMA key = \"x'{$hexKey}'\"");
+        } else {
+            $pdo->exec("PRAGMA hexkey = '{$hexKey}'");
+        }
+    }
+
+    /** The marker file of the raw key format (next to db.key). */
+    public static function rawMarker(): string
+    {
+        $dir = getenv('KEYS_DIR') ?: (getenv('DATA_DIR') ?: '/data');
+        return rtrim($dir, '/') . '/db.raw';
+    }
+
+    /** The database uses the raw key (bin/encrypt-db.php set the marker). */
+    public static function rawKey(): bool
+    {
+        return is_file(self::rawMarker());
     }
 
     public static function open(string $path): PDO

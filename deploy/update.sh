@@ -57,6 +57,10 @@ cleanup_handover() {
 
 # --- 1. database backup (the app container has PHP and SQLite) ---
 backup=""
+# The key form of the database at the backup (keys/db.raw): a rollback to an
+# older backup must not keep the marker of a newer form.
+raw_before=0
+docker compose exec -T app test -f /keys/db.raw 2>/dev/null && raw_before=1
 if docker compose ps --status running --services 2>/dev/null | grep -qx app; then
   step "backing up the database"
   name="pre-update-$(date -u +%Y%m%d-%H%M%S).sqlite"
@@ -83,12 +87,16 @@ step building
 docker compose --progress plain build || exit 1
 
 # A database that is still plain gets encrypted once by the new app at its
-# start; no BotCore may hold it open meanwhile, so this update runs without
-# the second core and stops the bots for the restart.
+# start, and one with the older passphrase key gets the raw key (no
+# keys/db.raw yet); no BotCore may hold it open meanwhile, so this update
+# runs without the second core and stops the bots for the restart.
 plain_db=0
 if docker compose exec -T app sh -c 'head -c 15 /data/bothub.sqlite 2>/dev/null' | grep -q '^SQLite format 3'; then
   plain_db=1
   step "the database gets encrypted: the bots restart without a second BotCore"
+elif docker compose exec -T app sh -c '{ [ -s /keys/db.key ] || [ -n "${BOTHUB_DB_KEY:-}" ]; } && [ ! -f /keys/db.raw ]' 2>/dev/null; then
+  plain_db=1
+  step "the database key switches to the raw form: the bots restart without a second BotCore"
 fi
 
 # --- 3. second BotCore ---
@@ -135,7 +143,9 @@ if [ "$ok" = 0 ] && [ -n "${OLD_COMMIT:-}" ]; then
   git reset -q --hard "$OLD_COMMIT"
   if [ -n "$backup" ]; then
     docker compose stop app bot >/dev/null 2>&1
-    docker compose run --rm --no-deps --entrypoint sh app -c "cp /data/backups/$backup /data/bothub.sqlite && rm -f /data/bothub.sqlite-wal /data/bothub.sqlite-shm" \
+    unmark=""
+    [ "$raw_before" = 0 ] && unmark=" && rm -f /keys/db.raw"
+    docker compose run --rm --no-deps --entrypoint sh app -c "cp /data/backups/$backup /data/bothub.sqlite && rm -f /data/bothub.sqlite-wal /data/bothub.sqlite-shm$unmark" \
       && echo "database restored from data/backups/$backup"
   fi
   docker compose --progress plain build && docker compose up -d --remove-orphans
