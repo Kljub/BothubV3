@@ -332,20 +332,33 @@ final class PluginStore
             }
             $cmd = is_file($dir . '/' . $path) ? json_decode((string) file_get_contents($dir . '/' . $path), true) : null;
             $graph = is_array($cmd) ? json_decode(json_encode($cmd['graph'] ?? null), false) : null;
-            if (!is_array($cmd) || !is_string($cmd['name'] ?? null) || !preg_match('/^[a-z0-9_-]{1,32}( [a-z0-9_-]{1,32}){0,2}$/', $cmd['name'])
-                || mb_strlen((string) ($cmd['description'] ?? '')) > 100) {
+            // A slash command (one trigger.slash) or a custom event (one trigger.event).
+            $list = is_array($cmd['graph']['nodes'] ?? null) ? $cmd['graph']['nodes'] : [];
+            $slash = array_filter($list, static fn ($n) => is_array($n) && ($n['type'] ?? null) === 'trigger.slash');
+            $event = array_values(array_filter($list, static fn ($n) => is_array($n) && ($n['type'] ?? null) === 'trigger.event'));
+            if (count($slash) + count($event) !== 1) {
+                throw new ApiError(422, 'error.plugin.command', ['file' => $path, 'reason' => 'needs exactly one trigger.slash or trigger.event block']);
+            }
+            $kind = $event ? 'event' : 'command';
+            $eventType = $event ? (string) ($event[0]['config']['event'] ?? '') : null;
+            if (!is_array($cmd) || !is_string($cmd['name'] ?? null) || mb_strlen((string) ($cmd['description'] ?? '')) > 100
+                || ($kind === 'command' && !preg_match('/^[a-z0-9_-]{1,32}( [a-z0-9_-]{1,32}){0,2}$/', $cmd['name']))
+                || ($kind === 'event' && (trim($cmd['name']) === '' || mb_strlen($cmd['name']) > 100 || $eventType === ''))) {
                 throw new ApiError(422, 'error.plugin.command', ['file' => $path, 'reason' => 'name or description']);
             }
-            $slash = array_filter(is_array($cmd['graph']['nodes'] ?? null) ? $cmd['graph']['nodes'] : [], static fn ($n) => is_array($n) && ($n['type'] ?? null) === 'trigger.slash');
-            if (count($slash) !== 1) {
-                throw new ApiError(422, 'error.plugin.command', ['file' => $path, 'reason' => 'needs exactly one trigger.slash block']);
+            if ($kind === 'event') {
+                try {
+                    CommandStore::validEvent($cmd['name'], $eventType);
+                } catch (ApiError $e) {
+                    throw new ApiError(422, 'error.plugin.command', ['file' => $path, 'reason' => 'unknown event ' . $eventType]);
+                }
             }
             try {
                 $nodes = CommandStore::validGraph($cmd['graph'] ?? null, $own);
             } catch (ApiError $e) {
                 throw new ApiError(422, 'error.plugin.command', ['file' => $path, 'reason' => $e->key]);
             }
-            $commands[$mm[1]] = ['name' => $cmd['name'], 'description' => (string) ($cmd['description'] ?? ''), 'graph' => $graph, 'nodes' => $nodes];
+            $commands[$mm[1]] = ['name' => $cmd['name'], 'description' => (string) ($cmd['description'] ?? ''), 'graph' => $graph, 'nodes' => $nodes, 'kind' => $kind, 'eventType' => $eventType];
         }
         return ['manifest' => $m, 'commands' => $commands, 'lang' => $lang];
     }
@@ -563,8 +576,9 @@ final class PluginStore
     // ---------- commands ----------
 
     /**
-     * Creates missing disabled copies of the plugin's commands for one bot,
-     * in a group named after the plugin. Copies the user never saved
+     * Creates missing disabled copies of the plugin's commands (and custom
+     * events: graphs with a trigger.event) for one bot, in a group named
+     * after the plugin. Copies the user never saved
      * (hidden = 1) follow a new plugin version (graph and version; the
      * enabled switch stays); saved copies are never overwritten, their
      * changed graph is reported.
@@ -595,8 +609,8 @@ final class PluginStore
                     if (json_decode((string) $existing['graph'], true) == json_decode($graph, true)) {
                         continue;
                     }
-                    $pdo->prepare("UPDATE commands SET graph = ?, description = ?, plugin_version = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?")
-                        ->execute([$graph, mb_substr($c['description'], 0, 100), $m['version'], (int) $existing['id']]);
+                    $pdo->prepare("UPDATE commands SET graph = ?, description = ?, plugin_version = ?, event_type = COALESCE(?, event_type), updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?")
+                        ->execute([$graph, mb_substr($c['description'], 0, 100), $m['version'], $c['eventType'] ?? null, (int) $existing['id']]);
                     $pdo->prepare('INSERT INTO command_versions (command_id, nodes, graph) VALUES (?, ?, ?)')->execute([(int) $existing['id'], $c['nodes'], $graph]);
                     Outbox::add($pdo, 'command.saved', ['botId' => $botId, 'commandId' => (int) $existing['id']]);
                     $out['updated']++;
@@ -605,8 +619,9 @@ final class PluginStore
                 }
                 continue;
             }
+            $kind = $c['kind'] ?? 'command';
             $taken->execute([$botId, $c['name']]);
-            if ($taken->fetchColumn() !== false) {
+            if ($kind === 'command' && $taken->fetchColumn() !== false) {
                 $out['conflicts'][] = $c['name']; // a user command already has this name
                 continue;
             }
@@ -620,9 +635,9 @@ final class PluginStore
                     $group = (int) $pdo->lastInsertId();
                 }
             }
-            $pdo->prepare("INSERT INTO commands (bot_id, kind, name, description, builtin, enabled, hidden, group_id, graph, plugin_id, plugin_version, preset_name)
-                VALUES (?, 'command', ?, ?, 0, 0, 1, ?, ?, ?, ?, ?)")
-                ->execute([$botId, $c['name'], mb_substr($c['description'], 0, 100), $group, $graph, $m['id'], $m['version'], $preset]);
+            $pdo->prepare('INSERT INTO commands (bot_id, kind, name, description, builtin, enabled, hidden, group_id, graph, plugin_id, plugin_version, preset_name, event_type)
+                VALUES (?, ?, ?, ?, 0, 0, 1, ?, ?, ?, ?, ?, ?)')
+                ->execute([$botId, $kind, $c['name'], mb_substr($c['description'], 0, 100), $group, $graph, $m['id'], $m['version'], $preset, $kind === 'event' ? $c['eventType'] : null]);
             $pdo->prepare('INSERT INTO command_versions (command_id, nodes, graph) VALUES (?, ?, ?)')->execute([(int) $pdo->lastInsertId(), $c['nodes'], $graph]);
             $out['created']++;
         }

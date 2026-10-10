@@ -179,10 +179,16 @@ export async function check(dir) {
     const file = join(dir, path);
     if (!existsSync(file)) { err(`missing ${path}`); continue; }
     const cmd = await readJson(file);
-    if (typeof cmd.name !== 'string' || !/^[a-z0-9_-]{1,32}( [a-z0-9_-]{1,32}){0,2}$/.test(cmd.name)) err(`${path}: name must be 1-3 words of a-z 0-9 _ -`);
-    if (String(cmd.description ?? '').length > 100) err(`${path}: description longer than 100 characters`);
     const nodes = cmd.graph?.nodes ?? [];
-    if (nodes.filter((n) => n.type === 'trigger.slash').length !== 1) err(`${path}: needs exactly one trigger.slash block`);
+    // A slash command (one trigger.slash) or a custom event (one trigger.event).
+    const slash = nodes.filter((n) => n.type === 'trigger.slash').length;
+    const events = nodes.filter((n) => n.type === 'trigger.event');
+    if (slash + events.length !== 1) err(`${path}: needs exactly one trigger.slash or trigger.event block`);
+    if (events.length) {
+      if (typeof cmd.name !== 'string' || !cmd.name.trim() || cmd.name.length > 100) err(`${path}: event name must be 1-100 characters`);
+      if (!events[0].config?.event) err(`${path}: trigger.event needs an event`);
+    } else if (typeof cmd.name !== 'string' || !/^[a-z0-9_-]{1,32}( [a-z0-9_-]{1,32}){0,2}$/.test(cmd.name)) err(`${path}: name must be 1-3 words of a-z 0-9 _ -`);
+    if (String(cmd.description ?? '').length > 100) err(`${path}: description longer than 100 characters`);
     const ids = new Set(nodes.map((n) => n.id));
     for (const n of nodes) {
       if (n.type?.startsWith('plugin.') && !ownNodes.has(n.type)) err(`${path}: ${n.type} is not a node of this plugin`);

@@ -66,6 +66,13 @@ export function bindEvents(client: Client, emit: Emit): void {
   client.on(Events.MessageCreate, (m) => {
     if (own(m.author)) return;
     emit(fromMessage('message_create', m));
+    // Someone talks to the bot: @mention, or a reply to one of its messages
+    // (also with the reply ping off). @everyone and role pings do not count.
+    const me = client.user?.id;
+    if (me && !m.author.bot && (m.mentions.users.has(me) || m.mentions.repliedUser?.id === me)) {
+      const text = m.content.replace(new RegExp(`<@!?${me}>`, 'g'), '').replace(/\s+/g, ' ').trim();
+      emit(fromMessage('bot_mention', m, { mention_text: text }));
+    }
   });
   client.on(Events.MessageUpdate, (before, after) => {
     if (own(after.author) || before.content === after.content) return;

@@ -408,27 +408,34 @@ func (s *Server) selectedBotOrHome(w http.ResponseWriter, r *http.Request, p Pag
 	return bot, true
 }
 
-// pluginCommandView is one slash command a plugin added to the bot (its copy
-// in Custom Commands), for the plugin page: toggle and builder link.
+// pluginCommandView is one slash command or custom event a plugin added to
+// the bot (its copy in Custom Commands or Custom Events), for the plugin
+// page: toggle and builder link.
 type pluginCommandView struct {
 	BotID  int64
 	Plugin string
+	Event  bool
 	api.CustomCommand
 }
 
-// pluginCommands lists the bot's copies of the plugin's commands by name.
+// pluginCommands lists the bot's copies of the plugin's commands by name,
+// then its events.
 func (s *Server) pluginCommands(r *http.Request, botID int64, plugin string) ([]pluginCommandView, error) {
-	all, err := s.api.CustomCommands(r.Context(), session(r), api.KindCommand, botID)
-	if err != nil {
-		return nil, err
-	}
 	var out []pluginCommandView
-	for _, c := range all {
-		if c.PluginID != nil && *c.PluginID == plugin {
-			out = append(out, pluginCommandView{BotID: botID, Plugin: plugin, CustomCommand: c})
+	for _, kind := range []api.Kind{api.KindCommand, api.KindEvent} {
+		all, err := s.api.CustomCommands(r.Context(), session(r), kind, botID)
+		if err != nil {
+			return nil, err
 		}
+		var part []pluginCommandView
+		for _, c := range all {
+			if c.PluginID != nil && *c.PluginID == plugin {
+				part = append(part, pluginCommandView{BotID: botID, Plugin: plugin, Event: kind == api.KindEvent, CustomCommand: c})
+			}
+		}
+		slices.SortFunc(part, func(a, b pluginCommandView) int { return strings.Compare(a.Name, b.Name) })
+		out = append(out, part...)
 	}
-	slices.SortFunc(out, func(a, b pluginCommandView) int { return strings.Compare(a.Name, b.Name) })
 	return out, nil
 }
 
@@ -445,7 +452,11 @@ func (s *Server) handlePluginCommand(w http.ResponseWriter, r *http.Request, p P
 		return
 	}
 	plugin := r.PathValue("plugin")
-	cur, err := s.api.CustomCommand(r.Context(), session(r), api.KindCommand, id, cid)
+	kind := api.KindCommand
+	if r.URL.Query().Get("kind") == "event" {
+		kind = api.KindEvent
+	}
+	cur, err := s.api.CustomCommand(r.Context(), session(r), kind, id, cid)
 	if err != nil {
 		s.fail(w, r, p, err)
 		return
@@ -456,16 +467,16 @@ func (s *Server) handlePluginCommand(w http.ResponseWriter, r *http.Request, p P
 	}
 	var c api.CustomCommand
 	_ = r.ParseForm()
-	if v, set := r.PostForm["private"]; set && len(v) > 0 {
-		c, err = s.api.SetCustomCommandPrivate(r.Context(), session(r), api.KindCommand, id, cid, v[0] == "true")
+	if v, set := r.PostForm["private"]; set && len(v) > 0 && kind == api.KindCommand {
+		c, err = s.api.SetCustomCommandPrivate(r.Context(), session(r), kind, id, cid, v[0] == "true")
 	} else {
-		c, err = s.api.SetCustomCommandEnabled(r.Context(), session(r), api.KindCommand, id, cid, r.PostFormValue("enabled") == "true")
+		c, err = s.api.SetCustomCommandEnabled(r.Context(), session(r), kind, id, cid, r.PostFormValue("enabled") == "true")
 	}
 	if err != nil {
 		s.fail(w, r, p, err)
 		return
 	}
-	s.render(w, http.StatusOK, "module_item", "plugin_command_row_fragment", withData(p, pluginCommandView{BotID: id, Plugin: plugin, CustomCommand: c}))
+	s.render(w, http.StatusOK, "module_item", "plugin_command_row_fragment", withData(p, pluginCommandView{BotID: id, Plugin: plugin, Event: kind == api.KindEvent, CustomCommand: c}))
 }
 
 // aboutStep is one row of a module's "How it works" article.

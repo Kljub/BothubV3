@@ -39,6 +39,7 @@
           "member_screening",
           "guild_update",
           "message_create",
+          "bot_mention",
           "message_update",
           "message_delete",
           "message_pin",

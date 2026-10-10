@@ -131,7 +131,7 @@
       "type": "array",
       "uniqueItems": true,
       "maxItems": 25,
-      "description": "Layer \"Commands\": slash command graphs ({name, description, graph}); every bot gets a disabled copy in Custom Commands.",
+      "description": "Layer \"Commands\": slash command graphs ({name, description, graph}; one trigger.slash) and custom event graphs (one trigger.event, e.g. bot_mention); every bot gets a disabled copy in Custom Commands or Custom Events.",
       "items": {
         "type": "string",
         "pattern": "^commands/[a-z0-9_-]{1,32}\\.json$"

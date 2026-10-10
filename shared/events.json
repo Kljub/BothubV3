@@ -167,6 +167,23 @@
           ]
         },
         {
+          "key": "bot_mention",
+          "vars": [
+            "{message.id}",
+            "{message.content}",
+            "{message.url}",
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}",
+            "{channel}",
+            "{channel.id}",
+            "{channel.name}",
+            "{mention_text}"
+          ]
+        },
+        {
           "key": "message_update",
           "vars": [
             "{message.id}",

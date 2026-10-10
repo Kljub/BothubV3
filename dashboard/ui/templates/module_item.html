@@ -134,22 +134,24 @@
 
 {{define "plugin_command_row_fragment"}}{{template "plugin_command_row" .Data}}{{end}}
 
-{{/* One command a plugin added (its copy in Custom Commands): toggle and builder. */}}
+{{/* One command or event a plugin added (its copy in Custom Commands or Custom Events): toggle and builder. */}}
 {{define "plugin_command_row"}}
 <div class="command-row" id="plugin-cmd-{{.ID}}">
   <div class="command-text">
-    <div class="command-line"><code class="command-usage">/{{.Name}}</code></div>
+    <div class="command-line">{{if .Event}}<span class="command-usage">📡 {{.Name}}</span> <span class="badge-soft">{{t (printf "builder.event.%s" .EventType)}}</span>{{else}}<code class="command-usage">/{{.Name}}</code>{{end}}</div>
     <p class="command-desc">{{with .Description}}{{.}}{{else}}{{t "cmdhub.no_description"}}{{end}}</p>
   </div>
   <div class="command-actions">
+    {{if not .Event}}
     <form hx-put="/bot/{{.BotID}}/plugins/{{.Plugin}}/commands/{{.ID}}" hx-trigger="change" hx-target="#plugin-cmd-{{.ID}}" hx-swap="outerHTML">
       <select name="private" class="select-plain" title="{{t "plugins.commands.visibility_hint"}}" aria-label="{{t "plugins.commands.visibility" "name" .Name}}">
         <option value="false"{{if not .Private}} selected{{end}}>{{t "plugins.commands.public"}}</option>
         <option value="true"{{if .Private}} selected{{end}}>{{t "plugins.commands.private"}}</option>
       </select>
     </form>
-    <a class="icon-btn" href="/bots/builder/{{.ID}}" hx-boost="false" title="{{t "plugins.commands.edit"}}" aria-label="{{t "plugins.commands.edit"}}">{{template "icon_gear"}}</a>
-    <form hx-put="/bot/{{.BotID}}/plugins/{{.Plugin}}/commands/{{.ID}}" hx-trigger="change" hx-target="#plugin-cmd-{{.ID}}" hx-swap="outerHTML">
+    {{end}}
+    <a class="icon-btn" href="{{if .Event}}/bots/events/builder/{{.ID}}{{else}}/bots/builder/{{.ID}}{{end}}" hx-boost="false" title="{{t "plugins.commands.edit"}}" aria-label="{{t "plugins.commands.edit"}}">{{template "icon_gear"}}</a>
+    <form hx-put="/bot/{{.BotID}}/plugins/{{.Plugin}}/commands/{{.ID}}{{if .Event}}?kind=event{{end}}" hx-trigger="change" hx-target="#plugin-cmd-{{.ID}}" hx-swap="outerHTML">
       <input type="checkbox" class="toggle" name="enabled" value="true" {{if .Enabled}}checked{{end}} aria-label="{{t "command.toggle" "name" .Name}}">
     </form>
   </div>

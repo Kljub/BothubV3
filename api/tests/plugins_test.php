@@ -167,6 +167,29 @@ $bad['commands/hello.json'] = json_encode(['name' => 'hello', 'graph' => ['schem
 $r = install(zipOf($bad));
 check('command without slash trigger refused', $r[0] === 422 && str_contains(json_encode($r[1]), 'trigger.slash'));
 
+// Custom events: a graph with one trigger.event becomes a disabled copy in Custom Events.
+$eventGraph = static fn (string $event) => ['schemaVersion' => 1, 'nodes' => [
+    ['id' => 't', 'type' => 'trigger.event', 'typeVersion' => 1, 'config' => ['event' => $event, 'event_name' => 'AI: answer mentions'], 'position' => ['x' => 0, 'y' => 0]],
+    ['id' => 'b', 'type' => 'plugin.plugin_greeter.wave', 'typeVersion' => 1, 'config' => (object) [], 'position' => ['x' => 0, 'y' => 100]],
+], 'edges' => []];
+$ev = pluginFiles('0.0.2', ['hello', 'mention']);
+$ev['commands/mention.json'] = json_encode(['name' => 'AI: answer mentions', 'description' => 'Answers when someone mentions the bot', 'graph' => $eventGraph('bot_mention')]);
+$r = install(zipOf($ev));
+$row = $pdo->query("SELECT kind, event_type, enabled, hidden FROM commands WHERE plugin_id = 'plugin_greeter' AND preset_name = 'mention'")->fetch();
+check('event graph installed as a disabled custom event', $r[0] === 201 && $r[1]['commands']['created'] >= 1
+    && $row && $row['kind'] === 'event' && $row['event_type'] === 'bot_mention' && $row['enabled'] === 0 && $row['hidden'] === 1);
+check('plugin event listed under events', in_array('AI: answer mentions', array_column(call('GET', "/internal/bots/{$bot1}/events")[1]['items'] ?? [], 'name'), true));
+call('DELETE', '/internal/admin/plugins/plugin_greeter', null, ['deleteCommands' => '1']);
+$ev['commands/mention.json'] = json_encode(['name' => 'AI: answer mentions', 'graph' => $eventGraph('no_such_event')]);
+$r = install(zipOf($ev));
+check('event graph with an unknown event refused', $r[0] === 422 && str_contains(json_encode($r[1]), 'error.plugin.command'));
+$both = $eventGraph('bot_mention');
+$both['nodes'][] = graph('hello')['nodes'][0];
+$both['nodes'][2]['id'] = 's';
+$ev['commands/mention.json'] = json_encode(['name' => 'mention', 'graph' => $both]);
+$r = install(zipOf($ev));
+check('graph with slash and event trigger refused', $r[0] === 422 && str_contains(json_encode($r[1]), 'trigger.event'));
+
 $r = install(zipOf(pluginFiles(change: ['secrets' => ['WEATHER_KEY']])));
 check('secrets need secrets.read', $r[0] === 422 && str_contains(json_encode($r[1]), 'secrets.read'));
 $r = install(zipOf(pluginFiles(change: ['secrets' => ['weather key'], 'permissions' => ['secrets.read']])));

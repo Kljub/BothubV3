@@ -5,7 +5,7 @@ core to Discord, the database and Redis.
 
 ```
 Plugin
-  ├── Commands    commands/<name>.json     slash command graphs
+  ├── Commands    commands/<name>.json     slash command and custom event graphs
   ├── Events      events/<event>.js        Discord event handlers
   ├── Services    services/*.js            timed tasks, external APIs, shared code
   ├── Nodes       nodes/<name>.json + .js  builder blocks
@@ -24,7 +24,8 @@ Plugin
 plugin_my_plugin/
 ├── bothub.json             the plugin file (schema: plugin-manifest.schema.json)
 ├── index.js                "main": joins nodes, events and services (definePlugin)
-├── commands/<name>.json    { name, description, graph }
+├── commands/<name>.json    { name, description, graph }: one trigger.slash (command)
+│                           or one trigger.event (custom event, e.g. bot_mention)
 ├── events/<event>.js       export default async (ctx, payload) => {}
 ├── services/<name>.js      tasks (export const tasks = { name: async (ctx) => {} }) and helpers
 ├── nodes/<name>.json       node definition (category, labelKey, inputs, outputs, results, config)
