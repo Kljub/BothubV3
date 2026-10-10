@@ -36,8 +36,13 @@ type discordClient struct {
 
 type cachedResponse struct {
 	body    []byte
+	err     error // a refusal (bad token, no access), kept briefly too
 	expires time.Time
 }
+
+// refusalTTL keeps a refusal of Discord (401, 403, 404) for a moment, so one
+// page does not wait for the same "no" several times.
+const refusalTTL = 15 * time.Second
 
 // guildCacheTTL keeps server, role and channel lists briefly, so pickers and
 // polling do not run into Discord's rate limits.
@@ -153,10 +158,18 @@ func (c *discordClient) cachedGet(ctx context.Context, token, path string, out a
 	hit, ok := c.cache[key]
 	c.mu.Unlock()
 	if ok && time.Now().Before(hit.expires) {
+		if hit.err != nil {
+			return hit.err
+		}
 		return json.Unmarshal(hit.body, out)
 	}
 	var raw json.RawMessage
 	if err := c.do(ctx, token, http.MethodGet, path, nil, &raw); err != nil {
+		if de, ok := err.(*discordError); ok && de.Status != 502 && de.Status != 429 {
+			c.mu.Lock()
+			c.cache[key] = cachedResponse{err: err, expires: time.Now().Add(refusalTTL)}
+			c.mu.Unlock()
+		}
 		return err
 	}
 	c.mu.Lock()

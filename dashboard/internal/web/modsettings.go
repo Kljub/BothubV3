@@ -370,15 +370,27 @@ func (s *Server) scopeData(r *http.Request, botID int64, scope settingsScope) (s
 	if needGuild {
 		// Without a running bot there are no servers; the page still works.
 		guilds, _ := s.api.ListGuilds(r.Context(), session(r), botID)
-		for _, g := range guilds {
-			sg := settingsGuild{ID: g.ID, Name: g.Name}
+		// Channels and roles of every server at the same time: one after the
+		// other they add up to seconds on a bot with several servers.
+		v.Guilds = make([]settingsGuild, len(guilds))
+		var wg sync.WaitGroup
+		for i, g := range guilds {
+			sg := &v.Guilds[i]
+			sg.ID, sg.Name = g.ID, g.Name
 			if g.IconURL != nil {
 				sg.IconURL = *g.IconURL
 			}
-			sg.Channels, _ = s.api.GuildChannels(r.Context(), session(r), botID, g.ID)
-			sg.Roles, _ = s.api.GuildRoles(r.Context(), session(r), botID, g.ID)
-			v.Guilds = append(v.Guilds, sg)
+			wg.Add(2)
+			go func() {
+				defer wg.Done()
+				sg.Channels, _ = s.api.GuildChannels(r.Context(), session(r), botID, g.ID)
+			}()
+			go func() {
+				defer wg.Done()
+				sg.Roles, _ = s.api.GuildRoles(r.Context(), session(r), botID, g.ID)
+			}()
 		}
+		wg.Wait()
 		v.Picker = s.pickerData(v.Guilds)
 	}
 	if sc.Integration != "" {

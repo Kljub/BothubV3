@@ -1074,3 +1074,32 @@ document.addEventListener('drop', (event) => {
   input.files = event.dataTransfer.files;
   input.dispatchEvent(new Event('change', { bubbles: true }));
 });
+
+// Page loads (hx-boost links and forms): a thin bar at the top shows at once
+// that the next page is on its way.
+(function () {
+  let bar = null;
+  let timer = null;
+  const start = () => {
+    // The page swap replaces the body: then the bar is made again.
+    if (!bar?.isConnected) {
+      bar = document.createElement('div');
+      bar.className = 'page-progress';
+      document.body.append(bar);
+    }
+    clearTimeout(timer);
+    bar.classList.remove('is-done');
+    bar.classList.add('is-active');
+  };
+  const done = () => {
+    if (!bar) return;
+    bar.classList.add('is-done');
+    timer = setTimeout(() => bar?.classList.remove('is-active', 'is-done'), 250);
+  };
+  document.addEventListener('htmx:beforeRequest', (event) => {
+    if (event.detail?.boosted) start();
+  });
+  for (const ev of ['htmx:afterSettle', 'htmx:responseError', 'htmx:sendError', 'htmx:timeout']) {
+    document.addEventListener(ev, (event) => { if (event.detail?.boosted || ev !== 'htmx:afterSettle') done(); });
+  }
+})();

@@ -67,20 +67,44 @@ final class Connection
         if ($path !== ':memory:' && !is_dir($dir) && !mkdir($dir, 0o750, true) && !is_dir($dir)) {
             throw new \RuntimeException("Cannot create data directory {$dir}");
         }
+        // The main database stays open per PHP thread (persistent): opening an
+        // encrypted database derives its key (PBKDF2, about 130 ms), which
+        // every request would pay otherwise.
+        $persistent = $path === self::defaultPath();
         $pdo = new PDO('sqlite:' . $path, null, null, [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_STRINGIFY_FETCHES => false,
+            PDO::ATTR_PERSISTENT => $persistent,
         ]);
         $key = $path === ':memory:' ? null : self::key();
-        if ($key !== null && !self::isPlain($path)) {
+        if ($key !== null && !self::isPlain($path) && !($persistent && self::readable($pdo))) {
             self::applyKey($pdo, $key);
+        }
+        if ($persistent) {
+            // A request that died inside a transaction must not leave it open for the next.
+            try {
+                $pdo->exec('ROLLBACK');
+            } catch (\PDOException) {
+                // no transaction open: the normal case
+            }
         }
         $pdo->exec('PRAGMA busy_timeout = 5000');
         $pdo->exec('PRAGMA journal_mode = WAL');
         $pdo->exec('PRAGMA synchronous = NORMAL');
         $pdo->exec('PRAGMA foreign_keys = ON');
         return $pdo;
+    }
+
+    /** A reused connection already has its key (an unkeyed one cannot read the schema). */
+    private static function readable(PDO $pdo): bool
+    {
+        try {
+            $pdo->query('SELECT count(*) FROM sqlite_master')->fetchColumn();
+            return true;
+        } catch (\PDOException) {
+            return false;
+        }
     }
 
     /** Path of the main database inside DATA_DIR. */

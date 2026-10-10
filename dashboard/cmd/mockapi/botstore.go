@@ -138,6 +138,32 @@ func (p *phpBots) job(ctx context.Context, id int64, action string) (map[string]
 
 // syncBots replaces the in-memory bots with the API's, keeping known tokens
 // and fetching missing ones. Caller must not hold s.mu.
+// syncBotsRecent: syncBots unless it ran less than a second ago. Status,
+// names and Co-Work members are at most a second old for reads.
+func (s *store) syncBotsRecent(ctx context.Context) error {
+	s.botSyncMu.Lock()
+	defer s.botSyncMu.Unlock()
+	if time.Since(s.botSynced) < time.Second {
+		return nil
+	}
+	if err := s.syncBots(ctx); err != nil {
+		return err
+	}
+	s.botSynced = time.Now()
+	return nil
+}
+
+// syncBotsNow: syncBots for a change; reads after it see the new list.
+func (s *store) syncBotsNow(ctx context.Context) error {
+	s.botSyncMu.Lock()
+	defer s.botSyncMu.Unlock()
+	if err := s.syncBots(ctx); err != nil {
+		return err
+	}
+	s.botSynced = time.Now()
+	return nil
+}
+
 func (s *store) syncBots(ctx context.Context) error {
 	list, err := s.php.list(ctx)
 	if err != nil {

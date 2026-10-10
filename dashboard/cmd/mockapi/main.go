@@ -112,8 +112,12 @@ type loginTicket struct {
 }
 
 type store struct {
-	mu            sync.Mutex
-	syncMu        sync.Mutex // orders the writes of account data to the PHP API
+	mu     sync.Mutex
+	syncMu sync.Mutex // orders the writes of account data to the PHP API
+	// botSync: the bot list from the PHP API, at most once a second for
+	// reads (every request on a bot needs it; concurrent ones share one).
+	botSyncMu     sync.Mutex
+	botSynced     time.Time
 	defaultLocale string
 	tickets       map[string]loginTicket
 	sessions      map[string]*sessionData // by sessionKey(cookie)
@@ -485,7 +489,7 @@ func main() {
 
 	addr := envOr("LISTEN_ADDR", ":9000")
 	slog.Info("mockapi listening", "addr", addr)
-	if err := http.ListenAndServe(addr, s.blocklistMiddleware(mux)); err != nil {
+	if err := http.ListenAndServe(addr, slowLog(s.blocklistMiddleware(mux))); err != nil {
 		slog.Error("mockapi stopped", "err", err)
 		os.Exit(1)
 	}
@@ -746,7 +750,12 @@ func (s *store) withBot(next botHandler) authed {
 		s.mu.Unlock()
 		if s.php != nil {
 			// Status and name come from the API (the NodeCore writes the status).
-			if err := s.syncBots(r.Context()); err != nil {
+			// Reads take the list of the last second; changes read it fresh.
+			refresh := s.syncBotsRecent
+			if r.Method != http.MethodGet && r.Method != http.MethodHead {
+				refresh = s.syncBotsNow
+			}
+			if err := refresh(r.Context()); err != nil {
 				pe := asPHPError(err)
 				apiError(w, pe.Status, pe.Key)
 				return
@@ -773,13 +782,19 @@ func (s *store) withBot(next botHandler) authed {
 		}
 		rec := &statusRecorder{ResponseWriter: w, status: 200}
 		next(rec, r, b)
+		if r.Method != http.MethodGet && r.Method != http.MethodHead {
+			// After a change the next read takes the list fresh.
+			s.botSyncMu.Lock()
+			s.botSynced = time.Time{}
+			s.botSyncMu.Unlock()
+		}
 		s.recordActivity(r, b, rec.status)
 	}
 }
 
 func (s *store) listBots(w http.ResponseWriter, r *http.Request, sid string) {
 	if s.php != nil {
-		if err := s.syncBots(r.Context()); err != nil {
+		if err := s.syncBotsRecent(r.Context()); err != nil {
 			pe := asPHPError(err)
 			apiError(w, pe.Status, pe.Key)
 			return
@@ -1431,4 +1446,16 @@ func envOr(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+// slowLog notes requests that take longer than half a second (which page
+// waits for what), without query strings.
+func slowLog(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		next.ServeHTTP(w, r)
+		if d := time.Since(start); d > 500*time.Millisecond {
+			slog.Info("slow request", "method", r.Method, "path", r.URL.Path, "ms", d.Milliseconds())
+		}
+	})
 }
