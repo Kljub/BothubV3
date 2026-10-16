@@ -164,7 +164,7 @@ final class InternalRouter
                     default => throw new ApiError(405, 'error.method_not_allowed'),
                 };
             }
-            if ($this->accounts !== null && preg_match('#^/internal/accounts(?:/(users|roles|passkeys|sessions)/([^/]{1,400}))?$#', $path, $m)) {
+            if ($this->accounts !== null && preg_match('#^/internal/accounts(?:/(users|roles|passkeys|sessions|devices)/([^/]{1,400}))?$#', $path, $m)) {
                 return $this->accountsRoute($method, $m[1] ?? '', isset($m[2]) ? rawurldecode($m[2]) : '', $body);
             }
             if ($this->docs !== null && preg_match('#^/internal/docs(?:/categories(?:/([a-z0-9-]{1,60}))?|/(\d+))?$#', $path, $m)) {
@@ -851,6 +851,8 @@ final class InternalRouter
             $kind === 'passkeys' && $method === 'DELETE' => $a->deletePasskey($id),
             $kind === 'sessions' && $method === 'PUT' => $a->saveSession($id, $body),
             $kind === 'sessions' && $method === 'DELETE' => $a->deleteSession($id),
+            $kind === 'devices' && $method === 'PUT' => $a->saveDevice($id, $body),
+            $kind === 'devices' && $method === 'DELETE' => $a->deleteDevice($id),
             default => throw new ApiError(405, 'error.method_not_allowed'),
         };
         return [204, null];

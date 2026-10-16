@@ -466,6 +466,12 @@ document.addEventListener('click', (event) => {
   dialog.querySelectorAll('.settings-content').forEach((el) => { el.hidden = el.id !== tab.dataset.settingsTab; });
 });
 
+// A button elsewhere in the popup that opens a tab: [data-settings-tab-open="<section id>"].
+document.addEventListener('click', (event) => {
+  const btn = event.target.closest('[data-settings-tab-open]');
+  btn?.closest('dialog')?.querySelector(`[data-settings-tab="${btn.dataset.settingsTabOpen}"]`)?.click();
+});
+
 // Date range picker ([data-range-picker]), design per the user's reference:
 // head with the selected dates written out, month row with ▲/▼, 6-week grid
 // (Monday first, other months dimmed). Two clicks pick the range in any

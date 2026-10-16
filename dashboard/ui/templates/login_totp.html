@@ -2,15 +2,30 @@
 
 {{define "content"}}
 <h2>{{t "login.totp.title"}}</h2>
-<p class="muted">{{t "login.totp.intro"}}</p>
 {{with .Data.Error}}{{template "flash_error" .}}{{end}}
+{{if .Data.Guard}}
+{{/* BotHub Guard: the page asks every 2 s whether the app approved. */}}
+<div id="guard-wait" class="guard-wait" hx-post="/login/guard" hx-vals='{"ticket": "{{.Data.Ticket}}"}' hx-trigger="every 2s" hx-swap="outerHTML">
+  <p class="guard-phone" aria-hidden="true">📱</p>
+  <p><strong>{{t "login.guard.title"}}</strong></p>
+  <p class="muted">{{t "login.guard.intro"}}</p>
+</div>
+<p class="muted">{{if .Data.TOTP}}{{t "login.guard.or_code_totp"}}{{else}}{{t "login.guard.or_code"}}{{end}}</p>
+{{else}}
+<p class="muted">{{t "login.totp.intro"}}</p>
+{{end}}
 <form method="post" action="/login/totp" class="form">
   <input type="hidden" name="ticket" value="{{.Data.Ticket}}">
+  <input type="hidden" name="guard" value="{{if .Data.Guard}}1{{end}}">
+  <input type="hidden" name="totp" value="{{if .Data.TOTP}}1{{end}}">
   <label>{{t "login.totp.code"}}
-    <input name="code" inputmode="numeric" autocomplete="one-time-code" required autofocus maxlength="20" placeholder="123456">
+    <input name="code" inputmode="numeric" autocomplete="one-time-code" required {{if not .Data.Guard}}autofocus{{end}} maxlength="20" placeholder="123456">
   </label>
-  <span class="hint">{{t "login.totp.recovery_hint"}}</span>
+  {{if .Data.TOTP}}<span class="hint">{{t "login.totp.recovery_hint"}}</span>{{end}}
   <button type="submit" class="btn btn-primary">{{t "login.submit"}}</button>
 </form>
 <p class="hint"><a href="/login">{{t "login.totp.back"}}</a></p>
 {{end}}
+
+{{/* The app denied the sign-in or it ran out. */}}
+{{define "guard_failed"}}<div id="guard-wait" class="alert alert-danger">{{.Data.Error}} <a href="/login">{{t "login.totp.back"}}</a></div>{{end}}

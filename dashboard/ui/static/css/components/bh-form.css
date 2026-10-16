@@ -55,3 +55,13 @@ textarea { font: inherit; color: var(--text); padding: 10px 12px; background: va
 .split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
 @media (max-width: 900px) { .split { grid-template-columns: 1fr; } }
 input.mono, textarea.mono, select.mono { font-size: 13px; }
+/* Settings → Mobile App: the pairing QR code. */
+.mobile-pairing { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 16px; }
+.mobile-qr { background: #fff; padding: 10px; border-radius: var(--radius); image-rendering: pixelated; }
+.mobile-steps { margin: 0; padding-left: 18px; }
+.mobile-link { word-break: break-all; }
+/* Sign-in: waiting for BotHub Guard in the app. */
+.guard-wait { text-align: center; padding: 12px 0; }
+.guard-phone { font-size: 40px; margin: 0; animation: guard-pulse 1.6s ease-in-out infinite; }
+@keyframes guard-pulse { 50% { transform: scale(1.12); } }
+@media (prefers-reduced-motion: reduce) { .guard-phone { animation: none; } }

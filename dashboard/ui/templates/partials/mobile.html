@@ -1,0 +1,102 @@
+{{/* Settings → Mobile App (internal/web/mobile.go): paired phones and the
+     QR code that pairs a new one. */}}
+
+{{/* Paired phones. Receives a mobileView. */}}
+{{define "mobile_fragment"}}
+{{with .Data}}
+<div id="mobile-devices" class="form" hx-get="/account/mobile" hx-trigger="mobile-paired from:body" hx-swap="outerHTML">
+  {{with .Notice}}<div class="alert alert-success">{{t .}}</div>{{end}}
+  <div class="settings-card">
+    <div class="settings-row" data-setting>
+      <span class="settings-row-text"><strong>{{t "settings.mobile.app"}}</strong><span class="hint">{{t "settings.mobile.app_hint"}}</span></span>
+      <a class="btn btn-sm" href="{{.AppURL}}" target="_blank" rel="noopener noreferrer">{{t "settings.mobile.download"}}</a>
+    </div>
+    <div class="settings-row" data-setting>
+      <span class="settings-row-text"><strong>{{t "settings.mobile.pair"}}</strong><span class="hint">{{t "settings.mobile.pair_hint"}}</span></span>
+      <button type="button" class="btn btn-primary btn-sm" hx-post="/account/mobile/pair" hx-target="#mobile-pairing" hx-swap="innerHTML">{{t "settings.mobile.pair_button"}}</button>
+    </div>
+    <div id="mobile-pairing"></div>
+  </div>
+
+  <h3 class="settings-group">{{t "settings.mobile.devices"}}</h3>
+  {{if .Devices}}
+  <div class="settings-card">
+    {{range .Devices}}{{$d := .}}
+    <details class="settings-row settings-expand" data-setting>
+      <summary>
+        <span class="settings-row-text"><strong>📱 {{.Name}}</strong>
+          <span class="hint">{{.Platform}}{{with .AppVersion}} · App {{.}}{{end}} · {{t "settings.security.last_active" "date" .LastSeen}}{{with .IP}} · {{.}}{{end}}</span></span>
+        <span class="settings-action">{{if .Push}}<span class="badge-soft badge-soft-running">🔔 {{t "settings.mobile.push_on"}}</span>{{end}} ›</span>
+      </summary>
+      <div class="settings-expand-body">
+        <form class="form" hx-post="/account/mobile/devices/{{.ID}}" hx-target="#mobile-devices" hx-swap="outerHTML">
+          <label class="field">{{t "settings.mobile.name"}}<input name="name" value="{{.Name}}" maxlength="40" required class="input-medium"></label>
+          <fieldset class="field">
+            <legend>{{t "settings.mobile.notify"}}</legend>
+            {{range $.Data.Events}}<label class="check"><input type="checkbox" name="notify_{{.}}" value="1" {{if index $d.Events .}}checked{{end}}> {{t (printf "settings.mobile.notify.%s" .)}}</label>{{end}}
+            <span class="hint">{{t "settings.mobile.notify_hint"}}</span>
+          </fieldset>
+          <p class="muted">{{t "settings.mobile.paired_at" "date" .Created}}</p>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-sm">{{t "settings.mobile.save"}}</button>
+            <button type="button" class="btn btn-danger-soft btn-sm" hx-delete="/account/mobile/devices/{{.ID}}" hx-target="#mobile-devices" hx-swap="outerHTML"
+              hx-confirm="{{t "settings.mobile.remove_confirm" "name" .Name}}">{{t "settings.mobile.remove"}}</button>
+          </div>
+        </form>
+      </div>
+    </details>
+    {{end}}
+  </div>
+  {{else}}
+  <p class="muted">{{t "settings.mobile.none"}}</p>
+  {{end}}
+</div>
+{{end}}
+{{end}}
+
+{{/* The QR code of an open pairing; polls until a phone used it. Receives a mobilePairingView. */}}
+{{define "mobile_pairing_fragment"}}
+{{with .Data}}
+<div class="mobile-pairing" {{if and (not .Paired) (not .Expired)}}hx-get="/account/mobile/pair/{{.ID}}" hx-trigger="every 2s" hx-swap="outerHTML"{{end}}>
+  {{if .Paired}}
+    <div class="alert alert-success">{{t "settings.mobile.paired" "name" .Paired.Name}}</div>
+  {{else if .Expired}}
+    <div class="alert alert-warning">{{t "settings.mobile.expired"}}</div>
+  {{else}}
+    <img class="mobile-qr" src="{{.QR}}" alt="{{t "settings.mobile.qr_alt"}}" width="220" height="220">
+    <ol class="hint mobile-steps">
+      <li>{{t "settings.mobile.step1"}}</li>
+      <li>{{t "settings.mobile.step2"}}</li>
+      <li>{{t "settings.mobile.step3"}}</li>
+    </ol>
+    <p class="hint">{{t "settings.mobile.valid" "minutes" "5"}}</p>
+    <details class="hint"><summary>{{t "settings.mobile.manual"}}</summary><code class="mono mobile-link">{{.Link}}</code></details>
+  {{end}}
+</div>
+{{end}}
+{{end}}
+
+{{/* Account tab: the paired phones in one line each. Receives a mobileView. */}}
+{{define "mobile_list_fragment"}}{{with .Data}}{{range .Devices}}📱 {{.Name}} · {{.Platform}} · {{t "settings.security.last_active" "date" .LastSeen}}<br>{{else}}{{t "settings.mobile.none"}}{{end}}{{end}}{{end}}
+
+{{/* Security tab → BotHub Guard: one switch per paired phone. Receives a mobileView. */}}
+{{define "guard_fragment"}}
+{{with .Data}}
+<div id="guard-devices" class="form">
+  {{with .Notice}}<div class="alert alert-success">{{t .}}</div>{{end}}
+  {{if .Devices}}
+  <ul class="list">
+    {{range .Devices}}
+    <li>
+      <span><strong>📱 {{.Name}}</strong><br><span class="muted">{{t "settings.security.last_active" "date" .LastSeen}}</span></span>
+      <input type="checkbox" class="toggle" name="guard" value="1" {{if .Guard}}checked{{end}} aria-label="{{t "settings.guard.toggle"}}" hx-post="/account/guard/{{.ID}}" hx-target="#guard-devices" hx-swap="outerHTML">
+    </li>
+    {{end}}
+  </ul>
+  <p class="hint">{{t "settings.guard.how"}}</p>
+  {{else}}
+  <p class="muted">{{t "settings.guard.no_devices"}} <button type="button" class="btn btn-sm" data-settings-tab-open="settings-mobile">{{t "settings.mobile.pair_button"}}</button></p>
+  {{end}}
+</div>
+{{end}}
+{{end}}

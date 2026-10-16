@@ -173,6 +173,7 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /register", s.handleRegisterPage)
 	mux.HandleFunc("POST /register", s.handleRegister)
 	mux.HandleFunc("POST /login/totp", s.handleLoginTOTP)
+	mux.HandleFunc("POST /login/guard", s.handleLoginGuard)
 
 	// Pages behind login.
 	auth := func(h authHandler) http.Handler { return s.requireAuth(h) }
@@ -279,6 +280,15 @@ func (s *Server) routes() http.Handler {
 	mux.Handle("PUT /bot/{id}/modules/{key}/state", auth(s.handleModuleState))
 	mux.Handle("PUT /bot/{id}/modules/{key}/commands/{name}", auth(s.handleCommandState))
 	mux.Handle("PUT /bot/{id}/plugins/{plugin}", auth(s.handleSetPlugin))
+	// Mobile app: pair phones by QR code (Settings → Mobile App).
+	mux.Handle("GET /account/mobile", auth(s.handleMobile))
+	mux.Handle("GET /account/mobile/list", auth(s.handleMobileList))
+	mux.Handle("GET /account/guard", auth(s.handleGuard))
+	mux.Handle("POST /account/guard/{did}", auth(s.handleGuardToggle))
+	mux.Handle("POST /account/mobile/pair", auth(s.handleMobilePair))
+	mux.Handle("GET /account/mobile/pair/{pid}", auth(s.handleMobilePairState))
+	mux.Handle("POST /account/mobile/devices/{did}", auth(s.handleMobileUpdate))
+	mux.Handle("DELETE /account/mobile/devices/{did}", auth(s.handleMobileDelete))
 	// Task manager of the plugins (Settings → Task manager).
 	mux.Handle("GET /account/tasks", auth(s.handleAllTasks))
 	mux.Handle("POST /account/tasks/{id}/{plugin}/{action}", auth(s.handleAllTaskAction))

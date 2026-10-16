@@ -26,6 +26,34 @@ const minPasswordLength = 12
 type totpForm struct {
 	Ticket string
 	Error  string
+	// BotHub Guard: approve in the app (the page polls), or type its code.
+	Guard bool
+	TOTP  bool
+}
+
+// totpFormOf: the second step from the params of error.auth.totp_required.
+func totpFormOf(params map[string]any) totpForm {
+	ticket, _ := params["ticket"].(string)
+	guard, _ := params["guard"].(bool)
+	totp, ok := params["totp"].(bool)
+	return totpForm{Ticket: ticket, Guard: guard, TOTP: totp || !ok}
+}
+
+// handleLoginGuard: polled by the 2FA page while BotHub Guard waits for the app.
+func (s *Server) handleLoginGuard(w http.ResponseWriter, r *http.Request) {
+	p := s.pageFor(r, nil)
+	pending, resp, err := s.api.LoginGuard(r.Context(), r.PostFormValue("ticket"))
+	if err != nil {
+		w.Header().Set("HX-Retarget", "#guard-wait")
+		s.render(w, http.StatusOK, "login_totp", "guard_failed", withData(p, totpForm{Error: s.apiErrorText(p, err)}))
+		return
+	}
+	if pending {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	relayCookies(w, resp)
+	w.Header().Set("HX-Redirect", "/")
 }
 
 func (s *Server) handleLoginTOTP(w http.ResponseWriter, r *http.Request) {
@@ -40,7 +68,9 @@ func (s *Server) handleLoginTOTP(w http.ResponseWriter, r *http.Request) {
 			s.render(w, http.StatusUnauthorized, "login", "auth_layout", withData(p, authForm{Error: s.apiErrorText(p, err)}))
 			return
 		}
-		s.render(w, apiErr.Status, "login_totp", "auth_layout", withData(p, totpForm{Ticket: ticket, Error: s.apiErrorText(p, err)}))
+		f := totpFormOf(map[string]any{"ticket": ticket, "guard": r.PostFormValue("guard") == "1", "totp": r.PostFormValue("totp") == "1"})
+		f.Error = s.apiErrorText(p, err)
+		s.render(w, apiErr.Status, "login_totp", "auth_layout", withData(p, f))
 		return
 	}
 	relayCookies(w, resp)

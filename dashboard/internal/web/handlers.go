@@ -80,8 +80,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		// Password correct, 2FA active: ask for the code. The API hands out a
 		// short-lived ticket, so the password is never sent back to the browser.
 		if apiErr.Key == "error.auth.totp_required" {
-			ticket, _ := apiErr.Params["ticket"].(string)
-			s.render(w, http.StatusOK, "login_totp", "auth_layout", withData(p, totpForm{Ticket: ticket}))
+			s.render(w, http.StatusOK, "login_totp", "auth_layout", withData(p, totpFormOf(apiErr.Params)))
 			return
 		}
 		form.Error = s.apiErrorText(p, err)

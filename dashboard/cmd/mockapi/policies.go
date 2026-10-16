@@ -111,7 +111,7 @@ func (s *store) needs2FA(u *mockUser) bool {
 	if !s.security.Require2FAAll && !slices.Contains(s.permissionsOf(u), "admin.access") {
 		return false
 	}
-	if u.totpSecret != "" {
+	if u.totpSecret != "" || len(s.guardDevices(u.ID)) > 0 {
 		return false
 	}
 	return s.passkeys == nil || !s.passkeys.has(u.ID)

@@ -94,11 +94,18 @@ func (s *store) sessUser(sid string) *mockUser {
 	if sess := s.sessions[sid]; sess != nil {
 		return s.userByID(sess.userID)
 	}
+	if _, d := s.deviceOf(sid); d != nil {
+		return s.userByID(d.UserID)
+	}
 	return nil
 }
 
 // sessUserFromRequest is requestUser for callers that hold s.mu.
 func (s *store) sessUserFromRequest(r *http.Request) *mockUser {
+	// A request the auth layer let through carries its user (cookie or mobile device).
+	if id := userFrom(r.Context()); id > 0 {
+		return s.userByID(id)
+	}
 	c, err := r.Cookie("bothub_session")
 	if err != nil {
 		return nil
@@ -108,6 +115,11 @@ func (s *store) sessUserFromRequest(r *http.Request) *mockUser {
 
 // requestUser is the signed-in user of a request (by its session cookie).
 func (s *store) requestUser(r *http.Request) *mockUser {
+	if id := userFrom(r.Context()); id > 0 {
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		return s.userByID(id)
+	}
 	c, err := r.Cookie("bothub_session")
 	if err != nil {
 		return nil
@@ -258,6 +270,10 @@ func (s *store) loadAccounts() {
 			LastSeenAt time.Time `json:"lastSeenAt"`
 			ExpiresAt  time.Time `json:"expiresAt"`
 		} `json:"sessions"`
+		Devices []struct {
+			KeyHash string `json:"keyHash"`
+			mobileDevice
+		} `json:"devices"`
 	}
 	var err error
 	for try := 0; try < 30; try++ {
@@ -335,6 +351,14 @@ func (s *store) loadAccounts() {
 			sess.deviceKey = *x.DeviceKey
 		}
 		s.sessions[x.KeyHash] = sess
+	}
+	for _, x := range in.Devices {
+		if s.userByID(x.UserID) == nil {
+			continue
+		}
+		d := x.mobileDevice
+		d.savedSeen = d.LastSeen
+		s.devices[x.KeyHash] = &d
 	}
 	slog.Info("mockapi: accounts loaded", "users", len(s.users), "roles", len(s.roles), "sessions", len(in.Sessions))
 }

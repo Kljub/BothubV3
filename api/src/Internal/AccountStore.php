@@ -55,7 +55,13 @@ final class AccountStore
             'remember' => (int) $x['remember'] === 1, 'deviceKey' => $x['device_key'], 'userAgent' => $x['user_agent'], 'ip' => $x['ip'],
             'createdAt' => $x['created_at'], 'lastSeenAt' => $x['last_seen_at'], 'expiresAt' => $x['expires_at'],
         ], $this->pdo->query('SELECT * FROM user_sessions ORDER BY created_at')->fetchAll());
-        return ['users' => $users, 'roles' => $roles, 'passkeys' => $keys, 'sessions' => $sessions];
+        $devices = array_map(fn (array $x) => [
+            'keyHash' => $x['key_hash'], 'id' => $x['public_id'], 'userId' => (int) $x['user_id'], 'name' => $x['name'], 'platform' => $x['platform'],
+            'appVersion' => $x['app_version'], 'publicKey' => $x['public_key'], 'pushToken' => $x['push_token'], 'pushPlatform' => $x['push_platform'],
+            'notify' => json_decode($x['notify'], true) ?: [], 'ip' => $x['ip'], 'createdAt' => $x['created_at'], 'lastSeenAt' => $x['last_seen_at'],
+            'guard' => (int) $x['guard'] === 1, 'guardSecret' => $x['guard_secret_enc'] === null ? '' : $this->box->decrypt($x['guard_secret_enc']),
+        ], $this->pdo->query('SELECT * FROM mobile_devices ORDER BY created_at')->fetchAll());
+        return ['users' => $users, 'roles' => $roles, 'passkeys' => $keys, 'sessions' => $sessions, 'devices' => $devices];
     }
 
     /** Adds or changes a user (the gateway's ID). */
@@ -181,5 +187,39 @@ final class AccountStore
     public function deleteSession(string $keyHash): void
     {
         $this->pdo->prepare('DELETE FROM user_sessions WHERE key_hash = ?')->execute([$keyHash]);
+    }
+
+    /** Adds or changes a paired phone of the mobile app (key: SHA-256 hex of its token). */
+    public function saveDevice(string $keyHash, array $in): void
+    {
+        $userId = $in['userId'] ?? 0;
+        $time = static fn (mixed $v): bool => is_string($v) && strtotime($v) !== false;
+        $notify = $in['notify'] ?? [];
+        if (!preg_match('/^[0-9a-f]{64}$/', $keyHash) || !is_int($userId) || $userId < 1 || !preg_match('/^[0-9a-f]{8,64}$/', (string) ($in['id'] ?? ''))
+            || !is_string($in['name'] ?? null) || $in['name'] === '' || mb_strlen($in['name']) > 40 || !in_array($in['platform'] ?? null, ['android', 'ios'], true)
+            || !is_string($in['publicKey'] ?? null) || strlen($in['publicKey']) > 400 || !is_array($notify)
+            || !$time($in['createdAt'] ?? null) || !$time($in['lastSeenAt'] ?? null)) {
+            throw new ApiError(422, 'error.validation', ['field' => 'device']);
+        }
+        $stmt = $this->pdo->prepare(
+            'INSERT INTO mobile_devices (key_hash, public_id, user_id, name, platform, app_version, public_key, push_token, push_platform, notify, ip, created_at, last_seen_at, guard, guard_secret_enc)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             ON CONFLICT (key_hash) DO UPDATE SET name = excluded.name, app_version = excluded.app_version, push_token = excluded.push_token,
+               push_platform = excluded.push_platform, notify = excluded.notify, ip = excluded.ip, last_seen_at = excluded.last_seen_at, guard = excluded.guard',
+        );
+        $values = [$keyHash, $in['id'], $userId, $in['name'], $in['platform'], mb_substr((string) ($in['appVersion'] ?? ''), 0, 20), $in['publicKey'],
+            mb_substr((string) ($in['pushToken'] ?? ''), 0, 4096), mb_substr((string) ($in['pushPlatform'] ?? ''), 0, 10),
+            json_encode(array_values(array_filter($notify, 'is_string'))), mb_substr((string) ($in['ip'] ?? ''), 0, 64), $in['createdAt'], $in['lastSeenAt'],
+            ($in['guard'] ?? false) === true ? 1 : 0, is_string($in['guardSecret'] ?? null) && $in['guardSecret'] !== '' ? $this->box->encrypt($in['guardSecret']) : null];
+        // The secret is a BLOB (STRICT table): bound as LOB, the rest as text and numbers.
+        foreach ($values as $n => $v) {
+            $stmt->bindValue($n + 1, $v, $n === 14 && $v !== null ? PDO::PARAM_LOB : (is_int($v) ? PDO::PARAM_INT : ($v === null ? PDO::PARAM_NULL : PDO::PARAM_STR)));
+        }
+        $stmt->execute();
+    }
+
+    public function deleteDevice(string $keyHash): void
+    {
+        $this->pdo->prepare('DELETE FROM mobile_devices WHERE key_hash = ?')->execute([$keyHash]);
     }
 }

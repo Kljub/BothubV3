@@ -100,6 +100,9 @@ func (s *store) checkSecondFactor(u *mockUser, code string) bool {
 	if u.totpSecret != "" && totpValid(u.totpSecret, code) {
 		return true
 	}
+	if s.guardCodeValid(u.ID, code) {
+		return true
+	}
 	h := recoveryHash(code)
 	for i, rc := range u.recovery {
 		if subtle.ConstantTimeCompare([]byte(h), []byte(rc)) == 1 {

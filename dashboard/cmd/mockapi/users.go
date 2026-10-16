@@ -384,6 +384,7 @@ func (s *store) deleteUser(w http.ResponseWriter, r *http.Request, sid string) {
 	}
 	// Their sessions end with them.
 	s.endSessionsOf(id, "")
+	s.endDevicesOf(id)
 	s.phpDelete(fmt.Sprintf("/internal/accounts/users/%d", id))
 	w.WriteHeader(204)
 }

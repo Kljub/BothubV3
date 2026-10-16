@@ -121,6 +121,11 @@ type store struct {
 	defaultLocale string
 	tickets       map[string]loginTicket
 	sessions      map[string]*sessionData // by sessionKey(cookie)
+	// Mobile app (mobile.go): paired phones by sessionKey(token), open pairing codes.
+	devices   map[string]*mobileDevice
+	pairings  map[string]*mobilePairing
+	pairLimit *loginLimiter
+	approvals map[string]*loginApproval // BotHub Guard sign-ins (guard.go)
 	// envPasswordPlain: BOTHUB_ADMIN_PASSWORD is set as plain text (admins see a warning).
 	envPasswordPlain bool
 	updater          *updater // nil: updates from git are not set up
@@ -197,6 +202,10 @@ func main() {
 		defaultLocale: "en",
 		tickets:       map[string]loginTicket{},
 		sessions:      map[string]*sessionData{},
+		devices:       map[string]*mobileDevice{},
+		pairings:      map[string]*mobilePairing{},
+		pairLimit:     newLoginLimiter(),
+		approvals:     map[string]*loginApproval{},
 		bots:          map[int64]*bot{},
 		nextID:        1,
 		modules:       map[string]bool{},
@@ -289,6 +298,20 @@ func main() {
 	mux.HandleFunc("POST /api/v1/admin/email/test", s.auth(s.testSMTP))
 	mux.HandleFunc("POST /api/v1/auth/logout", s.auth(s.logout))
 	mux.HandleFunc("GET /api/v1/auth/me", s.auth(s.me))
+	// Mobile app: pairing from the dashboard, the app's own calls (mobile.go).
+	mux.HandleFunc("POST /api/v1/account/devices/pairing", s.auth(s.createPairing))
+	mux.HandleFunc("GET /api/v1/account/devices/pairing/{pid}", s.auth(s.pairingStatus))
+	mux.HandleFunc("GET /api/v1/account/devices", s.auth(s.listDevices))
+	mux.HandleFunc("PATCH /api/v1/account/devices/{did}", s.auth(s.patchDevice))
+	mux.HandleFunc("DELETE /api/v1/account/devices/{did}", s.auth(s.deleteDevice))
+	mux.HandleFunc("POST /api/v1/mobile/pair", s.pairDevice)
+	mux.HandleFunc("GET /api/v1/mobile/me", s.auth(s.mobileMe))
+	mux.HandleFunc("PUT /api/v1/mobile/push", s.auth(s.mobilePush))
+	mux.HandleFunc("DELETE /api/v1/mobile/device", s.auth(s.mobileUnpair))
+	// BotHub Guard (guard.go).
+	mux.HandleFunc("POST /api/v1/auth/login/guard", s.loginGuard)
+	mux.HandleFunc("GET /api/v1/mobile/approvals", s.auth(s.mobileApprovals))
+	mux.HandleFunc("POST /api/v1/mobile/approvals/{aid}", s.auth(s.mobileDecide))
 	mux.HandleFunc("GET /api/v1/auth/sessions", s.auth(s.listSessions))
 	mux.HandleFunc("GET /api/v1/auth/device/challenge", s.auth(s.deviceChallenge))
 	mux.HandleFunc("POST /api/v1/auth/device/proof", s.auth(s.deviceProof))
@@ -513,6 +536,13 @@ type authed func(w http.ResponseWriter, r *http.Request, sid string)
 // changing method.
 func (s *store) auth(next authed) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// The mobile app: device token and signature instead of a cookie (mobile.go).
+		if dev, ok, handled := s.mobileAuth(w, r); handled {
+			if ok {
+				next(w, r.WithContext(withUser(r.Context(), dev.UserID)), "mobile:"+dev.ID)
+			}
+			return
+		}
 		c, err := r.Cookie("bothub_session")
 		key := ""
 		s.mu.Lock()
@@ -623,11 +653,17 @@ func (s *store) login(w http.ResponseWriter, r *http.Request) {
 	if ok && s.roleKey(u.RoleID) == "banned" {
 		ok = false
 	}
-	if ok && u.totpSecret != "" {
-		// Password right, 2FA on: hand out a short-lived ticket for the second step.
+	if ok && (u.totpSecret != "" || len(s.guardDevices(u.ID)) > 0) {
+		// Password right, 2FA on: hand out a short-lived ticket for the second
+		// step (authenticator code, Guard code, or the approval in the app).
 		ticket := s.newTicket(u.ID, in.sessionOpts)
+		params := map[string]any{"ticket": ticket, "totp": u.totpSecret != ""}
+		if len(s.guardDevices(u.ID)) > 0 {
+			params["guard"] = true
+			params["approval"] = s.newApproval(ticket, u.ID, r).ID
+		}
 		s.mu.Unlock()
-		apiErrorParams(w, 401, "error.auth.totp_required", map[string]any{"ticket": ticket})
+		apiErrorParams(w, 401, "error.auth.totp_required", params)
 		return
 	}
 	s.mu.Unlock()
@@ -686,6 +722,9 @@ func (s *store) logout(w http.ResponseWriter, r *http.Request, sid string) {
 func (s *store) me(w http.ResponseWriter, r *http.Request, sid string) {
 	s.mu.Lock()
 	sess := s.sessions[sid]
+	if _, d := s.deviceOf(sid); d != nil {
+		sess = &sessionData{userID: d.UserID}
+	}
 	s.mu.Unlock()
 	writeJSON(w, 200, s.meFor(sess.userID, sess.csrf))
 }

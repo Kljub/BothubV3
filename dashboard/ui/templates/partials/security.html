@@ -23,6 +23,12 @@
       <div><button type="submit" class="btn btn-primary btn-sm">{{t "security.email.save"}}</button></div>
     </form>
   </details>
+  {{/* Phones paired with the account (Mobile App tab): loaded when shown. */}}
+  <div class="settings-row" data-setting>
+    <span class="settings-row-text"><strong>{{t "settings.account.devices"}}</strong>
+      <span class="hint" id="account-devices" hx-get="/account/mobile/list" hx-trigger="intersect once" hx-swap="innerHTML">…</span></span>
+    <button type="button" class="btn btn-sm" data-settings-tab-open="settings-mobile">{{t "settings.account.devices_manage"}}</button>
+  </div>
 </div>
 {{end}}
 
@@ -73,6 +79,19 @@
       <span class="settings-action">{{template "twofa_badge" .TwoFactorEnabled}} ›</span>
     </summary>
     <div class="settings-expand-body">{{template "twofa" .}}</div>
+  </details>
+</div>
+
+<h3 class="settings-group">{{t "settings.guard.title"}}</h3>
+<div class="settings-card">
+  <details class="settings-row settings-expand" data-setting>
+    <summary>
+      <span class="settings-row-text"><strong>{{t "settings.guard.row"}}</strong><span class="hint">{{t "settings.guard.hint"}}</span></span>
+      <span class="settings-action">{{t "settings.show"}} ›</span>
+    </summary>
+    <div class="settings-expand-body">
+      <div id="guard-devices" hx-get="/account/guard" hx-trigger="toggle[target.open] from:closest details" hx-swap="outerHTML"><p class="muted">…</p></div>
+    </div>
   </details>
 </div>
 

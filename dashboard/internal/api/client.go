@@ -410,6 +410,14 @@ func (c *Client) LoginTOTP(ctx context.Context, ticket, code string) (Me, Respon
 	return me, resp, err
 }
 
+// LoginGuard asks whether the BotHub app approved a sign-in (BotHub Guard).
+// pending: still waiting; else the session cookie is in the Response.
+func (c *Client) LoginGuard(ctx context.Context, ticket string) (pending bool, resp Response, err error) {
+	var out map[string]any
+	resp, err = c.do(ctx, Session{}, http.MethodPost, "/api/v1/auth/login/guard", map[string]string{"ticket": ticket}, &out)
+	return err == nil && out["status"] == "pending", resp, err
+}
+
 func (c *Client) ChangePassword(ctx context.Context, s Session, current, next string) error {
 	in := map[string]string{"currentPassword": current, "newPassword": next}
 	_, err := c.do(ctx, s, http.MethodPost, "/api/v1/auth/password", in, nil)

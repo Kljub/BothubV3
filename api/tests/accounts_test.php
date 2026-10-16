@@ -59,6 +59,19 @@ check('bad session refused', $call('PUT', '/internal/accounts/sessions/xyz', $se
 $call('PUT', '/internal/accounts/sessions/' . hash('sha256', 'old'), ['id' => 'beef0000', 'expiresAt' => '2020-01-01T00:00:00Z'] + $sess);
 check('expired session dropped', count($call('GET', '/internal/accounts')[1]['sessions']) === 1);
 check('delete session', $call('DELETE', '/internal/accounts/sessions/' . $hash)[0] === 204 && $call('GET', '/internal/accounts')[1]['sessions'] === []);
+
+// Mobile app: paired phones (token hash, key, guard secret encrypted).
+$dev = ['id' => 'abcd1234', 'userId' => 1, 'name' => 'Pixel 9', 'platform' => 'android', 'appVersion' => '1.0.0', 'publicKey' => 'MFkw', 'notify' => ['bot_offline'],
+    'guard' => true, 'guardSecret' => 'JBSWY3DPEHPK3PXP', 'ip' => '10.0.0.5', 'createdAt' => '2026-10-01T00:00:00Z', 'lastSeenAt' => '2026-10-01T00:00:00Z'];
+$dhash = hash('sha256', 'bhm_token');
+check('device saved', $call('PUT', '/internal/accounts/devices/' . $dhash, $dev)[0] === 204);
+$call('PUT', '/internal/accounts/devices/' . $dhash, ['name' => 'My Pixel', 'guard' => false] + $dev);
+$d = $call('GET', '/internal/accounts')[1]['devices'];
+check('device listed, renamed, guard and secret back', count($d) === 1 && $d[0]['name'] === 'My Pixel' && $d[0]['guard'] === false && $d[0]['guardSecret'] === 'JBSWY3DPEHPK3PXP' && $d[0]['notify'] === ['bot_offline']);
+$raw = $pdo->query('SELECT guard_secret_enc FROM mobile_devices')->fetchColumn();
+check('guard secret encrypted', is_string($raw) && !str_contains($raw, 'JBSWY3DPEHPK3PXP'));
+check('bad device refused', $call('PUT', '/internal/accounts/devices/' . $dhash, ['platform' => 'web'] + $dev)[0] === 422);
+check('device deleted', $call('DELETE', '/internal/accounts/devices/' . $dhash)[0] === 204 && $call('GET', '/internal/accounts')[1]['devices'] === []);
 $call('PUT', '/internal/accounts/roles/7', ['key' => 'custom7', 'name' => 'Free', 'permissions' => [], 'color' => 'blue', 'icon' => 'BAD!', 'limits' => ['maxBots' => 2, 'maxRunning' => -1, 'idleStopHours' => 12, 'junk' => 5]]);
 $free = array_values(array_filter($call('GET', '/internal/accounts')[1]['roles'], static fn ($r) => $r['id'] === 7))[0] ?? null;
 check('role limits kept, bad ones dropped', $free !== null && (array) $free['limits'] === ['maxBots' => 2, 'idleStopHours' => 12]);
