@@ -85,12 +85,19 @@ func jsonReq(method, path, body string) *http.Request {
 func pair(t *testing.T, s *store, dash func(string, string, string, authed, ...string) *httptest.ResponseRecorder, p *phone) map[string]any {
 	t.Helper()
 	w := dash("POST", "/api/v1/account/devices/pairing", "{}", s.createPairing)
-	var code struct{ ID, Code string }
+	var code struct{ ID, Code, User string }
 	_ = json.Unmarshal(w.Body.Bytes(), &code)
-	if w.Code != 201 || len(code.Code) != 48 {
+	if w.Code != 201 || len(code.Code) != 48 || code.User != "other" {
 		t.Fatalf("pairing code: %d %s", w.Code, w.Body)
 	}
-	body, _ := json.Marshal(map[string]string{"code": code.Code, "name": "Pixel 9", "platform": "android", "appVersion": "1.0.0", "publicKey": p.pub})
+	// Another user's name with the right key: refused.
+	wrong, _ := json.Marshal(map[string]string{"code": code.Code, "user": "admin", "name": "Pixel 9", "platform": "android", "publicKey": p.pub})
+	w = httptest.NewRecorder()
+	s.pairDevice(w, jsonReq("POST", "/api/v1/mobile/pair", string(wrong)))
+	if w.Code != 404 {
+		t.Fatalf("wrong user: %d", w.Code)
+	}
+	body, _ := json.Marshal(map[string]string{"code": code.Code, "user": "other", "name": "Pixel 9", "platform": "android", "appVersion": "1.0.0", "publicKey": p.pub})
 	w = httptest.NewRecorder()
 	s.pairDevice(w, jsonReq("POST", "/api/v1/mobile/pair", string(body)))
 	var out map[string]any
@@ -234,5 +241,33 @@ func TestGuardApprovalAndCode(t *testing.T) {
 	s.mu.Unlock()
 	if w := guard(); w.Code != 401 || !strings.Contains(w.Body.String(), "guard_denied") {
 		t.Fatalf("denied: %d %s", w.Code, w.Body)
+	}
+}
+
+func TestPairingKeyRotates(t *testing.T) {
+	s := mobileStore()
+	dash := session(t, s, 2)
+	w := dash("POST", "/api/v1/account/devices/pairing", "{}", s.createPairing)
+	var first struct{ ID, Code, KeyID string }
+	_ = json.Unmarshal(w.Body.Bytes(), &first)
+	// 31 s later the dashboard's poll turns the key over.
+	s.mu.Lock()
+	p := s.pairings[first.ID]
+	p.rotatesAt = time.Now().Add(-time.Second)
+	s.mu.Unlock()
+	st := dash("GET", "/", "", s.pairingStatus, "pid", first.ID)
+	var next struct{ Code, KeyID string }
+	_ = json.Unmarshal(st.Body.Bytes(), &next)
+	if next.Code == first.Code || next.KeyID == first.KeyID || len(next.Code) != 48 {
+		t.Fatalf("no new key: %s", st.Body)
+	}
+	now := time.Now()
+	s.mu.Lock()
+	oldOK := p.accepts(first.Code, now)                       // grace
+	oldLate := p.accepts(first.Code, now.Add(11*time.Second)) // after the grace
+	newOK := p.accepts(next.Code, now)
+	s.mu.Unlock()
+	if !oldOK || oldLate || !newOK {
+		t.Fatalf("old %v, old late %v, new %v", oldOK, oldLate, newOK)
 	}
 }

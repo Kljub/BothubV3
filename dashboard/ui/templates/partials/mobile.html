@@ -57,19 +57,21 @@
 {{/* The QR code of an open pairing; polls until a phone used it. Receives a mobilePairingView. */}}
 {{define "mobile_pairing_fragment"}}
 {{with .Data}}
-<div class="mobile-pairing" {{if and (not .Paired) (not .Expired)}}hx-get="/account/mobile/pair/{{.ID}}" hx-trigger="every 2s" hx-swap="outerHTML"{{end}}>
+<div class="mobile-pairing" {{if and (not .Paired) (not .Expired)}}hx-get="/account/mobile/pair/{{.ID}}?k={{.KeyID}}" hx-trigger="every 2s" hx-swap="outerHTML"{{end}}>
   {{if .Paired}}
     <div class="alert alert-success">{{t "settings.mobile.paired" "name" .Paired.Name}}</div>
   {{else if .Expired}}
     <div class="alert alert-warning">{{t "settings.mobile.expired"}}</div>
   {{else}}
     <img class="mobile-qr" src="{{.QR}}" alt="{{t "settings.mobile.qr_alt"}}" width="220" height="220">
+    <p class="hint">{{t "settings.mobile.for_user" "user" .User}}</p>
+    <div class="mobile-key-timer" style="--rotate: {{.Rotates}}s" title="{{t "settings.mobile.key_hint"}}"><span></span></div>
     <ol class="hint mobile-steps">
       <li>{{t "settings.mobile.step1"}}</li>
       <li>{{t "settings.mobile.step2"}}</li>
       <li>{{t "settings.mobile.step3"}}</li>
     </ol>
-    <p class="hint">{{t "settings.mobile.valid" "minutes" "5"}}</p>
+    <p class="hint">{{t "settings.mobile.valid" "minutes" .Left}}</p>
     <details class="hint"><summary>{{t "settings.mobile.manual"}}</summary><code class="mono mobile-link">{{.Link}}</code></details>
   {{end}}
 </div>

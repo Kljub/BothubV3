@@ -65,3 +65,8 @@ input.mono, textarea.mono, select.mono { font-size: 13px; }
 .guard-phone { font-size: 40px; margin: 0; animation: guard-pulse 1.6s ease-in-out infinite; }
 @keyframes guard-pulse { 50% { transform: scale(1.12); } }
 @media (prefers-reduced-motion: reduce) { .guard-phone { animation: none; } }
+/* The validation key of the QR code turns over every 30 s: the bar runs down. */
+.mobile-key-timer { width: 220px; height: 4px; border-radius: 2px; background: var(--border); overflow: hidden; }
+.mobile-key-timer span { display: block; height: 100%; background: var(--blue); transform-origin: left; animation: mobile-key var(--rotate, 30s) linear forwards; }
+@keyframes mobile-key { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+@media (prefers-reduced-motion: reduce) { .mobile-key-timer span { animation: none; } }

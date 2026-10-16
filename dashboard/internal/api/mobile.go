@@ -27,15 +27,18 @@ type MobileDevice struct {
 type MobilePairing struct {
 	ID        string    `json:"id"`
 	Code      string    `json:"code"`
+	KeyID     string    `json:"keyId"`
+	User      string    `json:"user"`
+	RotatesAt time.Time `json:"rotatesAt"`
 	ExpiresAt time.Time `json:"expiresAt"`
 }
 
 // MobilePairingStatus tells whether a phone used the code.
 type MobilePairingStatus struct {
-	Paired    bool          `json:"paired"`
-	Expired   bool          `json:"expired"`
-	ExpiresAt time.Time     `json:"expiresAt"`
-	Device    *MobileDevice `json:"device"`
+	MobilePairing
+	Paired  bool          `json:"paired"`
+	Expired bool          `json:"expired"`
+	Device  *MobileDevice `json:"device"`
 }
 
 func (c *Client) MobileDevices(ctx context.Context, s Session) ([]MobileDevice, error) {

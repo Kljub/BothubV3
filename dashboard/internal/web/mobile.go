@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/Kljub/BothubV3/dashboard/internal/api"
 	"rsc.io/qr"
@@ -40,17 +41,36 @@ type mobileView struct {
 }
 
 type mobilePairingView struct {
-	ID        string
-	QR        template.URL
-	Link      string
-	ExpiresIn int // seconds
-	Paired    *api.MobileDevice
-	Expired   bool
+	ID      string
+	KeyID   string
+	User    string
+	QR      template.URL
+	Link    string
+	Rotates int // seconds until the next key
+	Left    int // minutes the pairing stays open
+	Paired  *api.MobileDevice
+	Expired bool
 }
 
-// pairLink: what the QR code holds.
-func pairLink(server, code string) string {
-	return "bothub://pair?" + url.Values{"server": {server}, "code": {code}}.Encode()
+// pairLink: what the QR code holds: dashboard address, user and the
+// validation key of the moment (new every 30 seconds).
+func pairLink(server, user, code string) string {
+	return "bothub://pair?" + url.Values{"server": {server}, "user": {user}, "code": {code}}.Encode()
+}
+
+// pairingView draws the QR code of the current key.
+func pairingView(r *http.Request, p api.MobilePairing) (mobilePairingView, error) {
+	link := pairLink(baseURL(r), p.User, p.Code)
+	code, err := qr.Encode(link, qr.M)
+	if err != nil {
+		return mobilePairingView{}, fmt.Errorf("qr: %w", err)
+	}
+	return mobilePairingView{
+		ID: p.ID, KeyID: p.KeyID, User: p.User, Link: link,
+		QR:      template.URL("data:image/png;base64," + base64.StdEncoding.EncodeToString(code.PNG())),
+		Rotates: max(1, int(time.Until(p.RotatesAt).Seconds()+0.5)),
+		Left:    max(1, int(time.Until(p.ExpiresAt).Minutes()+0.5)),
+	}, nil
 }
 
 func (s *Server) renderMobile(w http.ResponseWriter, r *http.Request, p Page, notice string) {
@@ -105,13 +125,11 @@ func (s *Server) handleMobilePair(w http.ResponseWriter, r *http.Request, p Page
 		s.failTo(w, r, p, err, "#account-flash")
 		return
 	}
-	link := pairLink(baseURL(r), pair.Code)
-	code, err := qr.Encode(link, qr.M)
+	v, err := pairingView(r, pair)
 	if err != nil {
-		s.failTo(w, r, p, fmt.Errorf("qr: %w", err), "#account-flash")
+		s.failTo(w, r, p, err, "#account-flash")
 		return
 	}
-	v := mobilePairingView{ID: pair.ID, QR: template.URL("data:image/png;base64," + base64.StdEncoding.EncodeToString(code.PNG())), Link: link, ExpiresIn: 300}
 	s.render(w, http.StatusOK, "error", "mobile_pairing_fragment", withData(p, v))
 }
 
@@ -123,7 +141,17 @@ func (s *Server) handleMobilePairState(w http.ResponseWriter, r *http.Request, p
 		return
 	}
 	if !st.Paired && !st.Expired {
-		w.WriteHeader(http.StatusNoContent) // htmx keeps the QR code
+		if st.KeyID == r.URL.Query().Get("k") {
+			w.WriteHeader(http.StatusNoContent) // same key: htmx keeps the QR code
+			return
+		}
+		// A new key: the QR code is drawn again.
+		v, err := pairingView(r, st.MobilePairing)
+		if err != nil {
+			s.failTo(w, r, p, err, "#account-flash")
+			return
+		}
+		s.render(w, http.StatusOK, "error", "mobile_pairing_fragment", withData(p, v))
 		return
 	}
 	v := mobilePairingView{ID: r.PathValue("pid"), Paired: st.Device, Expired: st.Expired}

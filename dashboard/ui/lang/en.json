@@ -6012,9 +6012,9 @@
   "settings.mobile.expired": "The QR code ran out. Show a new one.",
   "settings.mobile.qr_alt": "QR code to pair the BotHub app",
   "settings.mobile.step1": "Open the BotHub app and tap \"Pair with BotHub\".",
-  "settings.mobile.step2": "Scan this QR code.",
+  "settings.mobile.step2": "Scan this QR code (it changes every 30 seconds).",
   "settings.mobile.step3": "Confirm the name of the phone in the app.",
-  "settings.mobile.valid": "Valid for {minutes} minutes and only once.",
+  "settings.mobile.valid": "The pairing stays open {minutes} more minutes and works once.",
   "settings.mobile.manual": "Cannot scan? Pairing link",
   "error.mobile.too_many_devices": "At most 10 phones can be paired. Unpair one first.",
   "error.mobile.too_many_pairings": "Too many open QR codes. Wait a few minutes.",
@@ -6037,5 +6037,7 @@
   "error.mobile.unpaired": "This phone is not paired (any more). Pair it again.",
   "error.mobile.clock": "The phone's clock is off. Set the time automatically and try again.",
   "error.mobile.signature": "The request signature is wrong.",
-  "error.mobile.not_allowed": "The app may not do this. Use the dashboard."
+  "error.mobile.not_allowed": "The app may not do this. Use the dashboard.",
+  "settings.mobile.for_user": "For {user}. The key in the code is new every 30 seconds.",
+  "settings.mobile.key_hint": "Time until the next key"
 }

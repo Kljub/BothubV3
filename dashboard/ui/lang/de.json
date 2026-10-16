@@ -6012,9 +6012,9 @@
   "settings.mobile.expired": "Der QR-Code ist abgelaufen. Zeig einen neuen an.",
   "settings.mobile.qr_alt": "QR-Code zum Koppeln der BotHub-App",
   "settings.mobile.step1": "Öffne die BotHub-App und tippe auf „Mit BotHub koppeln“.",
-  "settings.mobile.step2": "Scanne diesen QR-Code.",
+  "settings.mobile.step2": "Scanne diesen QR-Code (er wechselt alle 30 Sekunden).",
   "settings.mobile.step3": "Bestätige in der App den Namen des Handys.",
-  "settings.mobile.valid": "Gültig für {minutes} Minuten und nur einmal.",
+  "settings.mobile.valid": "Die Kopplung bleibt noch {minutes} Minuten offen und gilt einmal.",
   "settings.mobile.manual": "Scannen geht nicht? Kopplungs-Link",
   "error.mobile.too_many_devices": "Höchstens 10 Handys können gekoppelt sein. Entkopple zuerst eines.",
   "error.mobile.too_many_pairings": "Zu viele offene QR-Codes. Warte ein paar Minuten.",
@@ -6037,5 +6037,7 @@
   "error.mobile.unpaired": "Dieses Handy ist (nicht mehr) gekoppelt. Kopple es neu.",
   "error.mobile.clock": "Die Uhr des Handys geht falsch. Stell die Zeit auf automatisch und versuch es noch mal.",
   "error.mobile.signature": "Die Signatur der Anfrage ist falsch.",
-  "error.mobile.not_allowed": "Das darf die App nicht. Nutze das Dashboard."
+  "error.mobile.not_allowed": "Das darf die App nicht. Nutze das Dashboard.",
+  "settings.mobile.for_user": "Für {user}. Der Schlüssel im Code wechselt alle 30 Sekunden.",
+  "settings.mobile.key_hint": "Zeit bis zum nächsten Schlüssel"
 }

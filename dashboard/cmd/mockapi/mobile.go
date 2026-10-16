@@ -16,11 +16,14 @@ import (
 // Mobile app (Android, github.com/Kljub/BotHubAndroitApp): a user controls
 // their bots from the phone.
 //
-// Pairing: the dashboard (Settings → Mobile App) asks for a pairing code and
-// shows it with the server address as a QR code. The app scans it, makes a
-// P-256 key in the phone's keystore (never leaves the phone) and calls
-// POST /api/v1/mobile/pair with the code, a name and the public key. It gets
-// a device token. The code works once and for pairingTTL.
+// Pairing: the dashboard (Settings → Mobile App) opens a pairing for
+// pairingTTL and shows a QR code with the server address, the user name and
+// a validation key. The key is new every pairingKeyEvery (the QR code is
+// drawn again); a key works until the next one plus pairingKeyGrace, so a
+// photo of an old QR code is useless. The app scans it, makes a P-256 key in
+// the phone's keystore (never leaves the phone) and calls
+// POST /api/v1/mobile/pair with key, user name, a device name and the public
+// key. It gets a device token; the pairing is then used up.
 //
 // Requests: "Authorization: Bearer bhm_…" plus X-BotHub-Time (unix seconds)
 // and X-BotHub-Signature (base64url raw r||s ECDSA over
@@ -34,6 +37,8 @@ import (
 
 const (
 	pairingTTL        = 5 * time.Minute
+	pairingKeyEvery   = 30 * time.Second
+	pairingKeyGrace   = 10 * time.Second
 	mobileClockSkew   = 5 * time.Minute
 	mobileTokenPrefix = "bhm_"
 	mobileSigPrefix   = "bothub-mobile:"
@@ -62,12 +67,43 @@ type mobileDevice struct {
 	used        map[string]time.Time // signatures seen within the clock window
 }
 
-// mobilePairing: an open pairing code (kept by its hash).
+// mobilePairing: an open pairing (by its id) with its rotating validation key.
 type mobilePairing struct {
-	id       string
-	userID   int64
-	expires  time.Time
-	deviceID string // set when a phone used it
+	id        string
+	userID    int64
+	expires   time.Time
+	deviceID  string // set when a phone used it
+	key       string // the current key (plain: the dashboard shows it again)
+	keyID     string // short id of the key: the dashboard redraws the QR code when it changes
+	rotatesAt time.Time
+	prevHash  string // the key before, valid until prevUntil
+	prevUntil time.Time
+}
+
+// rotate gives the pairing a new key when the current one is due. Caller holds s.mu.
+func (p *mobilePairing) rotate(now time.Time) {
+	if p.key != "" && now.Before(p.rotatesAt) {
+		return
+	}
+	if p.key != "" {
+		p.prevHash, p.prevUntil = sessionKey(p.key), now.Add(pairingKeyGrace)
+	}
+	p.key, p.keyID, p.rotatesAt = randomHex(24), randomHex(4), now.Add(pairingKeyEvery)
+}
+
+// accepts: the key is the current one or the one before (within the grace).
+func (p *mobilePairing) accepts(key string, now time.Time) bool {
+	h := sessionKey(key)
+	return h == sessionKey(p.key) || (p.prevHash != "" && h == p.prevHash && now.Before(p.prevUntil))
+}
+
+// pairingView: what the dashboard needs to draw the QR code.
+func (s *store) pairingView(p *mobilePairing, now time.Time) map[string]any {
+	name := ""
+	if u := s.userByID(p.userID); u != nil {
+		name = u.Username
+	}
+	return map[string]any{"id": p.id, "code": p.key, "keyId": p.keyID, "user": name, "rotatesAt": p.rotatesAt.UTC(), "expiresAt": p.expires.UTC()}
 }
 
 var notifyEvents = []string{"bot_offline", "bot_error", "update"}
@@ -257,10 +293,10 @@ func (s *store) createPairing(w http.ResponseWriter, r *http.Request, sid string
 		apiError(w, 429, "error.mobile.too_many_pairings")
 		return
 	}
-	code := randomHex(24)
 	p := &mobilePairing{id: randomHex(8), userID: u.ID, expires: now.Add(pairingTTL)}
-	s.pairings[sessionKey(code)] = p
-	writeJSON(w, 201, map[string]any{"id": p.id, "code": code, "expiresAt": p.expires.UTC()})
+	p.rotate(now)
+	s.pairings[p.id] = p
+	writeJSON(w, 201, s.pairingView(p, now))
 }
 
 // pairingStatus: whether a phone used the code (the dashboard polls it).
@@ -272,7 +308,13 @@ func (s *store) pairingStatus(w http.ResponseWriter, r *http.Request, sid string
 		if p.id != r.PathValue("pid") || p.userID != u.ID {
 			continue
 		}
-		out := map[string]any{"paired": p.deviceID != "", "expired": p.deviceID == "" && time.Now().After(p.expires), "expiresAt": p.expires.UTC()}
+		now := time.Now()
+		expired := p.deviceID == "" && now.After(p.expires)
+		if p.deviceID == "" && !expired {
+			p.rotate(now) // the dashboard polls: the key turns over here
+		}
+		out := s.pairingView(p, now)
+		out["paired"], out["expired"] = p.deviceID != "", expired
 		for _, d := range s.devices {
 			if d.ID == p.deviceID {
 				out["device"] = deviceView(d)
@@ -377,6 +419,7 @@ var pairNameRe = regexp.MustCompile(`^[\p{L}\p{N} ._'()-]{1,40}$`)
 func (s *store) pairDevice(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		Code       string `json:"code"`
+		User       string `json:"user"`
 		Name       string `json:"name"`
 		Platform   string `json:"platform"`
 		AppVersion string `json:"appVersion"`
@@ -397,14 +440,26 @@ func (s *store) pairDevice(w http.ResponseWriter, r *http.Request) {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	p := s.pairings[sessionKey(in.Code)]
-	if p == nil || p.deviceID != "" || time.Now().After(p.expires) || s.userByID(p.userID) == nil {
+	now := time.Now()
+	var p *mobilePairing
+	for _, x := range s.pairings {
+		if x.deviceID == "" && now.Before(x.expires) && x.accepts(in.Code, now) {
+			p = x
+		}
+	}
+	// The user of the QR code must match (when the app sends it).
+	if p != nil && in.User != "" {
+		if u := s.userByID(p.userID); u == nil || !strings.EqualFold(u.Username, in.User) {
+			p = nil
+		}
+	}
+	if p == nil || s.userByID(p.userID) == nil {
 		s.pairLimit.failed(ip, "")
 		apiError(w, 404, "error.mobile.code_invalid")
 		return
 	}
 	token := mobileTokenPrefix + randomHex(32)
-	now := time.Now().UTC()
+	now = now.UTC()
 	d := &mobileDevice{ID: randomHex(8), UserID: p.userID, Name: in.Name, Platform: in.Platform, AppVersion: in.AppVersion, PublicKey: in.PublicKey,
 		Notify: []string{"bot_offline", "bot_error"}, IP: ip, CreatedAt: now, LastSeen: now, GuardSecret: newGuardSecret()}
 	key := sessionKey(token)
