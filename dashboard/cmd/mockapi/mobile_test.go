@@ -155,7 +155,7 @@ func TestMobilePairingAndSignedRequests(t *testing.T) {
 	if w.Code != 403 || !strings.Contains(w.Body.String(), "not_allowed") {
 		t.Fatalf("password change from the phone: %d %s", w.Code, w.Body)
 	}
-	if !mobileMayCall("POST", "/api/v1/bots/3/start") || mobileMayCall("DELETE", "/api/v1/bots/3") || mobileMayCall("GET", "/api/v1/admin/users") {
+	if !mobileMayCall("PUT", "/api/v1/bots/3/modules/afk/commands/afk") || !mobileMayCall("POST", "/api/v1/bots/3/start") || mobileMayCall("DELETE", "/api/v1/bots/3") || mobileMayCall("GET", "/api/v1/admin/users") {
 		t.Fatal("allowed paths")
 	}
 	// The phone is the user's: the request user is "other", never the admin.

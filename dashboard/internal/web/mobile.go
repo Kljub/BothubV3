@@ -216,3 +216,39 @@ func (s *Server) handleMobileTexts(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "public, max-age=3600")
 	_ = json.NewEncoder(w).Encode(out)
 }
+
+// mobileGroupColors: the module group colours of the dashboard (bh-mod-card.css).
+var mobileGroupColors = map[string]string{
+	"utility": "#2dd4bf", "security": "#f87171", "messages": "#facc15", "fun": "#a855f7", "ticket": "#ec4899",
+	"social": "#3b82f6", "community": "#22c55e", "customization": "#f97316", "statistics": "#06b6d4",
+}
+
+// handleMobileCatalog: public. The module groups (order, icon, colour) and
+// which group each module belongs to, so the app shows modules like the
+// dashboard does. Names come from /mobile/texts (module.category.*, module.*.name).
+func (s *Server) handleMobileCatalog(w http.ResponseWriter, r *http.Request) {
+	type mod struct {
+		Key  string `json:"key"`
+		Icon string `json:"icon"`
+	}
+	type group struct {
+		Key     string `json:"key"`
+		Icon    string `json:"icon"`
+		Color   string `json:"color"`
+		Modules []mod  `json:"modules"`
+	}
+	out := []group{}
+	for _, c := range s.modules {
+		g := group{Key: c.Key, Icon: c.Icon, Color: mobileGroupColors[c.Key], Modules: []mod{}}
+		if g.Color == "" {
+			g.Color = "#7c5cff"
+		}
+		for _, m := range c.Modules {
+			g.Modules = append(g.Modules, mod{Key: m.Key, Icon: m.Icon})
+		}
+		out = append(out, g)
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("Cache-Control", "public, max-age=3600")
+	_ = json.NewEncoder(w).Encode(map[string]any{"groups": out})
+}

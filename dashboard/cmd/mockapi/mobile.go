@@ -120,6 +120,8 @@ var mobileAllowed = []struct {
 	{"GET", regexp.MustCompile(`^/api/v1/bots/\d+/logs$`)},
 	{"GET", regexp.MustCompile(`^/api/v1/bots/\d+/(modules|plugins)$`)},
 	{"PUT", regexp.MustCompile(`^/api/v1/bots/\d+/modules/[a-z0-9-]{1,64}$`)},
+	{"GET", regexp.MustCompile(`^/api/v1/bots/\d+/modules/[a-z0-9-]{1,64}/commands$`)},
+	{"PUT", regexp.MustCompile(`^/api/v1/bots/\d+/modules/[a-z0-9-]{1,64}/commands/[a-z0-9_-]{1,32}$`)},
 	{"PATCH", regexp.MustCompile(`^/api/v1/bots/\d+/plugins/[a-z0-9_-]{2,64}$`)},
 	{"GET", regexp.MustCompile(`^/api/v1/stats/overview$`)},
 	{"GET", regexp.MustCompile(`^/api/v1/mobile/me$`)},

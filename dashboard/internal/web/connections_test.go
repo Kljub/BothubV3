@@ -79,3 +79,12 @@ func TestBaseURLBehindProxy(t *testing.T) {
 		t.Errorf("public url: %s", got)
 	}
 }
+
+func TestMobileCatalog(t *testing.T) {
+	s := &Server{modules: []ModuleCategory{{Key: "security", Icon: "🛡️", Modules: []ModuleInfo{{Key: "anticontrol", Icon: "🛡️"}}}}}
+	w := httptest.NewRecorder()
+	s.handleMobileCatalog(w, httptest.NewRequest("GET", "/mobile/catalog", nil))
+	if !strings.Contains(w.Body.String(), `"color":"#f87171"`) || !strings.Contains(w.Body.String(), `"key":"anticontrol"`) {
+		t.Fatalf("catalog: %s", w.Body)
+	}
+}
