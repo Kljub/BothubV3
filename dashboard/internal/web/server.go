@@ -166,6 +166,8 @@ func (s *Server) routes() http.Handler {
 	// Custom invite link of a bot (Developer Portal install link).
 	mux.HandleFunc("GET /invite/{app}", s.handleInvitePage)
 	// Auto Assign Roles: members link their Discord connections (no BotHub account).
+	// Mobile app: log, error and status texts (public).
+	mux.HandleFunc("GET /mobile/texts/{lang}", s.handleMobileTexts)
 	mux.HandleFunc("GET /connect/callback", s.handleMemberConnectCallback)
 	mux.HandleFunc("GET /connect/{app}", s.handleMemberConnectPage)
 	mux.HandleFunc("GET /connect/{app}/start", s.handleMemberConnectStart)

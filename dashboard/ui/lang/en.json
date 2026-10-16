@@ -6033,5 +6033,9 @@
   "settings.guard.no_devices": "Pair a phone with the BotHub app first.",
   "settings.guard.saved": "Saved.",
   "error.mobile.approval_gone": "This sign-in is no longer waiting.",
-  "error.mobile.code_invalid": "The pairing code is wrong, used or expired."
+  "error.mobile.code_invalid": "The pairing code is wrong, used or expired.",
+  "error.mobile.unpaired": "This phone is not paired (any more). Pair it again.",
+  "error.mobile.clock": "The phone's clock is off. Set the time automatically and try again.",
+  "error.mobile.signature": "The request signature is wrong.",
+  "error.mobile.not_allowed": "The app may not do this. Use the dashboard."
 }

@@ -2,6 +2,7 @@ package web
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -159,4 +160,31 @@ func (s *Server) handleMobileDelete(w http.ResponseWriter, r *http.Request, p Pa
 		return
 	}
 	s.renderMobile(w, r, p, "settings.mobile.removed")
+}
+
+// mobileTextPrefixes: the texts the app needs (log lines, errors, states,
+// module names); everything else stays in the dashboard.
+var mobileTextPrefixes = []string{"log.", "error.", "bot.status.", "plugins.tasks.state.", "module."}
+
+// handleMobileTexts: public, cacheable. The app shows log lines and errors
+// in the user's language with the dashboard's own texts.
+func (s *Server) handleMobileTexts(w http.ResponseWriter, r *http.Request) {
+	lang := r.PathValue("lang")
+	if !s.i18n.Has(lang) {
+		lang = "en"
+	}
+	out := map[string]string{}
+	for _, k := range s.i18n.Keys(lang) {
+		for _, p := range mobileTextPrefixes {
+			if strings.HasPrefix(k, p) {
+				if v, ok := s.i18n.Lookup(lang, k); ok {
+					out[k] = v
+				}
+				break
+			}
+		}
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("Cache-Control", "public, max-age=3600")
+	_ = json.NewEncoder(w).Encode(out)
 }

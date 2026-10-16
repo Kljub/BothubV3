@@ -6033,5 +6033,9 @@
   "settings.guard.no_devices": "Kopple zuerst ein Handy mit der BotHub-App.",
   "settings.guard.saved": "Gespeichert.",
   "error.mobile.approval_gone": "Diese Anmeldung wartet nicht mehr.",
-  "error.mobile.code_invalid": "Der Kopplungscode ist falsch, benutzt oder abgelaufen."
+  "error.mobile.code_invalid": "Der Kopplungscode ist falsch, benutzt oder abgelaufen.",
+  "error.mobile.unpaired": "Dieses Handy ist (nicht mehr) gekoppelt. Kopple es neu.",
+  "error.mobile.clock": "Die Uhr des Handys geht falsch. Stell die Zeit auf automatisch und versuch es noch mal.",
+  "error.mobile.signature": "Die Signatur der Anfrage ist falsch.",
+  "error.mobile.not_allowed": "Das darf die App nicht. Nutze das Dashboard."
 }
