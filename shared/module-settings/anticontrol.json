@@ -73,7 +73,8 @@
         "timeout",
         "kick",
         "ban",
-        "quarantine"
+        "quarantine",
+        "captcha"
       ],
       "default": "none",
       "showIf": {
@@ -151,7 +152,8 @@
         "timeout",
         "kick",
         "ban",
-        "quarantine"
+        "quarantine",
+        "captcha"
       ],
       "default": "kick",
       "showIf": {
@@ -186,7 +188,8 @@
         "timeout",
         "kick",
         "ban",
-        "quarantine"
+        "quarantine",
+        "captcha"
       ],
       "default": "quarantine",
       "showIf": {
@@ -226,6 +229,63 @@
           "true"
         ]
       }
+    },
+    {
+      "key": "s_captcha",
+      "type": "section",
+      "hint": true
+    },
+    {
+      "key": "captchaAll",
+      "type": "bool",
+      "default": false,
+      "hint": true
+    },
+    {
+      "key": "captchaChannel",
+      "type": "channel",
+      "channelTypes": [
+        "text"
+      ],
+      "hint": true
+    },
+    {
+      "key": "captchaPanel",
+      "type": "message",
+      "default": {
+        "mode": "embed",
+        "title": "🛡️ Verification",
+        "description": "Press **I am human** and type the code of the picture to get access to {server}.",
+        "color": "#22c55e"
+      },
+      "vars": [
+        "server",
+        "members"
+      ]
+    },
+    {
+      "key": "captchaMinutes",
+      "type": "number",
+      "min": 0,
+      "max": 1440,
+      "default": 10,
+      "hint": true
+    },
+    {
+      "key": "captchaFailAction",
+      "type": "select",
+      "options": [
+        "kick",
+        "ban",
+        "none"
+      ],
+      "default": "kick",
+      "hint": true
+    },
+    {
+      "key": "captchaVerifiedRole",
+      "type": "role",
+      "hint": true
     },
     {
       "key": "s_messages",

@@ -14,6 +14,9 @@
 //   kicking many in a short time), Webhook Protection (webhooks created by
 //   someone not trusted are deleted), Permission Change Monitor (dangerous
 //   permissions given to a role or a member).
+// - Captcha (anticaptcha.ts): every new member, or only suspicious ones
+//   (action "captcha"), must solve a picture captcha before the quarantine
+//   role goes.
 // Trusted: the owner, the bot, and the users and roles of the settings.
 
 import {
@@ -22,10 +25,11 @@ import {
 } from 'discord.js';
 import { idIn, idsIn, type ModuleContext } from './context.js';
 import { assignable, send, warn } from './guard.js';
+import { captchaTick, requireCaptcha, type CaptchaConfig } from './anticaptcha.js';
 
-type Punish = 'none' | 'timeout' | 'kick' | 'ban' | 'quarantine';
+type Punish = 'none' | 'timeout' | 'kick' | 'ban' | 'quarantine' | 'captcha';
 
-export interface AntiConfig {
+export interface AntiConfig extends CaptchaConfig {
   logChannel: unknown; trustedUsers: string[]; trustedRoles: unknown; quarantineRole: unknown;
   raidEnabled: boolean; raidJoins: number; raidSeconds: number; raidAction: Punish; lockdownMinutes: number; lockChannels: unknown; pauseInvites: boolean;
   ageEnabled: boolean; minAccountDays: number; ageAction: Punish;
@@ -150,7 +154,7 @@ function trusted(ctx: ModuleContext, guild: Guild, userId: string | null | undef
   return !!m && roles.some((r) => m.roles.cache.has(r));
 }
 
-async function log(ctx: ModuleContext, guild: Guild, title: string, text: string, color = 0xef4444): Promise<void> {
+export async function log(ctx: ModuleContext, guild: Guild, title: string, text: string, color = 0xef4444): Promise<void> {
   const channel = guild.channels.cache.get(idIn(cfgOf(ctx).logChannel, guild.id) ?? '');
   if (channel?.isSendable()) await send(ctx, 'anticontrol', channel, { embeds: [{ color, title: `🛡️ ${title}`.slice(0, 256), description: text.slice(0, 4000), timestamp: new Date().toISOString() }], allowedMentions: { parse: [] } });
 }
@@ -163,6 +167,12 @@ async function punish(ctx: ModuleContext, member: GuildMember | null, action: Pu
     if (action === 'timeout' && member.moderatable) { await member.timeout(60 * 60_000, why); return 'timed out for 1 hour'; }
     if (action === 'kick' && member.kickable) { await member.kick(why); return 'kicked'; }
     if (action === 'ban' && member.bannable) { await member.ban({ reason: why, deleteMessageSeconds: 3600 }); return 'banned'; }
+    if (action === 'captcha') {
+      const done = await requireCaptcha(ctx, member, reason);
+      if (done) return done;
+      // Without a captcha channel or quarantine role: quarantine as before.
+      action = 'quarantine';
+    }
     if (action === 'quarantine') {
       const role = idIn(cfgOf(ctx).quarantineRole, member.guild.id);
       if (role && assignable(ctx, 'anticontrol', member.guild, [role]).length) { await member.roles.add(role, why); return 'put into quarantine'; }
@@ -225,6 +235,7 @@ export async function anticontrolTick(ctx: ModuleContext, guilds: Guild[], now =
     const s = ctx.getState<LockState>('anticontrol', g.id, 'lock');
     if (s && s.until > 0 && now >= s.until) await unlock(ctx, g, 'time is up');
   }
+  await captchaTick(ctx, guilds, (g, title, text, color) => log(ctx, g, title, text, color), now);
 }
 
 // ----- events -----
@@ -269,7 +280,14 @@ export async function antiJoin(ctx: ModuleContext, member: GuildMember): Promise
     if (r.score >= (cfg.riskThreshold || 60)) {
       const done = await punish(ctx, member, cfg.riskAction ?? 'quarantine', `join risk ${r.score}`);
       await log(ctx, guild, 'Suspicious user', `<@${user.id}> (${user.tag}) risk **${r.score}**/100: ${r.reasons.join(', ')} → ${done}.`, 0xf59e0b);
+      return;
     }
+  }
+
+  // Captcha for every new member (the checks above did not act).
+  if (cfg.captchaAll) {
+    const done = await requireCaptcha(ctx, member, 'new member');
+    if (!done) warn(ctx, 'WAR-2008', { module: 'anticontrol', problem: 'the captcha needs a quarantine role the bot can give and a captcha channel' });
   }
 }
 

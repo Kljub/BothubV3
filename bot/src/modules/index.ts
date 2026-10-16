@@ -18,7 +18,8 @@ import { messageReward, syncCurrencies } from './economy.js';
 import { afkMessage } from './afk.js';
 import { boostChange, boostMessage } from './boost.js';
 import { achCommand, achMessage, achReaction, achVoice } from './achievements.js';
-import { antiAudit, antiAuditWarn, antiJoin, antiMessage } from './anticontrol.js';
+import { antiAudit, antiAuditWarn, antiJoin, antiMessage, log as antiLog } from './anticontrol.js';
+import { captchaInteraction, ensureCaptchaPanels } from './anticaptcha.js';
 import { bindAuditLog } from './auditlog.js';
 import { rolePrefix } from './server-auto.js';
 import { thanksMessage } from './thanks.js';
@@ -47,6 +48,7 @@ export function bindModules(client: Client, ctx: ModuleContext, timezone: () => 
     guard('honeypot', ensureHoneypots(ctx, guilds));
     for (const g of guilds) guard('automod', syncAutomod(ctx, g));
     guard('stickies', ensureStickies(ctx, guilds));
+    guard('captcha', ensureCaptchaPanels(ctx, guilds));
     levelingVoiceInit(ctx, guilds);
     for (const g of guilds) antiAuditWarn(ctx, g);
   });
@@ -60,11 +62,13 @@ export function bindModules(client: Client, ctx: ModuleContext, timezone: () => 
     guard('honeypot', ensureHoneypots(ctx, guilds));
     for (const g of guilds) guard('automod', syncAutomod(ctx, g));
     guard('stickies', ensureStickies(ctx, guilds));
+    guard('captcha', ensureCaptchaPanels(ctx, guilds));
   };
   client.on(Events.AutoModerationActionExecution, (e) => guard('automod-hit', automodHit(ctx, e)));
   client.on(Events.InteractionCreate, (i) => {
     guard('interaction', onModuleInteraction(ctx, i));
     guard('welcome-button', welcomeButtonRoute(ctx, i));
+    guard('captcha', captchaInteraction(ctx, i, (g, title, text, color) => antiLog(ctx, g, title, text, color)));
     achCommand(ctx, i);
   });
   client.on(Events.GuildCreate, (g) => {
