@@ -131,6 +131,17 @@ var mobileAllowed = []struct {
 	{"POST", regexp.MustCompile(`^/api/v1/mobile/approvals/[0-9a-f]{16}$`)},
 }
 
+// mobileWebOnly: paths a phone never reaches (admin area, sign-in and
+// account settings, device management, secrets, users).
+func mobileWebOnly(path string) bool {
+	for _, p := range []string{"/api/v1/admin/", "/api/v1/account/", "/api/v1/auth/password", "/api/v1/auth/2fa", "/api/v1/auth/sessions", "/api/v1/auth/passkeys", "/api/v1/users", "/api/v1/secrets"} {
+		if strings.HasPrefix(path, p) {
+			return true
+		}
+	}
+	return false
+}
+
 func mobileMayCall(method, path string) bool {
 	for _, a := range mobileAllowed {
 		if a.method == method && a.re.MatchString(path) {
@@ -185,6 +196,13 @@ func (s *store) mobileAuth(w http.ResponseWriter, r *http.Request) (dev *mobileD
 	}
 	if _, seen := d.used[sig]; seen || !mobileSigned(d.PublicKey, stamp, r.Method, r.URL.RequestURI(), sig) {
 		apiError(w, 401, "error.mobile.signature")
+		return nil, false, true
+	}
+	// Security rule: admin settings, the account's sign-in settings and the
+	// phones themselves are changed in the BotHub web UI only, whatever the
+	// allow list below says.
+	if mobileWebOnly(r.URL.Path) {
+		apiError(w, 403, "error.mobile.web_only")
 		return nil, false, true
 	}
 	if !mobileMayCall(r.Method, r.URL.Path) {

@@ -152,8 +152,18 @@ func TestMobilePairingAndSignedRequests(t *testing.T) {
 	}
 	w := httptest.NewRecorder()
 	s.auth(s.me)(w, p.request("POST", "/api/v1/auth/password", "{}", now))
-	if w.Code != 403 || !strings.Contains(w.Body.String(), "not_allowed") {
+	if w.Code != 403 || !strings.Contains(w.Body.String(), "web_only") {
 		t.Fatalf("password change from the phone: %d %s", w.Code, w.Body)
+	}
+	w = httptest.NewRecorder()
+	s.auth(s.me)(w, p.request("GET", "/api/v1/admin/users", "", now.Add(500*time.Millisecond)))
+	if w.Code != 403 || !strings.Contains(w.Body.String(), "web_only") {
+		t.Fatalf("admin from the phone: %d %s", w.Code, w.Body)
+	}
+	for _, path := range []string{"/api/v1/admin/settings", "/api/v1/account/devices", "/api/v1/auth/2fa/setup", "/api/v1/users/3"} {
+		if !mobileWebOnly(path) {
+			t.Fatalf("%s must be web only", path)
+		}
 	}
 	if !mobileMayCall("PUT", "/api/v1/bots/3/modules/afk/commands/afk") || !mobileMayCall("POST", "/api/v1/bots/3/start") || mobileMayCall("DELETE", "/api/v1/bots/3") || mobileMayCall("GET", "/api/v1/admin/users") {
 		t.Fatal("allowed paths")

@@ -6039,5 +6039,6 @@
   "error.mobile.signature": "Die Signatur der Anfrage ist falsch.",
   "error.mobile.not_allowed": "Das darf die App nicht. Nutze das Dashboard.",
   "settings.mobile.for_user": "Für {user}. Der Schlüssel im Code wechselt alle 30 Sekunden.",
-  "settings.mobile.key_hint": "Zeit bis zum nächsten Schlüssel"
+  "settings.mobile.key_hint": "Zeit bis zum nächsten Schlüssel",
+  "error.mobile.web_only": "Admin- und Konto-Einstellungen ändert man nur in der BotHub-Weboberfläche."
 }
