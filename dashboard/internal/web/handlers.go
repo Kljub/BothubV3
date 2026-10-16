@@ -215,10 +215,6 @@ func (s *Server) handleBot(w http.ResponseWriter, r *http.Request, p Page) {
 			return
 		}
 		data["Plugins"] = plugins
-		// Task manager: shown when the API answers (not on old gateways).
-		if tasks, err := s.api.PluginTasks(r.Context(), sess, id); err == nil {
-			data["PluginTasks"] = pluginTasksView{BotID: id, PluginTasks: tasks}
-		}
 	case "cowork":
 		v, err := s.coworkView(r, p, id, "")
 		if err != nil {

@@ -1160,8 +1160,9 @@ document.addEventListener('drop', (event) => {
     } catch {
       return;
     }
-    const box = document.getElementById('plugin-tasks');
-    if (box && box.dataset.botId === String(b.id) && window.htmx) htmx.ajax('GET', `/bot/${b.id}/plugin-tasks`, { target: '#plugin-tasks', swap: 'outerHTML' });
+    // Task manager tab (settings): drawn again when it is open.
+    const box = document.getElementById('all-tasks');
+    if (box && b && !document.getElementById('settings-tasks')?.hidden && window.htmx) htmx.ajax('GET', '/account/tasks', { target: '#all-tasks', swap: 'outerHTML' });
   });
   window.addEventListener('pagehide', () => live.close());
 })();

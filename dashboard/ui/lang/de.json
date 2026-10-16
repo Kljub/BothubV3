@@ -5984,5 +5984,6 @@
   "modset.anticontrol.captchaVerifiedRole_hint": "Optional: wird nach gelöstem Captcha vergeben.",
   "modset.anticontrol.raidAction.captcha": "Captcha",
   "modset.anticontrol.ageAction.captcha": "Captcha",
-  "modset.anticontrol.riskAction.captcha": "Captcha"
+  "modset.anticontrol.riskAction.captcha": "Captcha",
+  "plugins.tasks.no_bots": "Keiner deiner Bots nutzt Plugins."
 }

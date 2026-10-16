@@ -13,6 +13,7 @@
       <button type="button" class="settings-nav-item" data-settings-tab="settings-account">{{template "icon_users"}}<span>{{t "settings.account"}}</span></button>
       <button type="button" class="settings-nav-item" data-settings-tab="settings-security">{{template "icon_shield"}}<span>{{t "settings.security"}}</span></button>
       <button type="button" class="settings-nav-item" data-settings-tab="settings-secrets">{{template "icon_key"}}<span>{{t "settings.secrets"}}</span></button>
+      <button type="button" class="settings-nav-item" data-settings-tab="settings-tasks">{{template "icon_activity"}}<span>{{t "plugins.tasks.title"}}</span></button>
     </nav>
     <div class="settings-main">
       <div id="account-flash"></div>
@@ -53,6 +54,12 @@
         <h2>{{t "settings.secrets"}}</h2>
         <div id="user-secrets-body-error"></div>
         <div id="user-secrets-body" hx-get="/account/secrets" hx-trigger="intersect once" hx-swap="innerHTML"><p class="muted">{{t "settings.secrets.loading"}}</p></div>
+      </section>
+
+      {{/* Task manager of the plugins of every bot: loaded when the tab opens, then every 5 s while it is open. */}}
+      <section class="settings-content" id="settings-tasks" hidden>
+        <h2>{{t "plugins.tasks.title"}}</h2>
+        <div id="all-tasks" hx-get="/account/tasks" hx-trigger="intersect once" hx-swap="outerHTML"><p class="muted">{{t "settings.secrets.loading"}}</p></div>
       </section>
     </div>
   </div>

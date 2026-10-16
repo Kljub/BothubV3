@@ -94,11 +94,18 @@ func TestLiveStreamsOwnBotsOnly(t *testing.T) {
 }
 
 // The task manager box: rows of the bot's report, actions per state.
-func TestPluginTasksBox(t *testing.T) {
+func TestPluginTasksTab(t *testing.T) {
 	fake := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write([]byte(`{"running":true,"tasks":[
-			{"pluginId":"plugin_a","name":"Alpha","version":"1.0.0","state":"running","pid":41,"restarts":0,"calls":12,"callsPerMinute":3,"memoryBytes":31457280,"cpuPercent":1.25},
-			{"pluginId":"plugin_b","name":"Beta","version":"2.0.0","state":"killed","pid":null,"restarts":0,"calls":0,"callsPerMinute":0,"memoryBytes":null,"cpuPercent":null,"reason":"sdk.plugin.killed_disabled"}]}`))
+		switch r.URL.Path {
+		case "/api/v1/bots":
+			_, _ = w.Write([]byte(`{"items":[{"id":7,"name":"Njetflix","status":"running"},{"id":8,"name":"Quiet","status":"stopped"}]}`))
+		case "/api/v1/bots/7/plugin-tasks":
+			_, _ = w.Write([]byte(`{"running":true,"tasks":[
+				{"pluginId":"plugin_a","name":"Alpha","version":"1.0.0","state":"running","pid":41,"restarts":0,"calls":12,"callsPerMinute":3,"memoryBytes":31457280,"cpuPercent":1.25},
+				{"pluginId":"plugin_b","name":"Beta","version":"2.0.0","state":"killed","pid":null,"restarts":0,"calls":0,"callsPerMinute":0,"memoryBytes":null,"cpuPercent":null,"reason":"sdk.plugin.killed_disabled"}]}`))
+		default:
+			_, _ = w.Write([]byte(`{"running":false,"tasks":[]}`))
+		}
 	}))
 	defer fake.Close()
 	client, _ := api.New(fake.URL)
@@ -107,19 +114,21 @@ func TestPluginTasksBox(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	r := httptest.NewRequest(http.MethodGet, "/bot/7/plugin-tasks", nil)
-	r.SetPathValue("id", "7")
+	r := httptest.NewRequest(http.MethodGet, "/account/tasks", nil)
 	r.Header.Set("HX-Request", "true")
 	w := httptest.NewRecorder()
-	s.handlePluginTasks(w, r, Page{Locale: "en"})
+	s.handleAllTasks(w, r, Page{Locale: "en"})
 	body := w.Body.String()
-	for _, want := range []string{"Alpha", "PID 41", "1.2 %", "3/min", "/bot/7/plugin-tasks/plugin_a/kill", "Ended", "it used the SDK although it is switched off"} {
+	for _, want := range []string{"Njetflix", "Alpha", "PID 41", "1.2 %", "3/min", "/account/tasks/7/plugin_a/kill", "Ended", "it used the SDK although it is switched off"} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("missing %q in %s", want, body)
 		}
 	}
-	if strings.Contains(body, "/plugin-tasks/plugin_b/kill") {
+	if strings.Contains(body, "/plugin_b/kill") {
 		t.Fatal("an ended task has no End task button")
+	}
+	if strings.Contains(body, "Quiet") {
+		t.Fatal("a bot without plugins is left out")
 	}
 }
 
