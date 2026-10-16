@@ -779,6 +779,9 @@ docker compose up -d --build</pre>
   {{else}}
   <p class="muted">{{t "update.intro"}} <a href="{{.Info.Repo}}" rel="noopener" class="mono">{{.Info.Repo}}</a> (<span class="mono">{{.Info.Branch}}</span>) → <span class="mono">{{.Info.HostDir}}</span></p>
   {{with .LastCheck}}<p class="hint">{{t "update.last_check" "date" .}}{{if gt $.Info.LastCheck.Behind 0}} · {{t "update.available" "count" $.Info.LastCheck.Behind}}{{end}}</p>{{end}}
+  {{with .Info.Prefetch}}{{if and $.Info.LastCheck (gt $.Info.LastCheck.Behind 0) (eq .Remote $.Info.LastCheck.Remote)}}
+  <p class="hint update-prefetch">{{if eq .Status "ready"}}📦 {{t "update.prefetch.ready" "commit" .Remote}}{{else if eq .Status "running"}}⏳ {{t "update.prefetch.running" "commit" .Remote}}{{else}}⚠️ {{t "update.prefetch.failed"}}{{end}}</p>
+  {{end}}{{end}}
   {{with .Check}}
     {{if .Error}}<div class="alert alert-error">{{t "update.check_failed"}}: {{.Error}}</div>
     {{else if eq .Behind 0}}<div class="alert alert-success">✅ {{t "update.up_to_date"}} <span class="mono">{{.Current}}</span></div>

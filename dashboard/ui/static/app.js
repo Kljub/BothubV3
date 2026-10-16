@@ -1137,6 +1137,13 @@ document.addEventListener('drop', (event) => {
 (() => {
   if (!window.EventSource || !document.querySelector('.sidebar')) return;
   const live = new EventSource('/live');
+  // After an update (the dashboard restarted) every open page reloads once.
+  live.addEventListener('hello', (e) => {
+    let boot = '';
+    try { boot = JSON.parse(e.data).boot || ''; } catch { return; }
+    const mine = document.querySelector('meta[name="bothub-boot"]')?.content || '';
+    if (boot && mine && boot !== mine) setTimeout(() => location.reload(), 600);
+  });
   live.addEventListener('bot', (e) => {
     let b;
     try {

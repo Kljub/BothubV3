@@ -1,9 +1,11 @@
 package web
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/Kljub/BothubV3/dashboard/internal/api"
+	"github.com/Kljub/BothubV3/dashboard/ui"
 )
 
 func TestNewestFirst(t *testing.T) {
@@ -38,6 +40,34 @@ func TestUpdateAvailable(t *testing.T) {
 	} {
 		if got := c.v.UpdateAvailable(); got != c.want {
 			t.Errorf("%s: %v, want %v", name, got, c.want)
+		}
+	}
+}
+
+// The update box tells whether the waiting version is already prepared in
+// the background (then installing only restarts).
+func TestUpdateBoxPrefetch(t *testing.T) {
+	tpl, err := parseTemplates(ui.FS)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for status, want := range map[string]string{"ready": "update.prefetch.ready", "running": "update.prefetch.running", "failed": "update.prefetch.failed"} {
+		info := api.UpdateInfo{Configured: true}
+		info.LastCheck = &api.UpdateLastCheck{Behind: 1, Remote: "b2c3d4e"}
+		info.Prefetch = &api.UpdatePrefetch{Remote: "b2c3d4e", Status: status}
+		var out strings.Builder
+		if err := tpl.sets["admin"].ExecuteTemplate(&out, "update_box_fragment", Page{Data: updateView{Info: info, Locale: "en"}}); err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(out.String(), want) {
+			t.Errorf("%s: no %s", status, want)
+		}
+		// An older preparation (another commit waits now) is not shown.
+		info.Prefetch.Remote = "a1a1a1a"
+		out.Reset()
+		_ = tpl.sets["admin"].ExecuteTemplate(&out, "update_box_fragment", Page{Data: updateView{Info: info, Locale: "en"}})
+		if strings.Contains(out.String(), "update.prefetch.") {
+			t.Errorf("%s: stale preparation shown", status)
 		}
 	}
 }

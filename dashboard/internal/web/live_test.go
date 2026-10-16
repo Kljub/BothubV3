@@ -62,6 +62,14 @@ func TestLiveStreamsOwnBotsOnly(t *testing.T) {
 	if line, _ := r.ReadString('\n'); line != "retry: 5000\n" {
 		t.Fatalf("first line %q", line)
 	}
+	// hello: the boot id, so pages of an older start reload after an update.
+	_, _ = r.ReadString('\n')
+	if line, _ := r.ReadString('\n'); line != "event: hello\n" {
+		t.Fatalf("hello %q", line)
+	}
+	if line, _ := r.ReadString('\n'); line != `data: {"boot":"`+s.bootID+`"}`+"\n" || s.bootID == "" {
+		t.Fatalf("boot %q", line)
+	}
 	hub.Publish([]byte(`{"type":"bot.status","botId":99,"status":"running"}`)) // not this account's
 	hub.Publish([]byte(`{"type":"bot.status","botId":12,"status":"stopped"}`))
 	var got []string

@@ -53,7 +53,9 @@ func (s *Server) handleLive(w http.ResponseWriter, r *http.Request, p Page) {
 	h.Set("X-Accel-Buffering", "no") // nginx in front: do not buffer
 	notes, cancel := s.live.Subscribe()
 	defer cancel()
-	if _, err := fmt.Fprint(w, "retry: 5000\n\n"); err != nil {
+	// hello: the boot id of this dashboard. A page of an older start (before
+	// an update) reloads itself when its stream reconnects.
+	if _, err := fmt.Fprintf(w, "retry: 5000\n\nevent: hello\ndata: {\"boot\":%q}\n\n", s.bootID); err != nil {
 		return
 	}
 	_ = rc.Flush()

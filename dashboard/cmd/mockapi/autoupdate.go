@@ -14,17 +14,25 @@ import (
 // Automatic updates and the restart policy (Admin → Server settings).
 //
 // autoUpdate: "off", "check" (look once a day at autoUpdateHour; admins see
-// a warning when commits are waiting) or "install" (also start the update
-// right away). The restart policy ("unless-stopped", "always" or "no") is
-// set on all containers of this compose project through the Docker socket;
+// a warning when commits are waiting), "install" (also start the update
+// right away at that hour) or "instant" (look every few minutes and install
+// as soon as the new version is prepared, prefetch.go). Every mode with the
+// updater prepares new versions in the background, so installing is quick;
+// open dashboards reload by themselves after the restart (live boot id).
+// The restart policy ("unless-stopped", "always" or "no") is set on all
+// containers of this compose project through the Docker socket;
 // "always" and "unless-stopped" bring BotHub back after a reboot as soon as
 // Docker itself runs. A rebuild takes the policy of the compose file, so the
 // gateway puts it back at start and on every tick.
 
 const autoUpdateTick = 5 * time.Minute
 
-// quietCheckEvery: how often the gateway looks for new commits on its own.
-const quietCheckEvery = 30 * time.Minute
+// quietCheckEvery: how often the gateway looks for new commits on its own
+// (instantCheckEvery with auto-update "instant").
+const (
+	quietCheckEvery   = 30 * time.Minute
+	instantCheckEvery = 10 * time.Minute
+)
 
 var restartPolicies = []string{"unless-stopped", "always", "no"}
 
@@ -35,6 +43,7 @@ type updateState struct {
 	current   string // commit here and the newest one of the last check
 	remote    string
 	day       string // the local date of the last automatic check
+	prefetch  prefetchState
 }
 
 // loadServerSettings reads the stored instance settings at start.
@@ -96,13 +105,27 @@ func (s *store) autoUpdateTick(now time.Time) {
 	}
 	// Besides the daily automatic update, a quiet check every 30 minutes
 	// keeps "Update available" in the admin sidebar current.
-	quiet := !due && now.Sub(s.updateState.checkedAt) >= quietCheckEvery
+	every := quietCheckEvery
+	if set.AutoUpdate == "instant" {
+		every = instantCheckEvery
+	}
+	quiet := !due && now.Sub(s.updateState.checkedAt) >= every
+	behind, remote, prepared := s.updateState.behind, s.updateState.remote, s.updateState.prefetch
 	s.mu.Unlock()
 
 	ctx, cancel := context.WithTimeout(context.Background(), updateTimeout)
 	defer cancel()
 	if err := s.updater.applyRestartPolicy(ctx, set.RestartPolicy); err != nil {
 		slog.Warn("mockapi: restart policy not applied", "err", err)
+	}
+	// Background preparation of a found update, and "instant": install once
+	// it is prepared (or its preparation failed: then the update builds itself).
+	s.prefetchTick(ctx, behind, remote)
+	if set.AutoUpdate == "instant" && behind > 0 && prepared.remote == remote && prepared.status != "running" && !s.updateRunning(ctx) {
+		if err := s.startUpdate(ctx, "auto"); err != nil {
+			slog.Error("mockapi: automatic update failed", "err", err)
+		}
+		return
 	}
 	if !due && !quiet {
 		return
@@ -118,6 +141,9 @@ func (s *store) autoUpdateTick(now time.Time) {
 			s.updateState.behind = res.Behind
 		}
 		s.mu.Unlock()
+		if res.Error == "" {
+			s.prefetchTick(ctx, res.Behind, res.Remote)
+		}
 		return
 	}
 	s.updateState.checkedAt, s.updateState.behind = now, res.Behind

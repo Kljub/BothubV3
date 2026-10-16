@@ -37,6 +37,15 @@ type UpdateInfo struct {
 	DockerDesktop bool             `json:"dockerDesktop"`
 	Run           *UpdateRun       `json:"run"`
 	LastCheck     *UpdateLastCheck `json:"lastCheck"`
+	// Prefetch: the new version prepared in the background (images built).
+	Prefetch *UpdatePrefetch `json:"prefetch"`
+}
+
+// UpdatePrefetch: running, ready or failed, for commit Remote.
+type UpdatePrefetch struct {
+	Remote string    `json:"remote"`
+	Status string    `json:"status"`
+	At     time.Time `json:"at"`
 }
 
 // UpdateLastCheck: the gateway's last check (manual, daily or quiet every 6 hours).

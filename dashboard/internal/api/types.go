@@ -296,7 +296,7 @@ type ServerSettings struct {
 
 // Choices of the update and restart settings, in display order.
 var (
-	AutoUpdateModes = []string{"off", "check", "install"}
+	AutoUpdateModes = []string{"off", "check", "install", "instant"}
 	RestartPolicies = []string{"unless-stopped", "always", "no"}
 )
 

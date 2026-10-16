@@ -31,7 +31,9 @@ type Page struct {
 	Locales       []string
 	AdminSections []string
 	AssetVersion  string
-	Data          any
+	// BootID changes with every dashboard start: open pages reload after an update.
+	BootID string
+	Data   any
 }
 
 // templates holds one parsed set per page: layout.html plus the page file.
@@ -224,6 +226,7 @@ func (s *Server) render(w http.ResponseWriter, status int, page, name string, da
 	data.BotSections = botSections
 	data.Themes = themes
 	data.AssetVersion = s.assetVersion
+	data.BootID = s.bootID
 
 	var buf bytes.Buffer
 	if err := clone.ExecuteTemplate(&buf, name, data); err != nil {

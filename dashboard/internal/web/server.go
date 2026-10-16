@@ -4,6 +4,7 @@ package web
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -53,6 +54,7 @@ type Server struct {
 	live          *live.Hub
 	self          *selfSampler
 	assetVersion  string
+	bootID        string // new at every start (live "hello": pages reload after an update)
 	mainCSS       []byte // css/bothub.css with ?v=<hash> on every @import
 	handler       http.Handler
 	// exit ends the process for a restart from the resource overview; the
@@ -98,6 +100,7 @@ func New(cfg Config) (*Server, error) {
 			os.Exit(0)
 		},
 		assetVersion: version,
+		bootID:       newBootID(),
 	}
 	if s.mainCSS, err = versionImports(static, "css/bothub.css", version); err != nil {
 		return nil, err
@@ -740,3 +743,10 @@ const (
 	WriteTimeout      = 30 * time.Second
 	IdleTimeout       = 120 * time.Second
 )
+
+// newBootID: random, new at every start of the dashboard.
+func newBootID() string {
+	b := make([]byte, 8)
+	_, _ = rand.Read(b)
+	return hex.EncodeToString(b)
+}

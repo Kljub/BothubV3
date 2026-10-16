@@ -4537,7 +4537,7 @@
   "server_settings.auto_update.off": "Off",
   "server_settings.auto_update.check": "Only check and notify admins",
   "server_settings.auto_update.install": "Check and install automatically",
-  "server_settings.auto_update_hint": "Looks once a day for new commits in the git repository. \"Install\" pulls and rebuilds right away; the dashboard is unavailable for a moment.",
+  "server_settings.auto_update_hint": "BotHub looks for new commits (every 30 minutes, with \"as soon as\" every 10) and prepares a new version in the background, so installing it only restarts. \"At this hour\" installs once a day; \"as soon as\" installs right after the preparation. Open dashboards reload by themselves when it is done.",
   "server_settings.auto_update_hour": "Time (hour)",
   "server_settings.auto_update_hour_hint": "Hour of the day, 0–23, in the time zone of the server (TZ).",
   "server_settings.restart_policy": "Start after a system restart",
@@ -6040,5 +6040,9 @@
   "error.mobile.not_allowed": "The app may not do this. Use the dashboard.",
   "settings.mobile.for_user": "For {user}. The key in the code is new every 30 seconds.",
   "settings.mobile.key_hint": "Time until the next key",
-  "error.mobile.web_only": "Admin and account settings are changed only in the BotHub web UI."
+  "error.mobile.web_only": "Admin and account settings are changed only in the BotHub web UI.",
+  "server_settings.auto_update.instant": "Install as soon as an update is out",
+  "update.prefetch.ready": "Version {commit} is prepared: installing only restarts BotHub (moments).",
+  "update.prefetch.running": "Version {commit} is being prepared in the background …",
+  "update.prefetch.failed": "The background preparation failed; the update builds everything itself."
 }

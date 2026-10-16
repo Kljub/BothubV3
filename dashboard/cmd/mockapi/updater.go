@@ -208,6 +208,9 @@ func (s *store) getUpdate(w http.ResponseWriter, r *http.Request, _ string) {
 	if !s.updateState.checkedAt.IsZero() {
 		out["lastCheck"] = map[string]any{"at": s.updateState.checkedAt, "behind": s.updateState.behind, "current": s.updateState.current, "remote": s.updateState.remote}
 	}
+	if p := s.updateState.prefetch.view(); p != nil {
+		out["prefetch"] = p
+	}
 	s.mu.Unlock()
 	if code, err := s.updater.docker(r.Context(), http.MethodGet, "/containers/"+updaterName+"/json", nil, &info); err == nil && code == 200 {
 		logs, _ := s.updater.logs(r.Context(), updaterName)
@@ -232,6 +235,8 @@ func (s *store) checkUpdate(w http.ResponseWriter, r *http.Request, _ string) {
 		s.updateState.checkedAt, s.updateState.behind = time.Now(), res.Behind
 		s.updateState.current, s.updateState.remote = res.Current, res.Remote
 		s.mu.Unlock()
+		// Prepare it in the background right away (the click on Update is then quick).
+		go s.prefetchTick(context.Background(), res.Behind, res.Remote)
 	}
 	writeJSON(w, 200, res)
 }

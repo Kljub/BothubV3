@@ -20,7 +20,7 @@ type serverSettings struct {
 	MaxUploadMB     int    `json:"maxUploadMb"`
 	RestartRequired bool   `json:"restartRequired"`
 	// Updates and restarts (autoupdate.go).
-	AutoUpdate     string `json:"autoUpdate"`     // off, check, install
+	AutoUpdate     string `json:"autoUpdate"`     // off, check, install, instant
 	AutoUpdateHour int    `json:"autoUpdateHour"` // 0-23, local time
 	RestartPolicy  string `json:"restartPolicy"`  // unless-stopped, always, no
 }
@@ -70,7 +70,7 @@ func (s *store) putServerSettings(w http.ResponseWriter, r *http.Request, _ stri
 		apiError(w, 422, "error.server_settings.port_conflict")
 		return
 	case in.SessionHours < 1 || in.SessionHours > 720 || in.MaxUploadMB < 1 || in.MaxUploadMB > 100,
-		!slices.Contains([]string{"off", "check", "install"}, in.AutoUpdate), in.AutoUpdateHour < 0 || in.AutoUpdateHour > 23,
+		!slices.Contains([]string{"off", "check", "install", "instant"}, in.AutoUpdate), in.AutoUpdateHour < 0 || in.AutoUpdateHour > 23,
 		!slices.Contains(restartPolicies, in.RestartPolicy):
 		apiError(w, 422, "error.validation.failed")
 		return
