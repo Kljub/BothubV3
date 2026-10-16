@@ -227,9 +227,14 @@ var mobileGroupColors = map[string]string{
 // which group each module belongs to, so the app shows modules like the
 // dashboard does. Names come from /mobile/texts (module.category.*, module.*.name).
 func (s *Server) handleMobileCatalog(w http.ResponseWriter, r *http.Request) {
+	type cmd struct {
+		Name   string `json:"name"`
+		Preset string `json:"preset"`
+	}
 	type mod struct {
-		Key  string `json:"key"`
-		Icon string `json:"icon"`
+		Key      string `json:"key"`
+		Icon     string `json:"icon"`
+		Commands []cmd  `json:"commands"`
 	}
 	type group struct {
 		Key     string `json:"key"`
@@ -244,7 +249,14 @@ func (s *Server) handleMobileCatalog(w http.ResponseWriter, r *http.Request) {
 			g.Color = "#7c5cff"
 		}
 		for _, m := range c.Modules {
-			g.Modules = append(g.Modules, mod{Key: m.Key, Icon: m.Icon})
+			// Commands with their preset: the app switches the bot's copy of it.
+			cmds := []cmd{}
+			for _, c := range s.commands[m.Key] {
+				if c.PresetName != "" {
+					cmds = append(cmds, cmd{Name: c.Name, Preset: c.PresetName})
+				}
+			}
+			g.Modules = append(g.Modules, mod{Key: m.Key, Icon: m.Icon, Commands: cmds})
 		}
 		out = append(out, g)
 	}

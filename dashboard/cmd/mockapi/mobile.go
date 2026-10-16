@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
+	"io"
 	"math/big"
 	"net/http"
 	"regexp"
@@ -120,8 +123,10 @@ var mobileAllowed = []struct {
 	{"GET", regexp.MustCompile(`^/api/v1/bots/\d+/logs$`)},
 	{"GET", regexp.MustCompile(`^/api/v1/bots/\d+/(modules|plugins)$`)},
 	{"PUT", regexp.MustCompile(`^/api/v1/bots/\d+/modules/[a-z0-9-]{1,64}$`)},
-	{"GET", regexp.MustCompile(`^/api/v1/bots/\d+/modules/[a-z0-9-]{1,64}/commands$`)},
-	{"PUT", regexp.MustCompile(`^/api/v1/bots/\d+/modules/[a-z0-9-]{1,64}/commands/[a-z0-9_-]{1,32}$`)},
+	// Module commands are switched through their copies in Custom Commands
+	// (like the dashboard does); the PATCH may only carry "enabled".
+	{"GET", regexp.MustCompile(`^/api/v1/bots/\d+/commands$`)},
+	{"PATCH", regexp.MustCompile(`^/api/v1/bots/\d+/commands/\d+$`)},
 	{"PATCH", regexp.MustCompile(`^/api/v1/bots/\d+/plugins/[a-z0-9_-]{2,64}$`)},
 	{"GET", regexp.MustCompile(`^/api/v1/stats/overview$`)},
 	{"GET", regexp.MustCompile(`^/api/v1/mobile/me$`)},
@@ -140,6 +145,29 @@ func mobileWebOnly(path string) bool {
 		}
 	}
 	return false
+}
+
+// commandPatchRe: a command PATCH of the app may only switch it on or off.
+var commandPatchRe = regexp.MustCompile(`^/api/v1/bots/\d+/commands/\d+$`)
+
+// mobileBodyAllowed: the body of a command PATCH holds nothing but
+// {"enabled": bool} (no renaming, no graph, no visibility). The body is read
+// and put back for the handler.
+func mobileBodyAllowed(r *http.Request) bool {
+	if r.Method != http.MethodPatch || !commandPatchRe.MatchString(r.URL.Path) {
+		return true
+	}
+	raw, err := io.ReadAll(io.LimitReader(r.Body, 1024))
+	if err != nil {
+		return false
+	}
+	r.Body = io.NopCloser(bytes.NewReader(raw))
+	var in map[string]json.RawMessage
+	if json.Unmarshal(raw, &in) != nil || len(in) != 1 {
+		return false
+	}
+	var on bool
+	return json.Unmarshal(in["enabled"], &on) == nil
 }
 
 func mobileMayCall(method, path string) bool {
@@ -205,7 +233,7 @@ func (s *store) mobileAuth(w http.ResponseWriter, r *http.Request) (dev *mobileD
 		apiError(w, 403, "error.mobile.web_only")
 		return nil, false, true
 	}
-	if !mobileMayCall(r.Method, r.URL.Path) {
+	if !mobileMayCall(r.Method, r.URL.Path) || !mobileBodyAllowed(r) {
 		apiError(w, 403, "error.mobile.not_allowed")
 		return nil, false, true
 	}

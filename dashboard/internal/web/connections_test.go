@@ -81,10 +81,11 @@ func TestBaseURLBehindProxy(t *testing.T) {
 }
 
 func TestMobileCatalog(t *testing.T) {
-	s := &Server{modules: []ModuleCategory{{Key: "security", Icon: "🛡️", Modules: []ModuleInfo{{Key: "anticontrol", Icon: "🛡️"}}}}}
+	s := &Server{modules: []ModuleCategory{{Key: "security", Icon: "🛡️", Modules: []ModuleInfo{{Key: "anticontrol", Icon: "🛡️"}}}},
+		commands: map[string][]CommandInfo{"anticontrol": {{Name: "lockdown", PresetName: "lockdown"}, {Name: "no-copy"}}}}
 	w := httptest.NewRecorder()
 	s.handleMobileCatalog(w, httptest.NewRequest("GET", "/mobile/catalog", nil))
-	if !strings.Contains(w.Body.String(), `"color":"#f87171"`) || !strings.Contains(w.Body.String(), `"key":"anticontrol"`) {
+	if !strings.Contains(w.Body.String(), `"color":"#f87171"`) || !strings.Contains(w.Body.String(), `"key":"anticontrol"`) || !strings.Contains(w.Body.String(), `{"name":"lockdown","preset":"lockdown"}`) || strings.Contains(w.Body.String(), "no-copy") {
 		t.Fatalf("catalog: %s", w.Body)
 	}
 }

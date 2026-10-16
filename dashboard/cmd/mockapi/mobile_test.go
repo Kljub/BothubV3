@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -165,7 +166,7 @@ func TestMobilePairingAndSignedRequests(t *testing.T) {
 			t.Fatalf("%s must be web only", path)
 		}
 	}
-	if !mobileMayCall("PUT", "/api/v1/bots/3/modules/afk/commands/afk") || !mobileMayCall("POST", "/api/v1/bots/3/start") || mobileMayCall("DELETE", "/api/v1/bots/3") || mobileMayCall("GET", "/api/v1/admin/users") {
+	if !mobileMayCall("PATCH", "/api/v1/bots/3/commands/12") || !mobileMayCall("GET", "/api/v1/bots/3/commands") || !mobileMayCall("POST", "/api/v1/bots/3/start") || mobileMayCall("DELETE", "/api/v1/bots/3") || mobileMayCall("GET", "/api/v1/admin/users") {
 		t.Fatal("allowed paths")
 	}
 	// The phone is the user's: the request user is "other", never the admin.
@@ -279,5 +280,25 @@ func TestPairingKeyRotates(t *testing.T) {
 	s.mu.Unlock()
 	if !oldOK || oldLate || !newOK {
 		t.Fatalf("old %v, old late %v, new %v", oldOK, oldLate, newOK)
+	}
+}
+
+func TestMobileCommandPatchOnlyEnabled(t *testing.T) {
+	req := func(body string) *http.Request {
+		r := jsonReq("PATCH", "/api/v1/bots/3/commands/12", body)
+		return r
+	}
+	if !mobileBodyAllowed(req(`{"enabled":false}`)) {
+		t.Fatal("enabled refused")
+	}
+	for _, b := range []string{`{"enabled":true,"name":"x"}`, `{"graph":{}}`, `{"enabled":"yes"}`, `nope`} {
+		if mobileBodyAllowed(req(b)) {
+			t.Fatalf("%s allowed", b)
+		}
+	}
+	r := req(`{"enabled":true}`)
+	_ = mobileBodyAllowed(r)
+	if b, _ := io.ReadAll(r.Body); string(b) != `{"enabled":true}` {
+		t.Fatalf("body not put back: %q", b)
 	}
 }
