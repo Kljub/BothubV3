@@ -24,11 +24,11 @@
     </form>
   </details>
   {{/* Phones paired with the account (Mobile App tab): loaded when shown. */}}
-  <div class="settings-row" data-setting>
+  <a class="settings-row" href="#" data-settings-tab-open="settings-mobile" data-setting>
     <span class="settings-row-text"><strong>{{t "settings.account.devices"}}</strong>
       <span class="hint" id="account-devices" hx-get="/account/mobile/list" hx-trigger="intersect once" hx-swap="innerHTML">…</span></span>
-    <button type="button" class="btn btn-sm" data-settings-tab-open="settings-mobile">{{t "settings.account.devices_manage"}}</button>
-  </div>
+    <span class="settings-action">{{t "settings.account.devices_manage"}} ›</span>
+  </a>
 </div>
 {{end}}
 

@@ -56,7 +56,7 @@ textarea { font: inherit; color: var(--text); padding: 10px 12px; background: va
 @media (max-width: 900px) { .split { grid-template-columns: 1fr; } }
 input.mono, textarea.mono, select.mono { font-size: 13px; }
 /* Settings → Mobile App: the pairing QR code. */
-.mobile-pairing { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 16px; }
+.mobile-pairing { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .mobile-qr { background: #fff; padding: 10px; border-radius: var(--radius); image-rendering: pixelated; }
 .mobile-steps { margin: 0; padding-left: 18px; }
 .mobile-link { word-break: break-all; }

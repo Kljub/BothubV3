@@ -469,7 +469,9 @@ document.addEventListener('click', (event) => {
 // A button elsewhere in the popup that opens a tab: [data-settings-tab-open="<section id>"].
 document.addEventListener('click', (event) => {
   const btn = event.target.closest('[data-settings-tab-open]');
-  btn?.closest('dialog')?.querySelector(`[data-settings-tab="${btn.dataset.settingsTabOpen}"]`)?.click();
+  if (!btn) return;
+  event.preventDefault();
+  btn.closest('dialog')?.querySelector(`[data-settings-tab="${btn.dataset.settingsTabOpen}"]`)?.click();
 });
 
 // Date range picker ([data-range-picker]), design per the user's reference:
