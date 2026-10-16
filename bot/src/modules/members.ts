@@ -162,7 +162,9 @@ async function welcome(ctx: ModuleContext, member: GuildMember, vars: Record<str
   const channelId = idIn(cfg.channel, guild.id);
   if (cfg.channelEnabled !== false && channelId) {
     const channel = guild.channels.cache.get(channelId);
-    let payload = await addCard(ctx, cfg.card, guild, member.user, member, vars, buildMessage(path.message, vars));
+    // Text, embed or card: one of them (message mode).
+    const text = buildMessage(path.message, vars);
+    let payload = path.message?.mode === 'card' ? await addCard(ctx, cfg.card, guild, member.user, member, vars, text) : text;
     const row = buttonsRow(ctx, cfg, guild, member.id);
     if (payload && row) payload = { ...payload, components: [row] };
     if (channel?.isSendable() && payload) {
@@ -465,7 +467,8 @@ async function leave(ctx: ModuleContext, member: GuildMember | PartialGuildMembe
     timedOut: !member.partial && (member.communicationDisabledUntilTimestamp ?? 0) > Date.now(),
   });
   const channel = guild.channels.cache.get(idIn(cfg.channel, guild.id) ?? '');
-  const payload = await addCard(ctx, cfg.card, guild, user, member.partial ? null : member, vars, buildMessage(chosen, vars));
+  const text = buildMessage(chosen, vars);
+  const payload = chosen?.mode === 'card' ? await addCard(ctx, cfg.card, guild, user, member.partial ? null : member, vars, text) : text;
   if (channel?.isSendable() && payload) await send(ctx, 'leavemer', channel, payload);
   await tellMods(ctx, 'leavemer', guild, cfg.modChannel, cfg.modMessage, vars);
 }

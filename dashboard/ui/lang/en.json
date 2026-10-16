@@ -5114,7 +5114,7 @@
   "modset.card.empty": "No cards yet: create one under Modules → Card Designer.",
   "modset.welcommer.s_message": "Welcome message",
   "modset.welcommer.card": "Image card",
-  "modset.welcommer.card_hint": "A card of the Card Designer, drawn for each new member. In an embed it becomes the image.",
+  "modset.welcommer.card_hint": "The card of the Card Designer, drawn for each new member. The text of the message becomes its caption.",
   "modset.welcommer.roleButtons": "Role buttons (max. 3)",
   "modset.welcommer.roleButtons_hint": "Buttons under the message: members click to take or drop the role.",
   "modset.welcommer.waveButton": "“Wave” button (others can wave to the new member)",
@@ -5175,7 +5175,7 @@
   "modset.welcommer.kickAfterHours_hint": "0 is off. Only works with membership screening.",
   "modset.leavemer.s_message": "Leave message",
   "modset.leavemer.card": "Image card",
-  "modset.leavemer.card_hint": "A card of the Card Designer for the member who left.",
+  "modset.leavemer.card_hint": "The card of the Card Designer for the member who left. The text of the message becomes its caption.",
   "modset.leavemer.s_reasons": "Why they left",
   "modset.leavemer.kickedMessage": "When kicked",
   "modset.leavemer.bannedMessage": "When banned",
@@ -5210,7 +5210,7 @@
   "modset.boost.stopMessage": "Stopped boosting",
   "modset.boost.stopMessage_hint": "Empty: nothing is posted.",
   "modset.boost.card": "Image card",
-  "modset.boost.card_hint": "A card of the Card Designer with the boost messages.",
+  "modset.boost.card_hint": "The card of the Card Designer for the boost messages in card mode. Their text becomes its caption.",
   "modset.boost.s_reward": "Thanks",
   "modset.boost.roles": "Roles while boosting",
   "modset.boost.roles_hint": "Given on a boost, taken away when the boost ends.",
@@ -5963,5 +5963,6 @@
   "modset.connection-roles.rules.connection.amazon-music": "Amazon Music",
   "modset.connection-roles.rules.connection.paypal": "PayPal",
   "modset.connection-roles.rules.connection.ebay": "eBay",
-  "modset.connection-roles.rules.connection.domain": "Domain"
+  "modset.connection-roles.rules.connection.domain": "Domain",
+  "modset.message.mode_card": "Card"
 }

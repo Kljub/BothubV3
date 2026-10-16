@@ -36,12 +36,18 @@
         "members",
         "leave_reason",
         "times_joined"
-      ]
+      ],
+      "card": "card"
     },
     {
       "key": "card",
       "type": "card",
-      "hint": true
+      "hint": true,
+      "showIf": {
+        "message.mode": [
+          "card"
+        ]
+      }
     },
     {
       "key": "ignoreBots",

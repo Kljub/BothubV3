@@ -32,11 +32,15 @@ type settingsField struct {
 	Multiline    bool                `json:"multiline"`
 	ChannelTypes []string            `json:"channelTypes"`
 	ShowIf       map[string][]string `json:"showIf"`
-	Item         []settingsField     `json:"item"`
-	TitleField   string              `json:"titleField"`
-	Pattern      string              `json:"pattern"`
-	Hint         bool                `json:"hint"`
-	Required     bool                `json:"required"`
+	// ShowIfAny: shown when at least one of the conditions holds (showIf: all of them).
+	ShowIfAny map[string][]string `json:"showIfAny"`
+	// Card: a message field whose mode may also be "card" (the card of that card field).
+	Card       string          `json:"card"`
+	Item       []settingsField `json:"item"`
+	TitleField string          `json:"titleField"`
+	Pattern    string          `json:"pattern"`
+	Hint       bool            `json:"hint"`
+	Required   bool            `json:"required"`
 	// Emoji: a text field that holds one emoji (gets the emoji picker).
 	Emoji bool `json:"emoji"`
 	// Drop: a list whose entries can be made by dropping image files on it;
@@ -199,13 +203,14 @@ type settingsItemView struct {
 // fieldView is one form field with its current value.
 type fieldView struct {
 	settingsField
-	Label, Name string // i18n key prefix, form name
-	Value       any
-	Selected    map[string]bool // channel(s)/role(s): "guild:id"
-	Text        string          // words/emojis joined, color, text
-	Message     map[string]string
-	ShowIfJSON  string
-	View        *settingsView
+	Label, Name   string // i18n key prefix, form name
+	Value         any
+	Selected      map[string]bool // channel(s)/role(s): "guild:id"
+	Text          string          // words/emojis joined, color, text
+	Message       map[string]string
+	ShowIfJSON    string
+	ShowIfAnyJSON string
+	View          *settingsView
 	// permissions: the block's value and the lists it shows, as JSON for permissions.js.
 	PermJSON, PermLists string
 	// image: upload URL and preview of the stored file.
@@ -244,6 +249,10 @@ func (s *Server) buildFields(v *settingsView, labels, prefix string, fields []se
 		if len(f.ShowIf) > 0 {
 			b, _ := json.Marshal(f.ShowIf)
 			fv.ShowIfJSON = string(b)
+		}
+		if len(f.ShowIfAny) > 0 {
+			b, _ := json.Marshal(f.ShowIfAny)
+			fv.ShowIfAnyJSON = string(b)
 		}
 		switch f.Type {
 		case "channel", "role":
@@ -536,7 +545,7 @@ func formValues(fields []settingsField, form url.Values) map[string]any {
 			for _, part := range []string{"mode", "content", "title", "description", "color", "image", "footer"} {
 				m[part] = strings.TrimSpace(form.Get(k + "." + part))
 			}
-			if m["mode"] != "embed" {
+			if m["mode"] != "embed" && !(m["mode"] == "card" && f.Card != "") {
 				m["mode"] = "text"
 			}
 			out[k] = m

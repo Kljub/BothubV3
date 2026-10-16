@@ -14,7 +14,8 @@ export interface Ref {
 
 /** Message field of a settings page. */
 export interface MessageConfig {
-  mode?: 'text' | 'embed';
+  /** card: the card of the module's card field is the message, content its caption. */
+  mode?: 'text' | 'embed' | 'card';
   content?: string;
   title?: string;
   description?: string;

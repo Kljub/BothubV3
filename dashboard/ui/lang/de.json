@@ -5114,7 +5114,7 @@
   "modset.card.empty": "Noch keine Karten: erstelle eine unter Module → Card Designer.",
   "modset.welcommer.s_message": "Willkommensnachricht",
   "modset.welcommer.card": "Bildkarte",
-  "modset.welcommer.card_hint": "Eine Karte aus dem Card Designer, für jedes neue Mitglied gezeichnet. In einem Embed wird sie zum Bild.",
+  "modset.welcommer.card_hint": "Die Karte aus dem Card Designer, für jedes neue Mitglied gezeichnet. Der Text der Nachricht wird ihre Bildunterschrift.",
   "modset.welcommer.roleButtons": "Rollen-Buttons (max. 3)",
   "modset.welcommer.roleButtons_hint": "Buttons unter der Nachricht: Mitglieder holen oder entfernen die Rolle per Klick.",
   "modset.welcommer.waveButton": "„Winken“-Button (andere können dem neuen Mitglied winken)",
@@ -5175,7 +5175,7 @@
   "modset.welcommer.kickAfterHours_hint": "0 ist aus. Nur mit Mitgliederprüfung.",
   "modset.leavemer.s_message": "Abschiedsnachricht",
   "modset.leavemer.card": "Bildkarte",
-  "modset.leavemer.card_hint": "Eine Karte aus dem Card Designer für das gegangene Mitglied.",
+  "modset.leavemer.card_hint": "Die Karte aus dem Card Designer für das gegangene Mitglied. Der Text der Nachricht wird ihre Bildunterschrift.",
   "modset.leavemer.s_reasons": "Warum gegangen",
   "modset.leavemer.kickedMessage": "Bei Kick",
   "modset.leavemer.bannedMessage": "Bei Bann",
@@ -5210,7 +5210,7 @@
   "modset.boost.stopMessage": "Boost beendet",
   "modset.boost.stopMessage_hint": "Leer: es wird nichts gepostet.",
   "modset.boost.card": "Bildkarte",
-  "modset.boost.card_hint": "Eine Karte aus dem Card Designer zu den Boost-Nachrichten.",
+  "modset.boost.card_hint": "Die Karte aus dem Card Designer für Boost-Nachrichten im Karten-Modus. Ihr Text wird die Bildunterschrift.",
   "modset.boost.s_reward": "Dank",
   "modset.boost.roles": "Rollen während des Boosts",
   "modset.boost.roles_hint": "Beim Boost vergeben, beim Ende des Boosts entfernt.",
@@ -5963,5 +5963,6 @@
   "modset.connection-roles.rules.connection.amazon-music": "Amazon Music",
   "modset.connection-roles.rules.connection.paypal": "PayPal",
   "modset.connection-roles.rules.connection.ebay": "eBay",
-  "modset.connection-roles.rules.connection.domain": "Domain"
+  "modset.connection-roles.rules.connection.domain": "Domain",
+  "modset.message.mode_card": "Karte"
 }

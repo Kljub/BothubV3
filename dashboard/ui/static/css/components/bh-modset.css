@@ -12,7 +12,8 @@
 }
 .modset-message legend { padding: 0 6px; font-weight: 700; }
 /* Embed fields only for embed messages. */
-.modset-message:has(select[name$=".mode"] option[value="text"]:checked) .modset-embed { display: none; }
+.modset-message:has(select[name$=".mode"] option[value="text"]:checked) .modset-embed,
+.modset-message:has(select[name$=".mode"] option[value="card"]:checked) .modset-embed { display: none; }
 .modset-embed { display: flex; flex-direction: column; gap: 12px; }
 .modset-grid { display: grid; grid-template-columns: 120px 1fr; gap: 12px; }
 

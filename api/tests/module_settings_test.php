@@ -78,6 +78,9 @@ check('emoji max', rejects($react, ['emojis' => array_fill(0, 21, '👍')], 'emo
 $wel = ModuleSettings::schema('welcommer');
 check('bad image url', rejects($wel, ['message' => ['mode' => 'embed', 'image' => 'http://x/y.png']], 'message.image'));
 check('bad color', rejects(ModuleSettings::schema('starboard'), ['color' => 'yellow'], 'color'));
+check('welcome message may be a card', ModuleSettings::normalize($wel, ['message' => ['mode' => 'card', 'content' => 'Hi']])['message']['mode'] === 'card');
+check('a message without card field may not', rejects($ar, ['responders' => [['message' => ['mode' => 'card']]]], 'responders.0.message.mode'));
+check('boost: first and again may be cards, stop not', ModuleSettings::normalize(ModuleSettings::schema('boost'), ['againMessage' => ['mode' => 'card']])['againMessage']['mode'] === 'card' && rejects(ModuleSettings::schema('boost'), ['stopMessage' => ['mode' => 'card']], 'stopMessage.mode'));
 check('read() survives broken stored data', ModuleSettings::read($wel, ['channel' => 'garbage'])['channelEnabled'] === true);
 $rr = ModuleSettings::schema('reaction-roles');
 $entry = ['channel' => $ref, 'messageId' => '123456789012345678', 'emoji' => ['👍']];

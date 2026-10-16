@@ -1,5 +1,7 @@
 // Module settings forms (templates/partials/module_settings.html):
 // - fields with data-show-if='{"field": ["value", …]}' are shown only while
+//   (data-show-if-any: at least one of the conditions; a message mode is
+//   the field "<message>.mode")
 //   another field of the same form has one of the values (checkboxes count
 //   as "true"/"false");
 // - role and channel fields (select[data-pick]) get the picker of the node
@@ -32,6 +34,14 @@
         const v = valueOf(form, name);
         return v === null || values.includes(v);
       });
+    });
+    // data-show-if-any: shown while at least one condition holds.
+    root.querySelectorAll('[data-show-if-any]').forEach((el) => {
+      let cond;
+      try { cond = JSON.parse(el.dataset.showIfAny); } catch { return; }
+      const form = el.closest('form');
+      if (!form) return;
+      el.hidden = !Object.entries(cond).some(([name, values]) => values.includes(valueOf(form, name)));
     });
   }
 

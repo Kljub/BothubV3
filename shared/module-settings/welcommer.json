@@ -55,17 +55,21 @@
         "member_number_ordinal",
         "inviter_name",
         "times_joined"
-      ]
+      ],
+      "card": "card"
     },
     {
       "key": "card",
       "type": "card",
+      "hint": true,
       "showIf": {
         "channelEnabled": [
           "true"
+        ],
+        "message.mode": [
+          "card"
         ]
-      },
-      "hint": true
+      }
     },
     {
       "key": "reactions",

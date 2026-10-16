@@ -204,7 +204,7 @@ final class ModuleSettings
                 }
                 return $block;
             case 'message':
-                return self::message($missing || $v === null ? ($default ?? []) : $v, $path);
+                return self::message($missing || $v === null ? ($default ?? []) : $v, $path, isset($f['card']));
             case 'list':
                 if ($missing || $v === null) {
                     return [];
@@ -350,7 +350,8 @@ final class ModuleSettings
             || (mb_strlen($e) <= 16 && !preg_match('/[\p{L}\p{N}\s<>:]/u', $e));
     }
 
-    private static function message(mixed $v, string $path): array
+    /** $card: the field names a card field ("card"), so the mode may be "card" (the card image, content as caption). */
+    private static function message(mixed $v, string $path, bool $card = false): array
     {
         // Older configs stored some messages as plain text (e.g. YouTube).
         if (is_string($v)) {
@@ -360,7 +361,7 @@ final class ModuleSettings
             self::fail($path);
         }
         $mode = $v['mode'] ?? 'text';
-        if ($mode !== 'text' && $mode !== 'embed') {
+        if ($mode !== 'text' && $mode !== 'embed' && !($card && $mode === 'card')) {
             self::fail("{$path}.mode");
         }
         $limits = ['content' => 2000, 'title' => 256, 'description' => 4000, 'footer' => 2048, 'image' => 500];

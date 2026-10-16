@@ -40,7 +40,8 @@
         "title": "🚀 Thank you for boosting!",
         "description": "{user.mention} just boosted **{server}**! We now have {boost_count} boosts.",
         "color": "#f472b6"
-      }
+      },
+      "card": "card"
     },
     {
       "key": "againMessage",
@@ -66,7 +67,8 @@
       "default": {
         "mode": "text",
         "content": "💜 {user.mention} boosted again! That is boost number {times_boosted} from them."
-      }
+      },
+      "card": "card"
     },
     {
       "key": "stopMessage",
@@ -94,7 +96,15 @@
     {
       "key": "card",
       "type": "card",
-      "hint": true
+      "hint": true,
+      "showIfAny": {
+        "firstMessage.mode": [
+          "card"
+        ],
+        "againMessage.mode": [
+          "card"
+        ]
+      }
     },
     {
       "key": "s_reward",

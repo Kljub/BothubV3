@@ -49,6 +49,13 @@ List fields may have `unique: ["field", …]`: the API refuses two entries with 
 values in these fields. `hint: true` shows the text `modset.<module>.<key>_hint` below
 the field (or at the top of a list).
 
+A `message` field with `card: "<card field>"` gets a third mode next to text
+and embed: `card` sends the card of that card field as the message (the
+content is its caption). Show the card field with
+`showIf: {"<message>.mode": ["card"]}` (or `showIfAny` for several messages).
+
+`showIfAny` works like `showIf` but needs only one of its conditions.
+
 `showIf: {"field": ["value", …]}` hides a field in the form unless another
 field on the same level has one of the values (booleans as `"true"`/`"false"`);
 the API still stores it. Channel types: `text`, `voice`, `category`, `forum`,

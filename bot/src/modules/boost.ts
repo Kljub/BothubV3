@@ -54,8 +54,8 @@ async function boosted(ctx: ModuleContext, member: GuildMember, kind: 'boost' | 
   const message = { first: cfg.firstMessage, again: cfg.againMessage, stop: cfg.stopMessage }[path];
   const channel = guild.channels.cache.get(idIn(cfg.channel, guild.id) ?? '');
   const text = buildMessage(message, vars);
-  // The card goes with boost messages only, not with "stopped boosting".
-  const payload = path === 'stop' ? text : await addCard(ctx, cfg.card, guild, member.user, member, vars, text);
+  // Text, embed or card (message mode); "stopped boosting" has no card.
+  const payload = path !== 'stop' && message?.mode === 'card' ? await addCard(ctx, cfg.card, guild, member.user, member, vars, text) : text;
   if (channel?.isSendable() && payload) await send(ctx, 'boost', channel, payload);
 
   const roles = assignable(ctx, 'boost', guild, idsIn(cfg.roles, guild.id));

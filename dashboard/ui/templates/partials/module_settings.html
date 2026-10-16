@@ -62,7 +62,7 @@
 {{/* One field. Receives a fieldView. */}}
 {{define "modset_field"}}
 {{$f := .}}
-<div class="modset-field" {{with .ShowIfJSON}}data-show-if="{{.}}"{{end}}>
+<div class="modset-field" {{with .ShowIfJSON}}data-show-if="{{.}}"{{end}}{{with .ShowIfAnyJSON}} data-show-if-any="{{.}}"{{end}}>
 {{if .Hint}}{{if ne .Type "list"}}<p class="hint modset-hint">{{t (printf "%s_hint" .Label)}}</p>{{end}}{{end}}
 {{if eq .Type "bool"}}
   <label class="toggle-row"><span>{{t .Label}}</span><input type="checkbox" class="toggle" name="{{.Name}}" value="true" {{if eq (printf "%v" .Value) "true"}}checked{{end}}></label>
@@ -181,6 +181,7 @@
       <select name="{{.Name}}.mode">
         <option value="text" {{if eq (index .Message "mode") "text"}}selected{{end}}>{{t "modset.message.mode_text"}}</option>
         <option value="embed" {{if eq (index .Message "mode") "embed"}}selected{{end}}>{{t "modset.message.mode_embed"}}</option>
+        {{if .Card}}<option value="card" {{if eq (index .Message "mode") "card"}}selected{{end}}>{{t "modset.message.mode_card"}}</option>{{end}}
       </select>
     </label>
     <label class="field">{{t "modset.message.content"}}<span class="modset-var-wrap"><textarea name="{{.Name}}.content" rows="3" maxlength="2000">{{index .Message "content"}}</textarea>{{if .Vars}}{{template "modset_var_tool"}}{{end}}</span></label>
