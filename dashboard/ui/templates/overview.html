@@ -36,5 +36,9 @@
     <p class="tile-value tile-value-blue">{{bytes .Memory.AverageBytes}}</p>
     <h2 class="tile-label">{{t "overview.memory_average.24h"}}</h2>
   </article>
+  <a class="tile tile-link" href="/store">
+    <p class="tile-value">{{.Plugins.Installed}}</p>
+    <h2 class="tile-label">{{t "overview.plugins_installed"}}</h2>
+  </a>
 </section>
 {{end}}

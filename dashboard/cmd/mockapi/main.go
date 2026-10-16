@@ -1179,6 +1179,7 @@ func (s *store) overviewStats(w http.ResponseWriter, r *http.Request, _ string) 
 	s.mu.Unlock()
 	writeJSON(w, 200, map[string]any{
 		"bots":    map[string]int{"total": total, "online": online},
+		"plugins": map[string]int{"installed": s.installedPlugins(r)},
 		"memory":  s.memoryStats(r.Context(), rng, from, to),
 		"storage": s.storage.stats(rng, from, to),
 	})
@@ -1469,4 +1470,37 @@ func slowLog(next http.Handler) http.Handler {
 			slog.Info("slow request", "method", r.Method, "path", r.URL.Path, "ms", d.Milliseconds())
 		}
 	})
+}
+
+// installedPlugins counts the plugins installed on this instance (App
+// Store); without the PHP API the plugins of the mock bots.
+func (s *store) installedPlugins(r *http.Request) int {
+	if s.php == nil {
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		ids := map[string]bool{}
+		for _, list := range s.plugins {
+			for _, p := range list {
+				ids[p.ID] = true
+			}
+		}
+		return len(ids)
+	}
+	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, s.php.base+"/internal/admin/plugins", nil)
+	if err != nil {
+		return 0
+	}
+	req.Header.Set("X-BotHub-Internal", s.php.key)
+	resp, err := s.php.http.Do(req)
+	if err != nil {
+		return 0
+	}
+	defer resp.Body.Close()
+	var out struct {
+		Items []json.RawMessage `json:"items"`
+	}
+	if resp.StatusCode != http.StatusOK || json.NewDecoder(resp.Body).Decode(&out) != nil {
+		return 0
+	}
+	return len(out.Items)
 }

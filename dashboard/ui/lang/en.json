@@ -5964,5 +5964,6 @@
   "modset.connection-roles.rules.connection.paypal": "PayPal",
   "modset.connection-roles.rules.connection.ebay": "eBay",
   "modset.connection-roles.rules.connection.domain": "Domain",
-  "modset.message.mode_card": "Card"
+  "modset.message.mode_card": "Card",
+  "overview.plugins_installed": "Plugins installed"
 }

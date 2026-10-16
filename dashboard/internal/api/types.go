@@ -131,6 +131,10 @@ type OverviewStats struct {
 	} `json:"bots"`
 	Memory  MemoryStats  `json:"memory"`
 	Storage StorageStats `json:"storage"`
+	// Plugins installed on the instance (App Store).
+	Plugins struct {
+		Installed int `json:"installed"`
+	} `json:"plugins"`
 }
 
 // StorageStats: the data folder (database, plugins, Redis, rest) and its disk.
