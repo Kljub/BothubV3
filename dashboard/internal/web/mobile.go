@@ -213,7 +213,8 @@ func (s *Server) handleMobileTexts(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.Header().Set("Cache-Control", "public, max-age=3600")
+	// Changes with every update: a proxy in front (nginx) must not keep an old copy.
+	w.Header().Set("Cache-Control", "no-cache")
 	_ = json.NewEncoder(w).Encode(out)
 }
 
@@ -261,6 +262,7 @@ func (s *Server) handleMobileCatalog(w http.ResponseWriter, r *http.Request) {
 		out = append(out, g)
 	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.Header().Set("Cache-Control", "public, max-age=3600")
+	// Changes with every update: a proxy in front (nginx) must not keep an old copy.
+	w.Header().Set("Cache-Control", "no-cache")
 	_ = json.NewEncoder(w).Encode(map[string]any{"groups": out})
 }
