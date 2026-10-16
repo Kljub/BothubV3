@@ -1,0 +1,80 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.connections",
+  "version": 1,
+  "category": "action",
+  "group": "api",
+  "order": 47,
+  "color": "purple",
+  "icon": "🔗",
+  "labelKey": "builder.node.action_connections.label",
+  "descriptionKey": "builder.node.action_connections.description",
+  "module": "connection-roles",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": "",
+      "labelKey": "builder.result.connections.0"
+    },
+    {
+      "suffix": ".linked",
+      "labelKey": "builder.result.connections.1"
+    },
+    {
+      "suffix": ".url",
+      "labelKey": "builder.result.connections.2"
+    },
+    {
+      "suffix": ".list",
+      "labelKey": "builder.result.connections.3"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "mode": {
+        "type": "string",
+        "enum": [
+          "link",
+          "show",
+          "unlink"
+        ],
+        "default": "link",
+        "x-labelKey": "builder.cfg.connections_mode",
+        "x-enumKey": "builder.enum.connections_mode"
+      },
+      "user": {
+        "type": "string",
+        "maxLength": 100,
+        "x-labelKey": "builder.cfg.connections_user",
+        "x-hintKey": "builder.cfg.connections_user_hint",
+        "x-showIf": {
+          "mode": [
+            "show"
+          ]
+        }
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  }
+}

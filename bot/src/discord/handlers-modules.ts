@@ -18,6 +18,7 @@ import type { DiscordData } from './handlers.js';
 import * as ach from '../modules/achievements.js';
 import { lockdown, unlock } from '../modules/anticontrol.js';
 import { linkTwitch, unlinkTwitch } from '../modules/twitchsubs.js';
+import { label, linkedConns, linkUrl, MODULE as CONNECTIONS, unlinkMember } from '../modules/connections.js';
 
 function guildOf(run: Run): Guild {
   const guild = (run.data as unknown as DiscordData).guild;
@@ -274,6 +275,34 @@ export function moduleHandlers(repo: Repo, botId: number, secret: (key: string) 
         const out = await linkTwitch(ctx, guild.id, userId, run.str(node, 'login'));
         run.setResult(node, '', out.text);
         run.setResult(node, '.linked', String(out.linked));
+      },
+    ],
+    // --- Auto Assign Roles: sign-in link, show, unlink ---
+    [
+      'action.connections',
+      async (node, run) => {
+        const guild = guildOf(run);
+        const self = snowflake(run.vars.get('user.id') ?? '', 'user');
+        const mode = run.str(node, 'mode') || 'link';
+        if (mode === 'unlink') {
+          const member = await guild.members.fetch(self).catch(() => null);
+          const had = await unlinkMember(ctx, member, self);
+          run.setResult(node, '', had ? 'Your connections are no longer linked; their roles are gone.' : 'You have not linked your connections.');
+          run.setResult(node, '.linked', 'false');
+          return;
+        }
+        const who = mode === 'show' ? userOf(run, node) : self;
+        const conns = linkedConns(ctx, who);
+        run.setResult(node, '.linked', String(!!conns));
+        run.setResult(node, '.list', (conns ?? []).map(label).join(', '));
+        const url = linkUrl(ctx);
+        run.setResult(node, '.url', url ?? '');
+        if (mode === 'show') {
+          run.setResult(node, '', conns ? (conns.length ? `🔗 <@${who}>: ${conns.map((c) => `${label(c)}${c.verified ? ' ✔' : ''}`).join(', ')}` : `<@${who}> linked, but has no connections.`) : `<@${who}> has not linked their connections.`);
+          return;
+        }
+        if (!url || !ctx.enabled(CONNECTIONS)) throw new GraphError('error.run.economy', { message: 'Auto Assign Roles is not set up on this bot yet.' });
+        run.setResult(node, '', `🔗 Sign in with Discord to link your connections (Steam, GitHub, Twitch …): ${url}${conns ? `\nLinked now: ${conns.map(label).join(', ') || '—'}` : ''}`);
       },
     ],
     // --- AntiControl: lock or unlock the server by hand ---

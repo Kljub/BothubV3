@@ -1,0 +1,96 @@
+{
+  "module": "connection-roles",
+  "fields": [
+    {
+      "key": "rules",
+      "type": "list",
+      "max": 25,
+      "titleField": "connection",
+      "hint": true,
+      "item": [
+        {
+          "key": "connection",
+          "type": "select",
+          "options": [
+            "steam",
+            "github",
+            "twitch",
+            "youtube",
+            "xbox",
+            "playstation",
+            "battlenet",
+            "epicgames",
+            "riotgames",
+            "leagueoflegends",
+            "roblox",
+            "spotify",
+            "reddit",
+            "twitter",
+            "tiktok",
+            "instagram",
+            "facebook",
+            "bluesky",
+            "mastodon",
+            "bungie",
+            "crunchyroll",
+            "amazon-music",
+            "paypal",
+            "ebay",
+            "domain"
+          ],
+          "default": "steam",
+          "required": true
+        },
+        {
+          "key": "role",
+          "type": "role",
+          "required": true
+        },
+        {
+          "key": "verified",
+          "type": "bool",
+          "default": true,
+          "hint": true
+        },
+        {
+          "key": "name",
+          "type": "text",
+          "max": 100,
+          "hint": true
+        }
+      ]
+    },
+    {
+      "key": "linkedRole",
+      "type": "role",
+      "hint": true
+    },
+    {
+      "key": "removeRoles",
+      "type": "bool",
+      "default": true,
+      "hint": true
+    },
+    {
+      "key": "refreshHours",
+      "type": "select",
+      "options": [
+        "6",
+        "12",
+        "24",
+        "48"
+      ],
+      "default": "12",
+      "hint": true
+    },
+    {
+      "key": "logChannel",
+      "type": "channel",
+      "channelTypes": [
+        "text",
+        "announcement"
+      ],
+      "hint": true
+    }
+  ]
+}

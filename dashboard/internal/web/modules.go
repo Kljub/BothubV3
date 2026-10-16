@@ -271,6 +271,11 @@ func (s *Server) handleModuleItem(kind string) authHandler {
 				tv.CSRF = p.CSRF
 				data["TwitchAuth"] = tv
 			}
+			if info.Key == "connection-roles" {
+				cv := s.connectionsView(r, bot.ID)
+				cv.CSRF = p.CSRF
+				data["Connections"] = cv
+			}
 			if info.Key == "member-stats" {
 				ms, err := s.memberStatsView(r, p, bot.ID)
 				if err != nil {

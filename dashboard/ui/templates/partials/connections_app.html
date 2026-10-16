@@ -1,0 +1,46 @@
+{{/* Auto Assign Roles: the bot's Discord sign-in for members (internal/web/connections.go). */}}
+{{define "connections_app"}}
+<section class="box connections-app">
+  <header class="box-head"><h2>{{t "connections.title"}}</h2></header>
+  <div class="box-body">
+    {{if eq .Notice "saved"}}<div class="alert alert-success">{{t "connections.notice.saved"}}</div>{{end}}
+    {{if eq .Notice "removed"}}<div class="alert alert-success">{{t "connections.notice.removed"}}</div>{{end}}
+    {{if eq .Notice "unlinked"}}<div class="alert alert-success">{{t "connections.notice.unlinked"}}</div>{{end}}
+    {{if eq .Notice "secret"}}<div class="alert alert-warning">{{t "connections.notice.secret"}}</div>{{end}}
+    {{if eq .Notice "failed"}}<div class="alert alert-danger">{{t "connections.notice.failed"}}</div>{{end}}
+    <p class="hint">{{t "connections.hint"}}</p>
+    <ol class="hint connections-steps">
+      <li>{{t "connections.step.portal"}} <code class="mono">{{.RedirectURL}}</code></li>
+      <li>{{t "connections.step.secret"}}</li>
+      <li>{{t "connections.step.share"}}</li>
+    </ol>
+    <form method="post" action="/bots/connections/save" class="inline-form connections-form">
+      <input type="hidden" name="csrf_token" value="{{.CSRF}}">
+      <input type="password" name="client_secret" autocomplete="off" class="input" placeholder="{{if .App.Configured}}{{t "connections.secret.keep"}}{{else}}{{t "connections.secret.placeholder"}}{{end}}">
+      <button type="submit" class="btn btn-primary btn-sm">{{t "connections.save"}}</button>
+    </form>
+    {{if .App.Configured}}
+    <p class="connections-link"><span class="badge-soft badge-soft-running"><span class="badge-dot" aria-hidden="true"></span>{{t "connections.ready"}}</span>
+      {{t "connections.link"}} <code class="mono">{{.App.LinkURL}}</code> · {{t "connections.linked"}} <strong>{{.App.Linked}}</strong></p>
+    {{if .Members}}
+    <table class="table connections-members">
+      <thead><tr><th>{{t "connections.member"}}</th><th>{{t "connections.list"}}</th><th></th></tr></thead>
+      <tbody>
+      {{range .Members}}
+        <tr>
+          <td><strong>{{.UserName}}</strong><br><span class="muted mono">{{.UserID}}</span></td>
+          <td>{{range .Connections}}<span class="badge-soft">{{.Type}}{{if .Name}}: {{.Name}}{{end}}{{if .Verified}} ✔{{end}}</span> {{else}}<span class="muted">—</span>{{end}}</td>
+          <td><form method="post" action="/bots/connections/members/{{.UserID}}/unlink" class="inline-form"><input type="hidden" name="csrf_token" value="{{$.CSRF}}"><button type="submit" class="btn btn-sm btn-danger-soft">{{t "connections.unlink"}}</button></form></td>
+        </tr>
+      {{end}}
+      </tbody>
+    </table>
+    {{end}}
+    <form method="post" action="/bots/connections/remove" class="inline-form">
+      <input type="hidden" name="csrf_token" value="{{.CSRF}}">
+      <button type="submit" class="btn btn-sm btn-danger-soft">{{t "connections.remove"}}</button>
+    </form>
+    {{end}}
+  </div>
+</section>
+{{end}}

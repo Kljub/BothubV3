@@ -1,0 +1,46 @@
+{{/* Public member page of Auto Assign Roles (/connect/<application ID>,
+     /connect/callback). Receives a connectPageView (internal/web/connections.go). */}}
+
+{{define "title"}}{{.Data.Bot.BotName}}{{end}}
+
+{{define "connect_layout"}}{{$de := eq .Data.Lang "de"}}<!doctype html>
+<html lang="{{.Data.Lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>{{with .Data.Bot.BotName}}{{.}} · {{end}}BotHub</title>
+<link rel="stylesheet" href="/static/css/bothub.css?v={{.AssetVersion}}">
+</head>
+<body class="auth" data-theme="{{.Theme}}">
+<main class="auth-card invite-card">
+  {{with .Data.Bot.AvatarURL}}<img class="invite-avatar" src="{{.}}" alt="" width="80" height="80">{{else}}<span class="invite-avatar invite-avatar-empty" aria-hidden="true">🔗</span>{{end}}
+  {{with .Data.Bot.BotName}}<h2>{{.}}</h2>{{end}}
+  {{if .Data.Result}}
+    <div class="alert alert-success">{{if $de}}Verknüpft als <strong>{{.Data.Result.UserName}}</strong>. Die Rollen kommen in etwa einer Minute.{{else}}Linked as <strong>{{.Data.Result.UserName}}</strong>. The roles follow within about a minute.{{end}}</div>
+    {{if .Data.Result.Connections}}
+    <ul class="connect-list">
+      {{range .Data.Result.Connections}}<li><span class="mono">{{.Type}}</span> {{.Name}}{{if .Verified}} ✔{{end}}</li>{{end}}
+    </ul>
+    {{else}}
+    <p class="muted">{{if $de}}Dein Discord-Konto hat keine Verknüpfungen. Füge sie unter Einstellungen → Verknüpfungen hinzu und melde dich dann noch mal an.{{else}}Your Discord account has no connections. Add them under Settings → Connections, then sign in again.{{end}}</p>
+    {{end}}
+    <p class="hint">{{if $de}}Änderst du später deine Verknüpfungen, liest der Bot sie regelmäßig neu. /connections-unlink im Server löscht die Verknüpfung.{{else}}When you change your connections later, the bot reads them again regularly. /connections-unlink on the server removes the link.{{end}}</p>
+  {{else if eq .Data.Error "expired"}}
+    <div class="alert alert-warning">{{if $de}}Die Anmeldung ist abgelaufen. Öffne den Link aus Discord noch einmal.{{else}}The sign-in expired. Open the link from Discord again.{{end}}</div>
+  {{else if eq .Data.Error "denied"}}
+    <div class="alert alert-warning">{{if $de}}Du hast die Anmeldung abgebrochen. Es wurde nichts gespeichert.{{else}}You cancelled the sign-in. Nothing was stored.{{end}}</div>
+    <a class="btn btn-primary btn-block" href="/connect/{{.Data.Bot.ApplicationID}}/start">{{if $de}}Noch mal versuchen{{else}}Try again{{end}}</a>
+  {{else if eq .Data.Error "failed"}}
+    <div class="alert alert-danger">{{if $de}}Discord hat die Anmeldung nicht bestätigt. Versuch es gleich noch mal.{{else}}Discord did not confirm the sign-in. Please try again.{{end}}</div>
+    <a class="btn btn-primary btn-block" href="/connect/{{.Data.Bot.ApplicationID}}/start">{{if $de}}Noch mal versuchen{{else}}Try again{{end}}</a>
+  {{else}}
+    <p>{{if $de}}Verknüpfe deine Discord-Verbindungen (Steam, GitHub, Twitch, YouTube …), damit der Bot dir passende Rollen gibt.{{else}}Link your Discord connections (Steam, GitHub, Twitch, YouTube …) so the bot gives you matching roles.{{end}}</p>
+    <p class="muted">{{if $de}}Der Bot liest nur deinen Namen und die Liste deiner Verknüpfungen (Typ, Name, verifiziert). Er kann nichts in deinem Namen tun.{{else}}The bot only reads your name and the list of your connections (type, name, verified). It cannot act for you.{{end}}</p>
+    <a class="btn btn-primary btn-block" href="/connect/{{.Data.Bot.ApplicationID}}/start">{{if $de}}Mit Discord anmelden{{else}}Sign in with Discord{{end}}</a>
+  {{end}}
+  <p class="legal-links"><a href="/terms">{{if $de}}Nutzungsbedingungen{{else}}Terms of Service{{end}}</a> · <a href="/privacy">{{if $de}}Datenschutz{{else}}Privacy{{end}}</a></p>
+</main>
+</body>
+</html>
+{{end}}

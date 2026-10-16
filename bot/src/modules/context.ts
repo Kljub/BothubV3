@@ -63,6 +63,9 @@ export class ModuleContext {
     return value as Partial<T>;
   }
 
+  /** Fires the custom event "connections_update" (Auto Assign Roles); set by the bot instance. */
+  connEmit: import('./connections.js').ConnEmit | null = null;
+
   /** Called after settings changed (e.g. reaction roles add their reactions). */
   onChange: (() => void) | null = null;
 

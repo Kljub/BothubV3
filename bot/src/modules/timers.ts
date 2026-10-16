@@ -19,6 +19,7 @@ import { autoPurge, dayNight } from './server-auto.js';
 import { welcomeTick } from './members.js';
 import { handover } from '../core/handover.js';
 import { stopTwitchAlerts, twitchAlertsTick } from './twitch-alerts.js';
+import { connectionsTick } from './connections.js';
 
 // ---------- pure helpers ----------
 
@@ -107,6 +108,7 @@ export class ModuleTimers {
       await flushAchievements(this.ctx, guilds, now);
       if (this.ctx.enabled('anticontrol')) await anticontrolTick(this.ctx, guilds, now);
       await twitchAlertsTick(this.ctx, guilds);
+      await connectionsTick(this.ctx, guilds, this.ctx.connEmit, now);
       const local = localTime(now, this.timezone());
       await this.birthdays(guilds, local);
       await this.qotd(guilds, local);

@@ -37,6 +37,7 @@
           "member_nickname",
           "member_status",
           "member_screening",
+          "connections_update",
           "guild_update",
           "message_create",
           "bot_mention",

@@ -135,6 +135,11 @@
       "icon": "📜"
     },
     {
+      "key": "connection-roles",
+      "category": "community",
+      "icon": "🔗"
+    },
+    {
       "key": "reaction-roles",
       "category": "messages",
       "icon": "📌"

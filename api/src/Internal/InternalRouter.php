@@ -43,6 +43,7 @@ final class InternalRouter
         private readonly ?TwitchAuthStore $twitch = null,
         private readonly ?RunStore $runs = null,
         private readonly ?RecoveryKey $recovery = null,
+        private readonly ?ConnectionStore $connections = null,
     ) {
     }
 
@@ -190,6 +191,38 @@ final class InternalRouter
             if ($this->templates !== null && preg_match('#^/internal/bots/(\d+)/message-templates(?:/(\d+)(/send)?)?$#', $path, $m)) {
                 $this->bots->find((int) $m[1]) ?? throw ApiError::notFound();
                 return $this->templateRoute($method, (int) $m[1], isset($m[2]) && $m[2] !== '' ? (int) $m[2] : null, isset($m[3]), $body, $bodyObject);
+            }
+            // Auto Assign Roles: the bot's Discord sign-in (client secret, write-only) and the linked members.
+            if ($this->connections !== null && preg_match('#^/internal/bots/(\d+)/connections(?:/(members)(?:/(\d{17,20}))?)?$#', $path, $m)) {
+                $this->bots->find((int) $m[1]) ?? throw ApiError::notFound();
+                $botId = (int) $m[1];
+                if (($m[2] ?? '') === 'members') {
+                    if (isset($m[3]) && $m[3] !== '') {
+                        $method === 'DELETE' || throw new ApiError(405, 'error.method_not_allowed');
+                        $this->connections->unlink($botId, $m[3]);
+                        return [204, null];
+                    }
+                    $method === 'GET' || throw new ApiError(405, 'error.method_not_allowed');
+                    return [200, ['items' => $this->connections->members($botId)]];
+                }
+                return match ($method) {
+                    'GET' => [200, $this->connections->status($botId)],
+                    'PUT' => [200, $this->connections->save($botId, $body)],
+                    'DELETE' => (function () use ($botId) {
+                        $this->connections->remove($botId);
+                        return [204, null];
+                    })(),
+                    default => throw new ApiError(405, 'error.method_not_allowed'),
+                };
+            }
+            // Public: the member page /connect/<application ID> and its sign-in callback.
+            if ($this->connections !== null && preg_match('#^/internal/connect/(\d{17,20})(/link)?$#', $path, $m)) {
+                if (($m[2] ?? '') === '/link') {
+                    $method === 'POST' || throw new ApiError(405, 'error.method_not_allowed');
+                    return [200, $this->connections->link($m[1], $body)];
+                }
+                $method === 'GET' || throw new ApiError(405, 'error.method_not_allowed');
+                return [200, $this->connections->page($m[1]) ?? throw ApiError::notFound()];
             }
             if ($this->twitch !== null && preg_match('#^/internal/bots/(\d+)/twitch-auth$#', $path, $m)) {
                 $bot = $this->bots->find((int) $m[1]) ?? throw ApiError::notFound();

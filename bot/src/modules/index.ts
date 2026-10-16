@@ -23,6 +23,7 @@ import { bindAuditLog } from './auditlog.js';
 import { rolePrefix } from './server-auto.js';
 import { thanksMessage } from './thanks.js';
 import { linkfixMessage } from './linkfix.js';
+import { connectionsJoin } from './connections.js';
 
 export { ModuleContext } from './context.js';
 
@@ -113,6 +114,7 @@ export function bindModules(client: Client, ctx: ModuleContext, timezone: () => 
     guard('invite-join', join);
     guard('member-add', join.catch(() => null).then((info) => onMemberAdd(ctx, m, info)));
     guard('anticontrol', antiJoin(ctx, m));
+    guard('connections', connectionsJoin(ctx, m));
   });
   client.on(Events.GuildMemberRemove, (m) => {
     guard('member-remove', onMemberRemove(ctx, m));

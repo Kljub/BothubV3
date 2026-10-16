@@ -431,7 +431,7 @@ export class BotInstance {
     client.on(Events.GuildDelete, (g) => this.deps.repo.guildLeft(this.botId, g.id));
     client.on(Events.ShardDisconnect, (e) => this.deps.repo.logCode(this.botId, 'ERR-1006', { code: e.code }));
     client.on(Events.Error, (err) => log.error('discord client error', { botId: this.botId, err }));
-    bindEvents(client, (ctx) => {
+    const emit = (ctx: EventContext): void => {
       // Status changes of bots go to plugins only (Custom Events see members).
       if (ctx.type === 'member_status' && ctx.user?.bot) {
         this.pluginEvent(ctx);
@@ -440,7 +440,10 @@ export class BotInstance {
       void this.runEvent(ctx);
       this.pluginEvent(ctx);
       this.countEvent(ctx);
-    });
+    };
+    bindEvents(client, emit);
+    // Auto Assign Roles: Discord has no event for changed connections; the module fires its own.
+    this.modules.connEmit = (member, vars) => emit({ type: 'connections_update', vars, guild: member.guild, channel: null, member, user: member.user });
     bindModules(client, this.modules, () => this.timeSettings.timezone);
     try {
       await client.login(token);

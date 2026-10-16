@@ -20,6 +20,7 @@ use BotHub\Internal\CardStore;
 use BotHub\Internal\RunStore;
 use BotHub\Internal\RecoveryKey;
 use BotHub\Internal\TwitchAuthStore;
+use BotHub\Internal\ConnectionStore;
 use BotHub\Internal\DataStore;
 use BotHub\Internal\BotBackup;
 use BotHub\Internal\SdkPolicyStore;
@@ -214,6 +215,7 @@ if (str_starts_with($path, '/internal/')) {
             new TwitchAuthStore($pdo, SecretBox::loadOrCreate(), $secrets),
             new RunStore($pdo),
             new RecoveryKey($pdo),
+            new ConnectionStore($pdo, SecretBox::loadOrCreate()),
         );
         [$status, $out] = $router->handle($method, $path, $body, $raw === '' ? null : json_decode($raw, false), $_GET);
     } catch (\Throwable $e) {

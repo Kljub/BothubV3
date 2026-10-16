@@ -254,6 +254,9 @@ func main() {
 	mux.HandleFunc("GET /api/v1/setup", s.setupState)
 	mux.HandleFunc("GET /api/v1/legal", s.getLegal)
 	mux.HandleFunc("GET /api/v1/invite/{app}", s.getInvitePage)
+	// Auto Assign Roles: the public member page and its sign-in (the Discord code is the proof).
+	mux.HandleFunc("GET /api/v1/connect/{app}", s.connectPublic)
+	mux.HandleFunc("POST /api/v1/connect/{app}/link", s.connectPublic)
 	mux.HandleFunc("GET /api/v1/admin/invite-settings", s.auth(s.getInviteSettings))
 	mux.HandleFunc("PUT /api/v1/admin/invite-settings", s.auth(s.putInviteSettings))
 	mux.HandleFunc("GET /api/v1/admin/legal", s.auth(s.getAdminLegal))
@@ -454,6 +457,11 @@ func main() {
 	mux.HandleFunc("GET /api/v1/bots/{id}/stats", s.auth(s.withBot(s.viaPHP(s.botStats))))
 	// Twitch Alerts: the channel's sign-in (PHP API only; tokens stay there).
 	mux.HandleFunc("GET /api/v1/bots/{id}/twitch-auth", s.auth(s.withBot(s.viaPHP(phpRequired))))
+	mux.HandleFunc("GET /api/v1/bots/{id}/connections", s.auth(s.withBot(s.viaPHP(phpRequired))))
+	mux.HandleFunc("PUT /api/v1/bots/{id}/connections", s.auth(s.withBot(s.viaPHP(phpRequired))))
+	mux.HandleFunc("DELETE /api/v1/bots/{id}/connections", s.auth(s.withBot(s.viaPHP(phpRequired))))
+	mux.HandleFunc("GET /api/v1/bots/{id}/connections/members", s.auth(s.withBot(s.viaPHP(phpRequired))))
+	mux.HandleFunc("DELETE /api/v1/bots/{id}/connections/members/{uid}", s.auth(s.withBot(s.viaPHP(phpRequired))))
 	mux.HandleFunc("POST /api/v1/bots/{id}/twitch-auth", s.auth(s.withBot(s.viaPHP(phpRequired))))
 	mux.HandleFunc("DELETE /api/v1/bots/{id}/twitch-auth", s.auth(s.withBot(s.viaPHP(phpRequired))))
 	// Stats module: paths of Welcomer, Leaver and Boost (PHP API only).

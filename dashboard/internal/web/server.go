@@ -165,6 +165,10 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /privacy", s.legalPage("privacy"))
 	// Custom invite link of a bot (Developer Portal install link).
 	mux.HandleFunc("GET /invite/{app}", s.handleInvitePage)
+	// Auto Assign Roles: members link their Discord connections (no BotHub account).
+	mux.HandleFunc("GET /connect/callback", s.handleMemberConnectCallback)
+	mux.HandleFunc("GET /connect/{app}", s.handleMemberConnectPage)
+	mux.HandleFunc("GET /connect/{app}/start", s.handleMemberConnectStart)
 	mux.HandleFunc("POST /login", s.handleLogin)
 	mux.HandleFunc("GET /register", s.handleRegisterPage)
 	mux.HandleFunc("POST /register", s.handleRegister)
@@ -198,6 +202,9 @@ func (s *Server) routes() http.Handler {
 	mux.Handle("GET /bots/twitch/connect", auth(s.handleTwitchConnect))
 	mux.Handle("POST /bots/twitch/disconnect", auth(s.handleTwitchDisconnect))
 	mux.Handle("GET /auth/twitch/callback", auth(s.handleTwitchCallback))
+	mux.Handle("POST /bots/connections/save", auth(s.handleConnectionsSave))
+	mux.Handle("POST /bots/connections/remove", auth(s.handleConnectionsRemove))
+	mux.Handle("POST /bots/connections/members/{uid}/unlink", auth(s.handleConnectionsUnlink))
 	mux.Handle("GET /bots/plugins/{key}", auth(s.handleModuleItem("plugins")))
 	mux.Handle("GET /nav/index", auth(s.handleNavIndex))
 	mux.Handle("GET /bots/commands/{name}", auth(s.handleCommandPage))

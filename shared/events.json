@@ -143,6 +143,23 @@
             "{old}",
             "{new}"
           ]
+        },
+        {
+          "key": "connections_update",
+          "vars": [
+            "{user}",
+            "{user.id}",
+            "{user.name}",
+            "{user.mention}",
+            "{user.avatar}",
+            "{server}",
+            "{server.id}",
+            "{connections}",
+            "{connections.types}",
+            "{connections.count}",
+            "{connections.added}",
+            "{connections.removed}"
+          ]
         }
       ]
     },

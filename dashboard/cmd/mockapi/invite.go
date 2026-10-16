@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"net/http"
 	"regexp"
 )
@@ -61,4 +62,24 @@ func (s *store) putInviteSettings(w http.ResponseWriter, r *http.Request, sid st
 	s.invite = in
 	s.mu.Unlock()
 	writeJSON(w, 200, in)
+}
+
+// connectPublic forwards the public Auto Assign Roles calls (member page
+// data, sign-in code) to the PHP API; without it there is no such page.
+func (s *store) connectPublic(w http.ResponseWriter, r *http.Request) {
+	if !appIDPattern.MatchString(r.PathValue("app")) || s.php == nil {
+		apiError(w, 404, "error.not_found")
+		return
+	}
+	var body []byte
+	if r.Method == http.MethodPost {
+		b, err := io.ReadAll(io.LimitReader(r.Body, 4096))
+		if err != nil {
+			apiError(w, 400, "error.validation.failed")
+			return
+		}
+		body = b
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	s.forward(w, r, body)
 }
