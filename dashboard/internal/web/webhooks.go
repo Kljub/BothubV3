@@ -3,6 +3,8 @@ package web
 import (
 	"crypto/rand"
 	"net/http"
+	"net/url"
+	"os"
 	"strconv"
 	"strings"
 
@@ -47,17 +49,38 @@ func newEventID() string {
 	return string(b)
 }
 
-// baseURL is the origin the browser uses, so the shown URLs work as they are.
+// baseURL is the origin the browser uses, so the shown URLs work as they are
+// (webhook URLs, sign-in redirects, the mobile app's QR code).
+// BOTHUB_PUBLIC_URL (e.g. https://bothub.example) wins. Else the scheme comes
+// from TLS or what a reverse proxy tells (X-Forwarded-Proto, Forwarded,
+// X-Forwarded-Ssl, Front-End-Https); the browser's own Origin / Referer of
+// the same host wins over them: a proxy that ends TLS without telling (or
+// says http) would otherwise turn https into http.
 func baseURL(r *http.Request) string {
-	scheme := "http"
-	if r.TLS != nil || strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https") {
-		scheme = "https"
+	if pub := strings.TrimRight(strings.TrimSpace(os.Getenv("BOTHUB_PUBLIC_URL")), "/"); strings.HasPrefix(pub, "https://") || strings.HasPrefix(pub, "http://") {
+		return pub
 	}
 	host := r.Host
-	if fh := r.Header.Get("X-Forwarded-Host"); fh != "" {
+	if fh := strings.TrimSpace(strings.Split(r.Header.Get("X-Forwarded-Host"), ",")[0]); fh != "" {
 		host = fh
 	}
-	return scheme + "://" + host
+	return requestScheme(r, host) + "://" + host
+}
+
+func requestScheme(r *http.Request, host string) string {
+	// The browser knows best: its own page of this host is https.
+	for _, h := range []string{r.Header.Get("Origin"), r.Header.Get("Referer")} {
+		if u, err := url.Parse(h); err == nil && u.Scheme == "https" && strings.EqualFold(u.Host, host) {
+			return "https"
+		}
+	}
+	first := func(v string) string { return strings.ToLower(strings.TrimSpace(strings.Split(v, ",")[0])) }
+	if r.TLS != nil || first(r.Header.Get("X-Forwarded-Proto")) == "https" || first(r.Header.Get("X-Forwarded-Scheme")) == "https" ||
+		strings.EqualFold(r.Header.Get("X-Forwarded-Ssl"), "on") || strings.EqualFold(r.Header.Get("Front-End-Https"), "on") ||
+		strings.Contains(strings.ToLower(r.Header.Get("Forwarded")), "proto=https") {
+		return "https"
+	}
+	return "http"
 }
 
 func (s *Server) webhooksData(r *http.Request, p Page, botID int64) (webhooksView, error) {

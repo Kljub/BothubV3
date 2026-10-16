@@ -1,6 +1,8 @@
 package web
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -44,5 +46,36 @@ func TestConnectPage(t *testing.T) {
 	}
 	if !clientSecretPattern.MatchString("AbCdEfGh_ijklmnop-123") || clientSecretPattern.MatchString("short") || clientSecretPattern.MatchString("has spaces in it 1234") {
 		t.Fatal("client secret pattern")
+	}
+}
+
+func TestBaseURLBehindProxy(t *testing.T) {
+	req := func(h map[string]string) *http.Request {
+		r := httptest.NewRequest("GET", "http://gitkljub.com/account/mobile/pair", nil)
+		for k, v := range h {
+			r.Header.Set(k, v)
+		}
+		return r
+	}
+	for _, c := range []struct {
+		h    map[string]string
+		want string
+	}{
+		{nil, "http://gitkljub.com"},
+		{map[string]string{"X-Forwarded-Proto": "https"}, "https://gitkljub.com"},
+		{map[string]string{"Forwarded": "for=1.2.3.4;proto=https"}, "https://gitkljub.com"},
+		{map[string]string{"X-Forwarded-Ssl": "on"}, "https://gitkljub.com"},
+		{map[string]string{"Origin": "https://gitkljub.com"}, "https://gitkljub.com"},
+		{map[string]string{"Referer": "https://gitkljub.com/bots"}, "https://gitkljub.com"},
+		{map[string]string{"Referer": "https://evil.example/x"}, "http://gitkljub.com"},
+		{map[string]string{"X-Forwarded-Proto": "http", "Referer": "https://gitkljub.com/"}, "https://gitkljub.com"},
+	} {
+		if got := baseURL(req(c.h)); got != c.want {
+			t.Errorf("%v: %s, want %s", c.h, got, c.want)
+		}
+	}
+	t.Setenv("BOTHUB_PUBLIC_URL", "https://bothub.example/")
+	if got := baseURL(req(nil)); got != "https://bothub.example" {
+		t.Errorf("public url: %s", got)
 	}
 }
