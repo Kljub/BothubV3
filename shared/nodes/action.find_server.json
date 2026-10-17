@@ -1,0 +1,62 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.find_server",
+  "version": 1,
+  "category": "action",
+  "group": "server",
+  "order": 1144,
+  "color": "orange",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_find_server.label",
+  "descriptionKey": "builder.node.action_find_server.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": ".id",
+      "labelKey": "builder.result.find_server.0"
+    },
+    {
+      "suffix": ".name",
+      "labelKey": "builder.result.find_server.1"
+    },
+    {
+      "suffix": ".members",
+      "labelKey": "builder.result.find_server.2"
+    },
+    {
+      "suffix": ".count",
+      "labelKey": "builder.result.find_server.3"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "name": {
+        "type": "string",
+        "maxLength": 100,
+        "x-labelKey": "builder.cfg.find_server_name"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  }
+}

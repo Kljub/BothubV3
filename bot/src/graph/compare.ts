@@ -1,6 +1,8 @@
 // Operators of the condition.state block. Same rules as the builder
 // simulation (dashboard/cmd/mockapi, compare()).
 
+import { valueType } from './values.js';
+
 export function compare(a: string, op: string, b: string): boolean {
   const x = Number(a);
   const y = Number(b);
@@ -48,6 +50,21 @@ export function compare(a: string, op: string, b: string): boolean {
       return inList();
     case 'not_in':
       return !inList();
+    // Value checks: the compare value is not used.
+    case 'exists':
+      return a.trim() !== '';
+    case 'empty':
+      return a.trim() === '';
+    case 'is_number':
+      return valueType(a) === 'number';
+    case 'is_text':
+      return valueType(a) === 'text';
+    case 'is_boolean':
+      return valueType(a) === 'boolean';
+    case 'is_list':
+      return valueType(a) === 'list';
+    case 'is_object':
+      return valueType(a) === 'object';
     default:
       return false;
   }

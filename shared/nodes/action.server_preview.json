@@ -1,0 +1,84 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.server_preview",
+  "version": 1,
+  "category": "action",
+  "group": "server",
+  "order": 1148,
+  "color": "orange",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_server_preview.label",
+  "descriptionKey": "builder.node.action_server_preview.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": ".id",
+      "labelKey": "builder.result.server_preview.0"
+    },
+    {
+      "suffix": ".name",
+      "labelKey": "builder.result.server_preview.1"
+    },
+    {
+      "suffix": ".description",
+      "labelKey": "builder.result.server_preview.2"
+    },
+    {
+      "suffix": ".members",
+      "labelKey": "builder.result.server_preview.3"
+    },
+    {
+      "suffix": ".online",
+      "labelKey": "builder.result.server_preview.4"
+    },
+    {
+      "suffix": ".emojis",
+      "labelKey": "builder.result.server_preview.5"
+    },
+    {
+      "suffix": ".stickers",
+      "labelKey": "builder.result.server_preview.6"
+    },
+    {
+      "suffix": ".icon",
+      "labelKey": "builder.result.server_preview.7"
+    },
+    {
+      "suffix": ".features",
+      "labelKey": "builder.result.server_preview.8"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "guild": {
+        "type": "string",
+        "maxLength": 40,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.guild",
+        "x-hintKey": "builder.cfg.guild_hint"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  }
+}

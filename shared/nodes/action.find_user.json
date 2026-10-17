@@ -1,0 +1,75 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.find_user",
+  "version": 1,
+  "category": "action",
+  "group": "server",
+  "order": 1141,
+  "color": "orange",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_find_user.label",
+  "descriptionKey": "builder.node.action_find_user.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": ".id",
+      "labelKey": "builder.result.find_user.0"
+    },
+    {
+      "suffix": ".name",
+      "labelKey": "builder.result.find_user.1"
+    },
+    {
+      "suffix": ".display_name",
+      "labelKey": "builder.result.find_user.2"
+    },
+    {
+      "suffix": ".mention",
+      "labelKey": "builder.result.find_user.3"
+    },
+    {
+      "suffix": ".count",
+      "labelKey": "builder.result.find_user.4"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "query": {
+        "type": "string",
+        "maxLength": 100,
+        "x-labelKey": "builder.cfg.find_user_query",
+        "x-placeholder": "kljub"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      },
+      "guild": {
+        "type": "string",
+        "maxLength": 40,
+        "x-advanced": true,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.guild",
+        "x-hintKey": "builder.cfg.guild_hint"
+      }
+    }
+  }
+}

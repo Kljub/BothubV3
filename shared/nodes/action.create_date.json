@@ -1,0 +1,151 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.create_date",
+  "version": 1,
+  "category": "action",
+  "group": "date",
+  "order": 1700,
+  "color": "purple",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_create_date.label",
+  "descriptionKey": "builder.node.action_create_date.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": ".unix",
+      "labelKey": "builder.result.create_date.0"
+    },
+    {
+      "suffix": ".iso",
+      "labelKey": "builder.result.create_date.1"
+    },
+    {
+      "suffix": ".discord",
+      "labelKey": "builder.result.create_date.2"
+    },
+    {
+      "suffix": ".relative",
+      "labelKey": "builder.result.create_date.3"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "date_mode": {
+        "type": "string",
+        "enum": [
+          "now",
+          "text",
+          "parts"
+        ],
+        "default": "now",
+        "x-labelKey": "builder.cfg.date_mode",
+        "x-enumKey": "builder.enum.create_date_date_mode"
+      },
+      "date": {
+        "type": "string",
+        "maxLength": 100,
+        "x-labelKey": "builder.cfg.date",
+        "x-hintKey": "builder.cfg.date_input_hint",
+        "x-placeholder": "{Date1}",
+        "x-showIf": {
+          "date_mode": [
+            "text"
+          ]
+        }
+      },
+      "year": {
+        "type": "string",
+        "maxLength": 40,
+        "x-labelKey": "builder.cfg.year",
+        "x-hintKey": "builder.cfg.create_date_year_hint",
+        "x-placeholder": "2026",
+        "x-showIf": {
+          "date_mode": [
+            "parts"
+          ]
+        }
+      },
+      "month": {
+        "type": "string",
+        "maxLength": 40,
+        "x-labelKey": "builder.cfg.month",
+        "x-placeholder": "12",
+        "x-showIf": {
+          "date_mode": [
+            "parts"
+          ]
+        }
+      },
+      "day": {
+        "type": "string",
+        "maxLength": 40,
+        "x-labelKey": "builder.cfg.day",
+        "x-placeholder": "24",
+        "x-showIf": {
+          "date_mode": [
+            "parts"
+          ]
+        }
+      },
+      "hour": {
+        "type": "string",
+        "maxLength": 40,
+        "x-labelKey": "builder.cfg.hour",
+        "x-placeholder": "18",
+        "x-showIf": {
+          "date_mode": [
+            "parts"
+          ]
+        }
+      },
+      "minute": {
+        "type": "string",
+        "maxLength": 40,
+        "x-labelKey": "builder.cfg.minute",
+        "x-placeholder": "0",
+        "x-showIf": {
+          "date_mode": [
+            "parts"
+          ]
+        }
+      },
+      "add": {
+        "type": "string",
+        "maxLength": 40,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.add",
+        "x-hintKey": "builder.cfg.create_date_add_hint",
+        "x-placeholder": "2h"
+      },
+      "timezone": {
+        "type": "string",
+        "maxLength": 60,
+        "x-labelKey": "builder.cfg.timezone",
+        "x-hintKey": "builder.cfg.date_timezone_hint",
+        "x-placeholder": "Europe/Berlin"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  }
+}

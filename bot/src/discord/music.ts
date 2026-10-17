@@ -390,6 +390,15 @@ class GuildMusic {
     this.scheduleLeave();
   }
 
+  /** Empties the queue but keeps the track that plays now; returns how many were removed. */
+  clearQueue(): number {
+    const now = this.current;
+    const removed = this.queue.length - (now ? 1 : 0);
+    this.queue = now ? [now] : [];
+    this.index = now ? 0 : -1;
+    return removed;
+  }
+
   /** Stops and clears the queue. */
   stop(): void {
     this.stopPlayback();

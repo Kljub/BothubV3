@@ -1,0 +1,81 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.webhook_info",
+  "version": 1,
+  "category": "action",
+  "group": "webhooks",
+  "order": 1184,
+  "color": "purple",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_webhook_info.label",
+  "descriptionKey": "builder.node.action_webhook_info.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": ".id",
+      "labelKey": "builder.result.webhook_info.0"
+    },
+    {
+      "suffix": ".url",
+      "labelKey": "builder.result.webhook_info.1"
+    },
+    {
+      "suffix": ".name",
+      "labelKey": "builder.result.webhook_info.2"
+    },
+    {
+      "suffix": ".avatar",
+      "labelKey": "builder.result.webhook_info.3"
+    },
+    {
+      "suffix": ".channel",
+      "labelKey": "builder.result.webhook_info.4"
+    },
+    {
+      "suffix": ".channel_id",
+      "labelKey": "builder.result.webhook_info.5"
+    },
+    {
+      "suffix": ".creator",
+      "labelKey": "builder.result.webhook_info.6"
+    },
+    {
+      "suffix": ".created",
+      "labelKey": "builder.result.webhook_info.7"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "webhook": {
+        "type": "string",
+        "maxLength": 300,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.webhook_ref",
+        "x-hintKey": "builder.cfg.webhook_ref_hint",
+        "x-placeholder": "{Hook.id}"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  }
+}

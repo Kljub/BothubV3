@@ -1,0 +1,129 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.date_info",
+  "version": 1,
+  "category": "action",
+  "group": "date",
+  "order": 1720,
+  "color": "purple",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_date_info.label",
+  "descriptionKey": "builder.node.action_date_info.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": ".year",
+      "labelKey": "builder.result.date_info.0"
+    },
+    {
+      "suffix": ".month",
+      "labelKey": "builder.result.date_info.1"
+    },
+    {
+      "suffix": ".day",
+      "labelKey": "builder.result.date_info.2"
+    },
+    {
+      "suffix": ".hour",
+      "labelKey": "builder.result.date_info.3"
+    },
+    {
+      "suffix": ".minute",
+      "labelKey": "builder.result.date_info.4"
+    },
+    {
+      "suffix": ".second",
+      "labelKey": "builder.result.date_info.5"
+    },
+    {
+      "suffix": ".weekday",
+      "labelKey": "builder.result.date_info.6"
+    },
+    {
+      "suffix": ".weekday_name",
+      "labelKey": "builder.result.date_info.7"
+    },
+    {
+      "suffix": ".month_name",
+      "labelKey": "builder.result.date_info.8"
+    },
+    {
+      "suffix": ".week",
+      "labelKey": "builder.result.date_info.9"
+    },
+    {
+      "suffix": ".day_of_year",
+      "labelKey": "builder.result.date_info.10"
+    },
+    {
+      "suffix": ".days_in_month",
+      "labelKey": "builder.result.date_info.11"
+    },
+    {
+      "suffix": ".weekend",
+      "labelKey": "builder.result.date_info.12"
+    },
+    {
+      "suffix": ".unix",
+      "labelKey": "builder.result.date_info.13"
+    },
+    {
+      "suffix": ".iso",
+      "labelKey": "builder.result.date_info.14"
+    },
+    {
+      "suffix": ".timezone",
+      "labelKey": "builder.result.date_info.15"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "date": {
+        "type": "string",
+        "maxLength": 100,
+        "x-labelKey": "builder.cfg.date",
+        "x-hintKey": "builder.cfg.date_input_hint",
+        "x-placeholder": "{Date1}"
+      },
+      "timezone": {
+        "type": "string",
+        "maxLength": 60,
+        "x-labelKey": "builder.cfg.timezone",
+        "x-hintKey": "builder.cfg.date_timezone_hint",
+        "x-placeholder": "Europe/Berlin"
+      },
+      "language": {
+        "type": "string",
+        "enum": [
+          "en",
+          "de"
+        ],
+        "default": "en",
+        "x-labelKey": "builder.cfg.date_language",
+        "x-enumKey": "builder.enum.date_language"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  }
+}

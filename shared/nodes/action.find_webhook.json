@@ -1,0 +1,112 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.find_webhook",
+  "version": 1,
+  "category": "action",
+  "group": "webhooks",
+  "order": 1183,
+  "color": "purple",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_find_webhook.label",
+  "descriptionKey": "builder.node.action_find_webhook.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": ".id",
+      "labelKey": "builder.result.find_webhook.0"
+    },
+    {
+      "suffix": ".url",
+      "labelKey": "builder.result.find_webhook.1"
+    },
+    {
+      "suffix": ".name",
+      "labelKey": "builder.result.find_webhook.2"
+    },
+    {
+      "suffix": ".avatar",
+      "labelKey": "builder.result.find_webhook.3"
+    },
+    {
+      "suffix": ".channel",
+      "labelKey": "builder.result.find_webhook.4"
+    },
+    {
+      "suffix": ".channel_id",
+      "labelKey": "builder.result.find_webhook.5"
+    },
+    {
+      "suffix": ".creator",
+      "labelKey": "builder.result.find_webhook.6"
+    },
+    {
+      "suffix": ".created",
+      "labelKey": "builder.result.find_webhook.7"
+    },
+    {
+      "suffix": ".count",
+      "labelKey": "builder.result.find_webhook.8"
+    },
+    {
+      "suffix": ".list",
+      "labelKey": "builder.result.find_webhook.9"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "name": {
+        "type": "string",
+        "maxLength": 80,
+        "x-labelKey": "builder.cfg.find_webhook_name",
+        "x-hintKey": "builder.cfg.find_webhook_name_hint"
+      },
+      "match": {
+        "type": "string",
+        "enum": [
+          "exact",
+          "contains"
+        ],
+        "default": "exact",
+        "x-labelKey": "builder.cfg.find_channel_match",
+        "x-enumKey": "builder.enum.name_match"
+      },
+      "channel": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.channel",
+        "x-hintKey": "builder.cfg.find_webhook_channel_hint",
+        "x-ref": "channel"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      },
+      "guild": {
+        "type": "string",
+        "maxLength": 40,
+        "x-advanced": true,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.guild",
+        "x-hintKey": "builder.cfg.guild_hint"
+      }
+    }
+  }
+}

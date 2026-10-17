@@ -1,0 +1,61 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.server_integrations",
+  "version": 1,
+  "category": "action",
+  "group": "server",
+  "order": 1147,
+  "color": "orange",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_server_integrations.label",
+  "descriptionKey": "builder.node.action_server_integrations.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": ".count",
+      "labelKey": "builder.result.server_integrations.0"
+    },
+    {
+      "suffix": ".names",
+      "labelKey": "builder.result.server_integrations.1"
+    },
+    {
+      "suffix": ".ids",
+      "labelKey": "builder.result.server_integrations.2"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      },
+      "guild": {
+        "type": "string",
+        "maxLength": 40,
+        "x-advanced": true,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.guild",
+        "x-hintKey": "builder.cfg.guild_hint"
+      }
+    }
+  }
+}

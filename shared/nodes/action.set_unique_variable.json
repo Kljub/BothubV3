@@ -39,11 +39,55 @@
         "enum": [
           "uuid",
           "number",
-          "short"
+          "short",
+          "text"
         ],
         "default": "uuid",
         "x-labelKey": "builder.cfg.unique_kind",
         "x-enumKey": "builder.enum.unique_kind"
+      },
+      "length": {
+        "type": "number",
+        "minimum": 1,
+        "maximum": 200,
+        "default": 12,
+        "x-labelKey": "builder.cfg.random_length",
+        "x-showIf": {
+          "unique_kind": [
+            "text"
+          ]
+        }
+      },
+      "charset": {
+        "type": "string",
+        "enum": [
+          "letters_digits",
+          "letters",
+          "lowercase",
+          "digits",
+          "hex",
+          "custom"
+        ],
+        "default": "letters_digits",
+        "x-labelKey": "builder.cfg.charset",
+        "x-enumKey": "builder.enum.charset",
+        "x-showIf": {
+          "unique_kind": [
+            "text"
+          ]
+        }
+      },
+      "custom_chars": {
+        "type": "string",
+        "maxLength": 200,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.custom_chars",
+        "x-placeholder": "ABC123!?",
+        "x-showIf": {
+          "charset": [
+            "custom"
+          ]
+        }
       },
       "variable": {
         "type": "string",

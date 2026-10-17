@@ -1,0 +1,104 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.format_date",
+  "version": 1,
+  "category": "action",
+  "group": "date",
+  "order": 1710,
+  "color": "purple",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_format_date.label",
+  "descriptionKey": "builder.node.action_format_date.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "date": {
+        "type": "string",
+        "maxLength": 100,
+        "x-labelKey": "builder.cfg.date",
+        "x-hintKey": "builder.cfg.date_input_hint",
+        "x-placeholder": "{Date1}"
+      },
+      "date_format": {
+        "type": "string",
+        "enum": [
+          "date_time",
+          "full",
+          "short_date",
+          "long_date",
+          "short_time",
+          "long_time",
+          "relative",
+          "iso",
+          "unix",
+          "custom"
+        ],
+        "default": "date_time",
+        "x-labelKey": "builder.cfg.date_format",
+        "x-enumKey": "builder.enum.format_date_date_format"
+      },
+      "pattern": {
+        "type": "string",
+        "maxLength": 100,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.format_date_pattern",
+        "x-hintKey": "builder.cfg.format_date_pattern_hint",
+        "x-placeholder": "DD.MM.YYYY HH:mm",
+        "x-showIf": {
+          "date_format": [
+            "custom"
+          ]
+        }
+      },
+      "timezone": {
+        "type": "string",
+        "maxLength": 60,
+        "x-labelKey": "builder.cfg.timezone",
+        "x-hintKey": "builder.cfg.date_timezone_hint",
+        "x-placeholder": "Europe/Berlin",
+        "x-showIf": {
+          "date_format": [
+            "custom"
+          ]
+        }
+      },
+      "language": {
+        "type": "string",
+        "enum": [
+          "en",
+          "de"
+        ],
+        "default": "en",
+        "x-labelKey": "builder.cfg.date_language",
+        "x-enumKey": "builder.enum.date_language",
+        "x-showIf": {
+          "date_format": [
+            "custom"
+          ]
+        }
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  }
+}

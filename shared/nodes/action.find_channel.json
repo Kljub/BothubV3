@@ -1,0 +1,100 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.find_channel",
+  "version": 1,
+  "category": "action",
+  "group": "channel",
+  "order": 506,
+  "color": "blue",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_find_channel.label",
+  "descriptionKey": "builder.node.action_find_channel.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": ".id",
+      "labelKey": "builder.result.find_channel.0"
+    },
+    {
+      "suffix": ".name",
+      "labelKey": "builder.result.find_channel.1"
+    },
+    {
+      "suffix": ".type",
+      "labelKey": "builder.result.find_channel.2"
+    },
+    {
+      "suffix": ".count",
+      "labelKey": "builder.result.find_channel.3"
+    },
+    {
+      "suffix": ".ids",
+      "labelKey": "builder.result.find_channel.4"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "name": {
+        "type": "string",
+        "maxLength": 100,
+        "x-labelKey": "builder.cfg.find_channel_name",
+        "x-placeholder": "general"
+      },
+      "channel_type": {
+        "type": "string",
+        "enum": [
+          "any",
+          "text",
+          "voice",
+          "category",
+          "announcement",
+          "forum",
+          "stage"
+        ],
+        "default": "any",
+        "x-labelKey": "builder.cfg.channel_type",
+        "x-enumKey": "builder.enum.find_channel_type"
+      },
+      "match": {
+        "type": "string",
+        "enum": [
+          "exact",
+          "contains"
+        ],
+        "default": "exact",
+        "x-labelKey": "builder.cfg.match",
+        "x-enumKey": "builder.enum.name_match"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      },
+      "guild": {
+        "type": "string",
+        "maxLength": 40,
+        "x-advanced": true,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.guild",
+        "x-hintKey": "builder.cfg.guild_hint"
+      }
+    }
+  }
+}

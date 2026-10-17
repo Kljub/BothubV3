@@ -1,0 +1,132 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.server_info",
+  "version": 1,
+  "category": "action",
+  "group": "server",
+  "order": 1142,
+  "color": "orange",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_server_info.label",
+  "descriptionKey": "builder.node.action_server_info.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": ".id",
+      "labelKey": "builder.result.server_info.0"
+    },
+    {
+      "suffix": ".name",
+      "labelKey": "builder.result.server_info.1"
+    },
+    {
+      "suffix": ".description",
+      "labelKey": "builder.result.server_info.2"
+    },
+    {
+      "suffix": ".owner",
+      "labelKey": "builder.result.server_info.3"
+    },
+    {
+      "suffix": ".owner_id",
+      "labelKey": "builder.result.server_info.4"
+    },
+    {
+      "suffix": ".members",
+      "labelKey": "builder.result.server_info.5"
+    },
+    {
+      "suffix": ".created",
+      "labelKey": "builder.result.server_info.6"
+    },
+    {
+      "suffix": ".icon",
+      "labelKey": "builder.result.server_info.7"
+    },
+    {
+      "suffix": ".banner",
+      "labelKey": "builder.result.server_info.8"
+    },
+    {
+      "suffix": ".boosts",
+      "labelKey": "builder.result.server_info.9"
+    },
+    {
+      "suffix": ".boost_tier",
+      "labelKey": "builder.result.server_info.10"
+    },
+    {
+      "suffix": ".channels",
+      "labelKey": "builder.result.server_info.11"
+    },
+    {
+      "suffix": ".roles",
+      "labelKey": "builder.result.server_info.12"
+    },
+    {
+      "suffix": ".emojis",
+      "labelKey": "builder.result.server_info.13"
+    },
+    {
+      "suffix": ".stickers",
+      "labelKey": "builder.result.server_info.14"
+    },
+    {
+      "suffix": ".verification",
+      "labelKey": "builder.result.server_info.15"
+    },
+    {
+      "suffix": ".vanity",
+      "labelKey": "builder.result.server_info.16"
+    },
+    {
+      "suffix": ".language",
+      "labelKey": "builder.result.server_info.17"
+    },
+    {
+      "suffix": ".afk_channel",
+      "labelKey": "builder.result.server_info.18"
+    },
+    {
+      "suffix": ".system_channel",
+      "labelKey": "builder.result.server_info.19"
+    },
+    {
+      "suffix": ".rules_channel",
+      "labelKey": "builder.result.server_info.20"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "guild": {
+        "type": "string",
+        "maxLength": 40,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.guild",
+        "x-hintKey": "builder.cfg.guild_hint"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  }
+}

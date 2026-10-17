@@ -1,0 +1,53 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.clear_data",
+  "version": 1,
+  "category": "action",
+  "group": "variables",
+  "order": 115,
+  "color": "red",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_clear_data.label",
+  "descriptionKey": "builder.node.action_clear_data.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "data_key": {
+        "type": "string",
+        "maxLength": 80,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.data_key",
+        "x-hintKey": "builder.cfg.clear_data_data_key_hint",
+        "x-placeholder": "var.coins"
+      },
+      "all_servers": {
+        "type": "boolean",
+        "default": false,
+        "x-labelKey": "builder.cfg.all_servers",
+        "x-hintKey": "builder.cfg.clear_data_all_servers_hint"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  }
+}

@@ -1,0 +1,113 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.channel_info",
+  "version": 1,
+  "category": "action",
+  "group": "channel",
+  "order": 507,
+  "color": "blue",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_channel_info.label",
+  "descriptionKey": "builder.node.action_channel_info.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": ".id",
+      "labelKey": "builder.result.channel_info.0"
+    },
+    {
+      "suffix": ".name",
+      "labelKey": "builder.result.channel_info.1"
+    },
+    {
+      "suffix": ".type",
+      "labelKey": "builder.result.channel_info.2"
+    },
+    {
+      "suffix": ".topic",
+      "labelKey": "builder.result.channel_info.3"
+    },
+    {
+      "suffix": ".category",
+      "labelKey": "builder.result.channel_info.4"
+    },
+    {
+      "suffix": ".category_id",
+      "labelKey": "builder.result.channel_info.5"
+    },
+    {
+      "suffix": ".position",
+      "labelKey": "builder.result.channel_info.6"
+    },
+    {
+      "suffix": ".nsfw",
+      "labelKey": "builder.result.channel_info.7"
+    },
+    {
+      "suffix": ".slowmode",
+      "labelKey": "builder.result.channel_info.8"
+    },
+    {
+      "suffix": ".created",
+      "labelKey": "builder.result.channel_info.9"
+    },
+    {
+      "suffix": ".url",
+      "labelKey": "builder.result.channel_info.10"
+    },
+    {
+      "suffix": ".bitrate",
+      "labelKey": "builder.result.channel_info.11"
+    },
+    {
+      "suffix": ".user_limit",
+      "labelKey": "builder.result.channel_info.12"
+    },
+    {
+      "suffix": ".members",
+      "labelKey": "builder.result.channel_info.13"
+    },
+    {
+      "suffix": ".member_list",
+      "labelKey": "builder.result.channel_info.14"
+    },
+    {
+      "suffix": ".channels",
+      "labelKey": "builder.result.channel_info.15"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "channel": {
+        "type": "string",
+        "maxLength": 200,
+        "default": "{channel.id}",
+        "x-labelKey": "builder.cfg.channel",
+        "x-hintKey": "builder.cfg.ref_hint",
+        "x-ref": "channel"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  }
+}

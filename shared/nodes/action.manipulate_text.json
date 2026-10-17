@@ -62,6 +62,7 @@
           "slice",
           "substring",
           "char_at",
+          "join",
           "split",
           "match",
           "length",
@@ -194,7 +195,8 @@
         "x-placeholder": ",",
         "x-showIf": {
           "operation": [
-            "split"
+            "split",
+            "join"
           ]
         }
       },

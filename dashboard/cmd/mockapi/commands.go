@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"math"
 	"math/rand"
 	"net/http"
 	"regexp"
@@ -533,8 +534,40 @@ func compare(a, op, b string) bool {
 		return inList()
 	case "not_in":
 		return !inList()
+	case "exists":
+		return strings.TrimSpace(a) != ""
+	case "empty":
+		return strings.TrimSpace(a) == ""
+	case "is_number", "is_text", "is_boolean", "is_list", "is_object":
+		return "is_"+valueType(a) == op
 	}
 	return false
+}
+
+// valueType matches valueType in bot/src/graph/values.ts.
+func valueType(text string) string {
+	t := strings.TrimSpace(text)
+	switch {
+	case t == "":
+		return "empty"
+	case t == "true" || t == "false":
+		return "boolean"
+	}
+	if f, err := strconv.ParseFloat(t, 64); err == nil && !math.IsInf(f, 0) && !math.IsNaN(f) {
+		return "number"
+	}
+	if strings.HasPrefix(t, "[") || strings.HasPrefix(t, "{") {
+		var v any
+		if json.Unmarshal([]byte(t), &v) == nil {
+			switch v.(type) {
+			case []any:
+				return "list"
+			case map[string]any:
+				return "object"
+			}
+		}
+	}
+	return "text"
 }
 
 // listVersions returns the saved versions of a command, newest first.

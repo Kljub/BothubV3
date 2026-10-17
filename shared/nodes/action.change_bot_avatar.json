@@ -1,0 +1,72 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.change_bot_avatar",
+  "version": 1,
+  "category": "action",
+  "group": "bot",
+  "order": 802,
+  "color": "orange",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_change_bot_avatar.label",
+  "descriptionKey": "builder.node.action_change_bot_avatar.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "where": {
+        "type": "string",
+        "enum": [
+          "server",
+          "everywhere"
+        ],
+        "default": "server",
+        "x-labelKey": "builder.cfg.where",
+        "x-hintKey": "builder.cfg.change_bot_avatar_where_hint",
+        "x-enumKey": "builder.enum.change_bot_avatar_where"
+      },
+      "avatar": {
+        "type": "string",
+        "maxLength": 2000,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.avatar",
+        "x-placeholder": "https://…/avatar.png"
+      },
+      "banner": {
+        "type": "string",
+        "maxLength": 2000,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.banner",
+        "x-hintKey": "builder.cfg.change_bot_avatar_banner_hint"
+      },
+      "reason": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.reason",
+        "x-hintKey": "builder.cfg.reason_hint"
+      },
+      "guild": {
+        "type": "string",
+        "maxLength": 40,
+        "x-advanced": true,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.guild",
+        "x-hintKey": "builder.cfg.guild_hint"
+      }
+    }
+  }
+}

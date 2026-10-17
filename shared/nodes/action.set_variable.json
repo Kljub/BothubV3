@@ -62,6 +62,13 @@
         "x-labelKey": "builder.undo.title",
         "x-undoTitleKey": "builder.undo.set_variable",
         "x-undoHintKey": "builder.undo.set_variable_hint"
+      },
+      "target_user": {
+        "type": "string",
+        "maxLength": 200,
+        "x-advanced": true,
+        "x-labelKey": "builder.cfg.target_user",
+        "x-hintKey": "builder.cfg.target_user_hint"
       }
     }
   }

@@ -1,0 +1,72 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.prune_members",
+  "version": 1,
+  "category": "action",
+  "group": "server",
+  "order": 1149,
+  "color": "red",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_prune_members.label",
+  "descriptionKey": "builder.node.action_prune_members.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "days": {
+        "type": "number",
+        "minimum": 1,
+        "maximum": 30,
+        "default": 7,
+        "x-labelKey": "builder.cfg.days"
+      },
+      "roles": {
+        "type": "string",
+        "maxLength": 500,
+        "x-labelKey": "builder.cfg.prune_roles",
+        "x-hintKey": "builder.cfg.prune_roles_hint",
+        "x-ref": "roles"
+      },
+      "dry_run": {
+        "type": "boolean",
+        "default": true,
+        "x-labelKey": "builder.cfg.dry_run"
+      },
+      "reason": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.reason",
+        "x-hintKey": "builder.cfg.reason_hint"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      },
+      "guild": {
+        "type": "string",
+        "maxLength": 40,
+        "x-advanced": true,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.guild",
+        "x-hintKey": "builder.cfg.guild_hint"
+      }
+    }
+  }
+}

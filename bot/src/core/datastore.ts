@@ -18,6 +18,8 @@ export interface DataStore {
   get(key: string, ctx: DataContext): string | undefined;
   set(key: string, ctx: DataContext, value: string): void;
   delete(key: string, ctx: DataContext): void;
+  /** Removes every stored value of the variable (only of one server when given); returns how many. */
+  clear(key: string, guildId: string | null): number;
 }
 
 interface Definition {
@@ -103,6 +105,12 @@ export function dataStore(db: Db, botId: number): DataStore {
       const def = known(key);
       const [server, owner] = where(def, ctx);
       db.prepare('DELETE FROM data_values WHERE variable_id = ? AND server_id = ? AND owner_id = ?').run(def.id, server, owner);
+    },
+    clear(key, guildId) {
+      const def = known(key);
+      // A variable that is not per server keeps its values under server ''.
+      if (guildId !== null && def.perServer) return Number(db.prepare('DELETE FROM data_values WHERE variable_id = ? AND server_id = ?').run(def.id, guildId).changes);
+      return Number(db.prepare('DELETE FROM data_values WHERE variable_id = ?').run(def.id).changes);
     },
   };
 }

@@ -1,0 +1,96 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.time_ago",
+  "version": 1,
+  "category": "action",
+  "group": "date",
+  "order": 1730,
+  "color": "purple",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_time_ago.label",
+  "descriptionKey": "builder.node.action_time_ago.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": ".seconds",
+      "labelKey": "builder.result.time_ago.0"
+    },
+    {
+      "suffix": ".minutes",
+      "labelKey": "builder.result.time_ago.1"
+    },
+    {
+      "suffix": ".hours",
+      "labelKey": "builder.result.time_ago.2"
+    },
+    {
+      "suffix": ".days",
+      "labelKey": "builder.result.time_ago.3"
+    },
+    {
+      "suffix": ".future",
+      "labelKey": "builder.result.time_ago.4"
+    },
+    {
+      "suffix": ".discord",
+      "labelKey": "builder.result.time_ago.5"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "date": {
+        "type": "string",
+        "maxLength": 100,
+        "x-labelKey": "builder.cfg.date",
+        "x-hintKey": "builder.cfg.date_input_hint",
+        "x-placeholder": "{Date1}"
+      },
+      "compare_to": {
+        "type": "string",
+        "maxLength": 100,
+        "x-labelKey": "builder.cfg.compare_to",
+        "x-hintKey": "builder.cfg.time_ago_compare_to_hint"
+      },
+      "timezone": {
+        "type": "string",
+        "maxLength": 60,
+        "x-advanced": true,
+        "x-labelKey": "builder.cfg.timezone",
+        "x-hintKey": "builder.cfg.date_timezone_hint",
+        "x-placeholder": "Europe/Berlin"
+      },
+      "language": {
+        "type": "string",
+        "enum": [
+          "en",
+          "de"
+        ],
+        "default": "en",
+        "x-labelKey": "builder.cfg.date_language",
+        "x-enumKey": "builder.enum.date_language"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  }
+}

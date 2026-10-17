@@ -1,0 +1,100 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.create_webhook",
+  "version": 1,
+  "category": "action",
+  "group": "webhooks",
+  "order": 1180,
+  "color": "purple",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_create_webhook.label",
+  "descriptionKey": "builder.node.action_create_webhook.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": ".id",
+      "labelKey": "builder.result.create_webhook.0"
+    },
+    {
+      "suffix": ".url",
+      "labelKey": "builder.result.create_webhook.1"
+    },
+    {
+      "suffix": ".name",
+      "labelKey": "builder.result.create_webhook.2"
+    },
+    {
+      "suffix": ".avatar",
+      "labelKey": "builder.result.create_webhook.3"
+    },
+    {
+      "suffix": ".channel",
+      "labelKey": "builder.result.create_webhook.4"
+    },
+    {
+      "suffix": ".channel_id",
+      "labelKey": "builder.result.create_webhook.5"
+    },
+    {
+      "suffix": ".creator",
+      "labelKey": "builder.result.create_webhook.6"
+    },
+    {
+      "suffix": ".created",
+      "labelKey": "builder.result.create_webhook.7"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "channel": {
+        "type": "string",
+        "maxLength": 200,
+        "default": "{channel.id}",
+        "x-labelKey": "builder.cfg.channel",
+        "x-hintKey": "builder.cfg.ref_hint",
+        "x-ref": "channel"
+      },
+      "name": {
+        "type": "string",
+        "maxLength": 80,
+        "x-labelKey": "builder.cfg.name",
+        "x-placeholder": "BotHub"
+      },
+      "avatar": {
+        "type": "string",
+        "maxLength": 2000,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.webhook_avatar",
+        "x-hintKey": "builder.cfg.create_webhook_avatar_hint"
+      },
+      "reason": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.reason",
+        "x-hintKey": "builder.cfg.reason_hint"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  }
+}

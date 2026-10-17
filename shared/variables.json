@@ -102,6 +102,18 @@
           "token": "{bot.id}"
         },
         {
+          "id": "bot_mention",
+          "token": "{bot.mention}"
+        },
+        {
+          "id": "bot_avatar",
+          "token": "{bot.avatar}"
+        },
+        {
+          "id": "bot_created",
+          "token": "{bot.created}"
+        },
+        {
           "id": "bot_servers",
           "token": "{bot.servers}"
         },

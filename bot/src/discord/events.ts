@@ -97,9 +97,10 @@ export function bindEvents(client: Client, emit: Emit): void {
   client.on(Events.MessageReactionRemoveEmoji, (r) => emit(fromMessage('reaction_remove_emoji', r.message, { emoji: r.emoji.toString(), 'emoji.id': r.emoji.id ?? '' })));
 
   // --- typing, pins (Discord tells only that the pins changed: the newest pin is read) ---
-  client.on(Events.TypingStart, (t) => {
+  client.on(Events.TypingStart, async (t) => {
     if (own(t.user as User) || !t.guild) return;
-    const user = t.user.partial ? null : (t.user as User);
+    // Discord sends only the user ID when the user is not cached: load it, else {user} stays empty.
+    const user = t.user.partial ? (t.member?.user ?? (await t.user.fetch().catch(() => null))) : (t.user as User);
     emit({ type: 'typing_start', vars: { ...channelVars(t.channel), ...userVars(user, t.member ?? null) }, guild: t.guild, channel: sendable(t.channel), member: t.member ?? null, user });
   });
   const lastPin = new Map<string, string>();

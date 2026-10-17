@@ -1,0 +1,103 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.control_variable",
+  "version": 1,
+  "category": "action",
+  "group": "variables",
+  "order": 105,
+  "color": "teal",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_control_variable.label",
+  "descriptionKey": "builder.node.action_control_variable.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": ".count",
+      "labelKey": "builder.result.control_variable.0"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "var_name": {
+        "type": "string",
+        "maxLength": 64,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.var_name",
+        "x-hintKey": "builder.cfg.var_name_hint",
+        "x-placeholder": "coins"
+      },
+      "scope": {
+        "type": "string",
+        "enum": [
+          "run",
+          "user",
+          "server",
+          "global"
+        ],
+        "default": "run",
+        "x-labelKey": "builder.cfg.scope",
+        "x-enumKey": "builder.enum.scope"
+      },
+      "list_operation": {
+        "type": "string",
+        "enum": [
+          "append",
+          "prepend",
+          "toggle",
+          "list_add",
+          "list_add_unique",
+          "list_remove",
+          "list_remove_at",
+          "list_clear"
+        ],
+        "default": "append",
+        "x-labelKey": "builder.cfg.list_operation",
+        "x-enumKey": "builder.enum.control_variable_list_operation"
+      },
+      "value": {
+        "type": "string",
+        "maxLength": 500,
+        "x-labelKey": "builder.cfg.value",
+        "x-showIf": {
+          "list_operation": [
+            "append",
+            "prepend",
+            "list_add",
+            "list_add_unique",
+            "list_remove",
+            "list_remove_at"
+          ]
+        }
+      },
+      "target_user": {
+        "type": "string",
+        "maxLength": 200,
+        "x-advanced": true,
+        "x-labelKey": "builder.cfg.target_user",
+        "x-hintKey": "builder.cfg.target_user_hint"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  }
+}

@@ -124,6 +124,30 @@
         "maximum": 21600,
         "default": 0
       },
+      "bitrate": {
+        "type": "string",
+        "maxLength": 20,
+        "x-labelKey": "builder.cfg.bitrate",
+        "x-hintKey": "builder.cfg.bitrate_hint",
+        "x-showIf": {
+          "channel_type": [
+            "voice",
+            "stage"
+          ]
+        }
+      },
+      "user_limit": {
+        "type": "string",
+        "maxLength": 20,
+        "x-labelKey": "builder.cfg.user_limit",
+        "x-hintKey": "builder.cfg.user_limit_hint",
+        "x-showIf": {
+          "channel_type": [
+            "voice",
+            "stage"
+          ]
+        }
+      },
       "undo_after": {
         "type": "string",
         "maxLength": 20,

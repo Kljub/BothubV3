@@ -50,6 +50,8 @@ import { stats, usageVar } from '../core/stats.js';
 import { Bucket, warn } from '../modules/guard.js';
 import { moduleHandlers } from './handlers-modules.js';
 import { extraHandlers } from './handlers-extra.js';
+import { serverHandlers } from './handlers-server.js';
+import { valueHandlers } from '../graph/handlers-values.js';
 import { parsePresence, PresenceRunner } from './presence.js';
 import { isDue, nextRun, type TimedEvent } from '../core/timed.js';
 import { botVars, channelVars, guildVars, userVars, type Vars } from './vars.js';
@@ -208,7 +210,7 @@ export class BotInstance {
       },
     };
     this.moderation = new Moderation(botId, deps.repo, () => this.client);
-    const handlers = new Map<string, Handler>([...coreHandlers(core), ...discordHandlers(deps.repo, this.moderation, core.secret, deps.secretKey), ...moduleHandlers(deps.repo, botId, core.secret, deps.secretKey ?? null), ...extraHandlers({ repo: deps.repo, secret: core.secret })]);
+    const handlers = new Map<string, Handler>([...coreHandlers(core), ...discordHandlers(deps.repo, this.moderation, core.secret, deps.secretKey), ...moduleHandlers(deps.repo, botId, core.secret, deps.secretKey ?? null), ...extraHandlers({ repo: deps.repo, secret: core.secret }), ...valueHandlers(core), ...serverHandlers()]);
     // Own copy of the definitions: plugin blocks exist only for this bot.
     this.engine = { defs: new Map(deps.defs), handlers, limits: deps.limits, match: matchState, lookup: (name, run) => lookupVariable(core, name, run) ?? this.liveVar(name, run) };
   }

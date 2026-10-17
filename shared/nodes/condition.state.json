@@ -45,7 +45,14 @@
           "ends_with",
           "not_ends_with",
           "in",
-          "not_in"
+          "not_in",
+          "exists",
+          "empty",
+          "is_number",
+          "is_text",
+          "is_boolean",
+          "is_list",
+          "is_object"
         ],
         "default": "eq",
         "x-labelKey": "builder.cfg.operator",

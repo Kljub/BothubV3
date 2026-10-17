@@ -1,0 +1,54 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.calculate",
+  "version": 1,
+  "category": "action",
+  "group": "other",
+  "order": 871,
+  "color": "teal",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_calculate.label",
+  "descriptionKey": "builder.node.action_calculate.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "expression": {
+        "type": "string",
+        "maxLength": 500,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.expression",
+        "x-hintKey": "builder.cfg.calculate_expression_hint",
+        "x-placeholder": "({option_amount} * 1.19) ^ 2"
+      },
+      "decimals": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 10,
+        "x-labelKey": "builder.cfg.decimals",
+        "x-hintKey": "builder.cfg.calculate_decimals_hint"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  }
+}

@@ -61,5 +61,13 @@ export function roleVars(role: Role | null | undefined): Vars {
 }
 
 export function botVars(user: User | null | undefined, servers: number): Vars {
-  return user ? { 'bot.name': user.username, 'bot.id': user.id, 'bot.servers': String(servers) } : {};
+  if (!user) return {};
+  return {
+    'bot.name': user.username,
+    'bot.id': user.id,
+    'bot.servers': String(servers),
+    'bot.mention': `<@${user.id}>`,
+    'bot.avatar': user.displayAvatarURL?.({ size: 1024 }) ?? '',
+    'bot.created': user.createdTimestamp ? `<t:${Math.floor(user.createdTimestamp / 1000)}:D>` : '',
+  };
 }

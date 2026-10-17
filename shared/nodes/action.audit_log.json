@@ -1,0 +1,122 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.audit_log",
+  "version": 1,
+  "category": "action",
+  "group": "server",
+  "order": 1145,
+  "color": "orange",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_audit_log.label",
+  "descriptionKey": "builder.node.action_audit_log.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": ".count",
+      "labelKey": "builder.result.audit_log.0"
+    },
+    {
+      "suffix": ".action",
+      "labelKey": "builder.result.audit_log.1"
+    },
+    {
+      "suffix": ".user",
+      "labelKey": "builder.result.audit_log.2"
+    },
+    {
+      "suffix": ".user_id",
+      "labelKey": "builder.result.audit_log.3"
+    },
+    {
+      "suffix": ".target_id",
+      "labelKey": "builder.result.audit_log.4"
+    },
+    {
+      "suffix": ".reason",
+      "labelKey": "builder.result.audit_log.5"
+    },
+    {
+      "suffix": ".created",
+      "labelKey": "builder.result.audit_log.6"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "audit_action": {
+        "type": "string",
+        "enum": [
+          "any",
+          "member_kick",
+          "member_ban",
+          "member_unban",
+          "member_update",
+          "member_roles",
+          "member_move",
+          "member_disconnect",
+          "member_prune",
+          "channel_create",
+          "channel_update",
+          "channel_delete",
+          "role_create",
+          "role_update",
+          "role_delete",
+          "message_delete",
+          "message_bulk_delete",
+          "message_pin",
+          "invite_create",
+          "webhook_create",
+          "webhook_delete",
+          "emoji_create",
+          "server_update"
+        ],
+        "default": "any",
+        "x-labelKey": "builder.cfg.audit_action",
+        "x-enumKey": "builder.enum.audit_log_audit_action"
+      },
+      "user": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.audit_user",
+        "x-hintKey": "builder.cfg.ref_optional_hint",
+        "x-ref": "member"
+      },
+      "limit": {
+        "type": "number",
+        "minimum": 1,
+        "maximum": 25,
+        "default": 5,
+        "x-labelKey": "builder.cfg.audit_limit"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      },
+      "guild": {
+        "type": "string",
+        "maxLength": 40,
+        "x-advanced": true,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.guild",
+        "x-hintKey": "builder.cfg.guild_hint"
+      }
+    }
+  }
+}

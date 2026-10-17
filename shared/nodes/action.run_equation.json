@@ -69,6 +69,13 @@
         "default": "run",
         "x-labelKey": "builder.cfg.scope",
         "x-enumKey": "builder.enum.scope"
+      },
+      "target_user": {
+        "type": "string",
+        "maxLength": 200,
+        "x-advanced": true,
+        "x-labelKey": "builder.cfg.target_user",
+        "x-hintKey": "builder.cfg.target_user_hint"
       }
     }
   }

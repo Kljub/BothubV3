@@ -12,6 +12,9 @@ import type { GraphNode } from '../graph/types.js';
 import { parseDuration, snowflake, snowflakes } from '../graph/util.js';
 import { transcript } from '../modules/support.js';
 import { data } from './handlers.js';
+import { parseDateTime } from '../graph/dates.js';
+
+export { parseDateTime };
 
 /** "#ff0000", "ff0000", "red"-free: hex only; empty = no colour. */
 export function hexColor(text: string): number | undefined {
@@ -19,48 +22,6 @@ export function hexColor(text: string): number | undefined {
   if (!t) return undefined;
   if (!/^[0-9a-f]{6}$/i.test(t)) throw new GraphError('error.run.bad_color', { value: text, message: `"${text}" is not a colour; use a hex code like #5865f2.` });
   return parseInt(t, 16);
-}
-
-/** UTC offset (ms) of a time zone at a moment. */
-function zoneOffset(ms: number, timeZone: string): number {
-  const parts = new Intl.DateTimeFormat('en-US', { timeZone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).formatToParts(new Date(ms));
-  const v = (t: string) => Number(parts.find((p) => p.type === t)?.value);
-  return Date.UTC(v('year'), v('month') - 1, v('day'), v('hour'), v('minute'), v('second')) - Math.floor(ms / 1000) * 1000;
-}
-
-/**
- * A date and time: "2026-12-24 18:00", "24.12.2026 18:00", ISO, Unix
- * seconds, <t:…> or a duration from now ("2h", "in 30m"). Without a time
- * zone in the text the given one counts (UTC when empty or unknown).
- */
-export function parseDateTime(text: string, timeZone = '', now = Date.now()): number {
-  const t = text.trim();
-  const fail = () => new GraphError('error.run.bad_date', { value: text });
-  if (!t) throw fail();
-  const stamp = /^<t:(\d{1,12})(?::[a-zA-Z])?>$/.exec(t) ?? /^(\d{9,12})$/.exec(t);
-  if (stamp) return Number(stamp[1]) * 1000;
-  const rel = /^(?:in\s+)?((?:\d+[smhdw])+)$/i.exec(t);
-  if (rel) return now + parseDuration(rel[1]!);
-  let m = /^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{2}))?$/.exec(t);
-  let y: number, mo: number, d: number, h = 0, mi = 0;
-  if (m) [y, mo, d, h, mi] = [Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4] ?? 0), Number(m[5] ?? 0)];
-  else if ((m = /^(\d{1,2})\.(\d{1,2})\.(\d{4})(?:,?\s+(\d{1,2}):(\d{2}))?$/.exec(t))) [d, mo, y, h, mi] = [Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4] ?? 0), Number(m[5] ?? 0)];
-  else {
-    const iso = Date.parse(t);
-    if (Number.isFinite(iso) && /\d{4}-\d{2}-\d{2}T/.test(t)) return iso;
-    throw fail();
-  }
-  const guess = Date.UTC(y, mo - 1, d, h, mi);
-  const probe = new Date(guess);
-  if (probe.getUTCMonth() !== mo - 1 || probe.getUTCDate() !== d || h > 23 || mi > 59) throw fail();
-  let zone = 'UTC';
-  try {
-    if (timeZone) new Intl.DateTimeFormat('en-US', { timeZone });
-    zone = timeZone || 'UTC';
-  } catch {
-    zone = 'UTC';
-  }
-  return guess - zoneOffset(guess - zoneOffset(guess, zone), zone);
 }
 
 /** Pages of a Go to Page block: separated by a line with --- . */

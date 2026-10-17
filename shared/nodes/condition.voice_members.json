@@ -1,0 +1,54 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "condition.voice_members",
+  "version": 1,
+  "category": "condition",
+  "group": "general",
+  "order": 85,
+  "icon": "⇒",
+  "conditionKind": "match",
+  "infoKey": "builder.info.voice_members",
+  "labelKey": "builder.node.condition_voice_members.label",
+  "descriptionKey": "builder.node.condition_voice_members.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "branches",
+      "type": "flow",
+      "labelKey": "builder.port.branches"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "channel": {
+        "type": "string",
+        "maxLength": 200,
+        "default": "{user.voice.channel.id}",
+        "x-labelKey": "builder.cfg.channel",
+        "x-hintKey": "builder.cfg.voice_members_channel_hint",
+        "x-ref": "channel"
+      },
+      "multi": {
+        "type": "string",
+        "enum": [
+          "first",
+          "all"
+        ],
+        "default": "first",
+        "x-advanced": true,
+        "x-labelKey": "builder.cfg.multi",
+        "x-hintKey": "builder.cfg.multi_hint",
+        "x-enumKey": "builder.enum.multi"
+      }
+    }
+  }
+}

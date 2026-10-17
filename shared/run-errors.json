@@ -669,5 +669,35 @@
       "text": "\"{value}\" ist keine Farbe.",
       "fix": "Nutze einen Hex-Code wie #5865f2. Eine Variable im Feld muss so einen Code enthalten."
     }
+  },
+  "error.run.bad_json": {
+    "en": {
+      "text": "\"{value}\" is not a valid object or JSON.",
+      "fix": "Use JSON like {\"a\": 1} or one \"name: value\" per line. Check the variable that fills the field."
+    },
+    "de": {
+      "text": "\"{value}\" ist kein gültiges Objekt oder JSON.",
+      "fix": "Nutze JSON wie {\"a\": 1} oder eine „name: wert“ pro Zeile. Prüfe die Variable, die das Feld füllt."
+    }
+  },
+  "error.run.bad_expression": {
+    "en": {
+      "text": "\"{value}\" is not a calculation the bot understands.",
+      "fix": "Use numbers, + - * / % ^, brackets and functions like round(…). A variable in it may be empty or text."
+    },
+    "de": {
+      "text": "\"{value}\" ist keine Rechnung, die der Bot versteht.",
+      "fix": "Nutze Zahlen, + - * / % ^, Klammern und Funktionen wie round(…). Eine Variable darin ist evtl. leer oder Text."
+    }
+  },
+  "error.run.webhook_not_found": {
+    "en": {
+      "text": "The webhook \"{value}\" was not found.",
+      "fix": "The webhook may be deleted, or the bot lacks Manage Webhooks. Use the webhook URL or the result of a Create Webhook block."
+    },
+    "de": {
+      "text": "Der Webhook \"{value}\" wurde nicht gefunden.",
+      "fix": "Der Webhook ist evtl. gelöscht, oder dem Bot fehlt Webhooks verwalten. Nutze die Webhook-URL oder das Ergebnis eines Webhook-erstellen-Blocks."
+    }
   }
 }

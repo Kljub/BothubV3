@@ -7,7 +7,7 @@ import { request, parseHeaders } from './http.js';
 import { mask } from '../core/secrets-global.js';
 import { GraphError, StopLoop, type Handler, type Run } from './interpreter.js';
 import type { GraphNode } from './types.js';
-import { parseDuration } from './util.js';
+import { parseDuration, snowflake } from './util.js';
 import type { DataContext, DataStore } from '../core/datastore.js';
 
 export type Scope = 'run' | 'user' | 'server' | 'global';
@@ -36,21 +36,21 @@ export interface CoreDeps {
 }
 
 /** Where a Data Storage value belongs: server, member and channel of the run. */
-export function dataContext(run: Run): DataContext {
-  return { guildId: run.vars.get('server.id') ?? '', userId: run.vars.get('user.id') ?? '', channelId: run.vars.get('channel.id') ?? '' };
+export function dataContext(run: Run, user = ''): DataContext {
+  return { guildId: run.vars.get('server.id') ?? '', userId: user || (run.vars.get('user.id') ?? ''), channelId: run.vars.get('channel.id') ?? '' };
 }
 
 /** "var.coins" -> "coins" for Data Storage variables, else undefined. */
-function dataKey(deps: CoreDeps, name: string): string | undefined {
+export function dataKey(deps: CoreDeps, name: string): string | undefined {
   return deps.data && name.startsWith('var.') ? name.slice(4) : undefined;
 }
 
 /** scope_id rules of the variables table. */
-export function scopeId(run: Run, scope: Exclude<Scope, 'run'>): string {
+export function scopeId(run: Run, scope: Exclude<Scope, 'run'>, user = ''): string {
   const guild = run.vars.get('server.id') ?? '';
   if (scope === 'global') return '';
   if (scope === 'server') return guild;
-  return `${guild}:${run.vars.get('user.id') ?? ''}`;
+  return `${guild}:${user || (run.vars.get('user.id') ?? '')}`;
 }
 
 /**
@@ -98,33 +98,50 @@ export function helperValue(name: string, nowMs = Date.now()): string | undefine
   return undefined;
 }
 
-function varName(run: Run, node: GraphNode): string {
+/** "Whose value" of the variable blocks (Advanced): a member ID or mention; empty = the member of the run. */
+export function targetUser(run: Run, node: GraphNode): string {
+  const v = run.str(node, 'target_user').trim();
+  return v ? snowflake(v, 'target_user') : '';
+}
+
+export function varName(run: Run, node: GraphNode): string {
   const name = run.str(node, 'var_name').trim();
   if (!name || name.length > 64) throw new GraphError('error.run.bad_variable_name', { value: name });
   return name;
 }
 
-function scopeOf(run: Run, node: GraphNode): Scope {
+export function scopeOf(run: Run, node: GraphNode): Scope {
   const s = String(run.raw(node, 'scope') ?? 'run');
   return s === 'user' || s === 'server' || s === 'global' ? s : 'run';
 }
 
-function readVar(deps: CoreDeps, run: Run, scope: Scope, name: string): string {
+export function readVar(deps: CoreDeps, run: Run, scope: Scope, name: string, user = ''): string {
   const key = dataKey(deps, name);
-  if (key !== undefined) return deps.data!.get(key, dataContext(run)) ?? '';
+  if (key !== undefined) return deps.data!.get(key, dataContext(run, user)) ?? '';
   if (scope === 'run') return run.vars.get(`local.${name}`) ?? '';
-  return deps.vars.get(scope, scopeId(run, scope), name) ?? '';
+  return deps.vars.get(scope, scopeId(run, scope, user), name) ?? '';
 }
 
-function writeVar(deps: CoreDeps, run: Run, scope: Scope, name: string, value: string): void {
+export function writeVar(deps: CoreDeps, run: Run, scope: Scope, name: string, value: string, user = ''): void {
   const key = dataKey(deps, name);
-  if (key !== undefined) return deps.data!.set(key, dataContext(run), value);
+  if (key !== undefined) return deps.data!.set(key, dataContext(run, user), value);
   if (value.length > 500) throw new GraphError('error.run.value_too_long', { max: 500 });
   if (scope === 'run') {
     run.vars.set(`local.${name}`, value);
     run.vars.set(name, value);
   } else {
-    deps.vars.set(scope, scopeId(run, scope), name, value);
+    deps.vars.set(scope, scopeId(run, scope, user), name, value);
+  }
+}
+
+export function deleteVar(deps: CoreDeps, run: Run, scope: Scope, name: string, user = ''): void {
+  const key = dataKey(deps, name);
+  if (key !== undefined) return deps.data!.delete(key, dataContext(run, user));
+  if (scope === 'run') {
+    run.vars.delete(`local.${name}`);
+    run.vars.delete(name);
+  } else {
+    deps.vars.delete(scope, scopeId(run, scope, user), name);
   }
 }
 
@@ -176,6 +193,8 @@ function manipulate(run: Run, node: GraphNode): string {
       return input.substring(n('start'), run.str(node, 'end') === '' ? undefined : n('end'));
     case 'char_at':
       return input.charAt(n('start'));
+    case 'join':
+      return loopItems(input).join(run.str(node, 'separator'));
     case 'split':
       return JSON.stringify(input.split(run.str(node, 'separator')));
     case 'match':
@@ -245,11 +264,28 @@ function cooldownScope(run: Run, scope: string, user: string): string {
 }
 
 /** Stores a JSON value as {Var.json}, {Var.json.a}, {Var.json.a.0}, … (depth 5, 200 keys). */
-function setJson(run: Run, node: GraphNode, prefix: string, value: unknown, depth = 0, budget = { left: 200 }): void {
+export function setJson(run: Run, node: GraphNode, prefix: string, value: unknown, depth = 0, budget = { left: 200 }): void {
   if (budget.left-- <= 0) return;
   run.setResult(node, prefix, typeof value === 'string' ? value : JSON.stringify(value));
   if (depth >= 5 || value === null || typeof value !== 'object') return;
   for (const [k, v] of Object.entries(value as Record<string, unknown>)) setJson(run, node, `${prefix}.${k}`, v, depth + 1, budget);
+}
+
+const CHARSETS: Record<string, string> = {
+  letters_digits: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789',
+  letters: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
+  lowercase: 'abcdefghijklmnopqrstuvwxyz0123456789',
+  digits: '0123456789',
+  hex: '0123456789abcdef',
+};
+
+/** Generate Random Text: a length and the characters to pick from. */
+function randomText(run: Run, node: GraphNode): string {
+  const length = Math.max(1, Math.min(200, Math.trunc(Number(run.str(node, 'length')) || 12)));
+  const set = String(run.raw(node, 'charset') ?? 'letters_digits');
+  const chars = [...(set === 'custom' ? run.str(node, 'custom_chars') : (CHARSETS[set] ?? CHARSETS.letters_digits!))];
+  if (!chars.length) throw new GraphError('error.run.missing_value', { field: 'custom_chars' });
+  return Array.from({ length }, () => chars[randomInt(chars.length)]).join('');
 }
 
 const MATH: Record<string, (a: number, b: number) => number> = {
@@ -388,22 +424,8 @@ export function coreHandlers(deps: CoreDeps): Map<string, Handler> {
     ['action.error_log', (node, run) => deps.logError(run, run.str(node, 'content'))],
     // Log a Line: a note in the playback only (Discord sees nothing).
     ['action.log_line', (node, run) => run.logLine(run.str(node, 'content'))],
-    ['action.set_variable', (node, run) => writeVar(deps, run, scopeOf(run, node), varName(run, node), run.str(node, 'value'))],
-    [
-      'action.delete_variable',
-      (node, run) => {
-        const scope = scopeOf(run, node);
-        const name = varName(run, node);
-        const key = dataKey(deps, name);
-        if (key !== undefined) return deps.data!.delete(key, dataContext(run));
-        if (scope === 'run') {
-          run.vars.delete(`local.${name}`);
-          run.vars.delete(name);
-        } else {
-          deps.vars.delete(scope, scopeId(run, scope), name);
-        }
-      },
-    ],
+    ['action.set_variable', (node, run) => writeVar(deps, run, scopeOf(run, node), varName(run, node), run.str(node, 'value'), targetUser(run, node))],
+    ['action.delete_variable', (node, run) => deleteVar(deps, run, scopeOf(run, node), varName(run, node), targetUser(run, node))],
     [
       'action.run_equation',
       (node, run) => {
@@ -411,19 +433,20 @@ export function coreHandlers(deps: CoreDeps): Map<string, Handler> {
         const name = varName(run, node);
         const op = MATH[String(run.raw(node, 'math') ?? 'add')];
         if (!op) throw new GraphError('error.run.unsupported_operation');
-        const current = Number(readVar(deps, run, scope, name) || 0);
+        const user = targetUser(run, node);
+        const current = Number(readVar(deps, run, scope, name, user) || 0);
         const operand = run.num(node, 'operand');
         if (!Number.isFinite(current)) throw new GraphError('error.run.not_a_number', { field: name });
         const result = op(current, operand);
         if (!Number.isFinite(result)) throw new GraphError('error.run.not_a_number', { field: name });
-        writeVar(deps, run, scope, name, String(result));
+        writeVar(deps, run, scope, name, String(result), user);
       },
     ],
     [
       'action.set_unique_variable',
       (node, run) => {
         const kind = run.raw(node, 'unique_kind');
-        const value = kind === 'number' ? String(randomInt(100000, 999999999)) : kind === 'short' ? randomUUID().slice(0, 8) : randomUUID();
+        const value = kind === 'number' ? String(randomInt(100000, 999999999)) : kind === 'short' ? randomUUID().slice(0, 8) : kind === 'text' ? randomText(run, node) : randomUUID();
         run.setResult(node, '', value);
       },
     ],

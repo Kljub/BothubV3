@@ -58,6 +58,32 @@
         "default": false,
         "x-labelKey": "builder.cfg.nsfw"
       },
+      "parent": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.parent",
+        "x-hintKey": "builder.cfg.edit_channel_parent_hint",
+        "x-ref": "category"
+      },
+      "position": {
+        "type": "string",
+        "maxLength": 20,
+        "x-advanced": true,
+        "x-labelKey": "builder.cfg.channel_position",
+        "x-hintKey": "builder.cfg.channel_position_hint"
+      },
+      "bitrate": {
+        "type": "string",
+        "maxLength": 20,
+        "x-labelKey": "builder.cfg.bitrate",
+        "x-hintKey": "builder.cfg.bitrate_hint"
+      },
+      "user_limit": {
+        "type": "string",
+        "maxLength": 20,
+        "x-labelKey": "builder.cfg.user_limit",
+        "x-hintKey": "builder.cfg.user_limit_hint"
+      },
       "reason": {
         "type": "string",
         "maxLength": 200,

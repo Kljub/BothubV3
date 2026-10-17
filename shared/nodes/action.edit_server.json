@@ -1,0 +1,130 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.edit_server",
+  "version": 1,
+  "category": "action",
+  "group": "server",
+  "order": 1143,
+  "color": "orange",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_edit_server.label",
+  "descriptionKey": "builder.node.action_edit_server.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "name": {
+        "type": "string",
+        "maxLength": 100,
+        "x-labelKey": "builder.cfg.edit_server_name",
+        "x-hintKey": "builder.cfg.edit_server_name_hint"
+      },
+      "icon": {
+        "type": "string",
+        "maxLength": 2000,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.icon"
+      },
+      "banner": {
+        "type": "string",
+        "maxLength": 2000,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.edit_server_banner",
+        "x-hintKey": "builder.cfg.edit_server_banner_hint"
+      },
+      "splash": {
+        "type": "string",
+        "maxLength": 2000,
+        "x-advanced": true,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.splash",
+        "x-hintKey": "builder.cfg.edit_server_splash_hint"
+      },
+      "description": {
+        "type": "string",
+        "maxLength": 120,
+        "x-labelKey": "builder.cfg.description",
+        "x-hintKey": "builder.cfg.edit_server_description_hint",
+        "x-multiline": true
+      },
+      "verification": {
+        "type": "string",
+        "enum": [
+          "keep",
+          "none",
+          "low",
+          "medium",
+          "high",
+          "very_high"
+        ],
+        "default": "keep",
+        "x-labelKey": "builder.cfg.verification",
+        "x-enumKey": "builder.enum.edit_server_verification"
+      },
+      "afk_channel": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.afk_channel",
+        "x-hintKey": "builder.cfg.ref_optional_hint",
+        "x-ref": "channel"
+      },
+      "afk_timeout": {
+        "type": "string",
+        "enum": [
+          "keep",
+          "60",
+          "300",
+          "900",
+          "1800",
+          "3600"
+        ],
+        "default": "keep",
+        "x-labelKey": "builder.cfg.afk_timeout",
+        "x-enumKey": "builder.enum.edit_server_afk_timeout"
+      },
+      "system_channel": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.system_channel",
+        "x-hintKey": "builder.cfg.ref_optional_hint",
+        "x-ref": "channel"
+      },
+      "rules_channel": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.rules_channel",
+        "x-hintKey": "builder.cfg.ref_optional_hint",
+        "x-ref": "channel"
+      },
+      "reason": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.reason",
+        "x-hintKey": "builder.cfg.reason_hint"
+      },
+      "guild": {
+        "type": "string",
+        "maxLength": 40,
+        "x-advanced": true,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.guild",
+        "x-hintKey": "builder.cfg.guild_hint"
+      }
+    }
+  }
+}

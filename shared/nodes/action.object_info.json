@@ -1,0 +1,65 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.object_info",
+  "version": 1,
+  "category": "action",
+  "group": "objects",
+  "order": 1650,
+  "color": "teal",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_object_info.label",
+  "descriptionKey": "builder.node.action_object_info.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "results": [
+    {
+      "suffix": ".keys",
+      "labelKey": "builder.result.object_info.0"
+    },
+    {
+      "suffix": ".count",
+      "labelKey": "builder.result.object_info.1"
+    },
+    {
+      "suffix": ".values",
+      "labelKey": "builder.result.object_info.2"
+    },
+    {
+      "suffix": ".json",
+      "labelKey": "builder.result.object_info.3"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "object": {
+        "type": "string",
+        "maxLength": 4000,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.object",
+        "x-hintKey": "builder.cfg.object_hint",
+        "x-placeholder": "{Obj}"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  }
+}

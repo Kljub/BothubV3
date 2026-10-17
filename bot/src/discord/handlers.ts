@@ -482,6 +482,7 @@ function musicHandlers(secret: (key: string) => string | null): [string, Handler
     simple('action.music_replay', (m) => m.replay()),
     simple('action.music_stop', (m) => m.stop()),
     simple('action.music_shuffle', (m) => m.shuffle()),
+    simple('action.music_clear', (m) => m.clearQueue()),
     simple('action.music_disconnect', (m) => m.disconnect()),
     simple('action.music_volume', (m, run, node) => m.setVolume(run.num(node, 'volume'))),
     simple('action.music_loop', (m, run, node) => {
@@ -845,6 +846,15 @@ export function discordHandlers(repo: Repo, mod?: Moderation, secret: (key: stri
           edit.rateLimitPerUser = Math.max(0, Math.min(21_600, Math.trunc(seconds)));
         }
         if (node.config.nsfw !== undefined) edit.nsfw = run.bool(node, 'nsfw');
+        // Category: an ID moves it, "none" takes it out of its category.
+        const parent = run.str(node, 'parent').trim();
+        if (parent) edit.parent = parent.toLowerCase() === 'none' ? null : snowflake(parent, 'parent');
+        const position = run.str(node, 'position').trim();
+        if (position !== '') edit.position = Math.max(0, Math.trunc(Number(position) || 0));
+        const bitrate = run.str(node, 'bitrate').trim();
+        if (bitrate !== '' && ch.isVoiceBased()) edit.bitrate = Math.max(8, Math.min(384, Math.trunc(Number(bitrate) || 64))) * 1000;
+        const limit = run.str(node, 'user_limit').trim();
+        if (limit !== '' && ch.isVoiceBased()) edit.userLimit = Math.max(0, Math.min(99, Math.trunc(Number(limit) || 0)));
         await discord(run, () => (ch as { edit(o: Record<string, unknown>): Promise<unknown> }).edit(edit));
       },
     ],
@@ -864,6 +874,12 @@ export function discordHandlers(repo: Repo, mod?: Moderation, secret: (key: stri
         if (type === 0 && node.config.nsfw !== undefined) opts.nsfw = run.bool(node, 'nsfw');
         const slow = Number(run.raw(node, 'slowmode') ?? 0);
         if (type === 0 && slow > 0) opts.rateLimitPerUser = Math.min(21_600, Math.trunc(slow));
+        if (type === 2 || type === 13) {
+          const bitrate = Number(run.str(node, 'bitrate') || 0);
+          if (bitrate > 0) opts.bitrate = Math.max(8, Math.min(384, Math.trunc(bitrate))) * 1000;
+          const limit = Number(run.str(node, 'user_limit') || 0);
+          if (limit > 0) opts.userLimit = Math.min(99, Math.trunc(limit));
+        }
         const everyone = guild.roles.everyone.id;
         const access = String(run.raw(node, 'access') ?? 'default');
         if (access === 'private') {

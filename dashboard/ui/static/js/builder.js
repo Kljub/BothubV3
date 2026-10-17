@@ -1319,7 +1319,8 @@
   // ---------- If / Else: what is checked, the checks, add a check ----------
 
   const OP_GROUPS = [['same', ['eq', 'ne']], ['numbers', ['gt', 'gte', 'lt', 'lte']], ['time', ['before', 'after']],
-    ['text', ['contains', 'not_contains', 'starts_with', 'not_starts_with', 'ends_with', 'not_ends_with']], ['collections', ['in', 'not_in']]];
+    ['text', ['contains', 'not_contains', 'starts_with', 'not_starts_with', 'ends_with', 'not_ends_with']], ['collections', ['in', 'not_in']],
+    ['values', ['exists', 'empty', 'is_number', 'is_text', 'is_boolean', 'is_list', 'is_object']]];
   const SOURCE_ICON = { variable: 'layers', option: 'list', other: 'code' };
 
   function checksWidget(node, key, schema) {

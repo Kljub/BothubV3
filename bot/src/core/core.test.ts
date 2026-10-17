@@ -12,6 +12,8 @@ import { buildCommands, denied, permissionBit, settingsOf } from '../discord/com
 import { discordHandlers } from '../discord/handlers.js';
 import { moduleHandlers } from '../discord/handlers-modules.js';
 import { extraHandlers } from '../discord/handlers-extra.js';
+import { serverHandlers } from '../discord/handlers-server.js';
+import { valueHandlers } from '../graph/handlers-values.js';
 import { coreHandlers } from '../graph/handlers-core.js';
 import type { Graph } from '../graph/types.js';
 
@@ -95,6 +97,8 @@ test('module presets only use blocks the bot runs', () => {
     ...discordHandlers({} as Repo),
     ...moduleHandlers({} as Repo, 1),
     ...extraHandlers({ repo: {} as Repo, secret: () => null }),
+    ...valueHandlers({ vars: { get: () => undefined, set: () => undefined, delete: () => undefined }, logError: () => undefined }),
+    ...serverHandlers(),
   ]);
   const passive = /^(trigger|option|condition|utility)\./;
   for (const p of presets as { module?: string; name: string; graph: Graph }[]) {
@@ -402,6 +406,8 @@ test('every block of the palette has a handler in the bot', () => {
     ...discordHandlers({} as Repo),
     ...moduleHandlers({} as Repo, 1),
     ...extraHandlers({ repo: {} as Repo, secret: () => null }),
+    ...valueHandlers({ vars: { get: () => undefined, set: () => undefined, delete: () => undefined }, logError: () => undefined }),
+    ...serverHandlers(),
   ]);
   const passive = /^(trigger|option|condition|utility|component)\./;
   const missing = readdirSync(join(shared, 'nodes'))

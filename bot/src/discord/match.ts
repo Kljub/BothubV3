@@ -1,4 +1,5 @@
-// Match conditions (role, permission, channel, user, status, subcommand).
+// Match conditions (role, permission, channel, user, status, subcommand,
+// voice channel members).
 // The state block's value is what the member must have or be: a role ID, a
 // permission name, a channel ID, a user ID, a status or a subcommand name.
 
@@ -8,6 +9,7 @@ import type { GraphNode } from '../graph/types.js';
 import { snowflake } from '../graph/util.js';
 import { permissionBit } from './commands.js';
 import { data } from './handlers.js';
+import { voiceMatch } from './handlers-server.js';
 
 async function subjectMember(run: Run, cond: GraphNode): Promise<GuildMember | null> {
   const d = data(run);
@@ -19,6 +21,15 @@ async function subjectMember(run: Run, cond: GraphNode): Promise<GuildMember | n
 
 export async function matchState(cond: GraphNode, state: GraphNode, run: Run): Promise<boolean> {
   const d = data(run);
+  if (cond.type === 'condition.voice_members') {
+    // An empty state value means "anyone is in it".
+    const value = run.str(cond, 'channel').trim() || d.member?.voice.channelId || '';
+    if (!value) return false;
+    run.countDiscordCall();
+    const ch = await d.client.channels.fetch(snowflake(value, 'channel')).catch(() => null);
+    if (!ch || !ch.isVoiceBased()) return false;
+    return voiceMatch([...ch.members.values()].map((m) => ({ id: m.id, bot: m.user.bot })), run.str(state, 'value'));
+  }
   const values = run
     .str(state, 'value')
     .split(',')

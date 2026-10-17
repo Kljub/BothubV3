@@ -1,0 +1,48 @@
+{
+  "$schema": "../node-definition.schema.json",
+  "type": "action.create_object",
+  "version": 1,
+  "category": "action",
+  "group": "objects",
+  "order": 1600,
+  "color": "teal",
+  "icon": "▶︎",
+  "labelKey": "builder.node.action_create_object.label",
+  "descriptionKey": "builder.node.action_create_object.description",
+  "inputs": [
+    {
+      "name": "in",
+      "type": "flow",
+      "labelKey": "builder.port.in",
+      "multiple": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "next",
+      "type": "flow",
+      "labelKey": "builder.port.next"
+    }
+  ],
+  "config": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "properties": {
+        "type": "string",
+        "maxLength": 4000,
+        "x-mono": true,
+        "x-labelKey": "builder.cfg.properties",
+        "x-hintKey": "builder.cfg.create_object_properties_hint",
+        "x-multiline": true,
+        "x-placeholder": "name: {user.name}\ncoins: 10"
+      },
+      "variable": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,31}$",
+        "x-labelKey": "builder.cfg.variable",
+        "x-hintKey": "builder.cfg.variable_hint"
+      }
+    }
+  }
+}
