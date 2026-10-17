@@ -66,3 +66,6 @@ e.g. `{user.mention}`, `{server}`, `{members}`.
 placeholders the bot really fills there (bot/src/modules: `baseVars` plus the
 field's extras). The settings page shows exactly these in its variable
 picker; keep the list in step with the module code.
+
+`plain: true` on a text field that takes no placeholders (a name, a regex)
+hides the placeholder hint below it.

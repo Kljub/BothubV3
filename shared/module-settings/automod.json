@@ -88,6 +88,182 @@
       "max": 50
     },
     {
+      "key": "rules",
+      "type": "list",
+      "max": 25,
+      "titleField": "name",
+      "hint": true,
+      "item": [
+        {
+          "key": "name",
+          "type": "text",
+          "max": 60,
+          "default": "Rule",
+          "required": true,
+          "plain": true
+        },
+        {
+          "key": "s_triggers",
+          "type": "section",
+          "hint": true
+        },
+        {
+          "key": "triggers",
+          "type": "choices",
+          "options": [
+            "words",
+            "regex",
+            "links",
+            "invites",
+            "attachments",
+            "caps",
+            "emojis",
+            "mentions",
+            "repeat",
+            "newlines"
+          ],
+          "max": 10,
+          "required": true
+        },
+        {
+          "key": "words",
+          "type": "words",
+          "max": 200,
+          "maxLength": 60,
+          "hint": true
+        },
+        {
+          "key": "pattern",
+          "type": "text",
+          "max": 300,
+          "hint": true,
+          "plain": true
+        },
+        {
+          "key": "allowedDomains",
+          "type": "words",
+          "max": 100,
+          "maxLength": 100,
+          "hint": true
+        },
+        {
+          "key": "threshold",
+          "type": "number",
+          "min": 1,
+          "max": 100,
+          "default": 5,
+          "hint": true
+        },
+        {
+          "key": "repeatSeconds",
+          "type": "number",
+          "min": 5,
+          "max": 600,
+          "default": 60
+        },
+        {
+          "key": "s_conditions",
+          "type": "section",
+          "hint": true
+        },
+        {
+          "key": "maxAccountDays",
+          "type": "number",
+          "min": 0,
+          "max": 3650,
+          "default": 0
+        },
+        {
+          "key": "maxMemberDays",
+          "type": "number",
+          "min": 0,
+          "max": 3650,
+          "default": 0
+        },
+        {
+          "key": "channelMode",
+          "type": "select",
+          "options": [
+            "all",
+            "except",
+            "only"
+          ],
+          "default": "all"
+        },
+        {
+          "key": "channels",
+          "type": "channels",
+          "channelTypes": [
+            "text",
+            "announcement",
+            "forum",
+            "voice"
+          ],
+          "max": 50,
+          "showIf": {
+            "channelMode": [
+              "except",
+              "only"
+            ]
+          }
+        },
+        {
+          "key": "exemptRoles",
+          "type": "roles",
+          "max": 25
+        },
+        {
+          "key": "checkStaff",
+          "type": "bool",
+          "default": false
+        },
+        {
+          "key": "s_effects",
+          "type": "section"
+        },
+        {
+          "key": "effects",
+          "type": "choices",
+          "options": [
+            "delete",
+            "warn",
+            "timeout",
+            "kick",
+            "ban",
+            "notice",
+            "alert"
+          ],
+          "max": 7,
+          "required": true
+        },
+        {
+          "key": "timeoutMinutes",
+          "type": "number",
+          "min": 1,
+          "max": 40320,
+          "default": 10
+        },
+        {
+          "key": "notice",
+          "type": "text",
+          "max": 300,
+          "default": "{user.mention}, your message broke the rule \"{rule}\".",
+          "vars": [
+            "user.mention",
+            "user.name",
+            "server",
+            "rule",
+            "trigger"
+          ]
+        },
+        {
+          "key": "countHit",
+          "type": "bool",
+          "default": true
+        }
+      ]
+    },
+    {
       "key": "mediaFilters",
       "type": "list",
       "max": 25,

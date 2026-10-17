@@ -59,6 +59,9 @@ type settingsField struct {
 	// Vars: the placeholders the bot fills in this text or message field
 	// (the variable picker shows exactly these).
 	Vars []string `json:"vars"`
+	// Plain: a text field that takes no placeholders (a name, a pattern):
+	// no placeholder hint below it.
+	Plain bool `json:"plain"`
 	// Dynamic: a "choices" field whose options the plugin sets (ctx.config.setOptions).
 	Dynamic bool `json:"dynamic"`
 	// Accept: what a "file" field takes ("audio").

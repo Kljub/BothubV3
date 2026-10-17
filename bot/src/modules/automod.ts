@@ -18,7 +18,8 @@ import {
 } from 'discord.js';
 import { log } from '../core/log.js';
 import { baseVars, fill, idIn, idsIn, type ModuleContext } from './context.js';
-import { warn } from './guard.js';
+import { automodRules } from './automod-rules.js';
+import { send, warn } from './guard.js';
 import { tempNotice } from './messages.js';
 
 export const PREFIX = 'BotHub · ';
@@ -163,6 +164,18 @@ export async function automodHit(ctx: ModuleContext, e: AutoModerationActionExec
   const ours = ctx.getState<string[]>('automod', e.guild.id, 'rules') ?? [];
   if (!ours.includes(e.ruleId)) return;
   await countHit(ctx, e.guild, e.userId);
+}
+
+/** New and edited messages: the own rules first, then the media filter. */
+export async function automodMessage(ctx: ModuleContext, msg: Message | PartialMessage): Promise<void> {
+  if (msg.partial || !msg.inGuild() || !ctx.enabled('automod')) return;
+  const guild = msg.guild;
+  const alert = async (text: string): Promise<void> => {
+    const channel = guild.channels.cache.get(idIn(ctx.config<AutomodConfig>('automod').alertChannel, guild.id) ?? '');
+    if (channel?.isSendable()) await send(ctx, 'automod', channel, { content: text.slice(0, 2000), allowedMentions: { parse: [] } });
+  };
+  if (await automodRules(ctx, msg, (userId) => countHit(ctx, guild, userId), alert)) return;
+  await automodMedia(ctx, msg);
 }
 
 /** Media filter: deletes GIFs, images or videos in the filtered channels (new and edited messages). */

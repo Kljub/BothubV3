@@ -112,7 +112,7 @@
       {{if .Multiline}}<textarea name="{{.Name}}" rows="3" {{with .Max}}maxlength="{{.}}"{{end}}>{{.Text}}</textarea>{{else if .Emoji}}<span class="bemoji-field"><input name="{{.Name}}" value="{{.Text}}" {{with .Max}}maxlength="{{.}}"{{end}}><button type="button" class="btn btn-sm bemoji-btn" data-emoji-pick="1" title="{{t "builder.emoji.pick"}}" aria-label="{{t "builder.emoji.pick"}}">{{template "icon_smile"}}</button></span>{{else}}<input name="{{.Name}}" value="{{.Text}}" {{with .Max}}maxlength="{{.}}"{{end}} {{with .Pattern}}pattern="{{.}}"{{end}}>{{end}}
       {{if .Vars}}{{template "modset_var_tool"}}{{end}}
     </span>
-    {{if not .Vars}}<span class="hint">{{t "modset.placeholders_hint"}}</span>{{end}}
+    {{if not (or .Vars .Plain)}}<span class="hint">{{t "modset.placeholders_hint"}}</span>{{end}}
   </label>
   {{with .Vars}}{{template "modset_vars" .}}{{end}}
 {{else if eq .Type "words"}}
