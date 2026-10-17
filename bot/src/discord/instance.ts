@@ -769,6 +769,20 @@ export class BotInstance {
       Object.assign(vars, { 'message.id': i.targetMessage.id, 'message.content': i.targetMessage.content, 'message.url': i.targetMessage.url });
     }
 
+    // "One run at a time": a second call waits up to 5 seconds, then gives up.
+    const release = await this.lockRun(cmd, i.guildId);
+    if (release === false) {
+      await i.reply({ content: 'This command is still running. Try again in a moment.', flags: 64 }).catch(() => undefined);
+      return;
+    }
+    try {
+      await this.runSlash(i, cmd, s, vars, member, channel);
+    } finally {
+      release?.();
+    }
+  }
+
+  private async runSlash(i: ChatInputCommandInteraction | UserContextMenuCommandInteraction | MessageContextMenuCommandInteraction, cmd: CommandRow, s: ReturnType<typeof settingsOf>, vars: Vars, member: GuildMember | null, channel: SendableChannels | null): Promise<void> {
     const runKey = randomUUID().slice(0, 12);
     const hideReplies = hideRepliesOf(s, vars);
     const d = this.data({ runKey, guild: i.guild, channel, member, user: i.user, interaction: i, hideReplies });
@@ -859,6 +873,33 @@ export class BotInstance {
   }
 
   /** Playback settings of a run (trigger "When it fails", record playbacks). */
+  /** Runs of commands with "one run at a time", per command and server. */
+  private readonly locks = new Map<string, Promise<void>>();
+
+  /**
+   * "One run at a time" (trigger option single_run): waits up to 5 seconds
+   * for a running run of the same command on the same server. Returns the
+   * release function, null when the command has no lock, or false when the
+   * other run is still busy.
+   */
+  private async lockRun(cmd: CommandRow, guildId: string | null): Promise<(() => void) | null | false> {
+    const trigger = cmd.graph.nodes.find((n) => n.type === 'trigger.slash' || n.type === 'trigger.event');
+    if (trigger?.config.single_run !== true) return null;
+    const key = `${cmd.id}:${guildId ?? 'dm'}`;
+    const busy = this.locks.get(key);
+    if (busy) {
+      const done = await Promise.race([busy.then(() => true), new Promise<boolean>((r) => setTimeout(() => r(false), 5000).unref())]);
+      if (!done || this.locks.has(key)) return false;
+    }
+    let release!: () => void;
+    const p = new Promise<void>((r) => (release = r));
+    this.locks.set(key, p);
+    return () => {
+      if (this.locks.get(key) === p) this.locks.delete(key);
+      release();
+    };
+  }
+
   private begin(run: Run, cmd: CommandRow, runKey: string, warnings: { node: string; text: string }[] = []): void {
     const fail = prepare(run, cmd);
     this.runMeta.set(run, { runKey, startVars: fail.record ? run.startVars() : {}, fail, warnings });
@@ -1024,14 +1065,20 @@ export class BotInstance {
     if (!list?.length || !this.client) return;
     for (const ev of list) {
       if (!this.mayRun(`event ${ctx.type}`, `${ctx.guild?.id ?? 'dm'}:${ctx.type}`)) return;
-      const runKey = randomUUID().slice(0, 12);
-      const vars = { ...this.baseVars(ctx.guild, ctx.channel, ctx.user, ctx.member), ...ctx.vars, 'event.name': ev.name };
-      const run = new Run(ev.graph, this.engine, this.data({ runKey, guild: ctx.guild, channel: ctx.channel, member: ctx.member, user: ctx.user, message: ctx.message }) as never, vars);
-      this.begin(run, ev, runKey);
-      const result = await this.tracked(run).catch((err: Error) => ({ ok: false, steps: [], errorKey: err.message }) as RunResult);
-      this.keepIfInteractive(runKey, run, ev, null);
-      this.afterRun(run, ev, result, { source: 'event', user: ctx.user, guild: ctx.guild, channel: ctx.channel });
-      if (!result.ok) this.deps.repo.logCode(this.botId, 'ERR-1008', { event: ev.name, reason: reasonOf(result) });
+      const release = await this.lockRun(ev, ctx.guild?.id ?? null);
+      if (release === false) continue; // still running: this occurrence is dropped
+      try {
+        const runKey = randomUUID().slice(0, 12);
+        const vars = { ...this.baseVars(ctx.guild, ctx.channel, ctx.user, ctx.member), ...ctx.vars, 'event.name': ev.name };
+        const run = new Run(ev.graph, this.engine, this.data({ runKey, guild: ctx.guild, channel: ctx.channel, member: ctx.member, user: ctx.user, message: ctx.message }) as never, vars);
+        this.begin(run, ev, runKey);
+        const result = await this.tracked(run).catch((err: Error) => ({ ok: false, steps: [], errorKey: err.message }) as RunResult);
+        this.keepIfInteractive(runKey, run, ev, null);
+        this.afterRun(run, ev, result, { source: 'event', user: ctx.user, guild: ctx.guild, channel: ctx.channel });
+        if (!result.ok) this.deps.repo.logCode(this.botId, 'ERR-1008', { event: ev.name, reason: reasonOf(result) });
+      } finally {
+        release?.();
+      }
     }
   }
 

@@ -6184,5 +6184,7 @@
   "modset.var.match": "Gefundener Text (Regex)",
   "modset.var.match.1": "Gruppe 1 (Regex)",
   "modset.var.match.2": "Gruppe 2 (Regex)",
-  "modset.var.published": "Veröffentlicht (relative Zeit)"
+  "modset.var.published": "Veröffentlicht (relative Zeit)",
+  "builder.cfg.single_run": "Nur ein Lauf gleichzeitig",
+  "builder.cfg.single_run_hint": "Läuft dieser Command auf dem Server noch, wartet ein neuer Aufruf bis zu 5 Sekunden und entfällt danach (Schutz gegen Spam und doppelte Belohnungen)."
 }

@@ -430,6 +430,13 @@
         "x-hintKey": "builder.cfg.fail_flow_hint",
         "x-enumKey": "builder.enum.fail_flow"
       },
+      "single_run": {
+        "type": "boolean",
+        "default": false,
+        "x-labelKey": "builder.cfg.single_run",
+        "x-hintKey": "builder.cfg.single_run_hint",
+        "x-advanced": true
+      },
       "record_runs": {
         "type": "boolean",
         "default": true,

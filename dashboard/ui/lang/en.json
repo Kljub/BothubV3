@@ -6184,5 +6184,7 @@
   "modset.var.match": "Matched text (regex)",
   "modset.var.match.1": "Group 1 (regex)",
   "modset.var.match.2": "Group 2 (regex)",
-  "modset.var.published": "Published (relative time)"
+  "modset.var.published": "Published (relative time)",
+  "builder.cfg.single_run": "One run at a time",
+  "builder.cfg.single_run_hint": "While this command still runs on the server, a new call waits up to 5 seconds and is then dropped (protects against spam and double rewards)."
 }
