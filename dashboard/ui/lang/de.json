@@ -6143,5 +6143,21 @@
   "builder.cfg.ticket_prefix": "Prefix",
   "builder.cfg.ticket_prefix_hint": "Buchstaben, Zahlen und Bindestriche. Leer: Prefix entfernen. Discord erlaubt nur 2 Umbenennungen pro Kanal in 10 Minuten.",
   "modset.ticket.archiveCategory": "Archiv-Kategorie",
-  "modset.ticket.archiveCategory_hint": "Gelöschte Tickets werden in diese Kategorie verschoben statt gelöscht (Rechte der Kategorie). Ist sie voll (50 Kanäle), wird das älteste archivierte Ticket gelöscht."
+  "modset.ticket.archiveCategory_hint": "Gelöschte Tickets werden in diese Kategorie verschoben statt gelöscht (Rechte der Kategorie). Ist sie voll (50 Kanäle), wird das älteste archivierte Ticket gelöscht.",
+  "cmdshare.button": "Export / Import",
+  "cmdshare.title": "Exportieren und importieren",
+  "cmdshare.export": "Exportieren",
+  "cmdshare.export_hint": "Eine Datei mit allen gewählten Einträgen (Trigger, Blöcke, Beschreibung). Rollen-, Kanal- und User-IDs gehören zu diesem Server.",
+  "cmdshare.export_button": "Datei herunterladen",
+  "cmdshare.export_empty": "Noch nichts zum Exportieren.",
+  "cmdshare.import": "Importieren",
+  "cmdshare.import_hint": "Eine .bothub.json-Datei aus einem anderen Bot oder Server. Importierte Einträge sind ausgeschaltet: erst IDs von Rollen, Kanälen und Usern anpassen, dann einschalten. Ist ein Name schon vergeben, bekommt der neue -2, -3 …",
+  "cmdshare.import_button": "Importieren",
+  "cmdshare.imported": "{count} importiert (ausgeschaltet):",
+  "cmdshare.import.no_file": "Bitte eine Datei wählen.",
+  "cmdshare.import.too_big": "Die Datei ist zu groß (max. 4 MB).",
+  "cmdshare.import.bad_file": "Das ist keine BotHub-Exportdatei.",
+  "cmdshare.import.newer": "Die Datei stammt aus einer neueren BotHub-Version.",
+  "cmdshare.import.wrong_kind": "Die Datei enthält die andere Art (Commands statt Events oder umgekehrt). Bitte auf der passenden Seite importieren.",
+  "cmdshare.import.count": "Die Datei muss 1 bis 100 Einträge enthalten."
 }

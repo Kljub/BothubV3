@@ -72,3 +72,9 @@
   .cmdhub-actions { width: 100%; justify-content: flex-start; }
   .cmdhub-groupfields { grid-template-columns: 1fr; }
 }
+
+/* Share dialog: export picks, import file (internal/web/cmdshare.go). */
+.cmdshare-export, .cmdshare-import { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; margin-bottom: 8px; }
+.cmdshare-export .choices-list { width: 100%; }
+.cmdshare-import { flex-direction: row; flex-wrap: wrap; align-items: center; }
+#cmd-import-result .alert { margin-top: 8px; }

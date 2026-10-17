@@ -210,6 +210,7 @@
       </select>
       <button type="button" class="btn btn-sm" data-open-dialog="cmd-groups-dialog" hx-get="/bot/{{.BotID}}/command-groups" hx-target="#cmd-groups-body" hx-swap="innerHTML">{{template "icon_layers"}} {{t "cmdhub.groups"}}</button>
       <button type="button" class="btn btn-sm" data-open-dialog="cmd-deleted-dialog" hx-get="/bot/{{.BotID}}/{{.Hub.Base}}/deleted" hx-target="#cmd-deleted-body" hx-swap="innerHTML">{{template "icon_trash"}} {{t "cmdhub.deleted"}}</button>
+      <button type="button" class="btn btn-sm" data-open-dialog="cmd-share-dialog" hx-get="/bot/{{.BotID}}/{{.Hub.Base}}/export" hx-target="#cmd-export-body" hx-swap="innerHTML">⇅ {{t "cmdshare.button"}}</button>
       <button type="button" class="btn btn-sm btn-primary" hx-post="/bot/{{.BotID}}/{{.Hub.Base}}" hx-swap="none" hx-disabled-elt="this">+ {{if .Hub.Event}}{{t "events.new"}}{{else}}{{t "builder.new_command"}}{{end}}</button>
     </div>
   </header>
@@ -224,6 +225,22 @@
     <p class="muted">{{t "cmdhub.groups.hint"}}</p>
     <div id="groups-error"></div>
     <div id="cmd-groups-body"><p class="muted">{{t "cmdhub.loading"}}</p></div>
+  </dialog>
+
+  <dialog id="cmd-share-dialog" class="modal modal-wide" aria-labelledby="cmd-share-title">
+    <header class="modal-header">
+      <h2 id="cmd-share-title">{{t "cmdshare.title"}}</h2>
+      <button type="button" class="icon-btn" data-close-dialog aria-label="{{t "admin.close"}}">×</button>
+    </header>
+    <h3 class="modset-section">{{t "cmdshare.export"}}</h3>
+    <div id="cmd-export-body"><p class="muted">{{t "cmdhub.loading"}}</p></div>
+    <h3 class="modset-section">{{t "cmdshare.import"}}</h3>
+    <p class="muted">{{t "cmdshare.import_hint"}}</p>
+    <form class="cmdshare-import" hx-post="/bot/{{.BotID}}/{{.Hub.Base}}/import" hx-encoding="multipart/form-data" hx-target="#cmd-import-result" hx-swap="innerHTML" hx-disabled-elt="find button">
+      <input type="file" name="file" accept=".json,application/json" required>
+      <button type="submit" class="btn btn-sm btn-primary">{{t "cmdshare.import_button"}}</button>
+    </form>
+    <div id="cmd-import-result"></div>
   </dialog>
 
   <dialog id="cmd-deleted-dialog" class="modal modal-wide" aria-labelledby="cmd-deleted-title">
@@ -679,3 +696,21 @@
   </div>
 </section>
 {{end}}
+
+{{/* Export: pick commands, the form downloads one file (internal/web/cmdshare.go). */}}
+{{define "cmd_export_fragment"}}{{with .Data}}
+{{if .Commands}}
+<form class="cmdshare-export" method="get" action="/bot/{{.BotID}}/{{.Hub.Base}}/export">
+  <div class="choices-list">
+    {{range .Commands}}<label class="choices-item"><span>{{if $.Hub.Event}}{{.Name}}{{else}}/{{.Name}}{{end}}{{with .Description}} <span class="muted">· {{.}}</span>{{end}}</span><input type="checkbox" name="ids" value="{{.ID}}" checked></label>{{end}}
+  </div>
+  <p class="hint">{{t "cmdshare.export_hint"}}</p>
+  <button type="submit" class="btn btn-sm btn-primary">{{t "cmdshare.export_button"}}</button>
+</form>
+{{else}}<p class="muted">{{t "cmdshare.export_empty"}}</p>{{end}}
+{{end}}{{end}}
+
+{{define "cmd_import_result"}}{{with .Data}}
+{{with .Imported}}<div class="alert alert-success">✅ {{t "cmdshare.imported" "count" (len .)}} <span class="mono">{{range $i, $n := .}}{{if $i}}, {{end}}{{$n}}{{end}}</span></div>{{end}}
+{{range .Failed}}<div class="alert alert-error">{{with .Name}}<span class="mono">{{.}}</span>: {{end}}{{t .Key}}</div>{{end}}
+{{end}}{{end}}

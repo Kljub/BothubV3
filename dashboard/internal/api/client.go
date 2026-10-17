@@ -617,6 +617,15 @@ func (c *Client) CreateCustomEvent(ctx context.Context, s Session, botID int64, 
 	return out, err
 }
 
+// SaveCustomCommand stores a whole command (name, description, enabled,
+// graph) like the builder does.
+func (c *Client) SaveCustomCommand(ctx context.Context, s Session, kind Kind, botID, id int64, name, description string, enabled bool, graph json.RawMessage) (CustomCommand, error) {
+	var out CustomCommand
+	in := map[string]any{"name": name, "description": description, "enabled": enabled, "graph": graph}
+	_, err := c.do(ctx, s, http.MethodPut, kind.path(botID, fmt.Sprintf("/%d", id)), in, &out)
+	return out, err
+}
+
 func (c *Client) SetCustomCommandEnabled(ctx context.Context, s Session, kind Kind, botID, id int64, enabled bool) (CustomCommand, error) {
 	var out CustomCommand
 	_, err := c.do(ctx, s, http.MethodPatch, kind.path(botID, fmt.Sprintf("/%d", id)), map[string]bool{"enabled": enabled}, &out)

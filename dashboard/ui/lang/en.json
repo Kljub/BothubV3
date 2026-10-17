@@ -6143,5 +6143,21 @@
   "builder.cfg.ticket_prefix": "Prefix",
   "builder.cfg.ticket_prefix_hint": "Letters, digits and dashes. Empty: remove the prefix. Discord allows only 2 renames per channel in 10 minutes.",
   "modset.ticket.archiveCategory": "Archive category",
-  "modset.ticket.archiveCategory_hint": "Deleted tickets are moved into this category instead (with its permissions). When it is full (50 channels), the oldest archived ticket is deleted."
+  "modset.ticket.archiveCategory_hint": "Deleted tickets are moved into this category instead (with its permissions). When it is full (50 channels), the oldest archived ticket is deleted.",
+  "cmdshare.button": "Export / Import",
+  "cmdshare.title": "Export and import",
+  "cmdshare.export": "Export",
+  "cmdshare.export_hint": "One file with every picked entry (trigger, blocks, description). Role, channel and user IDs belong to this server.",
+  "cmdshare.export_button": "Download file",
+  "cmdshare.export_empty": "Nothing to export yet.",
+  "cmdshare.import": "Import",
+  "cmdshare.import_hint": "A .bothub.json file from another bot or server. Imported entries are switched off: fix the IDs of roles, channels and users first, then switch them on. A name that is taken gets -2, -3 …",
+  "cmdshare.import_button": "Import",
+  "cmdshare.imported": "{count} imported (switched off):",
+  "cmdshare.import.no_file": "Please pick a file.",
+  "cmdshare.import.too_big": "The file is too big (max. 4 MB).",
+  "cmdshare.import.bad_file": "This is not a BotHub export file.",
+  "cmdshare.import.newer": "The file comes from a newer BotHub version.",
+  "cmdshare.import.wrong_kind": "The file holds the other kind (commands instead of events or the other way round). Please import it on the matching page.",
+  "cmdshare.import.count": "The file must hold 1 to 100 entries."
 }
