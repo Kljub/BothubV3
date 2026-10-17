@@ -39,3 +39,9 @@ test('member conditions: account and membership age', () => {
   assert.equal(memberConditions({ maxMemberDays: 1 }, 300, 0.5), true);
   assert.equal(memberConditions({}, 1, 1), true);
 });
+
+test('nested quantifiers are refused (they can hang the bot)', () => {
+  assert.equal(ruleRegex('(a+)+$'), null);
+  assert.equal(ruleRegex('/(\\w*)*x/'), null);
+  assert.notEqual(ruleRegex('/^!wiki (\\w+)/i'), null);
+});

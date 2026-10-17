@@ -15,7 +15,8 @@
             "equals",
             "starts_with",
             "ends_with",
-            "word"
+            "word",
+            "regex"
           ],
           "default": "contains"
         },
@@ -23,7 +24,8 @@
           "key": "keywords",
           "type": "words",
           "max": 100,
-          "maxLength": 100
+          "maxLength": 100,
+          "hint": true
         },
         {
           "key": "message",
@@ -45,7 +47,10 @@
             "channel.mention",
             "channel.id",
             "message.content",
-            "message.url"
+            "message.url",
+            "match",
+            "match.1",
+            "match.2"
           ]
         },
         {

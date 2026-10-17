@@ -50,11 +50,15 @@ function domainAllowed(host: string, allowed: string[]): boolean {
   });
 }
 
-/** Builds the regex of a rule; null when invalid (or too long). */
+/**
+ * Builds a regex from "/pattern/flags" or a plain pattern (case does not
+ * matter); null when invalid, too long or with a nested quantifier such as
+ * (a+)+ that can hang the bot on a long message.
+ */
 export function ruleRegex(pattern: string): RegExp | null {
   const m = /^\/(.+)\/([a-z]*)$/s.exec(pattern.trim());
   try {
-    if (pattern.length > 300) return null;
+    if (pattern.length > 300 || /\([^)]*[+*}][^)]*\)\s*[+*{]/.test(pattern)) return null;
     return m ? new RegExp(m[1]!, m[2]!.replace(/[^imsu]/g, '')) : new RegExp(pattern, 'i');
   } catch {
     return null;

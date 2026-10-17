@@ -6178,5 +6178,10 @@
   "modset.leveling.rewards.once": "Give only once (not again after losing a level or removal)",
   "modset.suggestions.reviewChannel": "Review channel (optional)",
   "modset.suggestions.reviewChannel_hint": "New suggestions land here first with \"Publish\" and \"Deny\" buttons. The manager roles decide (without roles: whoever can manage messages in the channel). Only published suggestions get a number and votes. Empty: suggestions appear at once.",
-  "modset.suggestions.preventSelfVote": "No vote on the own suggestion"
+  "modset.suggestions.preventSelfVote": "No vote on the own suggestion",
+  "modset.auto-responder.responders.match.regex": "matches a regex pattern",
+  "modset.auto-responder.responders.keywords_hint": "With \"Regex\": one pattern per line, e.g. /^!wiki (\\w+)/i. Groups are available in the answer as {match}, {match.1}, {match.2} … and {match.name}. Nested repeats such as (a+)+ are ignored.",
+  "modset.var.match": "Matched text (regex)",
+  "modset.var.match.1": "Group 1 (regex)",
+  "modset.var.match.2": "Group 2 (regex)"
 }

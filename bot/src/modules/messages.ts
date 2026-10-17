@@ -5,11 +5,12 @@ import { PermissionFlagsBits, type Guild, type Message, type SendableChannels } 
 import { log } from '../core/log.js';
 import { baseVars, buildMessage, fill, idIn, idsIn, passes, reactionOf, type MessageConfig, type ModuleContext } from './context.js';
 import { allow, send } from './guard.js';
+import { ruleRegex } from './automod-rules.js';
 
 // ---------- Autoresponder ----------
 
 export interface Responder {
-  match?: 'contains' | 'equals' | 'starts_with' | 'ends_with' | 'word';
+  match?: 'contains' | 'equals' | 'starts_with' | 'ends_with' | 'word' | 'regex';
   keywords?: string[];
   message?: MessageConfig;
   reply?: boolean;
@@ -22,6 +23,25 @@ export interface Responder {
 
 function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Regex responders: the first pattern that matches, with its groups as
+ * placeholders: {match} (whole match), {match.1} … and {match.<name>}.
+ * Null when no pattern matches.
+ */
+export function regexMatch(content: string, patterns: string[] | undefined): Record<string, string> | null {
+  const text = content.slice(0, 4000);
+  for (const p of patterns ?? []) {
+    const re = ruleRegex(p);
+    const m = re?.exec(text);
+    if (!m) continue;
+    const vars: Record<string, string> = { match: m[0] };
+    m.slice(1, 10).forEach((g, i) => (vars[`match.${i + 1}`] = g ?? ''));
+    for (const [k, v] of Object.entries(m.groups ?? {})) vars[`match.${k}`] = v ?? '';
+    return vars;
+  }
+  return null;
 }
 
 /** Does the message text trigger a responder? Case-insensitive. */
@@ -177,12 +197,13 @@ export async function onMessage(ctx: ModuleContext, msg: Message, edited = false
     const cfg = ctx.config<{ responders: Responder[] }>('auto-responder');
     const now = Date.now();
     for (const [i, r] of (cfg.responders ?? []).entries()) {
-      if (!keywordMatch(msg.content, r.keywords, r.match)) continue;
+      const groups = r.match === 'regex' ? regexMatch(msg.content, r.keywords) : null;
+      if (r.match === 'regex' ? !groups : !keywordMatch(msg.content, r.keywords, r.match)) continue;
       if (!passes(r.channelMode, idsIn(r.channels, guildId), channelIds)) continue;
       if (!passes(r.roleMode, idsIn(r.roles, guildId), roleIds)) continue;
       const key = `${ctx.botId}:${i}:${msg.channelId}`;
       if (now - (lastResponse.get(key) ?? 0) < (r.cooldown ?? 0) * 1000) continue;
-      const payload = buildMessage(r.message, vars);
+      const payload = buildMessage(r.message, groups ? { ...vars, ...groups } : vars);
       if (!payload) continue;
       if (!allow(ctx, 'auto-responder', msg.channelId)) continue;
       lastResponse.set(key, now);

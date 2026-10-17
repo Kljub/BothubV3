@@ -6178,5 +6178,10 @@
   "modset.leveling.rewards.once": "Nur einmal vergeben (auch nach Level-Verlust oder Entfernen nicht erneut)",
   "modset.suggestions.reviewChannel": "Prüf-Kanal (optional)",
   "modset.suggestions.reviewChannel_hint": "Neue Vorschläge landen erst hier mit den Buttons „Veröffentlichen“ und „Ablehnen“. Entscheiden dürfen die Verwalter-Rollen (ohne Rollen: wer im Kanal Nachrichten verwalten darf). Nur veröffentlichte Vorschläge bekommen eine Nummer und Abstimmung. Leer: Vorschläge erscheinen sofort.",
-  "modset.suggestions.preventSelfVote": "Keine Stimme für den eigenen Vorschlag"
+  "modset.suggestions.preventSelfVote": "Keine Stimme für den eigenen Vorschlag",
+  "modset.auto-responder.responders.match.regex": "auf ein Regex-Muster passt",
+  "modset.auto-responder.responders.keywords_hint": "Bei „Regex“: ein Muster pro Zeile, z. B. /^!wiki (\\w+)/i. Gruppen stehen in der Antwort als {match}, {match.1}, {match.2} … und {match.name} bereit. Verschachtelte Wiederholungen wie (a+)+ werden ignoriert.",
+  "modset.var.match": "Gefundener Text (Regex)",
+  "modset.var.match.1": "Gruppe 1 (Regex)",
+  "modset.var.match.2": "Gruppe 2 (Regex)"
 }
