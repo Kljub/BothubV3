@@ -68,6 +68,110 @@
           "only"
         ]
       }
+    },
+    {
+      "key": "minAgeHours",
+      "type": "number",
+      "min": 0,
+      "max": 8760,
+      "default": 0
+    },
+    {
+      "key": "maxAgeDays",
+      "type": "number",
+      "min": 0,
+      "max": 3650,
+      "default": 0,
+      "hint": true
+    },
+    {
+      "key": "boards",
+      "type": "list",
+      "max": 10,
+      "titleField": "name",
+      "hint": true,
+      "item": [
+        {
+          "key": "name",
+          "type": "text",
+          "max": 60,
+          "default": "Board",
+          "required": true,
+          "plain": true
+        },
+        {
+          "key": "enabled",
+          "type": "bool",
+          "default": true
+        },
+        {
+          "key": "emoji",
+          "type": "emojis",
+          "max": 1
+        },
+        {
+          "key": "required",
+          "type": "number",
+          "min": 1,
+          "max": 1000,
+          "default": 5
+        },
+        {
+          "key": "channel",
+          "type": "channel",
+          "channelTypes": [
+            "text",
+            "announcement"
+          ],
+          "required": true
+        },
+        {
+          "key": "color",
+          "type": "color",
+          "default": "#facc15"
+        },
+        {
+          "key": "channelMode",
+          "type": "select",
+          "options": [
+            "all",
+            "except",
+            "only"
+          ],
+          "default": "all"
+        },
+        {
+          "key": "channels",
+          "type": "channels",
+          "channelTypes": [
+            "text",
+            "announcement",
+            "forum"
+          ],
+          "max": 50,
+          "showIf": {
+            "channelMode": [
+              "except",
+              "only"
+            ]
+          }
+        },
+        {
+          "key": "minAgeHours",
+          "type": "number",
+          "min": 0,
+          "max": 8760,
+          "default": 0
+        },
+        {
+          "key": "maxAgeDays",
+          "type": "number",
+          "min": 0,
+          "max": 3650,
+          "default": 0,
+          "hint": true
+        }
+      ]
     }
   ]
 }
