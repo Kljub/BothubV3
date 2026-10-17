@@ -76,6 +76,26 @@ async function fetchText(url: URL): Promise<{ status: number; text: string } | n
   return { status: res.status, text: new TextDecoder('utf-8').decode(buf) };
 }
 
+/**
+ * The feed a normal web page links to (<link rel="alternate"
+ * type="application/rss+xml|atom+xml" href>), as an absolute URL; null
+ * when the page names none.
+ */
+export function discoverFeed(html: string, page: string): string | null {
+  for (const m of html.matchAll(/<link\b[^>]*>/gi)) {
+    const t = m[0];
+    if (!/rel=["']?[^"'>]*alternate/i.test(t) || !/type=["']?application\/(rss|atom)\+xml/i.test(t)) continue;
+    const href = /href=["']([^"']+)["']/i.exec(t)?.[1];
+    if (!href) continue;
+    try {
+      return new URL(decode(href), page).toString();
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
 /** IDs not seen yet (oldest first, at most max); null on the first round. */
 export function unseen<T extends { id: string }>(items: T[], seen: string[] | undefined, max = 5): T[] | null {
   if (!seen) return null;
@@ -92,17 +112,31 @@ export async function rss(ctx: ModuleContext, guilds: Guild[]): Promise<void> {
     const source = String(f.url ?? '').slice(0, 500);
     if (!t || !source || waiting(ctx, 'rss-notifs', t.guild.id, source)) continue;
     if (budget-- <= 0) break;
-    const url = await publicUrl(source);
+    // A normal web page: its linked feed is found once and remembered.
+    const foundKey = `found:${source}`.slice(0, 200);
+    const address = ctx.getState<string>('rss-notifs', t.guild.id, foundKey) ?? source;
+    const url = await publicUrl(address);
     if (!url) {
       failed(ctx, 'rss-notifs', t.guild.id, source, 'not a public http(s) address');
       continue;
     }
-    const res = await fetchText(url);
+    let res = await fetchText(url);
     if (res?.status !== 200) {
       failed(ctx, 'rss-notifs', t.guild.id, source, `HTTP ${res?.status ?? 'error'}`);
       continue;
     }
-    const feed = parseRss(res.text);
+    let feed = parseRss(res.text);
+    if (!feed.items.length && address === source) {
+      const linked = discoverFeed(res.text, url.toString());
+      const linkedUrl = linked ? await publicUrl(linked) : null;
+      if (linkedUrl) {
+        res = await fetchText(linkedUrl);
+        if (res?.status === 200) {
+          feed = parseRss(res.text);
+          if (feed.items.length) ctx.setState('rss-notifs', t.guild.id, foundKey, linkedUrl.toString());
+        }
+      }
+    }
     if (!feed.items.length) {
       failed(ctx, 'rss-notifs', t.guild.id, source, 'no RSS or Atom entries');
       continue;
@@ -117,7 +151,7 @@ export async function rss(ctx: ModuleContext, guilds: Guild[]): Promise<void> {
       continue;
     }
     for (const item of fresh) {
-      const vars = { ...baseVars(t.guild, null), feed: feed.title, title: item.title, url: item.url, author: item.author, summary: item.summary, image: item.image };
+      const vars = { ...baseVars(t.guild, null), feed: feed.title, title: item.title, url: item.url, author: item.author, summary: item.summary, image: item.image, published: item.published ? `<t:${Math.floor(item.published / 1000)}:R>` : '' };
       const payload = notification(messageOf(f.message, RSS_DEFAULT), vars, t.roles);
       if (!payload || !(await send(ctx, 'rss-notifs', t.channel, payload))) break;
       remember([item.id]);

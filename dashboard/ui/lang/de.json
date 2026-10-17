@@ -4709,7 +4709,7 @@
   "modset.rss-notifs.feeds": "Feeds",
   "modset.rss-notifs.feeds_hint": "Prüfung alle 5 Minuten. Die erste Prüfung merkt sich nur, was schon da ist, damit keine alten Einträge gepostet werden.",
   "modset.rss-notifs.feeds.url": "Feed-Adresse (RSS oder Atom)",
-  "modset.rss-notifs.feeds.url_hint": "z. B. https://www.heise.de/rss/heise-atom.xml; nur öffentliche Adressen.",
+  "modset.rss-notifs.feeds.url_hint": "Die Adresse eines RSS- oder Atom-Feeds oder einfach die Webseite: Der Bot sucht den dort verlinkten Feed selbst. Beim ersten Abruf werden vorhandene Einträge nur gemerkt, gepostet wird erst Neues.",
   "modset.rss-notifs.feeds.channel": "Channel",
   "modset.rss-notifs.feeds.mentionRoles": "Rollen anpingen",
   "modset.rss-notifs.feeds.message": "Nachricht",
@@ -6183,5 +6183,6 @@
   "modset.auto-responder.responders.keywords_hint": "Bei „Regex“: ein Muster pro Zeile, z. B. /^!wiki (\\w+)/i. Gruppen stehen in der Antwort als {match}, {match.1}, {match.2} … und {match.name} bereit. Verschachtelte Wiederholungen wie (a+)+ werden ignoriert.",
   "modset.var.match": "Gefundener Text (Regex)",
   "modset.var.match.1": "Gruppe 1 (Regex)",
-  "modset.var.match.2": "Gruppe 2 (Regex)"
+  "modset.var.match.2": "Gruppe 2 (Regex)",
+  "modset.var.published": "Veröffentlicht (relative Zeit)"
 }

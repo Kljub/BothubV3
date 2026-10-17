@@ -4709,7 +4709,7 @@
   "modset.rss-notifs.feeds": "Feeds",
   "modset.rss-notifs.feeds_hint": "Checked every 5 minutes. The first check only remembers what is there, so old entries are not posted.",
   "modset.rss-notifs.feeds.url": "Feed address (RSS or Atom)",
-  "modset.rss-notifs.feeds.url_hint": "e.g. https://www.heise.de/rss/heise-atom.xml; public addresses only.",
+  "modset.rss-notifs.feeds.url_hint": "The address of an RSS or Atom feed, or just the web page: the bot finds the feed it links to. On the first check existing entries are only remembered; only new ones are posted.",
   "modset.rss-notifs.feeds.channel": "Channel",
   "modset.rss-notifs.feeds.mentionRoles": "Ping roles",
   "modset.rss-notifs.feeds.message": "Message",
@@ -6183,5 +6183,6 @@
   "modset.auto-responder.responders.keywords_hint": "With \"Regex\": one pattern per line, e.g. /^!wiki (\\w+)/i. Groups are available in the answer as {match}, {match.1}, {match.2} … and {match.name}. Nested repeats such as (a+)+ are ignored.",
   "modset.var.match": "Matched text (regex)",
   "modset.var.match.1": "Group 1 (regex)",
-  "modset.var.match.2": "Group 2 (regex)"
+  "modset.var.match.2": "Group 2 (regex)",
+  "modset.var.published": "Published (relative time)"
 }
