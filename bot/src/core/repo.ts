@@ -544,6 +544,27 @@ export class Repo {
    * The currencies of the Economy settings as slash command choices
    * ("🪙 Coins" -> key); without settings the default currency.
    */
+  /**
+   * The checked entries of a choices field of a plugin's settings, with the
+   * labels the plugin gave them (config.setOptions), for command choices.
+   */
+  pluginChoices(botId: number, pluginId: string, field: string): { name: string; value: string }[] {
+    const parse = (raw: unknown): unknown => {
+      try {
+        return JSON.parse(String(raw ?? 'null'));
+      } catch {
+        return null;
+      }
+    };
+    const own = parse((this.db.prepare('SELECT config FROM plugin_settings WHERE bot_id = ? AND plugin_id = ?').get(botId, pluginId) as Row | undefined)?.config) as Record<string, unknown> | null;
+    const picked = own?.[field];
+    if (!Array.isArray(picked)) return [];
+    const options = parse((this.db.prepare('SELECT options FROM plugin_field_options WHERE bot_id = ? AND plugin_id = ? AND field = ?').get(botId, pluginId, field) as Row | undefined)?.options);
+    const labels = new Map<string, string>();
+    if (Array.isArray(options)) for (const o of options as { value?: unknown; label?: unknown }[]) if (typeof o?.value === 'string') labels.set(o.value, typeof o.label === 'string' && o.label ? o.label : o.value);
+    return picked.filter((v): v is string => typeof v === 'string' && v !== '').slice(0, 25).map((v) => ({ name: labels.get(v) ?? v, value: v }));
+  }
+
   currencyChoices(botId: number): { name: string; value: string }[] {
     return this.currencyList(botId).map((c) => ({ name: `${c.emoji && !c.emoji.startsWith('<') ? `${c.emoji} ` : ''}${c.name}`, value: c.key }));
   }

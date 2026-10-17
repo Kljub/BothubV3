@@ -333,6 +333,31 @@ test('economy commands offer the currencies of the settings as choices', () => {
   assert.deepEqual(cur.choices?.map((c) => c.value), ['coins', 'socialcredit']);
 });
 
+test('a choice option offers the checked entries of a plugin settings field (labels from setOptions)', async () => {
+  const { choiceSource } = await import('../discord/commands.js');
+  const { repo } = migratedDb();
+  const db = repo.db;
+  db.prepare("INSERT INTO bots (name, autostart) VALUES ('Test', 0)").run();
+  db.prepare("INSERT INTO plugins (id, version, sha256, manifest) VALUES ('plugin_forge', '1.1.0', ?, '{}')").run('a'.repeat(64));
+  db.prepare("INSERT INTO plugin_installs (plugin_id, version) VALUES ('plugin_forge', '1.1.0')").run();
+  db.prepare('INSERT INTO plugin_settings (bot_id, plugin_id, config) VALUES (1, ?, ?)').run('plugin_forge', JSON.stringify({ checkpoint: ['a.safetensors [1]', 'b.safetensors [2]'] }));
+  db.prepare('INSERT INTO plugin_field_options (bot_id, plugin_id, field, options) VALUES (1, ?, ?, ?)').run('plugin_forge', 'checkpoint', JSON.stringify([{ value: 'a.safetensors [1]', label: 'Model A' }, { value: 'c [3]', label: 'C' }]));
+  assert.deepEqual(repo.pluginChoices(1, 'plugin_forge', 'checkpoint'), [{ name: 'Model A', value: 'a.safetensors [1]' }, { name: 'b.safetensors [2]', value: 'b.safetensors [2]' }]);
+  assert.equal(choiceSource({ source: 'plugin', source_plugin: 'plugin_forge', source_field: 'checkpoint' }), 'plugin:plugin_forge:checkpoint');
+  assert.equal(choiceSource({ source: 'plugin', source_plugin: '../x', source_field: 'checkpoint' }), '');
+  const graph = {
+    schemaVersion: 1,
+    nodes: [
+      { id: 't', type: 'trigger.slash', typeVersion: 1, config: { command_name: 'img', description: 'x' } },
+      { id: 'o', type: 'option.choice', typeVersion: 1, config: { name: 'model', description: 'Model', required: false, source: 'plugin', source_plugin: 'plugin_forge', source_field: 'checkpoint', variable: 'model' } },
+    ],
+    edges: [{ from: { node: 'o', port: 'option' }, to: { node: 't', port: 'options' } }],
+  };
+  const body = buildCommands([{ id: 1, kind: 'command', name: 'img', description: 'x', builtin: false, moduleKey: null, eventType: null, graph } as never], undefined, false, { 'plugin:plugin_forge:checkpoint': repo.pluginChoices(1, 'plugin_forge', 'checkpoint') });
+  const opt = (body[0]!.options as { choices?: { name: string; value: string }[] }[])[0]!;
+  assert.deepEqual(opt.choices?.map((c) => c.name), ['Model A', 'b.safetensors [2]']);
+});
+
 test('role limits: owner limits from the role, admins have none, activity is tracked', () => {
   const { repo } = migratedDb();
   const db = repo.db;

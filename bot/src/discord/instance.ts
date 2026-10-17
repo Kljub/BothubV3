@@ -35,7 +35,7 @@ import type { PluginManager } from '../sdk/manager.js';
 import type { DiscordApiDeps } from '../sdk/discord-api.js';
 import type { Graph, GraphNode, NodeDefinition } from '../graph/types.js';
 import { endGiveaway } from '../modules/giveaway.js';
-import { buildCommands, denied, hideRepliesOf, settingsOf, type Permissions, type PseudoRoles } from './commands.js';
+import { buildCommands, choiceSource, denied, hideRepliesOf, settingsOf, type ChoiceSources, type Permissions, type PseudoRoles } from './commands.js';
 import { discordHandlers, type DiscordData } from './handlers.js';
 import { buildMessage, hasBody } from './message.js';
 import { VoiceManager } from './voice.js';
@@ -641,6 +641,21 @@ export class BotInstance {
     this.registerTimer.unref();
   }
 
+  /** Choices of the bot for option.choice ("source"): currencies and plugin settings fields. */
+  private choiceSources(): ChoiceSources {
+    const sources: ChoiceSources = { currencies: this.deps.repo.currencyChoices(this.botId) };
+    for (const cmd of this.commands.values()) {
+      for (const n of cmd.graph.nodes) {
+        if (n.type !== 'option.choice') continue;
+        const key = choiceSource(n.config);
+        if (!key.startsWith('plugin:') || key in sources) continue;
+        const [, plugin, field] = key.split(':') as [string, string, string];
+        sources[key] = this.deps.repo.pluginChoices(this.botId, plugin, field);
+      }
+    }
+    return sources;
+  }
+
   /** PUT the full command list; skipped when nothing changed. */
   private async registerCommands(): Promise<void> {
     const c = this.client;
@@ -649,7 +664,7 @@ export class BotInstance {
       [...this.commands.values()],
       (dropped) => this.deps.repo.logCode(this.botId, 'WAR-2008', { module: 'commands', problem: `Discord allows 100 commands; ${dropped} were not registered` }),
       this.deps.repo.moduleOn(this.botId, 'dm-commands'),
-      { currencies: this.deps.repo.currencyChoices(this.botId) },
+      this.choiceSources(),
     );
     const hash = createHash('sha256').update(JSON.stringify(body)).digest('hex');
     if (hash === this.registeredHash) return;

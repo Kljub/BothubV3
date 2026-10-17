@@ -83,8 +83,21 @@ export function permissionBit(name: string): bigint | undefined {
   return undefined;
 }
 
-/** Choices a choice option can take from the bot itself (config "source"), e.g. the economy currencies. */
+/**
+ * Choices a choice option can take from the bot itself (config "source"):
+ * "currencies" (Economy), or "plugin:<id>:<field>" (the checked entries of
+ * a choices field of a plugin's settings, e.g. the Forge models).
+ */
 export type ChoiceSources = Record<string, { name: string; value: string }[]>;
+
+/** Key of an option's source in ChoiceSources ('' for none). */
+export function choiceSource(config: Record<string, unknown>): string {
+  const source = String(config.source ?? '');
+  if (source !== 'plugin') return source;
+  const plugin = String(config.source_plugin ?? '');
+  const field = String(config.source_field ?? '');
+  return /^[a-z0-9_-]{2,64}$/.test(plugin) && /^[a-z][a-zA-Z0-9_]{0,31}$/.test(field) ? `plugin:${plugin}:${field}` : '';
+}
 
 function optionJson(run: { nodes: GraphNode[] }, cmd: CommandRow, sources: ChoiceSources = {}): Record<string, unknown>[] {
   const trig = triggerOf(cmd);
@@ -102,7 +115,7 @@ function optionJson(run: { nodes: GraphNode[] }, cmd: CommandRow, sources: Choic
       description: (String(o.config.description ?? '') || name).slice(0, 100),
       required: o.config.required !== false,
     };
-    const source = o.type === 'option.choice' ? sources[String(o.config.source ?? '')] : undefined;
+    const source = o.type === 'option.choice' ? sources[choiceSource(o.config)] : undefined;
     if (source?.length) {
       json.choices = source.slice(0, 25).map((c) => ({ name: c.name.slice(0, 100), value: c.value.slice(0, 100) }));
     } else if (o.type === 'option.choice') {

@@ -45,11 +45,33 @@
         "type": "string",
         "enum": [
           "",
-          "currencies"
+          "currencies",
+          "plugin"
         ],
         "default": "",
         "x-labelKey": "builder.cfg.choices_source",
         "x-hintKey": "builder.cfg.choices_source_hint"
+      },
+      "source_plugin": {
+        "type": "string",
+        "pattern": "^([a-z0-9_-]{2,64})?$",
+        "x-labelKey": "builder.cfg.source_plugin",
+        "x-showIf": {
+          "source": [
+            "plugin"
+          ]
+        }
+      },
+      "source_field": {
+        "type": "string",
+        "pattern": "^([a-z][a-zA-Z0-9_]{0,31})?$",
+        "x-labelKey": "builder.cfg.source_field",
+        "x-hintKey": "builder.cfg.source_field_hint",
+        "x-showIf": {
+          "source": [
+            "plugin"
+          ]
+        }
       },
       "choices": {
         "type": "string",
