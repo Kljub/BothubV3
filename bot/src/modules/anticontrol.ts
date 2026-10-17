@@ -32,7 +32,7 @@ type Punish = 'none' | 'timeout' | 'kick' | 'ban' | 'quarantine' | 'captcha';
 export interface AntiConfig extends CaptchaConfig {
   logChannel: unknown; trustedUsers: string[]; trustedRoles: unknown; quarantineRole: unknown;
   raidEnabled: boolean; raidJoins: number; raidSeconds: number; raidAction: Punish; lockdownMinutes: number; lockChannels: unknown; pauseInvites: boolean;
-  ageEnabled: boolean; minAccountDays: number; ageAction: Punish;
+  ageEnabled: boolean; minAccountDays: number; ageAction: Punish | 'ban_until' | 'ban_for'; ageBanHours: number;
   riskEnabled: boolean; riskThreshold: number; riskAction: Punish; staffNames: string[];
   botEnabled: boolean; botAction: 'kick' | 'ban' | 'none';
   scamEnabled: boolean; scamAction: Punish; scamDomains: string[];
@@ -188,6 +188,27 @@ async function punish(ctx: ModuleContext, member: GuildMember | null, action: Pu
   return 'could not act (missing permission or higher role)';
 }
 
+/**
+ * When a too new account may come back (pure): when it is old enough, but
+ * with a duration (hours) not before that time either; at least one hour.
+ */
+export function ageUnbanAt(now: number, createdAt: number, minDays: number, hours: number): number {
+  const eligible = createdAt + minDays * 86_400_000;
+  return Math.max(now + 3_600_000, eligible, hours > 0 ? now + hours * 3_600_000 : 0);
+}
+
+/** Bans a too new account and plans the unban (tempban job, as /tempban does). */
+async function ageBan(ctx: ModuleContext, member: GuildMember | null, createdAt: number, minDays: number, hours: number): Promise<string> {
+  if (!member?.bannable) return 'could not act (missing permission or higher role)';
+  const until = ageUnbanAt(Date.now(), createdAt, minDays, hours);
+  const why = `AntiControl: account younger than ${minDays} days (unban <t:${Math.floor(until / 1000)}:f>)`;
+  await member.send({ content: `You were removed from **${member.guild.name}** because your Discord account is too new. You can join again <t:${Math.floor(until / 1000)}:R>.` }).catch(() => undefined);
+  const ok = await member.ban({ reason: why.slice(0, 500) }).then(() => true, () => false);
+  if (!ok) return 'could not act (missing permission or higher role)';
+  ctx.repo.addJob(ctx.botId, 'undo', new Date(until), { op: 'unban', guild: member.guild.id, user: member.id }, `tempban:${member.guild.id}:${member.id}`);
+  return `banned until <t:${Math.floor(until / 1000)}:f>`;
+}
+
 // ----- lockdown -----
 
 interface LockState { until: number; channels: { id: string; send: boolean | null }[]; invites: boolean }
@@ -269,7 +290,10 @@ export async function antiJoin(ctx: ModuleContext, member: GuildMember): Promise
   if (cfg.ageEnabled !== false && (cfg.minAccountDays ?? 0) > 0) {
     const days = (Date.now() - user.createdTimestamp) / 86_400_000;
     if (days < cfg.minAccountDays!) {
-      const done = await punish(ctx, member, cfg.ageAction ?? 'kick', `account younger than ${cfg.minAccountDays} days`);
+      const action = cfg.ageAction ?? 'kick';
+      const done = action === 'ban_until' || action === 'ban_for'
+        ? await ageBan(ctx, member, user.createdTimestamp, cfg.minAccountDays!, action === 'ban_for' ? cfg.ageBanHours ?? 24 : 0)
+        : await punish(ctx, member, action, `account younger than ${cfg.minAccountDays} days`);
       await log(ctx, guild, 'Account Age Protection', `<@${user.id}> (${user.tag}), account created <t:${Math.floor(user.createdTimestamp / 1000)}:R>: ${done}.`, 0xf59e0b);
       return;
     }

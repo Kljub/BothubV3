@@ -6159,5 +6159,9 @@
   "cmdshare.import.bad_file": "This is not a BotHub export file.",
   "cmdshare.import.newer": "The file comes from a newer BotHub version.",
   "cmdshare.import.wrong_kind": "The file holds the other kind (commands instead of events or the other way round). Please import it on the matching page.",
-  "cmdshare.import.count": "The file must hold 1 to 100 entries."
+  "cmdshare.import.count": "The file must hold 1 to 100 entries.",
+  "modset.anticontrol.ageAction.ban_until": "Ban until the account is old enough",
+  "modset.anticontrol.ageAction.ban_for": "Ban for a duration (never before the account is old enough)",
+  "modset.anticontrol.ageBanHours": "Ban length (hours)",
+  "modset.anticontrol.ageBanHours_hint": "At least 1 hour. The bot first tells the member by DM when they can join again."
 }
