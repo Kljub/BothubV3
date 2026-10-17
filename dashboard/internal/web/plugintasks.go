@@ -22,31 +22,65 @@ type pluginTasksView struct {
 	api.PluginTasks
 }
 
-// allTasksView: the tab, one block per bot (bots without plugins left out).
+// allTasksView: the tab, one block per bot (bots without plugins left out),
+// or only the bot picked in the drop-down (Selected; 0 = all bots).
 type allTasksView struct {
-	Bots  []pluginTasksView
-	Error string
+	Bots     []pluginTasksView
+	Error    string
+	Selected int64
+	// Choices: every bot of the user for the drop-down (panel only).
+	Choices []api.Bot
 }
 
 func (s *Server) handleAllTasks(w http.ResponseWriter, r *http.Request, p Page) {
 	s.renderAllTasks(w, r, p, "")
 }
 
-func (s *Server) renderAllTasks(w http.ResponseWriter, r *http.Request, p Page, errKey string) {
-	bots, err := s.api.ListBots(r.Context(), session(r))
+// handleTasksPanel: the tab's head (title, bot drop-down) and the list,
+// loaded once when the tab opens; the list then refreshes on its own.
+func (s *Server) handleTasksPanel(w http.ResponseWriter, r *http.Request, p Page) {
+	v, err := s.allTasks(r, "")
 	if err != nil {
 		s.failTo(w, r, p, err, "#account-flash")
 		return
 	}
-	v := allTasksView{Error: errKey}
+	s.render(w, http.StatusOK, "error", "tasks_panel_fragment", withData(p, v))
+}
+
+func (s *Server) renderAllTasks(w http.ResponseWriter, r *http.Request, p Page, errKey string) {
+	v, err := s.allTasks(r, errKey)
+	if err != nil {
+		s.failTo(w, r, p, err, "#account-flash")
+		return
+	}
+	s.render(w, http.StatusOK, "error", "all_tasks_fragment", withData(p, v))
+}
+
+func (s *Server) allTasks(r *http.Request, errKey string) (allTasksView, error) {
+	bots, err := s.api.ListBots(r.Context(), session(r))
+	if err != nil {
+		return allTasksView{}, err
+	}
+	v := allTasksView{Error: errKey, Choices: bots}
+	if id, _ := strconv.ParseInt(r.FormValue("bot"), 10, 64); id > 0 {
+		for _, b := range bots {
+			if b.ID == id {
+				v.Selected = id
+			}
+		}
+	}
 	for _, b := range bots {
+		if v.Selected != 0 && b.ID != v.Selected {
+			continue
+		}
 		tasks, err := s.api.PluginTasks(r.Context(), session(r), b.ID)
-		if err != nil || (len(tasks.Tasks) == 0 && !tasks.Running) {
+		// All bots: only those with plugins; one picked bot is always shown.
+		if err != nil || (v.Selected == 0 && len(tasks.Tasks) == 0 && !tasks.Running) {
 			continue
 		}
 		v.Bots = append(v.Bots, pluginTasksView{Bot: b, PluginTasks: tasks})
 	}
-	s.render(w, http.StatusOK, "error", "all_tasks_fragment", withData(p, v))
+	return v, nil
 }
 
 // handleAllTaskAction: "End task" or "Restart" of one plugin of one bot. The

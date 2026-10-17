@@ -6204,5 +6204,7 @@
   "modset.bot-profile.servers.nick": "Name (nickname)",
   "modset.bot-profile.servers.bio": "Bio",
   "modset.bot-profile.servers.avatar": "Avatar (https link)",
-  "modset.bot-profile.servers.banner": "Banner (https link)"
+  "modset.bot-profile.servers.banner": "Banner (https link)",
+  "plugins.tasks.pick_bot": "Pick a bot",
+  "plugins.tasks.all_bots": "All bots"
 }

@@ -301,6 +301,7 @@ func (s *Server) routes() http.Handler {
 	mux.Handle("DELETE /account/mobile/devices/{did}", auth(s.handleMobileDelete))
 	// Task manager of the plugins (Settings → Task manager).
 	mux.Handle("GET /account/tasks", auth(s.handleAllTasks))
+	mux.Handle("GET /account/tasks/panel", auth(s.handleTasksPanel))
 	mux.Handle("POST /account/tasks/{id}/{plugin}/{action}", auth(s.handleAllTaskAction))
 	mux.Handle("PUT /bot/{id}/plugins/{plugin}/settings", auth(s.handlePluginSettingsSave))
 	mux.Handle("POST /bot/{id}/plugins/{plugin}/files", auth(s.handlePluginFileUpload))

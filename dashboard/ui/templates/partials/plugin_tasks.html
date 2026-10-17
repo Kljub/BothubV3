@@ -7,7 +7,7 @@
 
 {{define "all_tasks_fragment"}}
 {{with .Data}}
-<div id="all-tasks" hx-get="/account/tasks" hx-trigger="every 5s [!document.getElementById('settings-tasks')?.hidden]" hx-swap="outerHTML">
+<div id="all-tasks" hx-get="/account/tasks" hx-include="#tasks-bot" hx-trigger="every 5s [!document.getElementById('settings-tasks')?.hidden]" hx-swap="outerHTML">
   {{with .Error}}<div class="alert alert-danger">{{t .}}</div>{{end}}
   <p class="hint">{{t "plugins.tasks.meta"}}</p>
   {{range .Bots}}{{$bot := .Bot}}
@@ -18,42 +18,34 @@
     {{else if not .Tasks}}
     <p class="muted settings-row">{{t "plugins.tasks.none"}}</p>
     {{else}}
-    <div class="task-table">
-      <table class="table">
-        <thead><tr>
-          <th>{{t "plugins.tasks.plugin"}}</th>
-          <th>{{t "plugins.tasks.state"}}</th>
-          <th class="num">{{t "plugins.tasks.cpu"}}</th>
-          <th class="num">{{t "plugins.tasks.memory"}}</th>
-          <th class="num">{{t "plugins.tasks.calls"}}</th>
-          <th class="num">{{t "plugins.tasks.restarts"}}</th>
-          <th>{{t "plugins.tasks.uptime"}}</th>
-          <th></th>
-        </tr></thead>
-        <tbody>
-        {{range .Tasks}}
-          <tr>
-            <td><strong>{{.Name}}</strong> <span class="muted mono">{{.Version}}</span>{{with .PID}}<br><span class="hint mono">PID {{.}}</span>{{end}}</td>
-            <td>
-              <span class="badge-soft badge-soft-{{if eq .State "running"}}running{{else if or (eq .State "starting") (eq .State "restarting")}}error{{else}}stopped{{end}}"><span class="badge-dot" aria-hidden="true"></span>{{t (printf "plugins.tasks.state.%s" .State)}}</span>
-              {{with .Reason}}<br><span class="hint">{{t .}}</span>{{end}}
-            </td>
-            <td class="num">{{pct .CPUPercent}}</td>
-            <td class="num">{{with .MemoryBytes}}{{bytes .}}{{else}}–{{end}}</td>
-            <td class="num" title="{{t "plugins.tasks.calls_total" "count" .Calls}}">{{.CallsPerMinute}}/min</td>
-            <td class="num">{{.Restarts}}</td>
-            <td class="muted">{{with since .StartedAt}}{{.}}{{else}}–{{end}}</td>
-            <td class="num task-actions">
-              {{if or (eq .State "running") (eq .State "starting") (eq .State "restarting")}}
-              <button type="button" class="btn btn-sm btn-outline-danger" hx-post="/account/tasks/{{$bot.ID}}/{{.PluginID}}/kill" hx-target="#all-tasks" hx-swap="outerHTML" hx-confirm="{{t "plugins.tasks.kill_confirm" "name" .Name}}">{{t "plugins.tasks.kill"}}</button>
-              {{end}}
-              <button type="button" class="btn btn-sm" hx-post="/account/tasks/{{$bot.ID}}/{{.PluginID}}/restart" hx-target="#all-tasks" hx-swap="outerHTML">{{t "plugins.tasks.restart"}}</button>
-            </td>
-          </tr>
-        {{end}}
-        </tbody>
-      </table>
-    </div>
+    {{/* One row per task: name and state, the numbers below, the buttons on the right (fits the tab, no side scrolling). */}}
+    <ul class="task-list">
+    {{range .Tasks}}
+      <li class="task-row">
+        <div class="task-main">
+          <div class="task-title">
+            <strong>{{.Name}}</strong> <span class="muted mono">{{.Version}}</span>
+            <span class="badge-soft badge-soft-{{if eq .State "running"}}running{{else if or (eq .State "starting") (eq .State "restarting")}}error{{else}}stopped{{end}}"><span class="badge-dot" aria-hidden="true"></span>{{t (printf "plugins.tasks.state.%s" .State)}}</span>
+          </div>
+          {{with .Reason}}<p class="hint task-reason">{{t .}}</p>{{end}}
+          <dl class="task-stats">
+            <div><dt>{{t "plugins.tasks.cpu"}}</dt><dd>{{pct .CPUPercent}}</dd></div>
+            <div><dt>{{t "plugins.tasks.memory"}}</dt><dd>{{with .MemoryBytes}}{{bytes .}}{{else}}–{{end}}</dd></div>
+            <div title="{{t "plugins.tasks.calls_total" "count" .Calls}}"><dt>{{t "plugins.tasks.calls"}}</dt><dd>{{.CallsPerMinute}}/min</dd></div>
+            <div><dt>{{t "plugins.tasks.restarts"}}</dt><dd>{{.Restarts}}</dd></div>
+            {{with .PID}}<div><dd class="mono muted">PID {{.}}</dd></div>{{end}}
+            {{with since .StartedAt}}<div><dt>{{t "plugins.tasks.uptime"}}</dt><dd>{{.}}</dd></div>{{end}}
+          </dl>
+        </div>
+        <div class="task-actions">
+          {{if or (eq .State "running") (eq .State "starting") (eq .State "restarting")}}
+          <button type="button" class="btn btn-sm btn-outline-danger" hx-post="/account/tasks/{{$bot.ID}}/{{.PluginID}}/kill" hx-include="#tasks-bot" hx-target="#all-tasks" hx-swap="outerHTML" hx-confirm="{{t "plugins.tasks.kill_confirm" "name" .Name}}">{{t "plugins.tasks.kill"}}</button>
+          {{end}}
+          <button type="button" class="btn btn-sm" hx-post="/account/tasks/{{$bot.ID}}/{{.PluginID}}/restart" hx-include="#tasks-bot" hx-target="#all-tasks" hx-swap="outerHTML">{{t "plugins.tasks.restart"}}</button>
+        </div>
+      </li>
+    {{end}}
+    </ul>
     {{end}}
   </div>
   {{else}}
@@ -61,4 +53,20 @@
   {{end}}
 </div>
 {{end}}
+{{end}}
+
+{{/* The tab's head with the bot drop-down and the list (loaded once). */}}
+{{define "tasks_panel_fragment"}}
+<div class="tasks-panel">
+  <div class="tasks-head">
+    <h2>{{t "plugins.tasks.title"}}</h2>
+    {{with .Data}}
+    <select id="tasks-bot" name="bot" aria-label="{{t "plugins.tasks.pick_bot"}}" hx-get="/account/tasks" hx-trigger="change" hx-target="#all-tasks" hx-swap="outerHTML">
+      <option value="">{{t "plugins.tasks.all_bots"}}</option>
+      {{range .Choices}}<option value="{{.ID}}" {{if eq .ID $.Data.Selected}}selected{{end}}>{{.Name}}</option>{{end}}
+    </select>
+    {{end}}
+  </div>
+  {{template "all_tasks_fragment" .}}
+</div>
 {{end}}

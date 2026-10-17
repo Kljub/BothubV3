@@ -30,7 +30,20 @@
 .meter-fill-high { fill: var(--red); }
 
 /* Task manager of the plugins: the table scrolls sideways on phones. */
-.task-table { overflow-x: auto; }
-.task-table .table { min-width: 640px; }
-.task-actions { white-space: nowrap; }
-.task-actions .btn + .btn { margin-left: 6px; }
+/* Task manager: one row per plugin process; wraps instead of scrolling sideways. */
+.task-list { list-style: none; margin: 0; padding: 0; }
+.task-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 12px 14px; }
+.task-row + .task-row { border-top: 1px solid var(--border); }
+.task-main { min-width: 0; flex: 1; }
+.task-title { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; overflow-wrap: anywhere; }
+.task-reason { margin: 4px 0 0; }
+.task-stats { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 6px 0 0; font-size: 12px; }
+.task-stats div { display: flex; gap: 4px; }
+.task-stats dt { color: var(--muted); }
+.task-stats dd { margin: 0; font-variant-numeric: tabular-nums; }
+.task-actions { display: flex; flex-direction: column; align-items: stretch; gap: 6px; flex: none; }
+.task-actions .btn { white-space: nowrap; }
+@media (max-width: 520px) { .task-row { flex-direction: column; } .task-actions { flex-direction: row; } }
+.tasks-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.tasks-head h2 { margin: 0; }
+.tasks-head select { min-width: 180px; max-width: 100%; }

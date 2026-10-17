@@ -1177,7 +1177,7 @@ document.addEventListener('drop', (event) => {
     }
     // Task manager tab (settings): drawn again when it is open.
     const box = document.getElementById('all-tasks');
-    if (box && b && !document.getElementById('settings-tasks')?.hidden && window.htmx) htmx.ajax('GET', '/account/tasks', { target: '#all-tasks', swap: 'outerHTML' });
+    if (box && b && !document.getElementById('settings-tasks')?.hidden && window.htmx) htmx.ajax('GET', '/account/tasks', { target: '#all-tasks', swap: 'outerHTML', values: { bot: document.getElementById('tasks-bot')?.value || '' } });
   });
   window.addEventListener('pagehide', () => live.close());
 })();

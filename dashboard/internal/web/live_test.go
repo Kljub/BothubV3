@@ -138,6 +138,17 @@ func TestPluginTasksTab(t *testing.T) {
 	if strings.Contains(body, "Quiet") {
 		t.Fatal("a bot without plugins is left out")
 	}
+	// The panel has the bot drop-down; a picked bot shows only that bot.
+	w = httptest.NewRecorder()
+	s.handleTasksPanel(w, httptest.NewRequest(http.MethodGet, "/account/tasks/panel", nil), Page{Locale: "en"})
+	if body = w.Body.String(); !strings.Contains(body, `id="tasks-bot"`) || !strings.Contains(body, ">All bots<") || !strings.Contains(body, "Alpha") {
+		t.Fatalf("panel: %s", body)
+	}
+	w = httptest.NewRecorder()
+	s.handleAllTasks(w, httptest.NewRequest(http.MethodGet, "/account/tasks?bot=8", nil), Page{Locale: "en"})
+	if body = w.Body.String(); strings.Contains(body, "Alpha") || !strings.Contains(body, "Quiet") {
+		t.Fatalf("bot 8 picked: only Quiet (even without plugins): %s", body)
+	}
 }
 
 // Without Redis /live answers 204: the browser stops reconnecting.

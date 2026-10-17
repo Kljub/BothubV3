@@ -65,8 +65,7 @@
 
       {{/* Task manager of the plugins of every bot: loaded when the tab opens, then every 5 s while it is open. */}}
       <section class="settings-content" id="settings-tasks" hidden>
-        <h2>{{t "plugins.tasks.title"}}</h2>
-        <div id="all-tasks" hx-get="/account/tasks" hx-trigger="intersect once" hx-swap="outerHTML"><p class="muted">{{t "settings.secrets.loading"}}</p></div>
+        <div id="tasks-panel" hx-get="/account/tasks/panel" hx-trigger="intersect once" hx-swap="outerHTML"><h2>{{t "plugins.tasks.title"}}</h2><p class="muted">{{t "settings.secrets.loading"}}</p></div>
       </section>
     </div>
   </div>
