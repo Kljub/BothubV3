@@ -633,10 +633,22 @@
 {{if .User}}
 <p class="muted">{{t "settings.secrets.intro"}}</p>
 
-<h3 class="settings-group">{{t "admin.secrets.title"}} <span class="badge-soft">{{len .Secrets}}</span></h3>
-<div class="settings-card secrets-card">
+<h3 class="settings-group">{{t "admin.secrets.title"}} <span class="badge-soft" data-secret-count data-total="{{len .Secrets}}">{{len .Secrets}}</span></h3>
+{{if .Secrets}}
+{{/* Search, filter and sort (app.js, in the browser: the list keeps them after saving). */}}
+<div class="secret-tools" data-secret-tools>
+  <input type="search" data-secret-q placeholder="{{t "admin.secrets.tools.search"}}" aria-label="{{t "admin.secrets.tools.search"}}">
+  <select data-secret-filter aria-label="{{t "admin.secrets.tools.filter"}}">
+    {{range list "all" "empty" "set" "shared" "unused" "address" "key"}}<option value="{{.}}">{{t (printf "admin.secrets.tools.filter.%s" .)}}</option>{{end}}
+  </select>
+  <select data-secret-sort aria-label="{{t "admin.secrets.tools.sort"}}">
+    {{range list "name" "name_desc" "newest" "oldest" "updated"}}<option value="{{.}}">{{t (printf "admin.secrets.tools.sort.%s" .)}}</option>{{end}}
+  </select>
+</div>
+{{end}}
+<div class="settings-card secrets-card" data-secret-list>
   {{range .Secrets}}
-  <details class="settings-row settings-expand secret-row">
+  <details class="settings-row settings-expand secret-row" data-key="{{.Key}}" data-text="{{.Key}} {{.Description}}" data-set="{{.Set}}" data-used="{{len .UsedBy}}" data-address="{{.Address}}" data-created="{{.CreatedAt.Unix}}" data-updated="{{.UpdatedAt.Unix}}">
     <summary>
       <span class="secret-icon" aria-hidden="true">{{if .Address}}🔗{{else}}🔑{{end}}</span>
       <span class="settings-row-text">
@@ -664,6 +676,7 @@
   {{else}}
   <div class="settings-row secret-empty"><span class="settings-row-text"><strong>{{t "admin.secrets.empty"}}</strong><span class="hint">{{t "admin.secrets.empty_hint"}}</span></span></div>
   {{end}}
+  <div class="settings-row secret-empty" data-secret-none hidden><span class="settings-row-text"><strong>{{t "admin.secrets.tools.none"}}</strong></span></div>
   <details class="settings-row settings-expand secret-add">
     <summary>
       <span class="secret-icon" aria-hidden="true">＋</span>

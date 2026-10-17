@@ -6206,5 +6206,21 @@
   "modset.bot-profile.servers.avatar": "Avatar (https-Link)",
   "modset.bot-profile.servers.banner": "Banner (https-Link)",
   "plugins.tasks.pick_bot": "Bot auswählen",
-  "plugins.tasks.all_bots": "Alle Bots"
+  "plugins.tasks.all_bots": "Alle Bots",
+  "admin.secrets.tools.search": "Secrets durchsuchen …",
+  "admin.secrets.tools.filter": "Filter",
+  "admin.secrets.tools.sort": "Sortierung",
+  "admin.secrets.tools.none": "Kein Secret passt zur Suche oder zum Filter.",
+  "admin.secrets.tools.filter.all": "Alle",
+  "admin.secrets.tools.filter.empty": "Leer ([NULL])",
+  "admin.secrets.tools.filter.set": "Mit Wert",
+  "admin.secrets.tools.filter.shared": "Von Plugins genutzt",
+  "admin.secrets.tools.filter.unused": "Nicht genutzt",
+  "admin.secrets.tools.filter.address": "Adressen",
+  "admin.secrets.tools.filter.key": "Schlüssel",
+  "admin.secrets.tools.sort.name": "Name A–Z",
+  "admin.secrets.tools.sort.name_desc": "Name Z–A",
+  "admin.secrets.tools.sort.newest": "Neueste zuerst",
+  "admin.secrets.tools.sort.oldest": "Älteste zuerst",
+  "admin.secrets.tools.sort.updated": "Zuletzt geändert"
 }

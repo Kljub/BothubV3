@@ -1181,3 +1181,70 @@ document.addEventListener('drop', (event) => {
   });
   window.addEventListener('pagehide', () => live.close());
 })();
+
+// API / Secrets (user settings): search, filter and sort of the own secrets.
+// The choice lives in the page, so it stays when the list is drawn again
+// after saving or deleting.
+(() => {
+  const state = { q: '', filter: 'all', sort: 'name' };
+  const matches = (row) => {
+    const d = row.dataset;
+    const text = (d.text || '').toLowerCase();
+    if (state.q && !text.includes(state.q)) return false;
+    switch (state.filter) {
+      case 'empty': return d.set !== 'true';
+      case 'set': return d.set === 'true';
+      case 'shared': return Number(d.used) > 0;
+      case 'unused': return Number(d.used) === 0;
+      case 'address': return d.address === 'true';
+      case 'key': return d.address !== 'true';
+      default: return true;
+    }
+  };
+  const order = {
+    name: (a, b) => a.dataset.key.localeCompare(b.dataset.key),
+    name_desc: (a, b) => b.dataset.key.localeCompare(a.dataset.key),
+    newest: (a, b) => Number(b.dataset.created) - Number(a.dataset.created),
+    oldest: (a, b) => Number(a.dataset.created) - Number(b.dataset.created),
+    updated: (a, b) => Number(b.dataset.updated) - Number(a.dataset.updated),
+  };
+  const apply = (scope) => {
+    const tools = scope.querySelector('[data-secret-tools]');
+    const list = scope.querySelector('[data-secret-list]');
+    if (!tools || !list) return;
+    tools.querySelector('[data-secret-q]').value = state.q;
+    tools.querySelector('[data-secret-filter]').value = state.filter;
+    tools.querySelector('[data-secret-sort]').value = state.sort;
+    const rows = [...list.querySelectorAll('.secret-row[data-key]')];
+    const add = list.querySelector('.secret-add');
+    let shown = 0;
+    rows.sort(order[state.sort] || order.name).forEach((row) => {
+      const ok = matches(row);
+      row.hidden = !ok;
+      if (ok) shown++;
+      list.insertBefore(row, add);
+    });
+    const none = list.querySelector('[data-secret-none]');
+    if (none) {
+      none.hidden = shown > 0;
+      list.insertBefore(none, add);
+    }
+    const count = scope.querySelector('[data-secret-count]');
+    if (count) count.textContent = shown === rows.length ? String(rows.length) : `${shown} / ${rows.length}`;
+  };
+  const scopeOf = (el) => el.closest('[id]') || document;
+  document.addEventListener('input', (e) => {
+    if (!e.target.matches('[data-secret-q]')) return;
+    state.q = e.target.value.trim().toLowerCase();
+    apply(scopeOf(e.target.closest('[data-secret-tools]').parentElement));
+  });
+  document.addEventListener('change', (e) => {
+    if (e.target.matches('[data-secret-filter]')) state.filter = e.target.value;
+    else if (e.target.matches('[data-secret-sort]')) state.sort = e.target.value;
+    else return;
+    apply(scopeOf(e.target.closest('[data-secret-tools]').parentElement));
+  });
+  document.addEventListener('htmx:afterSettle', (e) => {
+    if (e.target.querySelector?.('[data-secret-tools]')) apply(e.target);
+  });
+})();

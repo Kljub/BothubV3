@@ -151,3 +151,8 @@ a.settings-row:hover .settings-action { color: var(--text); }
 @media (max-width: 720px) { .limit-grid, .users-roles .secret-grid { grid-template-columns: 1fr; } }
 .limit-grid .field, .users-roles .secret-grid .field { min-width: 0; text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 500; color: var(--text); }
 .limit-grid .field input, .users-roles .secret-grid .field input, .users-roles .secret-grid .field select { width: 100%; max-width: none; }
+
+/* API / Secrets: search, filter, sort above the own secrets. */
+.secret-tools { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 10px; }
+.secret-tools input[type="search"] { flex: 1 1 120px; min-width: 0; width: auto; }
+.secret-tools select { flex: 0 0 auto; width: auto; max-width: 100%; }
