@@ -27,6 +27,7 @@ import { log } from '../core/log.js';
 import { baseVars, buildMessage, fill, idIn, idsIn, type MessageConfig, type ModuleContext } from './context.js';
 import { assignable, Bucket, warn } from './guard.js';
 import { giveawayButton } from './giveaway.js';
+import { roleGroupInteraction } from './rolegroups.js';
 
 // ---------- pure helpers ----------
 
@@ -139,6 +140,7 @@ export async function onModuleInteraction(ctx: ModuleContext, i: Interaction): P
   if (!('customId' in i) || typeof i.customId !== 'string' || !i.customId.startsWith('bhm:') || !i.inCachedGuild()) return;
   const [, module, action, arg] = i.customId.split(':');
   if (module === 'giveaway' && action === 'enter' && i.isButton()) return giveawayButton(ctx.repo, ctx.botId, i);
+  if (module === 'rr' && action && (i.isButton() || i.isStringSelectMenu())) return roleGroupInteraction(ctx, i, action, arg);
 
   if (module === 'verify') {
     const cfg = ctx.config<VerifyConfig>('verification');

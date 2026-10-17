@@ -2,6 +2,124 @@
   "module": "reaction-roles",
   "fields": [
     {
+      "key": "groups",
+      "type": "list",
+      "max": 25,
+      "titleField": "name",
+      "hint": true,
+      "item": [
+        {
+          "key": "name",
+          "type": "text",
+          "max": 60,
+          "default": "Roles",
+          "required": true
+        },
+        {
+          "key": "channel",
+          "type": "channel",
+          "channelTypes": [
+            "text",
+            "announcement"
+          ],
+          "required": true
+        },
+        {
+          "key": "style",
+          "type": "select",
+          "options": [
+            "buttons",
+            "select"
+          ],
+          "default": "buttons"
+        },
+        {
+          "key": "message",
+          "type": "message",
+          "default": {
+            "mode": "embed",
+            "title": "Choose your roles",
+            "description": "Click a button to get or remove a role.",
+            "color": "#7c5cff"
+          },
+          "vars": [
+            "server",
+            "members"
+          ]
+        },
+        {
+          "key": "roles",
+          "type": "roles",
+          "max": 25,
+          "required": true
+        },
+        {
+          "key": "labels",
+          "type": "words",
+          "max": 25,
+          "maxLength": 80,
+          "hint": true
+        },
+        {
+          "key": "emojis",
+          "type": "emojis",
+          "max": 25,
+          "hint": true
+        },
+        {
+          "key": "buttonStyle",
+          "type": "select",
+          "options": [
+            "secondary",
+            "primary",
+            "success",
+            "danger"
+          ],
+          "default": "secondary",
+          "showIf": {
+            "style": [
+              "buttons"
+            ]
+          }
+        },
+        {
+          "key": "placeholder",
+          "type": "text",
+          "max": 150,
+          "default": "Choose your roles",
+          "showIf": {
+            "style": [
+              "select"
+            ]
+          }
+        },
+        {
+          "key": "maxRoles",
+          "type": "number",
+          "min": 0,
+          "max": 25,
+          "default": 0,
+          "hint": true
+        },
+        {
+          "key": "requiredRoles",
+          "type": "roles",
+          "max": 25,
+          "hint": true
+        },
+        {
+          "key": "blacklist",
+          "type": "roles",
+          "max": 25
+        },
+        {
+          "key": "permanent",
+          "type": "bool",
+          "default": false
+        }
+      ]
+    },
+    {
       "key": "entries",
       "type": "list",
       "max": 100,
