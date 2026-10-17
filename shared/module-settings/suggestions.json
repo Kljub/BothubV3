@@ -12,6 +12,14 @@
       "hint": true
     },
     {
+      "key": "reviewChannel",
+      "type": "channel",
+      "channelTypes": [
+        "text"
+      ],
+      "hint": true
+    },
+    {
       "key": "convertMessages",
       "type": "bool",
       "default": true
@@ -30,6 +38,11 @@
       "key": "downvote",
       "type": "emojis",
       "max": 1
+    },
+    {
+      "key": "preventSelfVote",
+      "type": "bool",
+      "default": false
     },
     {
       "key": "color",

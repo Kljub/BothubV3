@@ -6175,5 +6175,8 @@
   "modset.leveling.syncMode.levelup": "Only on a level up (recommended)",
   "modset.leveling.syncMode.xp": "With every XP gain",
   "modset.leveling.syncMode_hint": "With every XP gain, reward roles removed by hand come back with the next message.",
-  "modset.leveling.rewards.once": "Give only once (not again after losing a level or removal)"
+  "modset.leveling.rewards.once": "Give only once (not again after losing a level or removal)",
+  "modset.suggestions.reviewChannel": "Review channel (optional)",
+  "modset.suggestions.reviewChannel_hint": "New suggestions land here first with \"Publish\" and \"Deny\" buttons. The manager roles decide (without roles: whoever can manage messages in the channel). Only published suggestions get a number and votes. Empty: suggestions appear at once.",
+  "modset.suggestions.preventSelfVote": "No vote on the own suggestion"
 }

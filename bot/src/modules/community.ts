@@ -1,8 +1,12 @@
 // Community modules: Leveling, Reaction Roles, Invite Tracker, Suggestions.
 
 import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
   EmbedBuilder,
   PermissionFlagsBits,
+  type ButtonInteraction,
   type Guild,
   type GuildMember,
   type Invite,
@@ -362,6 +366,7 @@ export async function inviteLeave(ctx: ModuleContext, member: GuildMember | Part
 interface SuggestConfig {
   channel: unknown; convertMessages: boolean; upvote: string[]; neutral: boolean; downvote: string[]; color: string;
   thread: boolean; anonymous: boolean; dmAuthor: boolean; managerRoles: unknown; autoApprove: number; autoDeny: number; roleMode: string; roles: unknown;
+  reviewChannel: unknown; preventSelfVote: boolean;
 }
 
 /** approved / rejected / null from the vote counts (0 = rule off). */
@@ -412,7 +417,71 @@ export function createSuggestion(ctx: ModuleContext, guild: Guild, member: Guild
   return run;
 }
 
+/**
+ * With a review channel a new suggestion goes there first (buttons for the
+ * team); approved ones are published, denied ones never are. The review
+ * entry lives in module_state until it is decided.
+ */
 async function postSuggestion(ctx: ModuleContext, guild: Guild, member: GuildMember, text: string): Promise<{ number: number; message: Message } | null> {
+  const cfg = ctx.config<SuggestConfig>('suggestions');
+  const review = guild.channels.cache.get(idIn(cfg.reviewChannel, guild.id) ?? '');
+  if (review?.isSendable()) {
+    const content = text.slice(0, 2000);
+    const id = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+    const embed = new EmbedBuilder()
+      .setTitle('💡 New suggestion (review)')
+      .setDescription(content)
+      .setColor(COLORS.pending)
+      .setAuthor({ name: member.displayName, iconURL: member.user.displayAvatarURL() })
+      .setFooter({ text: `From ${member.user.username} (${member.id})` })
+      .setTimestamp(new Date());
+    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder().setCustomId(`bhm:sugg:ok:${id}`).setLabel('Publish').setStyle(ButtonStyle.Success),
+      new ButtonBuilder().setCustomId(`bhm:sugg:no:${id}`).setLabel('Deny').setStyle(ButtonStyle.Danger),
+    );
+    const msg = await send(ctx, 'suggestions', review, { embeds: [embed], components: [row] });
+    if (!msg) return null;
+    ctx.setState('suggestions', guild.id, `review:${id}`, { author: member.id, content, message: msg.id, channel: review.id });
+    return { number: 0, message: msg };
+  }
+  return publishSuggestion(ctx, guild, member, text);
+}
+
+/** A review button: only managers (or members who can manage the review channel) decide. */
+export async function suggestionReview(ctx: ModuleContext, i: ButtonInteraction<'cached'>, action: string, id: string): Promise<void> {
+  const cfg = ctx.config<SuggestConfig>('suggestions');
+  const entry = ctx.getState<{ author: string; content: string; message: string; channel: string }>('suggestions', i.guildId, `review:${id}`);
+  if (!entry) return void (await i.reply({ content: 'This suggestion was decided already.', flags: 64 }));
+  const managers = idsIn(cfg.managerRoles, i.guildId);
+  const may = managers.length ? managers.some((r) => i.member.roles.cache.has(r)) : !!i.channel && i.channel.permissionsFor(i.member)?.has(PermissionFlagsBits.ManageMessages) === true;
+  if (!may) return void (await i.reply({ content: 'Only the suggestion team can decide this.', flags: 64 }));
+  ctx.deleteState('suggestions', i.guildId, `review:${id}`);
+  const author = await i.guild.members.fetch(entry.author).catch(() => null);
+  let note: string;
+  if (action === 'ok') {
+    const res = author ? await createSuggestionNow(ctx, i.guild, author, entry.content) : null;
+    note = res ? `✅ Published by ${i.user.username} as #${res.number}` : '⚠️ Could not be published (author left or no suggestions channel)';
+  } else {
+    note = `❌ Denied by ${i.user.username}`;
+    if (cfg.dmAuthor !== false && author) await author.send({ content: `Your suggestion in ${i.guild.name} was not published.` }).catch(() => undefined);
+  }
+  const embed = i.message.embeds[0] ? EmbedBuilder.from(i.message.embeds[0]).setColor(action === 'ok' ? COLORS.approved : COLORS.rejected).setFooter({ text: note.slice(0, 2048) }) : null;
+  await i.update({ embeds: embed ? [embed] : [], components: [] });
+}
+
+/** Publishes without the review step (approved review entries). */
+function createSuggestionNow(ctx: ModuleContext, guild: Guild, member: GuildMember, text: string): Promise<{ number: number; message: Message } | null> {
+  const key = `${ctx.botId}:${guild.id}`;
+  const run = (numberQueue.get(key) ?? Promise.resolve()).then(() => publishSuggestion(ctx, guild, member, text));
+  const tail = run.catch(() => undefined);
+  numberQueue.set(key, tail);
+  void tail.then(() => {
+    if (numberQueue.get(key) === tail) numberQueue.delete(key);
+  });
+  return run;
+}
+
+async function publishSuggestion(ctx: ModuleContext, guild: Guild, member: GuildMember, text: string): Promise<{ number: number; message: Message } | null> {
   const cfg = ctx.config<SuggestConfig>('suggestions');
   const channel = guild.channels.cache.get(idIn(cfg.channel, guild.id) ?? '');
   if (!channel?.isSendable()) return null;
@@ -465,6 +534,11 @@ export async function suggestionVote(ctx: ModuleContext, partial: MessageReactio
     .get(ctx.botId, msg.guildId, msg.id) as { id: number; number: number; author_id: string; status: string } | undefined;
   if (!row || row.status !== 'pending') return;
   const cfg = ctx.config<SuggestConfig>('suggestions');
+  // No votes on the own suggestion.
+  if (cfg.preventSelfVote && user.id === row.author_id) {
+    await reaction.users.remove(user.id).catch(() => undefined);
+    return;
+  }
   const up = (cfg.upvote ?? [])[0] || '👍';
   const down = (cfg.downvote ?? [])[0] || '👎';
   const full = msg.partial ? await msg.fetch() : msg;

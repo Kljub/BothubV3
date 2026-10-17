@@ -6175,5 +6175,8 @@
   "modset.leveling.syncMode.levelup": "Nur beim Level-Aufstieg (empfohlen)",
   "modset.leveling.syncMode.xp": "Bei jedem XP-Gewinn",
   "modset.leveling.syncMode_hint": "Bei jedem XP-Gewinn kommen von Hand entfernte Belohnungsrollen mit der nächsten Nachricht zurück.",
-  "modset.leveling.rewards.once": "Nur einmal vergeben (auch nach Level-Verlust oder Entfernen nicht erneut)"
+  "modset.leveling.rewards.once": "Nur einmal vergeben (auch nach Level-Verlust oder Entfernen nicht erneut)",
+  "modset.suggestions.reviewChannel": "Prüf-Kanal (optional)",
+  "modset.suggestions.reviewChannel_hint": "Neue Vorschläge landen erst hier mit den Buttons „Veröffentlichen“ und „Ablehnen“. Entscheiden dürfen die Verwalter-Rollen (ohne Rollen: wer im Kanal Nachrichten verwalten darf). Nur veröffentlichte Vorschläge bekommen eine Nummer und Abstimmung. Leer: Vorschläge erscheinen sofort.",
+  "modset.suggestions.preventSelfVote": "Keine Stimme für den eigenen Vorschlag"
 }
