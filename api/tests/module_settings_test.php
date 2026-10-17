@@ -64,7 +64,7 @@ check('words trimmed and unique', $r['keywords'] === ['hello', 'hi']);
 check('refs deduplicated', $r['channels'] === [$ref]);
 check('message normalized', $r['message']['color'] === '#abcdef' && $r['message']['content'] === '' && $r['message']['mode'] === 'embed');
 check('unknown fields dropped', !array_key_exists('extra', ModuleSettings::normalize($ar, ['extra' => 1])));
-check('bad select', rejects($ar, ['responders' => [['match' => 'regex']]], 'responders.0.match'));
+check('bad select', rejects($ar, ['responders' => [['match' => 'glob']]], 'responders.0.match'));
 check('bad ref', rejects($ar, ['responders' => [['channels' => [['id' => 'x', 'guild' => '1']]]]], 'responders.0.channels'));
 check('number range', rejects($ar, ['responders' => [['cooldown' => 99999]]], 'responders.0.cooldown'));
 check('number type', rejects($ar, ['responders' => [['cooldown' => '5']]], 'responders.0.cooldown'));
