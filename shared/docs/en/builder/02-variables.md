@@ -31,3 +31,7 @@ Many blocks give results. A block with the variable name `px` gives `{px}` and o
 ## Image cards
 
 `{card.<name>}` draws a card of the Card Designer for the member and posts it with the message (in the text or as embed image). Spaces in the name become `_`, e.g. `{card.Welcome_Card}`. The variable picker lists your cards under *Image cards*.
+
+## User menu commands
+
+A command of the type *User menu* (right click on a member → Apps) has the right-clicked member as `{target}`: `{target.mention}`, `{target.avatar}`, `{target.banner}`, `{target.created}`, `{target.account_age}`, `{target.joined}`, `{target.member_since}`, `{target.roles}`, `{target.top_role}` and the other `user` fields. `{user}` stays the member who used the menu. The variable picker shows them under *Right-clicked member*.

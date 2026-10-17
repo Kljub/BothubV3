@@ -6,6 +6,7 @@
   "group": "api",
   "order": 130,
   "color": "orange",
+  "beta": true,
   "icon": "▶︎",
   "labelKey": "builder.node.action_ifttt.label",
   "descriptionKey": "builder.node.action_ifttt.description",

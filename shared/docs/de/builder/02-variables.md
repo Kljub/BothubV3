@@ -31,3 +31,7 @@ Variablen aus **Data Storage** schreibt man `{var.<key>}`. Sie halten einen Wert
 ## Bildkarten
 
 `{card.<Name>}` zeichnet eine Karte aus dem Card Designer für das Mitglied und sendet sie mit der Nachricht (im Text oder als Embed-Bild). Leerzeichen im Namen werden zu `_`, z. B. `{card.Welcome_Card}`. Die Variablenauswahl listet deine Karten unter *Bildkarten*.
+
+## User-Menü-Commands
+
+Ein Command vom Typ *User-Menü* (Rechtsklick auf ein Mitglied → Apps) hat das rechtsgeklickte Mitglied als `{target}`: `{target.mention}`, `{target.avatar}`, `{target.banner}`, `{target.created}`, `{target.account_age}`, `{target.joined}`, `{target.member_since}`, `{target.roles}`, `{target.top_role}` und die anderen `user`-Felder. `{user}` bleibt, wer das Menü benutzt hat. Die Variablenauswahl zeigt sie unter *Rechtsgeklicktes Mitglied*.

@@ -2138,7 +2138,8 @@
   function pickVariable(onPick, mode = 'insert', node = null) {
     window.BotHubVarPicker?.open({
       t, el, icon, mode, onPick,
-      catalog: VAR_CATALOG,
+      // {target.*} only in user menu commands (category "commandType").
+      catalog: { ...VAR_CATALOG, categories: VAR_CATALOG.categories.filter((c) => !c.commandType || c.commandType === (trigger()?.config.command_type || 'slash')) },
       graphVars: () => graphVariables(node).filter((v) => mode !== 'insert' || !VAR_CATALOG.categories.some((c) => c.items.some((i) => i.token === v))),
       dataVarsUrl: meta.dataVarsUrl,
       cardsUrl: meta.cardsUrl,
@@ -2274,7 +2275,10 @@
         item.draggable = true;
         item.append(el('span', 'bpalette-grip', '⠿'), el('span', 'bnode-icon', d.icon || '•'));
         const text = el('span', 'bnode-text');
-        text.append(el('strong', '', t(d.labelKey)), el('span', '', t(d.descriptionKey || '')));
+        const title = el('strong', '', t(d.labelKey));
+        // "beta": works, but not finished or not set up everywhere yet.
+        if (d.beta) title.append(' ', el('span', 'beta', t('modules.beta')));
+        text.append(title, el('span', '', t(d.descriptionKey || '')));
         const star = el('span', `bpalette-star${favs.has(d.type) ? ' is-on' : ''}`, '★');
         star.setAttribute('role', 'button');
         star.tabIndex = 0;

@@ -58,7 +58,8 @@
       variables: () => PLACEHOLDERS.map((p) => `{${p}}`),
       pickVariable: window.BotHubVarPicker ? (onPick) => window.BotHubVarPicker.open({
         t, el, icon, onPick,
-        catalog: island('msgb-variables') || { categories: [] },
+        // No command here: no categories of a command type ({target.*}).
+        catalog: { categories: (island('msgb-variables') || { categories: [] }).categories.filter((c) => !c.commandType) },
         graphVars: () => [],
         dataVarsUrl: root.dataset.dataVarsUrl,
       }) : undefined,

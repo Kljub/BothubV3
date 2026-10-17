@@ -112,6 +112,11 @@
       "type": "boolean",
       "default": true
     },
+    "beta": {
+      "description": "true: the palette marks the block as Beta (works, but not finished or not set up everywhere yet).",
+      "type": "boolean",
+      "default": false
+    },
     "compact": {
       "description": "Small node box (condition states).",
       "type": "boolean",

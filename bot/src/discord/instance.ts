@@ -781,7 +781,10 @@ export class BotInstance {
         if (v && !(v in vars)) vars[v] = value;
       }
     } else if (i.isUserContextMenuCommand()) {
-      Object.assign(vars, userVars(i.targetUser, (i.targetMember as GuildMember | null) ?? null, 'target'));
+      // {target.*}: the right-clicked member. Discord may send only raw member data: load the member then.
+      const raw = i.targetMember as GuildMember | null;
+      const target = raw && 'displayAvatarURL' in raw ? raw : ((await i.guild?.members.fetch(i.targetUser.id).catch(() => null)) ?? null);
+      Object.assign(vars, userVars(i.targetUser, target, 'target'));
     } else if (i.isMessageContextMenuCommand()) {
       Object.assign(vars, { 'message.id': i.targetMessage.id, 'message.content': i.targetMessage.content, 'message.url': i.targetMessage.url });
     }

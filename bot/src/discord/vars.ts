@@ -5,6 +5,18 @@ import type { Guild, GuildMember, Message, PartialMessage, Role, User, PartialUs
 
 export type Vars = Record<string, string>;
 
+/** Roles of a member, highest first, without @everyone. */
+function memberRoleVars(member: GuildMember | null | undefined, prefix: string): Vars {
+  const cache = member?.roles?.cache;
+  if (!cache) return { [`${prefix}.roles`]: '', [`${prefix}.role_count`]: '0', [`${prefix}.top_role`]: '' };
+  const roles = [...cache.values()].filter((r) => r.id !== member!.guild?.id).sort((a, b) => b.position - a.position);
+  return {
+    [`${prefix}.roles`]: roles.map((r) => `<@&${r.id}>`).join(' '),
+    [`${prefix}.role_count`]: String(roles.length),
+    [`${prefix}.top_role`]: roles[0] ? `<@&${roles[0].id}>` : '',
+  };
+}
+
 export function userVars(user: User | PartialUser | null | undefined, member?: GuildMember | null, prefix = 'user', now = Date.now()): Vars {
   if (!user) return {};
   const name = member?.displayName ?? user.globalName ?? user.username ?? '';
@@ -20,6 +32,9 @@ export function userVars(user: User | PartialUser | null | undefined, member?: G
     [`${prefix}.joined`]: stamp(joined, 'D'),
     [`${prefix}.member_since`]: stamp(joined, 'R'),
     [`${prefix}.member_days`]: days(joined),
+    ...memberRoleVars(member, prefix),
+    [`${prefix}.nickname`]: member?.nickname ?? '',
+    [`${prefix}.bot`]: user.bot ? 'yes' : 'no',
     [prefix]: name,
     [`${prefix}.id`]: user.id,
     [`${prefix}.name`]: user.username ?? name,

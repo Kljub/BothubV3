@@ -1,5 +1,5 @@
 {
-  "$comment": "Placeholders of the variable picker (builder, message builder). Only names the bot resolves (bot/src/discord/vars.ts, graph/handlers-core.ts helperValue). Texts: dashboard lang keys vars.cat.<category> and vars.item.<id> / vars.item.<id>_hint. {var.<key>} (Data Storage) and the graph's own variables are added at run time.",
+  "$comment": "Placeholders of the variable picker (builder, message builder). Only names the bot resolves (bot/src/discord/vars.ts, graph/handlers-core.ts helperValue). Texts: dashboard lang keys vars.cat.<category> and vars.item.<id> / vars.item.<id>_hint. {var.<key>} (Data Storage) and the graph's own variables are added at run time. A category with \"commandType\" shows only in commands of that type (user: user menu commands, {target.*} = the right-clicked member).",
   "categories": [
     {
       "key": "basic",
@@ -52,6 +52,26 @@
         {
           "id": "user_member_days",
           "token": "{user.member_days}"
+        },
+        {
+          "id": "user_nickname",
+          "token": "{user.nickname}"
+        },
+        {
+          "id": "user_roles",
+          "token": "{user.roles}"
+        },
+        {
+          "id": "user_top_role",
+          "token": "{user.top_role}"
+        },
+        {
+          "id": "user_role_count",
+          "token": "{user.role_count}"
+        },
+        {
+          "id": "user_bot",
+          "token": "{user.bot}"
         },
         {
           "id": "user_voice_channel",
@@ -200,6 +220,85 @@
         {
           "id": "default_server",
           "token": "{DEFAULT_SERVER}"
+        }
+      ]
+    },
+    {
+      "key": "target",
+      "icon": "user",
+      "commandType": "user",
+      "items": [
+        {
+          "id": "target",
+          "token": "{target}"
+        },
+        {
+          "id": "target_mention",
+          "token": "{target.mention}"
+        },
+        {
+          "id": "target_name",
+          "token": "{target.name}"
+        },
+        {
+          "id": "target_id",
+          "token": "{target.id}"
+        },
+        {
+          "id": "target_avatar",
+          "token": "{target.avatar}"
+        },
+        {
+          "id": "target_banner",
+          "token": "{target.banner}"
+        },
+        {
+          "id": "target_nickname",
+          "token": "{target.nickname}"
+        },
+        {
+          "id": "target_created",
+          "token": "{target.created}"
+        },
+        {
+          "id": "target_account_age",
+          "token": "{target.account_age}"
+        },
+        {
+          "id": "target_account_days",
+          "token": "{target.account_days}"
+        },
+        {
+          "id": "target_joined",
+          "token": "{target.joined}"
+        },
+        {
+          "id": "target_member_since",
+          "token": "{target.member_since}"
+        },
+        {
+          "id": "target_member_days",
+          "token": "{target.member_days}"
+        },
+        {
+          "id": "target_roles",
+          "token": "{target.roles}"
+        },
+        {
+          "id": "target_top_role",
+          "token": "{target.top_role}"
+        },
+        {
+          "id": "target_role_count",
+          "token": "{target.role_count}"
+        },
+        {
+          "id": "target_bot",
+          "token": "{target.bot}"
+        },
+        {
+          "id": "target_voice_channel",
+          "token": "{target.voice.channel}"
         }
       ]
     },
