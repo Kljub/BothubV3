@@ -8,7 +8,8 @@ import type { Repo } from '../core/repo.js';
 import { GraphError, type Handler, type Run } from '../graph/interpreter.js';
 import type { GraphNode } from '../graph/types.js';
 import { snowflake } from '../graph/util.js';
-import { createSuggestion, decideSuggestion, levelFor } from '../modules/community.js';
+import { createSuggestion, decideSuggestion } from '../modules/community.js';
+import { levelFor, type CurveConfig } from '../modules/levelcurve.js';
 import { ModuleContext } from '../modules/context.js';
 import * as eco from '../modules/economy.js';
 import { afkOf, clearAfk, setAfk } from '../modules/afk.js';
@@ -91,7 +92,7 @@ export function moduleHandlers(repo: Repo, botId: number, secret: (key: string) 
     const member = (run.data as unknown as DiscordData).member;
     if (member) await eco.syncRoles(ctx, member);
   };
-  const levelCfg = () => ctx.config<{ baseXp: number; stepXp: number; maxLevel: number }>('leveling');
+  const levelCfg = () => ctx.config<CurveConfig>('leveling');
   const inviteStats = (guildId: string, userId: string) =>
     db
       .prepare(
@@ -212,7 +213,7 @@ export function moduleHandlers(repo: Repo, botId: number, secret: (key: string) 
         const mode = String(run.raw(node, 'xp_mode') ?? 'add');
         const xp = Math.max(0, mode === 'set' ? amount : mode === 'remove' ? cur - amount : cur + amount);
         const cfg = levelCfg();
-        const level = levelFor(xp, cfg.baseXp ?? 100, cfg.stepXp ?? 50, cfg.maxLevel ?? 0);
+        const level = levelFor(xp, cfg);
         db.prepare(
           `INSERT INTO leveling_members (bot_id, guild_id, user_id, xp, level) VALUES (?, ?, ?, ?, ?)
            ON CONFLICT (bot_id, guild_id, user_id) DO UPDATE SET xp = excluded.xp, level = excluded.level`,

@@ -6163,5 +6163,17 @@
   "modset.anticontrol.ageAction.ban_until": "Bannen, bis der Account alt genug ist",
   "modset.anticontrol.ageAction.ban_for": "Bannen für eine Dauer (nie bevor der Account alt genug ist)",
   "modset.anticontrol.ageBanHours": "Bann-Dauer (Stunden)",
-  "modset.anticontrol.ageBanHours_hint": "Mindestens 1 Stunde. Der Bot schreibt dem Mitglied vorher per DM, ab wann es wieder beitreten kann."
+  "modset.anticontrol.ageBanHours_hint": "Mindestens 1 Stunde. Der Bot schreibt dem Mitglied vorher per DM, ab wann es wieder beitreten kann.",
+  "modset.leveling.curve": "Levelkurve",
+  "modset.leveling.curve.linear": "Linear (Basis-XP, dann pro Level mehr)",
+  "modset.leveling.curve.custom": "Eigene Formel",
+  "modset.leveling.curveFormula": "Formel: Gesamt-XP für ein Level",
+  "modset.leveling.curveFormula_hint": "Mit level (oder L), Zahlen, + - * / % ^, Klammern und floor, ceil, round, sqrt, abs, log, min, max, pow. Beispiel: 5 * level ^ 2 + 50 * level + 100. Die XP müssen mit jedem Level steigen, sonst gilt die lineare Kurve. Eine Änderung gilt sofort für alle (Level werden aus den XP neu berechnet), Belohnungsrollen bleiben unverändert.",
+  "modset.leveling.voiceMinMembers": "Mindestens so viele Mitglieder im Sprachkanal",
+  "modset.leveling.voiceMinMembers_hint": "Voice-XP gibt es jede Minute, nur wenn so viele Mitglieder den ganzen Moment im selben Kanal sind (nicht stumm, nicht taub, nicht AFK, keine Bots).",
+  "modset.leveling.syncMode": "Belohnungen abgleichen",
+  "modset.leveling.syncMode.levelup": "Nur beim Level-Aufstieg (empfohlen)",
+  "modset.leveling.syncMode.xp": "Bei jedem XP-Gewinn",
+  "modset.leveling.syncMode_hint": "Bei jedem XP-Gewinn kommen von Hand entfernte Belohnungsrollen mit der nächsten Nachricht zurück.",
+  "modset.leveling.rewards.once": "Nur einmal vergeben (auch nach Level-Verlust oder Entfernen nicht erneut)"
 }

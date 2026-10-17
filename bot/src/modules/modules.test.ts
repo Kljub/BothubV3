@@ -114,14 +114,15 @@ test('module state and settings cache', () => {
 
 test('leveling curve', async () => {
   const { xpForLevel, levelFor } = await import('./community.js');
-  assert.equal(xpForLevel(0, 100, 50), 0);
-  assert.equal(xpForLevel(1, 100, 50), 100);
-  assert.equal(xpForLevel(3, 100, 50), 100 + 150 + 200);
-  assert.equal(levelFor(99, 100, 50), 0);
-  assert.equal(levelFor(100, 100, 50), 1);
-  assert.equal(levelFor(449, 100, 50), 2);
-  assert.equal(levelFor(450, 100, 50), 3);
-  assert.equal(levelFor(1_000_000, 100, 50, 10), 10);
+  const c = { baseXp: 100, stepXp: 50 };
+  assert.equal(xpForLevel(0, c), 0);
+  assert.equal(xpForLevel(1, c), 100);
+  assert.equal(xpForLevel(3, c), 100 + 150 + 200);
+  assert.equal(levelFor(99, c), 0);
+  assert.equal(levelFor(100, c), 1);
+  assert.equal(levelFor(449, c), 2);
+  assert.equal(levelFor(450, c), 3);
+  assert.equal(levelFor(1_000_000, { ...c, maxLevel: 10 }), 10);
 });
 
 test('invite detection and suggestion verdicts', async () => {

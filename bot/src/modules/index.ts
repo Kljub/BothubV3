@@ -5,7 +5,7 @@
 import { Events, type Client } from 'discord.js';
 import { log } from '../core/log.js';
 import { ensureRoleGroups } from './rolegroups.js';
-import { cacheInvites, inviteChanged, inviteJoin, inviteLeave, levelingLeave, levelingMessage, levelingVoice, levelingVoiceInit, prepareReactionRoles, reactionRoles, suggestionMessage, suggestionVote } from './community.js';
+import { cacheInvites, inviteChanged, inviteJoin, inviteLeave, levelingLeave, levelingMessage, levelingVoiceInit, relevel, prepareReactionRoles, reactionRoles, suggestionMessage, suggestionVote } from './community.js';
 import { automodHit, automodMessage, syncAutomod } from './automod.js';
 import type { ModuleContext } from './context.js';
 import { onCountingMessage, onStarReaction } from './games.js';
@@ -51,12 +51,14 @@ export function bindModules(client: Client, ctx: ModuleContext, timezone: () => 
     for (const g of guilds) guard('automod', syncAutomod(ctx, g));
     guard('stickies', ensureStickies(ctx, guilds));
     guard('captcha', ensureCaptchaPanels(ctx, guilds));
-    levelingVoiceInit(ctx, guilds);
+    levelingVoiceInit(ctx, () => [...client.guilds.cache.values()]);
+    guard('leveling-curve', Promise.resolve().then(() => relevel(ctx)));
     for (const g of guilds) antiAuditWarn(ctx, g);
   });
   bindAuditLog(client, ctx);
   ctx.onChange = () => {
     syncCurrencies(ctx);
+    guard('leveling-curve', Promise.resolve().then(() => relevel(ctx)));
     if (!client.isReady()) return;
     const guilds = [...client.guilds.cache.values()];
     guard('reaction-roles', prepareReactionRoles(ctx, guilds));
@@ -142,7 +144,6 @@ export function bindModules(client: Client, ctx: ModuleContext, timezone: () => 
     guard('reaction-role-remove', reactionRoles(ctx, r, u, false));
   });
   client.on(Events.VoiceStateUpdate, (before, after) => {
-    guard('leveling-voice', levelingVoice(ctx, before, after));
     guard('temp-voice', tempVoice(ctx, before, after));
     achVoice(ctx, before, after);
   });

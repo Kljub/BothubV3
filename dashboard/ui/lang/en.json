@@ -6163,5 +6163,17 @@
   "modset.anticontrol.ageAction.ban_until": "Ban until the account is old enough",
   "modset.anticontrol.ageAction.ban_for": "Ban for a duration (never before the account is old enough)",
   "modset.anticontrol.ageBanHours": "Ban length (hours)",
-  "modset.anticontrol.ageBanHours_hint": "At least 1 hour. The bot first tells the member by DM when they can join again."
+  "modset.anticontrol.ageBanHours_hint": "At least 1 hour. The bot first tells the member by DM when they can join again.",
+  "modset.leveling.curve": "Level curve",
+  "modset.leveling.curve.linear": "Linear (base XP, then more per level)",
+  "modset.leveling.curve.custom": "Own formula",
+  "modset.leveling.curveFormula": "Formula: total XP for a level",
+  "modset.leveling.curveFormula_hint": "With level (or L), numbers, + - * / % ^, brackets and floor, ceil, round, sqrt, abs, log, min, max, pow. Example: 5 * level ^ 2 + 50 * level + 100. The XP must rise with every level, otherwise the linear curve applies. A change applies to everyone at once (levels are worked out again from the XP); reward roles stay as they are.",
+  "modset.leveling.voiceMinMembers": "At least this many members in the voice channel",
+  "modset.leveling.voiceMinMembers_hint": "Voice XP comes every minute, only while this many members are in the same channel (not muted, not deafened, not AFK, no bots).",
+  "modset.leveling.syncMode": "Sync rewards",
+  "modset.leveling.syncMode.levelup": "Only on a level up (recommended)",
+  "modset.leveling.syncMode.xp": "With every XP gain",
+  "modset.leveling.syncMode_hint": "With every XP gain, reward roles removed by hand come back with the next message.",
+  "modset.leveling.rewards.once": "Give only once (not again after losing a level or removal)"
 }

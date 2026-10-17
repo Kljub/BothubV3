@@ -18,32 +18,27 @@ import { log } from '../core/log.js';
 import { baseVars, fill, idIn, idsIn, passes, reactionOf, sameEmoji, type ModuleContext } from './context.js';
 import { assignable, send, warn } from './guard.js';
 import type { JoinInfo } from './members.js';
+import { levelFor, type CurveConfig } from './levelcurve.js';
 
 // ---------- Leveling ----------
 
-/** Total XP needed to reach a level: level 1 costs base, each next level step more. */
-export function xpForLevel(level: number, base: number, step: number): number {
-  return level <= 0 ? 0 : level * base + (step * level * (level - 1)) / 2;
-}
+export { levelFor, xpForLevel } from './levelcurve.js';
 
-export function levelFor(xp: number, base: number, step: number, maxLevel = 0): number {
-  let level = 0;
-  while (xpForLevel(level + 1, base, step) <= xp && (maxLevel <= 0 || level < maxLevel) && level < 100_000) level++;
-  return level;
-}
+interface Reward { level: number; role: unknown; once?: boolean }
 
-interface LevelConfig {
-  minXp: number; maxXp: number; cooldown: number; baseXp: number; stepXp: number; maxLevel: number;
-  voiceXp: boolean; voiceXpPerMinute: number; levelUp: string; levelUpChannel: unknown; levelUpMessage: string;
+interface LevelConfig extends CurveConfig {
+  minXp: number; maxXp: number; cooldown: number;
+  voiceXp: boolean; voiceXpPerMinute: number; voiceMinMembers: number; levelUp: string; levelUpChannel: unknown; levelUpMessage: string;
   clearOnLeave: boolean; channelMode: string; channels: unknown; roleMode: string; roles: unknown; stackRewards: boolean;
-  rewards: { level: number; role: unknown }[];
+  syncMode: string; // levelup, xp
+  rewards: Reward[];
 }
 
 /** Adds XP, returns the new and old level. */
 function addXp(ctx: ModuleContext, guildId: string, userId: string, xp: number, cfg: Partial<LevelConfig>, message: boolean, voiceMinutes = 0): { old: number; level: number } {
   const row = ctx.db.prepare('SELECT xp, level FROM leveling_members WHERE bot_id = ? AND guild_id = ? AND user_id = ?').get(ctx.botId, guildId, userId) as { xp: number; level: number } | undefined;
   const total = (row?.xp ?? 0) + xp;
-  const level = levelFor(total, cfg.baseXp ?? 100, cfg.stepXp ?? 50, cfg.maxLevel ?? 0);
+  const level = levelFor(total, cfg);
   ctx.db
     .prepare(
       `INSERT INTO leveling_members (bot_id, guild_id, user_id, xp, level, messages, voice_minutes, last_xp_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -55,19 +50,42 @@ function addXp(ctx: ModuleContext, guildId: string, userId: string, xp: number, 
   return { old: row?.level ?? 0, level };
 }
 
+/**
+ * The reward roles a member should get and lose at a level (pure). Without
+ * stacking only the highest earned reward stays. "once" rewards are given a
+ * single time: after that they are neither given again nor removed.
+ */
+export function rewardPlan(rewards: { level: number; role: string; once?: boolean }[], level: number, stack: boolean, has: string[], givenOnce: string[]): { add: string[]; remove: string[] } {
+  const sorted = [...rewards].sort((a, b) => a.level - b.level);
+  const earned = sorted.filter((r) => r.level <= level);
+  const keep = stack ? earned : earned.slice(-1);
+  const add = keep.filter((r) => !has.includes(r.role) && !(r.once && givenOnce.includes(r.role))).map((r) => r.role);
+  const remove = stack ? [] : earned.slice(0, -1).filter((r) => !r.once && has.includes(r.role) && !keep.some((k) => k.role === r.role)).map((r) => r.role);
+  return { add: [...new Set(add)], remove: [...new Set(remove)] };
+}
+
+async function syncRewards(ctx: ModuleContext, member: GuildMember, level: number, cfg: Partial<LevelConfig>): Promise<void> {
+  const guild = member.guild;
+  const rewards = (cfg.rewards ?? []).map((r) => ({ level: r.level, role: idIn(r.role, guild.id) ?? '', once: r.once === true })).filter((r) => r.role);
+  if (!rewards.length) return;
+  const onceKey = `once:${member.id}`;
+  const givenOnce = ctx.getState<string[]>('leveling', guild.id, onceKey) ?? [];
+  const plan = rewardPlan(rewards, level, cfg.stackRewards !== false, [...member.roles.cache.keys()], givenOnce);
+  const add = assignable(ctx, 'leveling', guild, plan.add);
+  if (add.length && (await member.roles.add(add, 'Leveling reward').then(() => true, () => false))) {
+    const once = rewards.filter((r) => r.once && add.includes(r.role)).map((r) => r.role);
+    if (once.length) ctx.setState('leveling', guild.id, onceKey, [...new Set([...givenOnce, ...once])]);
+  }
+  const remove = assignable(ctx, 'leveling', guild, plan.remove);
+  if (remove.length) await member.roles.remove(remove, 'Leveling reward').catch(() => undefined);
+}
+
 async function levelUp(ctx: ModuleContext, member: GuildMember, old: number, level: number, cfg: Partial<LevelConfig>, channelId: string | null): Promise<void> {
+  // Sync mode "xp": the rewards are checked with every XP (roles removed by
+  // hand come back); "levelup" (default): only when the level changes.
+  if (level > old || cfg.syncMode === 'xp') await syncRewards(ctx, member, level, cfg);
   if (level <= old) return;
   const guild = member.guild;
-  // Role rewards: the rewards up to this level (all of them, or only the highest).
-  const rewards = (cfg.rewards ?? []).filter((r) => idIn(r.role, guild.id)).sort((a, b) => a.level - b.level);
-  const earned = rewards.filter((r) => r.level <= level);
-  const give = cfg.stackRewards === false ? earned.slice(-1) : earned;
-  const giveIds = assignable(ctx, 'leveling', guild, give.map((r) => idIn(r.role, guild.id)!));
-  if (giveIds.length) await member.roles.add(giveIds, 'Leveling reward').catch(() => undefined);
-  if (cfg.stackRewards === false) {
-    const drop = earned.slice(0, -1).map((r) => idIn(r.role, guild.id)!).filter((id) => member.roles.cache.has(id));
-    if (drop.length) await member.roles.remove(drop, 'Leveling reward').catch(() => undefined);
-  }
   const mode = cfg.levelUp ?? 'current';
   if (mode === 'off') return;
   const text = fill(cfg.levelUpMessage || '🎉 {user.mention} reached level **{level}**!', { ...baseVars(guild, member), level: String(level), 'level.old': String(old) }).slice(0, 2000);
@@ -101,39 +119,60 @@ export async function levelingMessage(ctx: ModuleContext, msg: Message): Promise
   await levelUp(ctx, msg.member, old, level, cfg, msg.channelId);
 }
 
-const voiceSince = new Map<string, number>();
-
-const counts = (s: VoiceState) => !!s.channelId && !s.selfDeaf && !s.serverDeaf && s.channelId !== s.guild.afkChannelId;
+/** In voice and earning: not deafened or muted, not in the AFK channel, no bot. */
+const earns = (s: VoiceState): boolean =>
+  !!s.channelId && !!s.member && !s.member.user.bot && !s.selfDeaf && !s.serverDeaf && !s.selfMute && !s.serverMute && !s.suppress && s.channelId !== s.guild.afkChannelId;
 
 /**
- * Voice XP: time is counted per channel. Leaving, switching channels or
- * deafening closes the running interval and pays it out when the channel
- * it was spent in gives XP.
+ * Voice XP once per minute: in every voice channel with at least the minimum
+ * of earning members, each of them gets the XP of one minute.
  */
-export async function levelingVoice(ctx: ModuleContext, before: VoiceState, after: VoiceState): Promise<void> {
+export async function levelingVoiceTick(ctx: ModuleContext, guilds: Guild[]): Promise<void> {
   if (!ctx.enabled('leveling')) return;
-  const member = after.member ?? before.member;
-  if (!member || member.user.bot) return;
-  const key = `${ctx.botId}:${member.guild.id}:${member.id}`;
-  if (before.channelId === after.channelId && counts(before) === counts(after)) return;
-  const since = voiceSince.get(key);
-  voiceSince.delete(key);
-  if (counts(after)) voiceSince.set(key, Date.now());
-  if (since === undefined || !before.channelId) return;
-  const minutes = Math.floor((Date.now() - since) / 60_000);
   const cfg = ctx.config<LevelConfig>('leveling');
-  if (!cfg.voiceXp || minutes < 1 || !xpAllowed(cfg, member.guild.id, [before.channelId], member)) return;
-  const { old, level } = addXp(ctx, member.guild.id, member.id, minutes * (cfg.voiceXpPerMinute ?? 5), cfg, false, minutes);
-  await levelUp(ctx, member, old, level, cfg, null);
-}
-
-/** After a (re)start: members already in voice start counting now. */
-export function levelingVoiceInit(ctx: ModuleContext, guilds: Guild[]): void {
-  for (const g of guilds) {
-    for (const vs of g.voiceStates.cache.values()) {
-      if (vs.member && !vs.member.user.bot && counts(vs)) voiceSince.set(`${ctx.botId}:${g.id}:${vs.id}`, Date.now());
+  if (!cfg.voiceXp) return;
+  const need = Math.max(1, cfg.voiceMinMembers ?? 1);
+  for (const guild of guilds) {
+    const byChannel = new Map<string, VoiceState[]>();
+    for (const vs of guild.voiceStates.cache.values()) {
+      if (earns(vs)) byChannel.set(vs.channelId!, [...(byChannel.get(vs.channelId!) ?? []), vs]);
+    }
+    for (const [channelId, states] of byChannel) {
+      if (states.length < need) continue;
+      for (const vs of states) {
+        const member = vs.member!;
+        if (!xpAllowed(cfg, guild.id, [channelId], member)) continue;
+        const { old, level } = addXp(ctx, guild.id, member.id, cfg.voiceXpPerMinute ?? 5, cfg, false, 1);
+        await levelUp(ctx, member, old, level, cfg, null);
+      }
     }
   }
+}
+
+const voiceTimers = new Map<number, NodeJS.Timeout>();
+
+/** Starts the voice XP minute (once per bot). */
+export function levelingVoiceInit(ctx: ModuleContext, guilds: () => Guild[]): void {
+  if (voiceTimers.has(ctx.botId)) return;
+  voiceTimers.set(ctx.botId, setInterval(() => void levelingVoiceTick(ctx, guilds()).catch((err) => log.debug('voice xp failed', { err: String(err) })), 60_000).unref());
+}
+
+/**
+ * After a change of the curve: every stored level follows the new curve
+ * (levels come from XP). Rewards are not changed.
+ */
+export function relevel(ctx: ModuleContext): void {
+  if (!ctx.enabled('leveling')) return;
+  const cfg = ctx.config<LevelConfig>('leveling');
+  const sig = JSON.stringify([cfg.curve ?? 'linear', cfg.curveFormula ?? '', cfg.baseXp ?? 100, cfg.stepXp ?? 50, cfg.maxLevel ?? 0]);
+  if (ctx.getState<string>('leveling', '0', 'curve') === sig) return;
+  const rows = ctx.db.prepare('SELECT guild_id, user_id, xp, level FROM leveling_members WHERE bot_id = ?').all(ctx.botId) as { guild_id: string; user_id: string; xp: number; level: number }[];
+  const update = ctx.db.prepare('UPDATE leveling_members SET level = ? WHERE bot_id = ? AND guild_id = ? AND user_id = ?');
+  for (const r of rows) {
+    const level = levelFor(r.xp, cfg);
+    if (level !== r.level) update.run(level, ctx.botId, r.guild_id, r.user_id);
+  }
+  ctx.setState('leveling', '0', 'curve', sig);
 }
 
 export function levelingLeave(ctx: ModuleContext, member: GuildMember | PartialGuildMember): void {
