@@ -172,6 +172,51 @@ export function attachCards(payload: Record<string, unknown>, files: Map<string,
   payload.files = [...((payload.files as unknown[]) ?? []), ...attach];
 }
 
+/** Draws a card of the Card Designer for a member; answers "attachment://card-….png" (sent with the next message that names it). */
+export async function drawCard(repo: Repo, run: Run, cardId: number, member: GuildMember | null): Promise<string> {
+  const d = data(run);
+  const user = member?.user ?? d.user;
+  const guild = member?.guild ?? d.guild;
+  const vars: Record<string, string> = { ...Object.fromEntries(run.vars) };
+  if (user) {
+    Object.assign(vars, cardVars({
+      guildName: guild?.name ?? '', guildId: guild?.id ?? '', members: guild?.memberCount ?? 0, userId: user.id, userName: user.username,
+      display: member?.displayName ?? user.globalName ?? user.username, avatar: user.displayAvatarURL({ extension: 'png', size: 256 }),
+      createdAt: user.createdTimestamp, joinedAt: member?.joinedTimestamp ?? null,
+    }));
+  }
+  const png = await renderCard(repo.db, d.botId, cardId, vars);
+  if (!png) throw new GraphError('error.card.unknown');
+  d.files ??= new Map();
+  if (d.files.size >= 5) throw new GraphError('error.card.too_many_in_run', { max: 5 });
+  const name = cardFile(png, `card-${d.files.size + 1}`);
+  d.files.set(name, png);
+  return `attachment://${name}`;
+}
+
+/** "Welcome Card" -> "Welcome_Card": the name in {card.<name>} (also the variable picker). */
+export function cardSlug(name: string): string {
+  return name.trim().replace(/[^A-Za-z0-9_.:-]+/g, '_').slice(0, 90);
+}
+
+/**
+ * {card.<name>} in a message: draws that card of the Card Designer for the
+ * member of the run (once per run) and fills the placeholder with its
+ * attachment, so the text or an embed image posts it.
+ */
+export async function cardPlaceholders(repo: Repo, run: Run, message: unknown): Promise<void> {
+  if (!message) return;
+  const wanted = [...new Set([...JSON.stringify(message).matchAll(/\{card\.([A-Za-z0-9_.:-]{1,90})\}/g)].map((m) => m[1]!))];
+  const todo = wanted.filter((w) => !run.vars.get(`card.${w}`));
+  if (!todo.length) return;
+  const cards = repo.db.prepare('SELECT id, name FROM bot_cards WHERE bot_id = ?').all(data(run).botId) as { id: number; name: string }[];
+  for (const w of todo) {
+    const card = cards.find((c) => cardSlug(c.name).toLowerCase() === w.toLowerCase());
+    if (!card) throw new GraphError('error.card.unknown', { value: w });
+    run.vars.set(`card.${w}`, await drawCard(repo, run, card.id, data(run).member));
+  }
+}
+
 async function sendMessage(node: GraphNode, run: Run): Promise<void> {
   const d = data(run);
   const payload = buildMessage(run, node, d.customId) as Record<string, unknown> & { flags?: number };
@@ -659,33 +704,19 @@ export function discordHandlers(repo: Repo, mod?: Moderation, secret: (key: stri
   };
 
   return new Map<string, Handler>([
-    ['action.send_message', sendMessage],
+    ['action.send_message', async (node, run) => {
+      await cardPlaceholders(repo, run, node.config.message);
+      await sendMessage(node, run);
+    }],
     [
       // Make Image Card: draws a card of the Card Designer for a member; {card}
       // in a later message (text or embed image) posts it.
       'action.make_card',
       async (node, run) => {
-        const d = data(run);
         const cardId = Number(run.str(node, 'card'));
         if (!Number.isInteger(cardId) || cardId < 1) throw new GraphError('error.card.unknown');
-        const member = run.str(node, 'user').trim() ? await memberOf(run, node, 'user') : d.member;
-        const user = member?.user ?? d.user;
-        const guild = member?.guild ?? d.guild;
-        const vars: Record<string, string> = { ...Object.fromEntries(run.vars) };
-        if (user) {
-          Object.assign(vars, cardVars({
-            guildName: guild?.name ?? '', guildId: guild?.id ?? '', members: guild?.memberCount ?? 0, userId: user.id, userName: user.username,
-            display: member?.displayName ?? user.globalName ?? user.username, avatar: user.displayAvatarURL({ extension: 'png', size: 256 }),
-            createdAt: user.createdTimestamp, joinedAt: member?.joinedTimestamp ?? null,
-          }));
-        }
-        const png = await renderCard(repo.db, d.botId, cardId, vars);
-        if (!png) throw new GraphError('error.card.unknown');
-        d.files ??= new Map();
-        if (d.files.size >= 5) throw new GraphError('error.card.too_many_in_run', { max: 5 });
-        const name = cardFile(png, `card-${d.files.size + 1}`);
-        d.files.set(name, png);
-        run.setResult(node, '', `attachment://${name}`);
+        const member = run.str(node, 'user').trim() ? await memberOf(run, node, 'user') : data(run).member;
+        run.setResult(node, '', await drawCard(repo, run, cardId, member));
       },
     ],
     [

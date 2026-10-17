@@ -6644,5 +6644,21 @@
   "vars.item.bot_avatar": "Bot-Avatar",
   "vars.item.bot_avatar_hint": "Link zum Avatar des Bots.",
   "vars.item.bot_created": "Bot erstellt",
-  "vars.item.bot_created_hint": "Wann das Bot-Konto erstellt wurde."
+  "vars.item.bot_created_hint": "Wann das Bot-Konto erstellt wurde.",
+  "vars.item.user_banner": "Nutzer-Banner",
+  "vars.item.user_banner_hint": "Link zum Profilbanner des Nutzers (zuerst das Server-Banner). Leer, wenn es keines gibt, dann lässt ein Embed das Bild weg.",
+  "vars.cat.cards": "Bildkarten",
+  "vars.card_hint": "Zeichnet diese Karte für das Mitglied und sendet sie (Text oder Embed-Bild).",
+  "vars.item.user_created": "Konto erstellt",
+  "vars.item.user_created_hint": "Datum, an dem das Discord-Konto erstellt wurde.",
+  "vars.item.user_account_age": "Kontoalter",
+  "vars.item.user_account_age_hint": "Wie lange das Konto schon besteht („vor 3 Jahren“), in der Sprache des Lesers.",
+  "vars.item.user_account_days": "Kontoalter in Tagen",
+  "vars.item.user_account_days_hint": "Tage seit der Kontoerstellung, als Zahl.",
+  "vars.item.user_joined": "Mitglied seit (Datum)",
+  "vars.item.user_joined_hint": "Datum, an dem das Mitglied dem Server beigetreten ist.",
+  "vars.item.user_member_since": "Mitglied seit",
+  "vars.item.user_member_since_hint": "Wie lange das Mitglied schon auf dem Server ist („vor 2 Monaten“).",
+  "vars.item.user_member_days": "Mitglied seit Tagen",
+  "vars.item.user_member_days_hint": "Tage auf diesem Server, als Zahl."
 }

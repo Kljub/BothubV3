@@ -6644,5 +6644,21 @@
   "vars.item.bot_avatar": "Bot avatar",
   "vars.item.bot_avatar_hint": "Link to the avatar of the bot.",
   "vars.item.bot_created": "Bot created",
-  "vars.item.bot_created_hint": "When the bot account was made."
+  "vars.item.bot_created_hint": "When the bot account was made.",
+  "vars.item.user_banner": "User banner",
+  "vars.item.user_banner_hint": "Link to the user's profile banner (server banner first). Empty when there is none, so an embed leaves the image out.",
+  "vars.cat.cards": "Image cards",
+  "vars.card_hint": "Draws this card for the member and posts it (text or embed image).",
+  "vars.item.user_created": "Account created",
+  "vars.item.user_created_hint": "Date the Discord account was made.",
+  "vars.item.user_account_age": "Account age",
+  "vars.item.user_account_age_hint": "How long ago the account was made (\"3 years ago\"), in the reader's language.",
+  "vars.item.user_account_days": "Account age in days",
+  "vars.item.user_account_days_hint": "Days since the account was made, as a number.",
+  "vars.item.user_joined": "Member since (date)",
+  "vars.item.user_joined_hint": "Date the member joined this server.",
+  "vars.item.user_member_since": "Member since",
+  "vars.item.user_member_since_hint": "How long ago the member joined this server (\"2 months ago\").",
+  "vars.item.user_member_days": "Member days",
+  "vars.item.user_member_days_hint": "Days on this server, as a number."
 }

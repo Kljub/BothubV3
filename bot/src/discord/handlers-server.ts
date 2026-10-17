@@ -7,7 +7,8 @@ import { AuditLogEvent, ChannelType, GuildVerificationLevel, MessageFlags, Webho
 import { GraphError, type Handler, type Run } from '../graph/interpreter.js';
 import type { GraphNode } from '../graph/types.js';
 import { snowflake, snowflakes } from '../graph/util.js';
-import { attachCards, data } from './handlers.js';
+import { attachCards, cardPlaceholders, data } from './handlers.js';
+import type { Repo } from '../core/repo.js';
 import { buildMessage, hasBody } from './message.js';
 
 const TYPE_NAMES: Partial<Record<ChannelType, string>> = {
@@ -91,7 +92,7 @@ export function voiceMatch(members: { id: string; bot: boolean }[], value: strin
     .some((id) => members.some((m) => m.id === id));
 }
 
-export function serverHandlers(): [string, Handler][] {
+export function serverHandlers(repo: Repo): [string, Handler][] {
   const call = async <T>(run: Run, fn: () => Promise<T>): Promise<T> => {
     run.countDiscordCall();
     try {
@@ -306,6 +307,7 @@ export function serverHandlers(): [string, Handler][] {
       async (node, run) => {
         const d = data(run);
         const value = run.str(node, 'webhook').trim();
+        await cardPlaceholders(repo, run, node.config.message);
         const payload = buildMessage(run, node, d.customId) as Record<string, unknown> & { flags?: number };
         // Webhooks of other apps may not carry buttons or menus of this bot.
         delete payload.components;

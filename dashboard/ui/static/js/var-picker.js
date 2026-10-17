@@ -3,7 +3,8 @@
 // variables of the current command. Used by the node editor, the message
 // editor and the Message Builder page.
 //
-// BotHubVarPicker.open({ t, el, icon, catalog, graphVars, dataVarsUrl, mode, onPick })
+// BotHubVarPicker.open({ t, el, icon, catalog, graphVars, dataVarsUrl, cardsUrl, mode, onPick })
+//   cardsUrl: the bot's image cards, inserted as {card.<name>}.
 //   mode 'insert' (default): onPick gets a placeholder like "{user.id}".
 //   mode 'name': only variables a block can write; onPick gets the name
 //   without braces ("var.coins", "Var1").
@@ -22,6 +23,11 @@
         .catch(() => []));
     }
     return dataCache.get(url);
+  }
+
+  /** "Welcome Card" -> "Welcome_Card" (same as cardSlug in bot/src/discord/handlers.ts). */
+  function cardSlug(name) {
+    return String(name).trim().replace(/[^A-Za-z0-9_.:-]+/g, '_').slice(0, 90);
   }
 
   function open(ctx) {
@@ -169,8 +175,8 @@
     renderList(dataSections);
     search.focus();
 
-    // Data Storage variables, grouped like on their module page.
-    loadDataVars(ctx.dataVarsUrl).then((vars) => {
+    // Data Storage variables, grouped like on their module page; the image cards of the Card Designer.
+    Promise.all([loadDataVars(ctx.dataVarsUrl), mode === 'insert' ? loadDataVars(ctx.cardsUrl) : []]).then(([vars, cards]) => {
       const groups = new Map();
       for (const v of vars) {
         const g = v.group || t('vars.ungrouped');
@@ -178,6 +184,7 @@
         groups.get(g).push({ name: v.name, hint: v.description || t(`data.shape.${v.owner}_${v.perServer}`), token: `{var.${v.key}}` });
       }
       dataSections = [...groups.entries()].map(([label, items], i) => ({ key: `data-${i}`, label, icon: 'folder', items }));
+      if (cards.length) dataSections.push({ key: 'cards', label: t('vars.cat.cards'), icon: 'image', items: cards.map((c) => ({ name: c.name, hint: t('vars.card_hint'), token: `{card.${cardSlug(c.name)}}` })) });
       if (!overlay.isConnected) return;
       renderNav(dataSections);
       renderList(dataSections);

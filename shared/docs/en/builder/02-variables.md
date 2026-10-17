@@ -9,6 +9,9 @@ Texts in blocks and messages may contain **placeholders** in curly braces. The v
 | Placeholder | Value |
 |---|---|
 | `{user.id}`, `{user.name}`, `{user.mention}` | The member who used the command or caused the event |
+| `{user.avatar}`, `{user.banner}` | Avatar and profile banner; `{user.banner}` is empty without a banner, so an embed leaves the image out |
+| `{user.created}`, `{user.account_age}`, `{user.account_days}` | Account created (date), how long ago, and in days |
+| `{user.joined}`, `{user.member_since}`, `{user.member_days}` | Joined this server (date), how long ago, and in days |
 | `{server.id}`, `{server.name}`, `{server.members}` | The server |
 | `{channel.id}`, `{channel.name}`, `{channel.mention}` | The channel |
 | `{command.name}` | The command |
@@ -24,3 +27,7 @@ Many blocks give results. A block with the variable name `px` gives `{px}` and o
 ## Your own data
 
 **Data Storage** variables are written `{var.<key>}`. They can hold one value, one per member or one per channel, separately per server. See [Data Storage](/docs/builder/data-storage).
+
+## Image cards
+
+`{card.<name>}` draws a card of the Card Designer for the member and posts it with the message (in the text or as embed image). Spaces in the name become `_`, e.g. `{card.Welcome_Card}`. The variable picker lists your cards under *Image cards*.

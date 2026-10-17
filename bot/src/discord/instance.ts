@@ -54,7 +54,7 @@ import { serverHandlers } from './handlers-server.js';
 import { valueHandlers } from '../graph/handlers-values.js';
 import { parsePresence, PresenceRunner } from './presence.js';
 import { isDue, nextRun, type TimedEvent } from '../core/timed.js';
-import { botVars, channelVars, guildVars, userVars, type Vars } from './vars.js';
+import { botVars, channelVars, fillBanners, guildVars, userVars, type Vars } from './vars.js';
 import { alertEmbed, failConfig, hintOf, ownerTip, preflight, prepare, reasonText, traceOf, type FailConfig, type TraceContext } from './playback.js';
 import type { Hint, RunErrorTexts } from '../graph/explain.js';
 
@@ -210,7 +210,7 @@ export class BotInstance {
       },
     };
     this.moderation = new Moderation(botId, deps.repo, () => this.client);
-    const handlers = new Map<string, Handler>([...coreHandlers(core), ...discordHandlers(deps.repo, this.moderation, core.secret, deps.secretKey), ...moduleHandlers(deps.repo, botId, core.secret, deps.secretKey ?? null), ...extraHandlers({ repo: deps.repo, secret: core.secret }), ...valueHandlers(core), ...serverHandlers()]);
+    const handlers = new Map<string, Handler>([...coreHandlers(core), ...discordHandlers(deps.repo, this.moderation, core.secret, deps.secretKey), ...moduleHandlers(deps.repo, botId, core.secret, deps.secretKey ?? null), ...extraHandlers({ repo: deps.repo, secret: core.secret }), ...valueHandlers(core), ...serverHandlers(deps.repo)]);
     // Own copy of the definitions: plugin blocks exist only for this bot.
     this.engine = { defs: new Map(deps.defs), handlers, limits: deps.limits, match: matchState, lookup: (name, run) => lookupVariable(core, name, run) ?? this.liveVar(name, run) };
   }
@@ -803,6 +803,7 @@ export class BotInstance {
     const runKey = randomUUID().slice(0, 12);
     const hideReplies = hideRepliesOf(s, vars);
     const d = this.data({ runKey, guild: i.guild, channel, member, user: i.user, interaction: i, hideReplies });
+    if (this.client) await fillBanners(this.client, cmd.graph, vars);
     const run = new Run(cmd.graph, this.engine, d as never, vars);
     this.begin(run, cmd, runKey, i.guild ? preflight(cmd.graph.nodes, i.guild.members.me, channel) : []);
     // Discord waits 3 seconds for an answer: slow blocks (loading games,
@@ -1087,6 +1088,7 @@ export class BotInstance {
       try {
         const runKey = randomUUID().slice(0, 12);
         const vars = { ...this.baseVars(ctx.guild, ctx.channel, ctx.user, ctx.member), ...ctx.vars, 'event.name': ev.name };
+        await fillBanners(this.client, ev.graph, vars);
         const run = new Run(ev.graph, this.engine, this.data({ runKey, guild: ctx.guild, channel: ctx.channel, member: ctx.member, user: ctx.user, message: ctx.message }) as never, vars);
         this.begin(run, ev, runKey);
         const result = await this.tracked(run).catch((err: Error) => ({ ok: false, steps: [], errorKey: err.message }) as RunResult);

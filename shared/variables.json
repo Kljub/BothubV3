@@ -26,6 +26,34 @@
           "token": "{user.avatar}"
         },
         {
+          "id": "user_banner",
+          "token": "{user.banner}"
+        },
+        {
+          "id": "user_created",
+          "token": "{user.created}"
+        },
+        {
+          "id": "user_account_age",
+          "token": "{user.account_age}"
+        },
+        {
+          "id": "user_account_days",
+          "token": "{user.account_days}"
+        },
+        {
+          "id": "user_joined",
+          "token": "{user.joined}"
+        },
+        {
+          "id": "user_member_since",
+          "token": "{user.member_since}"
+        },
+        {
+          "id": "user_member_days",
+          "token": "{user.member_days}"
+        },
+        {
           "id": "user_voice_channel",
           "token": "{user.voice.channel}"
         },

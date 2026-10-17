@@ -106,3 +106,21 @@ test('variable blocks: control a list, read it for another member', async () => 
   assert.equal(run.vars.get('O'), '{"a":1,"b":{"c":"x"}}');
   assert.equal(run.vars.get('O.b.c'), 'x');
 });
+
+test('user variables: banner, account age and member since; banners loaded only when a graph uses them', async () => {
+  const { userVars, bannerPrefixes, fillBanners } = await import('../discord/vars.js');
+  const { cardSlug } = await import('../discord/handlers.js');
+  const day = 86_400_000;
+  const user = { id: '1', username: 'kljub', createdTimestamp: 10 * day, displayAvatarURL: () => 'a.png', bannerURL: () => null } as never;
+  const member = { displayName: 'K', joinedTimestamp: 15 * day, displayAvatarURL: () => 'm.png', bannerURL: () => null, voice: {} } as never;
+  const v = userVars(user, member, 'user', 20 * day);
+  assert.deepEqual([v['user.created'], v['user.account_age'], v['user.account_days'], v['user.member_since'], v['user.member_days'], v['user.banner']], ['<t:864000:D>', '<t:864000:R>', '10', '<t:1296000:R>', '5', '']);
+  const graph = { nodes: [{ config: { message: { embeds: [{ image_url: '{user.banner}', thumbnail_url: '{target.banner}' }] } } }] };
+  assert.deepEqual(bannerPrefixes(graph), ['user', 'target']);
+  const vars: Record<string, string> = { 'user.id': '1', 'user.banner': '' };
+  const client = { users: { fetch: async (id: string) => ({ bannerURL: () => (id === '1' ? 'https://cdn/banner.png' : null) }) } } as never;
+  await fillBanners(client, graph, vars);
+  assert.equal(vars['user.banner'], 'https://cdn/banner.png');
+  assert.equal(vars['target.banner'], '', 'no user: empty, never the placeholder');
+  assert.equal(cardSlug(' Welcome Card #2 '), 'Welcome_Card_2');
+});

@@ -2141,6 +2141,7 @@
       catalog: VAR_CATALOG,
       graphVars: () => graphVariables(node).filter((v) => mode !== 'insert' || !VAR_CATALOG.categories.some((c) => c.items.some((i) => i.token === v))),
       dataVarsUrl: meta.dataVarsUrl,
+      cardsUrl: meta.cardsUrl,
     });
   }
 
