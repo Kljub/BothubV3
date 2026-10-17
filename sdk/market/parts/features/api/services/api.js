@@ -6,8 +6,9 @@
 // The admin stores the address (e.g. https://api.example.com/v1) and the API
 // key as secrets under Admin -> API / Secrets and shares both with this
 // plugin in the App Store. Rules: both names must be in bothub.json
-// "services.secrets"; path starts with "/", no ".." or "//"; no
-// Authorization, Cookie or Host headers; request JSON <= 64 KB, answer
+// "services.secrets"; path starts with "/", no ".." or "//"; no Cookie or
+// Host headers (Authorization only to an address secret, for an own login
+// session, and without auth); request JSON <= 64 KB, answer
 // <= 1 MB, 10 s timeout. Errors: sdk.http.bad_path, sdk.http.timeout,
 // sdk.http.too_big; NotSetUp (below) when a secret has no value yet.
 //

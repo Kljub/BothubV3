@@ -87,6 +87,7 @@ export interface SecretRequest {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   query?: Record<string, string>;
   json?: Json;
+  /** No Cookie or Host; Authorization only to an address secret and without `auth` (an own login session). */
   headers?: Record<string, string>;
   /** The key: secret name, where it goes (default header Authorization, "Bearer <key>"). */
   /** format 'basic': the secret is "user:password" (HTTP Basic). */

@@ -517,8 +517,11 @@ export function createTestContext(options: TestContextOptions = {}): TestContext
         }
         for (const [k, v] of Object.entries(request.query ?? {})) u.searchParams.set(k, String(v));
         const headers: Record<string, string> = {};
+        // Like the bot: an own Authorization header only to an admin address and without auth.
+        const adminAddress = /^[A-Z][A-Z0-9_]{1,39}$/.test(name);
         for (const [h, value] of Object.entries(request.headers ?? {})) {
-          if (BLOCKED_HEADERS.has(h.toLowerCase())) throw new SdkCallError('sdk.http.bad_header');
+          const ownAuth = h.toLowerCase() === 'authorization' && adminAddress && !request.auth;
+          if (BLOCKED_HEADERS.has(h.toLowerCase()) && !ownAuth) throw new SdkCallError('sdk.http.bad_header');
           headers[h] = String(value);
         }
         if (request.auth) {

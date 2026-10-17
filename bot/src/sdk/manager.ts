@@ -702,13 +702,18 @@ export class PluginManager {
     if (!HTTP_METHODS.includes(method)) throw new SdkError('sdk.http.bad_method');
 
     const { url, authHeaders, hide } = await this.secretTarget(r, secretOf, hosts);
+    // The address comes from an admin secret (not a public host of services.hosts).
+    const adminAddress = typeof r.url === 'string' && SECRET_NAME.test(r.url);
     const headers: Record<string, string> = {};
     if (r.headers !== undefined) {
       if (!r.headers || typeof r.headers !== 'object' || Object.keys(r.headers).length > 30) throw new SdkError('sdk.http.bad_header');
       const authNames = Object.keys(authHeaders).map((h) => h.toLowerCase());
       for (const [k, v] of Object.entries(r.headers as Record<string, unknown>)) {
         const lower = k.toLowerCase();
-        if (!/^[A-Za-z0-9-]{1,64}$/.test(k) || typeof v !== 'string' || v.length > 1000 || /[\r\n]/.test(v) || FORBIDDEN_HEADERS.test(lower) || authNames.includes(lower)) {
+        // A session token of the plugin's own login (AMP: "Bearer <session>")
+        // may go to the address the admin set, never to a public host.
+        const ownAuth = lower === 'authorization' && adminAddress;
+        if (!/^[A-Za-z0-9-]{1,64}$/.test(k) || typeof v !== 'string' || v.length > 1000 || /[\r\n]/.test(v) || (FORBIDDEN_HEADERS.test(lower) && !ownAuth) || authNames.includes(lower)) {
           throw new SdkError('sdk.http.bad_header');
         }
         headers[k] = v;

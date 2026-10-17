@@ -289,6 +289,9 @@ const res = await ctx.http.secret({
 - `auth.format`: `bearer` (default, header `Authorization: Bearer <key>`),
   `plain` (header with the key as it is) or `query` (URL parameter `param`).
 - Secret values are masked in the answer. Answer max. 1 MB, timeout 10 s.
+- `headers` may not set Cookie or Host. `Authorization` is allowed only
+  without `auth` and only to an address secret: a session token of the
+  plugin's own login (e.g. AMP: `Bearer <session>`), never to a public host.
 - With `storage.files` too: `file: { name, field }` sends an image of the
   plugin files as multipart/form-data (text values in `fields`, not together
   with `json`); `saveAs: 'file'` stores a successful image answer (PNG, GIF,

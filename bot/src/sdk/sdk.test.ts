@@ -625,6 +625,8 @@ test('http.secret: address and key from shared secrets, the plugin never sees th
       '.ok': await r(() => ctx.http.secret({ url: 'WEATHER_URL', path: '/today', query: { city: 'Berlin' }, headers: { 'X-Trace': '1' }, auth: { secret: 'WEATHER_KEY' } })),
       '.query': await r(() => ctx.http.secret({ url: 'https://api.example.com/x', auth: { secret: 'WEATHER_KEY', format: 'query', param: 'appid' } })),
       '.lan': await r(() => ctx.http.secret({ url: 'LAN_URL', path: '/library', auth: { secret: 'WEATHER_KEY', header: 'X-Plex-Token', format: 'plain' } })),
+      '.own': await r(() => ctx.http.secret({ url: 'LAN_URL', path: '/API/Core/GetStatus', method: 'POST', json: {}, headers: { Authorization: 'Bearer my-session' } })),
+      '.own_public': await r(() => ctx.http.secret({ url: 'https://api.example.com/x', headers: { Authorization: 'Bearer my-session' } })),
       '.not_shared': await r(() => ctx.http.secret({ url: 'WEATHER_URL', auth: { secret: 'OTHER_KEY' } })),
       '.undeclared': await r(() => ctx.http.secret({ url: 'DISCORD_URL' })),
       '.host': await r(() => ctx.http.secret({ url: 'https://evil.example.com/x', auth: { secret: 'WEATHER_KEY' } })),
@@ -656,9 +658,10 @@ test('http.secret: address and key from shared secrets, the plugin never sees th
     assert.equal(fetched[1]!.url, 'https://api.example.com/x?appid=s3cr3t-value', 'key as URL parameter');
     assert.equal(fetched[2]!.url, 'http://192.168.1.10:32400/library', 'an address from an admin secret may be in the home network');
     assert.equal((fetched[2]!.init.headers as Record<string, string>)['X-Plex-Token'], 's3cr3t-value');
+    assert.equal((fetched[3]!.init.headers as Record<string, string>).Authorization, 'Bearer my-session', 'own session token to an admin address');
     assert.deepEqual(
-      [results['.not_shared'], results['.undeclared'], results['.host'], results['.http'], results['.path'], results['.method'], results['.header'], results['.big'], results['.read']],
-      ['sdk.secret.not_shared', 'sdk.secret.not_shared', 'sdk.http.host_not_allowed', 'sdk.http.bad_url', 'sdk.http.bad_path', 'sdk.http.bad_method', 'sdk.http.bad_header', 'sdk.http.too_big', 'sdk.call.denied'],
+      [results['.own_public'], results['.not_shared'], results['.undeclared'], results['.host'], results['.http'], results['.path'], results['.method'], results['.header'], results['.big'], results['.read']],
+      ['sdk.http.bad_header', 'sdk.secret.not_shared', 'sdk.secret.not_shared', 'sdk.http.host_not_allowed', 'sdk.http.bad_url', 'sdk.http.bad_path', 'sdk.http.bad_method', 'sdk.http.bad_header', 'sdk.http.too_big', 'sdk.call.denied'],
     );
   } finally {
     manager.stopAll();
