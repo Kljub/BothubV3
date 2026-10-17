@@ -115,6 +115,14 @@
       "hint": true
     },
     {
+      "key": "archiveCategory",
+      "type": "channel",
+      "channelTypes": [
+        "category"
+      ],
+      "hint": true
+    },
+    {
       "key": "logChannel",
       "type": "channel",
       "channelTypes": [

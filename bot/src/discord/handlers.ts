@@ -28,7 +28,7 @@ import { actionName, type CaseHandle, type Moderation } from './moderation.js';
 import { ModuleContext } from '../modules/context.js';
 import { clock, findTracks, musicEvent, musicOf, MusicError, trackLength, trackVars, type LoopMode } from './music.js';
 import { lyricsOf } from './lyrics.js';
-import { createTicket, finishTicket, modmailBlock, modmailClose, modmailReply, reopenTicket, ticketCounts, ticketMember, ticketPanelIndex, ticketPanelPayload, type TicketConfig } from '../modules/support.js';
+import { createTicket, finishTicket, modmailBlock, modmailClose, modmailReply, reopenTicket, ticketPrefix, ticketCounts, ticketMember, ticketPanelIndex, ticketPanelPayload, type TicketConfig } from '../modules/support.js';
 import { countClick, findStations, stationLines, stationTrack } from './radio.js';
 import { trackLink } from './music.js';
 import { acrIdentify, icyTitle, RecognizeError, recordSample, splitStreamTitle, type Song } from './recognize.js';
@@ -1003,6 +1003,13 @@ export function discordHandlers(repo: Repo, mod?: Moderation, secret: (key: stri
       async (node, run) => {
         run.countDiscordCall();
         check(await finishTicket(moduleCtx(run), await guildChannel(run, node), moderatorOf(run) ?? '', run.str(node, 'reason').slice(0, 500), 'delete'));
+      },
+    ],
+    [
+      'action.ticket_prefix',
+      async (node, run) => {
+        run.countDiscordCall();
+        check(await ticketPrefix(moduleCtx(run), await guildChannel(run, node), run.str(node, 'prefix')));
       },
     ],
     [

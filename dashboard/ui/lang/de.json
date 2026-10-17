@@ -6137,5 +6137,11 @@
   "modset.starboard.boards.enabled": "Aktiv",
   "modset.starboard.boards.minAgeHours": "Nur Nachrichten, die mindestens so alt sind (Stunden)",
   "modset.starboard.boards.maxAgeDays": "Nur Nachrichten, die höchstens so alt sind (Tage)",
-  "modset.starboard.boards.maxAgeDays_hint": "0 = egal."
+  "modset.starboard.boards.maxAgeDays_hint": "0 = egal.",
+  "builder.node.action_ticket_prefix.label": "Ticket-Prefix",
+  "builder.node.action_ticket_prefix.description": "Setzt einen Prefix vor den Kanalnamen des Tickets (z. B. assigned-ticket-12)",
+  "builder.cfg.ticket_prefix": "Prefix",
+  "builder.cfg.ticket_prefix_hint": "Buchstaben, Zahlen und Bindestriche. Leer: Prefix entfernen. Discord erlaubt nur 2 Umbenennungen pro Kanal in 10 Minuten.",
+  "modset.ticket.archiveCategory": "Archiv-Kategorie",
+  "modset.ticket.archiveCategory_hint": "Gelöschte Tickets werden in diese Kategorie verschoben statt gelöscht (Rechte der Kategorie). Ist sie voll (50 Kanäle), wird das älteste archivierte Ticket gelöscht."
 }

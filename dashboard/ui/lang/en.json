@@ -6137,5 +6137,11 @@
   "modset.starboard.boards.enabled": "Active",
   "modset.starboard.boards.minAgeHours": "Only messages at least this old (hours)",
   "modset.starboard.boards.maxAgeDays": "Only messages at most this old (days)",
-  "modset.starboard.boards.maxAgeDays_hint": "0 = any."
+  "modset.starboard.boards.maxAgeDays_hint": "0 = any.",
+  "builder.node.action_ticket_prefix.label": "Ticket prefix",
+  "builder.node.action_ticket_prefix.description": "Puts a prefix in front of the ticket's channel name (e.g. assigned-ticket-12)",
+  "builder.cfg.ticket_prefix": "Prefix",
+  "builder.cfg.ticket_prefix_hint": "Letters, digits and dashes. Empty: remove the prefix. Discord allows only 2 renames per channel in 10 minutes.",
+  "modset.ticket.archiveCategory": "Archive category",
+  "modset.ticket.archiveCategory_hint": "Deleted tickets are moved into this category instead (with its permissions). When it is full (50 channels), the oldest archived ticket is deleted."
 }

@@ -66,7 +66,7 @@ function row(...buttons: ButtonBuilder[]): ActionRowBuilder<ButtonBuilder> {
 
 interface VerifyConfig { channel: unknown; type: string; panel: MessageConfig; buttonLabel: string; role: unknown; removeRole: unknown; successMessage: string; failMessage: string }
 interface TicketPanel { name: string; channel: unknown; panel: MessageConfig; buttonLabel: string; buttonEmoji: string[]; category: unknown; supportRoles: unknown; channelName: string; welcome: MessageConfig; pingSupport: boolean; maxPerUser: number }
-export interface TicketConfig { panels: TicketPanel[]; logChannel: unknown; transcript: boolean; dmCreator: boolean }
+export interface TicketConfig { panels: TicketPanel[]; archiveCategory: unknown; logChannel: unknown; transcript: boolean; dmCreator: boolean }
 
 /** Posts or updates a panel message; remembers it in module_state. */
 export async function ensurePanel(ctx: ModuleContext, module: string, key: string, guild: Guild, channelId: string, payload: MessageCreateOptions): Promise<void> {
@@ -326,6 +326,18 @@ export async function finishTicket(ctx: ModuleContext, channel: GuildTextBasedCh
     await opener?.send({ embeds: [embed], files: file ? [new AttachmentBuilder(file.attachment as Buffer, { name: file.name ?? 'ticket.txt' })] : [] }).catch(() => undefined);
   }
   if (mode === 'delete') {
+    // With an archive category the channel moves there (its permissions) instead.
+    const archive = guild.channels.cache.get(idIn(cfg.archiveCategory, guild.id) ?? '');
+    if (archive?.type === ChannelType.GuildCategory && 'setParent' in channel && channel.parentId !== archive.id) {
+      await makeRoomInArchive(ctx, guild, archive.id);
+      const moved = await channel.setParent(archive.id, { lockPermissions: true, reason: `Ticket #${ticket.number} archived` }).then(() => true, () => false);
+      if (moved) {
+        ctx.db.prepare("UPDATE tickets SET status = 'closed' WHERE id = ?").run(ticket.id);
+        await channel.send({ content: `🗄️ Ticket archived by <@${closerId}>.`, allowedMentions: { parse: [] } }).catch(() => undefined);
+        return null;
+      }
+      warn(ctx, 'WAR-2008', { module: 'ticket', problem: `cannot move ticket #${ticket.number} into the archive category (needs Manage Channels there): deleted instead` });
+    }
     setTimeout(() => void channel.delete(`Ticket #${ticket.number} deleted`).catch(() => undefined), 5000).unref();
     return null;
   }
@@ -333,6 +345,43 @@ export async function finishTicket(ctx: ModuleContext, channel: GuildTextBasedCh
     await channel.permissionOverwrites.edit(ticket.opener_id, { SendMessages: false }, { reason: `Ticket #${ticket.number} closed` }).catch(() => undefined);
   }
   await channel.send({ content: `🔒 Ticket closed by <@${closerId}>.${reason ? ` Reason: ${reason.slice(0, 500)}` : ''}`, allowedMentions: { parse: [] } }).catch(() => undefined);
+  return null;
+}
+
+/** A full archive category (Discord: 50 channels) loses its oldest archived ticket. */
+async function makeRoomInArchive(ctx: ModuleContext, guild: Guild, categoryId: string): Promise<void> {
+  const inside = guild.channels.cache.filter((c) => c.parentId === categoryId);
+  if (inside.size < 50) return;
+  const ids = [...inside.keys()];
+  const oldest = ctx.db
+    .prepare(`SELECT channel_id FROM tickets WHERE bot_id = ? AND guild_id = ? AND channel_id IN (${ids.map(() => '?').join(',')}) ORDER BY COALESCE(closed_at, created_at) LIMIT 1`)
+    .get(ctx.botId, guild.id, ...ids) as { channel_id: string } | undefined;
+  if (oldest) await guild.channels.cache.get(oldest.channel_id)?.delete('Ticket archive full').catch(() => undefined);
+}
+
+/** The channel name with a prefix: "assigned" + "ticket-12" → "assigned-ticket-12"; empty removes it. */
+export function prefixedName(base: string, prefix: string): string {
+  const clean = prefix.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\p{L}\p{N}_-]/gu, '').replace(/^-+|-+$/g, '').slice(0, 30);
+  return (clean ? `${clean}-${base}` : base).slice(0, 100);
+}
+
+/** Sets (or with "" removes) the prefix of a ticket's channel name. */
+export async function ticketPrefix(ctx: ModuleContext, channel: GuildTextBasedChannel, prefix: string): Promise<string | null> {
+  const ticket = ticketOf(ctx, channel.id);
+  if (!ticket) return 'This is not a ticket channel.';
+  if (!('setName' in channel)) return 'This is not a ticket channel.';
+  // The name without a prefix is kept the first time a prefix is set.
+  const base = ctx.getState<string>('ticket', channel.guild.id, `name:${channel.id}`) ?? channel.name;
+  ctx.setState('ticket', channel.guild.id, `name:${channel.id}`, base);
+  const name = prefixedName(base, prefix);
+  if (name === channel.name) return null;
+  // Discord allows 2 renames per channel in 10 minutes and then waits silently.
+  const done = await Promise.race([
+    channel.setName(name, 'Ticket prefix').then(() => 'ok', () => 'failed'),
+    new Promise<string>((r) => setTimeout(() => r('limit'), 8000).unref()),
+  ]);
+  if (done === 'failed') return 'I could not rename the channel (missing Manage Channels?).';
+  if (done === 'limit') return 'Discord allows only 2 renames per channel in 10 minutes; the new name follows as soon as Discord allows it.';
   return null;
 }
 

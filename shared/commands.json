@@ -114,6 +114,7 @@
     { "name": "ticket create", "usage": "/ticket create", "module": "ticket" },
     { "name": "ticket close", "usage": "/ticket close [reason]", "module": "ticket" },
     { "name": "ticket reopen", "usage": "/ticket reopen", "module": "ticket" },
+    { "name": "ticket prefix", "usage": "/ticket prefix [prefix]", "module": "ticket" },
     { "name": "ticket delete", "usage": "/ticket delete", "module": "ticket" },
     { "name": "ticket add", "usage": "/ticket add @user", "module": "ticket" },
     { "name": "ticket remove", "usage": "/ticket remove @user", "module": "ticket" },
