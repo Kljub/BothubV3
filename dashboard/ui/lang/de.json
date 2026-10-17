@@ -6186,5 +6186,20 @@
   "modset.var.match.2": "Gruppe 2 (Regex)",
   "modset.var.published": "Veröffentlicht (relative Zeit)",
   "builder.cfg.single_run": "Nur ein Lauf gleichzeitig",
-  "builder.cfg.single_run_hint": "Läuft dieser Command auf dem Server noch, wartet ein neuer Aufruf bis zu 5 Sekunden und entfällt danach (Schutz gegen Spam und doppelte Belohnungen)."
+  "builder.cfg.single_run_hint": "Läuft dieser Command auf dem Server noch, wartet ein neuer Aufruf bis zu 5 Sekunden und entfällt danach (Schutz gegen Spam und doppelte Belohnungen).",
+  "module.bot-profile.name": "Bot-Profil",
+  "module.bot-profile.description": "Name, Bio, Avatar und Banner des Bots pro Server",
+  "modset.bot-profile.nick": "Name (Nickname)",
+  "modset.bot-profile.nick_hint": "Leer: der normale Name des Bots. Alle Felder gelten auf jedem Server; unten lassen sie sich pro Server ändern.",
+  "modset.bot-profile.bio": "Bio (Über mich)",
+  "modset.bot-profile.avatar": "Avatar (https-Link zu einem Bild)",
+  "modset.bot-profile.avatar_hint": "PNG, JPG, GIF oder WebP. Discord ändert Profile nur ein paar Mal pro Stunde: Der Bot schickt ein Profil nur, wenn es sich geändert hat.",
+  "modset.bot-profile.banner": "Banner (https-Link zu einem Bild)",
+  "modset.bot-profile.servers": "Pro Server",
+  "modset.bot-profile.servers_hint": "Leere Felder übernehmen die Werte von oben. Server-ID: Rechtsklick auf den Server → Server-ID kopieren (Entwicklermodus).",
+  "modset.bot-profile.servers.guildId": "Server-ID",
+  "modset.bot-profile.servers.nick": "Name (Nickname)",
+  "modset.bot-profile.servers.bio": "Bio",
+  "modset.bot-profile.servers.avatar": "Avatar (https-Link)",
+  "modset.bot-profile.servers.banner": "Banner (https-Link)"
 }

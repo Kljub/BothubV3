@@ -5,6 +5,7 @@
 import { Events, type Client } from 'discord.js';
 import { log } from '../core/log.js';
 import { ensureRoleGroups } from './rolegroups.js';
+import { syncBotProfiles } from './botprofile.js';
 import { cacheInvites, inviteChanged, inviteJoin, inviteLeave, levelingLeave, levelingMessage, levelingVoiceInit, relevel, prepareReactionRoles, reactionRoles, suggestionMessage, suggestionVote } from './community.js';
 import { automodHit, automodMessage, syncAutomod } from './automod.js';
 import type { ModuleContext } from './context.js';
@@ -46,6 +47,7 @@ export function bindModules(client: Client, ctx: ModuleContext, timezone: () => 
     for (const g of guilds) guard('invites', cacheInvites(ctx, g));
     guard('reaction-roles', prepareReactionRoles(ctx, guilds));
     guard('role-groups', ensureRoleGroups(ctx, guilds));
+    guard('bot-profile', syncBotProfiles(ctx, guilds));
     guard('panels', ensurePanels(ctx, guilds));
     guard('honeypot', ensureHoneypots(ctx, guilds));
     for (const g of guilds) guard('automod', syncAutomod(ctx, g));
@@ -63,6 +65,7 @@ export function bindModules(client: Client, ctx: ModuleContext, timezone: () => 
     const guilds = [...client.guilds.cache.values()];
     guard('reaction-roles', prepareReactionRoles(ctx, guilds));
     guard('role-groups', ensureRoleGroups(ctx, guilds));
+    guard('bot-profile', syncBotProfiles(ctx, guilds));
     guard('panels', ensurePanels(ctx, guilds));
     guard('honeypot', ensureHoneypots(ctx, guilds));
     for (const g of guilds) guard('automod', syncAutomod(ctx, g));

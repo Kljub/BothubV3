@@ -367,6 +367,11 @@
       "icon": "🏷️"
     },
     {
+      "key": "bot-profile",
+      "category": "customization",
+      "icon": "🪪"
+    },
+    {
       "key": "statistic-channels",
       "category": "statistics",
       "icon": "📊"

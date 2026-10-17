@@ -6186,5 +6186,20 @@
   "modset.var.match.2": "Group 2 (regex)",
   "modset.var.published": "Published (relative time)",
   "builder.cfg.single_run": "One run at a time",
-  "builder.cfg.single_run_hint": "While this command still runs on the server, a new call waits up to 5 seconds and is then dropped (protects against spam and double rewards)."
+  "builder.cfg.single_run_hint": "While this command still runs on the server, a new call waits up to 5 seconds and is then dropped (protects against spam and double rewards).",
+  "module.bot-profile.name": "Bot Profile",
+  "module.bot-profile.description": "The bot's name, bio, avatar and banner per server",
+  "modset.bot-profile.nick": "Name (nickname)",
+  "modset.bot-profile.nick_hint": "Empty: the bot's normal name. Every field applies on every server; below they can be changed per server.",
+  "modset.bot-profile.bio": "Bio (About me)",
+  "modset.bot-profile.avatar": "Avatar (https link to an image)",
+  "modset.bot-profile.avatar_hint": "PNG, JPG, GIF or WebP. Discord changes profiles only a few times per hour: the bot sends a profile only when it changed.",
+  "modset.bot-profile.banner": "Banner (https link to an image)",
+  "modset.bot-profile.servers": "Per server",
+  "modset.bot-profile.servers_hint": "Empty fields take the values from above. Server ID: right-click the server → Copy Server ID (developer mode).",
+  "modset.bot-profile.servers.guildId": "Server ID",
+  "modset.bot-profile.servers.nick": "Name (nickname)",
+  "modset.bot-profile.servers.bio": "Bio",
+  "modset.bot-profile.servers.avatar": "Avatar (https link)",
+  "modset.bot-profile.servers.banner": "Banner (https link)"
 }

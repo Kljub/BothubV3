@@ -1,0 +1,81 @@
+{
+  "module": "bot-profile",
+  "fields": [
+    {
+      "key": "nick",
+      "type": "text",
+      "max": 32,
+      "plain": true,
+      "hint": true
+    },
+    {
+      "key": "bio",
+      "type": "text",
+      "max": 190,
+      "multiline": true,
+      "plain": true
+    },
+    {
+      "key": "avatar",
+      "type": "text",
+      "max": 500,
+      "pattern": "^(https://\\S+)?$",
+      "plain": true,
+      "hint": true
+    },
+    {
+      "key": "banner",
+      "type": "text",
+      "max": 500,
+      "pattern": "^(https://\\S+)?$",
+      "plain": true
+    },
+    {
+      "key": "servers",
+      "type": "list",
+      "max": 50,
+      "titleField": "guildId",
+      "hint": true,
+      "item": [
+        {
+          "key": "guildId",
+          "type": "text",
+          "max": 21,
+          "pattern": "^\\d{17,21}$",
+          "required": true,
+          "plain": true
+        },
+        {
+          "key": "nick",
+          "type": "text",
+          "max": 32,
+          "plain": true
+        },
+        {
+          "key": "bio",
+          "type": "text",
+          "max": 190,
+          "multiline": true,
+          "plain": true
+        },
+        {
+          "key": "avatar",
+          "type": "text",
+          "max": 500,
+          "pattern": "^(https://\\S+)?$",
+          "plain": true
+        },
+        {
+          "key": "banner",
+          "type": "text",
+          "max": 500,
+          "pattern": "^(https://\\S+)?$",
+          "plain": true
+        }
+      ],
+      "unique": [
+        "guildId"
+      ]
+    }
+  ]
+}
