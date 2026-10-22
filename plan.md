@@ -205,6 +205,34 @@ Module gelten pro Bot für alle seine Server. Katalog und Reihenfolge: `shared/m
 
 Reihenfolge der Umsetzung legt der User fest.
 
+### Phase 4b – Web-Verifizierung (Anti-VPN) und Datenschutz-Abschnitte
+
+Entschieden 2026-10-22: Kern-Modul, kein Plugin. Grund: IP-Daten, OAuth und Alt-Abgleich brauchen eigene Tabellen und gehören nicht in fremden Plugin-Code. Discord gibt Bots keine IP, darum läuft die Prüfung über eine Webseite.
+
+**Modul `web-verify`** (Gruppe security, erweitert die Verifizierung aus `anticaptcha.ts`):
+- Neues Mitglied bekommt die Quarantäne-Rolle. Das Panel enthält einen Button mit einem Link `/verify/<token>`. Der Token ist einmalig, läuft nach kurzer Zeit ab und gehört zu genau einer Guild und einem User.
+- Auf der Seite meldet sich das Mitglied mit Discord OAuth2 (`identify`) an und löst ein Captcha (Turnstile oder hCaptcha).
+- Prüfungen: Tor-Exit-Liste, ASN/Hosting-Netze, optional externe API (proxycheck.io o. ä.) mit eigenem Key über die Secrets, Länderfilter, Alt-Abgleich über gesalzene IP-Hashes pro Guild.
+- Ergebnis: erlauben, Review durch Mods, kick oder ban. Dazu Whitelist-Rolle, Bypass für Mods und ein Log mit Grund und Score.
+- Speicherung: IP nie im Klartext. Die Aufbewahrungsfrist ist einstellbar (Standard 30 Tage), danach werden die Daten automatisch gelöscht.
+- Auf der Verify-Seite steht vor dem Login ein kurzer Hinweis mit Link auf `/privacy`.
+
+**Datenschutz-Abschnitte mit Latch-Flag** (gilt für alle Module, nicht nur `web-verify`):
+- Ein Modul, das sensible Daten speichert oder an Dritte sendet, bekommt in `shared/modules.json` ein Feld `privacySection` (z. B. `"webVerify"`).
+- Wird so ein Modul zum ersten Mal aktiviert, setzt die API in `settings` unter `legal.disclosures` einen Eintrag mit Datum (`{"webVerify": {"since": "…"}}`). Der Eintrag gilt für die ganze Instanz.
+- Der Eintrag wird nie automatisch entfernt. Deaktivieren ändert ihn nicht, weil gespeicherte Daten bis zum Ablauf der Frist weiter erklärt sein müssen.
+- `/privacy` (`legal.html`) zeigt jeden Abschnitt, dessen Eintrag existiert. Admin → Rechtliches listet die aktiven Abschnitte mit Datum, nur lesbar.
+- **Warnung beim Aktivieren:** Vor dem ersten Aktivieren eines Moduls mit `privacySection` zeigt das Dashboard einen Bestätigungsdialog. Text sinngemäß: „Wenn du dieses Modul aktivierst, wird die Datenschutzerklärung dieser BotHub-Instanz automatisch um einen Abschnitt ergänzt (welche Daten, Zweck, Frist, Dritte). Der Abschnitt bleibt auch dann bestehen, wenn du das Modul später wieder deaktivierst.“ Mit Link auf die Vorschau des Abschnitts. Erst nach Bestätigung wird das Modul aktiviert. Die API lehnt die erste Aktivierung ohne Bestätigungsfeld ab, damit kein Client den Dialog überspringt.
+- Ist der Abschnitt schon gesetzt, erscheint statt des Dialogs nur ein kurzer Hinweis auf der Modulseite: „Dieses Modul ist in der Datenschutzerklärung aufgeführt.“
+
+| Teil | Status |
+|---|---|
+| `privacySection` im Katalog, `legal.disclosures` in der API, Abschnitte in `legal.html` | ⬜ |
+| Warn-Dialog beim ersten Aktivieren, Bestätigung in der API erzwingen | ⬜ |
+| Modul `web-verify`: Token, Seite, OAuth, Captcha | ⬜ |
+| Prüfungen (Tor, ASN, externe API, Land, Alt-Abgleich) | ⬜ |
+| Aktionen, Log, Whitelist, automatisches Löschen nach Frist | ⬜ |
+
 ### Phase 5 – AMP-Template
 
 Zurückgestellt (User, 2026-09-28). Die Architektur bleibt trotzdem AMP-tauglich: ein Datenordner, Adressen nur aus ENV, ein öffentlicher Port.
