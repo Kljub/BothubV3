@@ -320,7 +320,17 @@ final class CommandStore
         if (!self::moduleKnown($key)) {
             throw ApiError::notFound('error.module.unknown');
         }
-        Connection::write($this->pdo, function (PDO $pdo) use ($botId, $key, $in): void {
+        // A module with a privacy section adds it to /privacy on its first
+        // activation and never removes it. The owner must confirm that first
+        // (privacyAck), so no client can switch it on without the warning.
+        $section = $in['enabled'] ? self::privacySection($key) : null;
+        if ($section !== null && !LegalStore::disclosed($this->pdo, $section) && ($in['privacyAck'] ?? null) !== true) {
+            throw new ApiError(409, 'error.module.privacy_ack', ['section' => $section]);
+        }
+        Connection::write($this->pdo, function (PDO $pdo) use ($botId, $key, $in, $section): void {
+            if ($section !== null) {
+                LegalStore::disclose($pdo, $section, $key);
+            }
             $pdo->prepare('INSERT INTO bot_modules (bot_id, module_key, enabled) VALUES (?, ?, ?)
                 ON CONFLICT (bot_id, module_key) DO UPDATE SET enabled = excluded.enabled')
                 ->execute([$botId, $key, $in['enabled'] ? 1 : 0]);
@@ -569,6 +579,19 @@ final class CommandStore
             }
         }
         return false;
+    }
+
+    /** The privacy section of a module (modules.json privacySection), or null. */
+    public static function privacySection(string $key): ?string
+    {
+        $doc = json_decode((string) file_get_contents(self::shared('modules.json')), true, 512, JSON_THROW_ON_ERROR);
+        foreach ($doc['modules'] as $module) {
+            if (($module['key'] ?? null) === $key) {
+                $section = $module['privacySection'] ?? null;
+                return is_string($section) && $section !== '' ? $section : null;
+            }
+        }
+        return null;
     }
 
     private static function shared(string $file): string

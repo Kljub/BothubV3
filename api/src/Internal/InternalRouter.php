@@ -44,6 +44,9 @@ final class InternalRouter
         private readonly ?RunStore $runs = null,
         private readonly ?RecoveryKey $recovery = null,
         private readonly ?ConnectionStore $connections = null,
+        private readonly ?WebVerifyStore $webVerify = null,
+        // The member's address as the dashboard saw it (X-BotHub-Client-IP); only Web Verify reads it.
+        private readonly string $clientIp = '',
     ) {
     }
 
@@ -223,6 +226,15 @@ final class InternalRouter
                 }
                 $method === 'GET' || throw new ApiError(405, 'error.method_not_allowed');
                 return [200, $this->connections->page($m[1]) ?? throw ApiError::notFound()];
+            }
+            // Public: the Web Verify page /verify/<token> and its check after the Discord sign-in.
+            if ($this->webVerify !== null && preg_match('#^/internal/verify/([A-Za-z0-9_-]{43})(/check)?$#', $path, $m)) {
+                if (($m[2] ?? '') === '/check') {
+                    $method === 'POST' || throw new ApiError(405, 'error.method_not_allowed');
+                    return [200, $this->webVerify->check($m[1], $body, $this->clientIp)];
+                }
+                $method === 'GET' || throw new ApiError(405, 'error.method_not_allowed');
+                return [200, $this->webVerify->page($m[1]) ?? throw ApiError::notFound('error.webverify.expired')];
             }
             if ($this->twitch !== null && preg_match('#^/internal/bots/(\d+)/twitch-auth$#', $path, $m)) {
                 $bot = $this->bots->find((int) $m[1]) ?? throw ApiError::notFound();

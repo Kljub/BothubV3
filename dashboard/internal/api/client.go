@@ -934,10 +934,12 @@ func (c *Client) ListBotModules(ctx context.Context, s Session, botID int64) ([]
 	return out.Items, err
 }
 
-func (c *Client) SetBotModule(ctx context.Context, s Session, botID int64, key string, enabled bool) (ModuleState, error) {
+// privacyAck: the owner confirmed that the module's first activation adds
+// its section to the Privacy Policy (modules with privacySection).
+func (c *Client) SetBotModule(ctx context.Context, s Session, botID int64, key string, enabled, privacyAck bool) (ModuleState, error) {
 	var out ModuleState
 	path := fmt.Sprintf("/api/v1/bots/%d/modules/%s", botID, url.PathEscape(key))
-	_, err := c.do(ctx, s, http.MethodPut, path, map[string]bool{"enabled": enabled}, &out)
+	_, err := c.do(ctx, s, http.MethodPut, path, map[string]bool{"enabled": enabled, "privacyAck": privacyAck}, &out)
 	return out, err
 }
 
@@ -1226,6 +1228,15 @@ type LegalInfo struct {
 	Email      string `json:"email"`
 	SourceURL  string `json:"sourceUrl"`
 	AdminEmail string `json:"adminEmail,omitempty"`
+	// Disclosures: privacy sections of modules, added on their first
+	// activation and never removed (read only), e.g. "webVerify".
+	Disclosures map[string]Disclosure `json:"disclosures,omitempty"`
+}
+
+// Disclosure is one privacy section: since when and which module added it.
+type Disclosure struct {
+	Since  string `json:"since"`
+	Module string `json:"module"`
 }
 
 // Legal reads the operator details without a session (public pages).

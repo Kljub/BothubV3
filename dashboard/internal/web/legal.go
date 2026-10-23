@@ -25,6 +25,9 @@ type legalView struct {
 	Source   string // public source code (open source), optional
 	Domain   string
 	Updated  string
+	// Disclosures: privacy sections of modules (e.g. "webVerify"), shown
+	// once a module added them, even when it is off again.
+	Disclosures map[string]api.Disclosure
 	// Other is the URL of the other page; Lang the language of the text.
 	Other, Lang string
 }
@@ -41,7 +44,7 @@ func (s *Server) legalPage(kind string) http.HandlerFunc {
 		}
 		v := legalView{Kind: kind, Lang: lang, Domain: r.Host}
 		if info, err := s.api.Legal(r.Context()); err == nil {
-			v.Operator, v.Email, v.Source = info.Operator, info.Email, info.SourceURL
+			v.Operator, v.Email, v.Source, v.Disclosures = info.Operator, info.Email, info.SourceURL, info.Disclosures
 			if v.Email == "" {
 				v.Email = info.AdminEmail
 			}
@@ -51,7 +54,14 @@ func (s *Server) legalPage(kind string) http.HandlerFunc {
 				}
 			}
 		}
-		v.Updated = formatDateOnly(legalVersion, lang)
+		// "Last updated" is the newest of the texts and the module sections.
+		updated := legalVersion
+		for _, d := range v.Disclosures {
+			if len(d.Since) >= 10 && d.Since[:10] > updated {
+				updated = d.Since[:10]
+			}
+		}
+		v.Updated = formatDateOnly(updated, lang)
 		if kind == "terms" {
 			v.Other = "/privacy"
 		} else {

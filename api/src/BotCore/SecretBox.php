@@ -86,6 +86,16 @@ final class SecretBox
         return hash_hmac('sha256', $plain, $salt, true);
     }
 
+    /**
+     * HMAC-SHA-256 (hex) with a key derived from the secret key for one
+     * purpose, e.g. the IP addresses of Web Verify: equal input gives an
+     * equal value, but nobody without the key can test addresses against it.
+     */
+    public function keyedHash(string $purpose, string $data): string
+    {
+        return hash_hmac('sha256', $data, hash_hkdf('sha256', $this->key, 32, $purpose));
+    }
+
     private static function decodeKey(string $base64): string
     {
         $key = base64_decode($base64, true);

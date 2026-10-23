@@ -26,6 +26,37 @@ document.addEventListener('click', (event) => {
   }
 });
 
+// Modules with a privacy section (data-privacy-warn="<dialog id>" on the
+// toggle form): switching one on for the first time adds its section to
+// /privacy for good, so the owner confirms a warning first. "Activate" sends
+// privacy_ack (the API refuses the first activation without it); cancel or
+// closing the dialog sets the toggle back.
+document.addEventListener('htmx:confirm', (event) => {
+  const form = event.target.closest?.('form[data-privacy-warn]');
+  const toggle = form?.querySelector('input[name="enabled"]');
+  const dialog = form && document.getElementById(form.dataset.privacyWarn);
+  if (!toggle || !toggle.checked || !dialog) return;
+  event.preventDefault();
+  let confirmed = false;
+  const ack = form.querySelector('input[name="privacy_ack"]');
+  const onClick = (e) => {
+    if (e.target.closest('[data-privacy-confirm]')) {
+      confirmed = true;
+      if (ack) ack.disabled = false;
+      dialog.close();
+      event.detail.issueRequest(true);
+    } else if (e.target.closest('[data-privacy-cancel]') || e.target === dialog) {
+      dialog.close();
+    }
+  };
+  dialog.addEventListener('click', onClick);
+  dialog.addEventListener('close', () => {
+    dialog.removeEventListener('click', onClick);
+    if (!confirmed) toggle.checked = false;
+  }, { once: true });
+  dialog.showModal();
+});
+
 // Server asks to close dialogs (e.g. after adding a bot). Forms inside are reset.
 document.addEventListener('bothub:close-dialogs', () => {
   document.querySelectorAll('dialog[open]').forEach((dialog) => {

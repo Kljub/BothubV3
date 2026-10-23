@@ -19,11 +19,14 @@ type ModuleCategory struct {
 	Modules []ModuleInfo
 }
 
-// ModuleInfo describes one module of the catalog.
+// ModuleInfo describes one module of the catalog. PrivacySection: the
+// module's section of the Privacy Policy, added on its first activation
+// (the toggle warns the owner first).
 type ModuleInfo struct {
-	Key  string
-	Icon string
-	Beta bool
+	Key            string
+	Icon           string
+	Beta           bool
+	PrivacySection string
 }
 
 // LoadModules reads the module catalog grouped by category, in file order.
@@ -42,6 +45,7 @@ func LoadModules(path string) ([]ModuleCategory, error) {
 			Category string `json:"category"`
 			Icon     string `json:"icon"`
 			Beta     bool   `json:"beta"`
+			Privacy  string `json:"privacySection"`
 		} `json:"modules"`
 	}
 	if err := json.Unmarshal(raw, &catalog); err != nil {
@@ -58,7 +62,7 @@ func LoadModules(path string) ([]ModuleCategory, error) {
 		if !ok {
 			return nil, fmt.Errorf("module %q: unknown category %q", m.Key, m.Category)
 		}
-		cats[i].Modules = append(cats[i].Modules, ModuleInfo{Key: m.Key, Icon: m.Icon, Beta: m.Beta})
+		cats[i].Modules = append(cats[i].Modules, ModuleInfo{Key: m.Key, Icon: m.Icon, Beta: m.Beta, PrivacySection: m.Privacy})
 	}
 	return cats, nil
 }
@@ -69,6 +73,8 @@ type moduleView struct {
 	Category string
 	ModuleInfo
 	Enabled bool
+	// Disclosed: the module's privacy section is on /privacy already.
+	Disclosed bool
 }
 
 // categoryView is one collapsible group on the modules tab.
@@ -90,6 +96,10 @@ func (s *Server) moduleCategories(r *http.Request, botID int64) ([]categoryView,
 		enabled[st.Key] = st.Enabled
 	}
 	closed, _ := s.api.ModuleGroupsClosed(r.Context(), session(r), botID) // optional: all open on error
+	var disclosures map[string]api.Disclosure
+	if legal, err := s.api.Legal(r.Context()); err == nil {
+		disclosures = legal.Disclosures
+	}
 	cats := make([]categoryView, 0, len(s.modules))
 	for _, c := range s.modules {
 		cv := categoryView{Key: c.Key, Icon: c.Icon, Total: len(c.Modules), Closed: slices.Contains(closed, c.Key)}
@@ -97,7 +107,8 @@ func (s *Server) moduleCategories(r *http.Request, botID int64) ([]categoryView,
 			if enabled[m.Key] {
 				cv.Active++
 			}
-			cv.Modules = append(cv.Modules, moduleView{BotID: botID, Category: c.Key, ModuleInfo: m, Enabled: enabled[m.Key]})
+			_, disclosed := disclosures[m.PrivacySection]
+			cv.Modules = append(cv.Modules, moduleView{BotID: botID, Category: c.Key, ModuleInfo: m, Enabled: enabled[m.Key], Disclosed: m.PrivacySection != "" && disclosed})
 		}
 		cats = append(cats, cv)
 	}
@@ -116,6 +127,20 @@ func (s *Server) handleModuleGroups(w http.ResponseWriter, r *http.Request, p Pa
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// disclosed: the module's privacy section is on /privacy already (false
+// when the module has none or the API cannot be asked).
+func (s *Server) disclosed(r *http.Request, m ModuleInfo) bool {
+	if m.PrivacySection == "" {
+		return false
+	}
+	legal, err := s.api.Legal(r.Context())
+	if err != nil {
+		return false
+	}
+	_, ok := legal.Disclosures[m.PrivacySection]
+	return ok
 }
 
 // findModule returns the catalog entry and its category.
@@ -143,7 +168,7 @@ func (s *Server) handleSetModule(w http.ResponseWriter, r *http.Request, p Page)
 		s.fail(w, r, p, &api.Error{Status: http.StatusNotFound, Key: "error.module.unknown"})
 		return
 	}
-	if _, err := s.api.SetBotModule(r.Context(), session(r), id, key, r.PostFormValue("enabled") == "true"); err != nil {
+	if _, err := s.api.SetBotModule(r.Context(), session(r), id, key, r.PostFormValue("enabled") == "true", r.PostFormValue("privacy_ack") == "true"); err != nil {
 		s.fail(w, r, p, err)
 		return
 	}
@@ -245,7 +270,7 @@ func (s *Server) handleModuleItem(kind string) authHandler {
 				return
 			}
 			data["Module"], data["Category"], data["Commands"] = info, category, cmds
-			data["Header"] = moduleHeaderView{BotID: bot.ID, Category: category, ModuleInfo: info, Enabled: enabled}
+			data["Header"] = moduleHeaderView{BotID: bot.ID, Category: category, ModuleInfo: info, Enabled: enabled, Disclosed: s.disclosed(r, info)}
 			data["About"] = s.moduleAbout(p.Locale, info.Key)
 			if info.Key == "webhooks" {
 				hooks, err := s.webhooksData(r, p, bot.ID)

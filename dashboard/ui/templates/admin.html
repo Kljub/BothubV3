@@ -307,6 +307,19 @@
   </section>
   <div class="autosave-fallback"><button type="submit" class="btn btn-primary">{{t "action.save"}}</button></div>
 </form>
+{{/* Privacy sections of modules: added on first activation, never removed (read only). */}}
+<section class="section">
+  <header class="section-head"><h3>{{t "legal_settings.disclosures"}}</h3></header>
+  <p class="hint">{{t "legal_settings.disclosures_hint"}}</p>
+  {{range $key, $d := .Disclosures}}
+  <div class="settings-row">
+    <span class="settings-row-text"><strong>{{t (printf "module.%s.name" $d.Module)}}</strong><span class="hint">{{t "legal_settings.disclosure_since" "date" (printf "%.10s" $d.Since)}}</span></span>
+    <a href="/privacy#{{$d.Module}}" target="_blank" rel="noopener">{{t "privacy_warn.preview"}}</a>
+  </div>
+  {{else}}
+  <p class="muted">{{t "legal_settings.disclosures_none"}}</p>
+  {{end}}
+</section>
 {{end}}
 
 {{/* SMTP settings. The password is write-only and never rendered. */}}

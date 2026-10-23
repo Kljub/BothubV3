@@ -1,0 +1,187 @@
+{
+  "module": "web-verify",
+  "fields": [
+    {
+      "key": "s_general",
+      "type": "section",
+      "hint": true
+    },
+    {
+      "key": "channel",
+      "type": "channel",
+      "channelTypes": [
+        "text"
+      ]
+    },
+    {
+      "key": "panel",
+      "type": "message",
+      "default": {
+        "mode": "embed",
+        "title": "🌍 Verification",
+        "description": "Press **Verify** and sign in with Discord on the page that opens to get access to {server}.",
+        "color": "#38bdf8"
+      },
+      "vars": [
+        "server",
+        "server.id",
+        "members"
+      ]
+    },
+    {
+      "key": "buttonLabel",
+      "type": "text",
+      "max": 80,
+      "default": "Verify",
+      "plain": true
+    },
+    {
+      "key": "unverifiedRole",
+      "type": "role",
+      "hint": true
+    },
+    {
+      "key": "verifiedRole",
+      "type": "role",
+      "hint": true
+    },
+    {
+      "key": "logChannel",
+      "type": "channel",
+      "channelTypes": [
+        "text"
+      ],
+      "hint": true
+    },
+    {
+      "key": "s_checks",
+      "type": "section",
+      "hint": true
+    },
+    {
+      "key": "vpnCheck",
+      "type": "bool",
+      "default": true,
+      "hint": true
+    },
+    {
+      "key": "vpnAction",
+      "type": "select",
+      "options": [
+        "retry",
+        "review",
+        "block"
+      ],
+      "default": "retry",
+      "showIf": {
+        "vpnCheck": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "torCheck",
+      "type": "bool",
+      "default": true,
+      "hint": true
+    },
+    {
+      "key": "torAction",
+      "type": "select",
+      "options": [
+        "retry",
+        "review",
+        "block"
+      ],
+      "default": "retry",
+      "showIf": {
+        "torCheck": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "altCheck",
+      "type": "bool",
+      "default": true,
+      "hint": true
+    },
+    {
+      "key": "altAction",
+      "type": "select",
+      "options": [
+        "log",
+        "review",
+        "block"
+      ],
+      "default": "review",
+      "showIf": {
+        "altCheck": [
+          "true"
+        ]
+      }
+    },
+    {
+      "key": "countryMode",
+      "type": "select",
+      "options": [
+        "off",
+        "allow",
+        "block"
+      ],
+      "default": "off",
+      "hint": true
+    },
+    {
+      "key": "countries",
+      "type": "words",
+      "max": 60,
+      "maxLength": 2,
+      "hint": true,
+      "showIf": {
+        "countryMode": [
+          "allow",
+          "block"
+        ]
+      }
+    },
+    {
+      "key": "countryAction",
+      "type": "select",
+      "options": [
+        "review",
+        "block"
+      ],
+      "default": "review",
+      "showIf": {
+        "countryMode": [
+          "allow",
+          "block"
+        ]
+      }
+    },
+    {
+      "key": "s_result",
+      "type": "section"
+    },
+    {
+      "key": "blockAction",
+      "type": "select",
+      "options": [
+        "kick",
+        "ban",
+        "none"
+      ],
+      "default": "kick",
+      "hint": true
+    },
+    {
+      "key": "retentionDays",
+      "type": "number",
+      "min": 1,
+      "max": 365,
+      "default": 30,
+      "hint": true
+    }
+  ]
+}

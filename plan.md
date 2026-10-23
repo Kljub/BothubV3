@@ -227,11 +227,11 @@ Entschieden 2026-10-22: Kern-Modul, kein Plugin. Grund: IP-Daten, OAuth und Alt-
 
 | Teil | Status |
 |---|---|
-| `privacySection` im Katalog, `legal.disclosures` in der API, Abschnitte in `legal.html` | ⬜ |
-| Warn-Dialog beim ersten Aktivieren, Bestätigung in der API erzwingen | ⬜ |
-| Modul `web-verify`: Token, Seite, OAuth, Captcha | ⬜ |
-| Prüfungen (Tor, ASN, externe API, Land, Alt-Abgleich) | ⬜ |
-| Aktionen, Log, Whitelist, automatisches Löschen nach Frist | ⬜ |
+| `privacySection` im Katalog, `legal.disclosures` in der API, Abschnitte in `legal.html`, Liste unter Admin → Rechtliches | 🔄 Code und Tests fertig (2026-10-22), wartet auf Test im echten Discord |
+| Warn-Dialog beim ersten Aktivieren, Bestätigung in der API erzwingen (auch Backup-Restore schaltet ohne Abschnitt nicht ein) | 🔄 Code und Tests fertig |
+| Modul `web-verify`: Token-Link, Seite `/verify/<token>`, Discord-Anmeldung (Client Secret aus Auto Assign Roles) | 🔄 Code und Tests fertig; Captcha (Turnstile) noch offen |
+| Prüfungen: Tor-Liste, VPN/Proxy/Hosting und Land über proxycheck.io (Secret `PROXYCHECK_API_KEY`), Alt-Abgleich über HMAC pro Server (IPv6 als /64) | 🔄 Code und Tests fertig |
+| Aktionen (erneut versuchen, Prüfen mit Buttons, Sperren), Log, Rollen, automatisches Löschen nach Frist (auch bei ausgeschaltetem Modul) | 🔄 Code und Tests fertig; Whitelist-Rolle und Bypass für Mods noch offen |
 
 ### Phase 5 – AMP-Template
 

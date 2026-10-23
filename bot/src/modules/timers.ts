@@ -20,6 +20,7 @@ import { welcomeTick } from './members.js';
 import { handover } from '../core/handover.js';
 import { stopTwitchAlerts, twitchAlertsTick } from './twitch-alerts.js';
 import { connectionsTick } from './connections.js';
+import { webVerifyCleanup, webVerifyTick } from './webverify.js';
 
 // ---------- pure helpers ----------
 
@@ -78,7 +79,10 @@ interface TimedMessage { _id?: string; name: string; channel: unknown; days: num
 
 export class ModuleTimers {
   private timer: NodeJS.Timeout | undefined;
+  // Web Verify results: members wait for their roles, so every 5 seconds.
+  private fast: NodeJS.Timeout | undefined;
   private busy = false;
+  private fastBusy = false;
 
   constructor(
     private readonly ctx: ModuleContext,
@@ -89,10 +93,13 @@ export class ModuleTimers {
     this.stop();
     this.timer = setInterval(() => void this.tick(client), 30_000);
     this.timer.unref();
+    this.fast = setInterval(() => void this.fastTick(client), 5_000);
+    this.fast.unref();
   }
 
   stop(): void {
     clearInterval(this.timer);
+    clearInterval(this.fast);
     stopTwitchAlerts(this.ctx.botId);
   }
 
@@ -109,6 +116,8 @@ export class ModuleTimers {
       if (this.ctx.enabled('anticontrol')) await anticontrolTick(this.ctx, guilds, now);
       await twitchAlertsTick(this.ctx, guilds);
       await connectionsTick(this.ctx, guilds, this.ctx.connEmit, now);
+      // Also while the module is off: stored address hashes still expire.
+      if (Math.floor(now / 600_000) !== Math.floor((now - 30_000) / 600_000)) webVerifyCleanup(this.ctx, now);
       const local = localTime(now, this.timezone());
       await this.birthdays(guilds, local);
       await this.qotd(guilds, local);
@@ -127,6 +136,18 @@ export class ModuleTimers {
       log.warn('module timers failed', { botId: this.ctx.botId, err: String(err) });
     } finally {
       this.busy = false;
+    }
+  }
+
+  async fastTick(client: Client): Promise<void> {
+    if (this.fastBusy || !client.isReady() || !handover.isLeader()) return;
+    this.fastBusy = true;
+    try {
+      await webVerifyTick(this.ctx, [...client.guilds.cache.values()]);
+    } catch (err) {
+      log.warn('web verify tick failed', { botId: this.ctx.botId, err: String(err) });
+    } finally {
+      this.fastBusy = false;
     }
   }
 

@@ -377,8 +377,12 @@ final class BotBackup
                 ->execute([$b['enabled'] ? 1 : 0, $botId, $b['module'], $b['name']]);
         }
         foreach ($d['modules'] as $m) {
+            // A module with a privacy section stays off until its section is
+            // on /privacy: only the owner's confirmation adds it (CommandStore::setModule).
+            $section = CommandStore::privacySection((string) $m['key']);
+            $on = $m['enabled'] && ($section === null || LegalStore::disclosed($pdo, $section));
             $pdo->prepare('INSERT INTO bot_modules (bot_id, module_key, enabled, config) VALUES (?, ?, ?, ?)')
-                ->execute([$botId, $m['key'], $m['enabled'] ? 1 : 0, json_encode((object) $m['config'], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)]);
+                ->execute([$botId, $m['key'], $on ? 1 : 0, json_encode((object) $m['config'], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)]);
         }
         foreach ($d['messageTemplates'] as $m) {
             $pdo->prepare('INSERT INTO message_templates (bot_id, name, message) VALUES (?, ?, ?)')

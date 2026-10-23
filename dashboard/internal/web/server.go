@@ -175,6 +175,10 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /connect/callback", s.handleMemberConnectCallback)
 	mux.HandleFunc("GET /connect/{app}", s.handleMemberConnectPage)
 	mux.HandleFunc("GET /connect/{app}/start", s.handleMemberConnectStart)
+	// Web Verify: members verify with the bot's Discord sign-in (address checks).
+	mux.HandleFunc("GET /verify/callback", s.handleVerifyCallback)
+	mux.HandleFunc("GET /verify/{token}", s.handleVerifyPage)
+	mux.HandleFunc("GET /verify/{token}/start", s.handleVerifyStart)
 	mux.HandleFunc("POST /login", s.handleLogin)
 	mux.HandleFunc("GET /register", s.handleRegisterPage)
 	mux.HandleFunc("POST /register", s.handleRegister)

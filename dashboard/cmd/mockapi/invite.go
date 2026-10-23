@@ -83,3 +83,27 @@ func (s *store) connectPublic(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	s.forward(w, r, body)
 }
+
+var verifyTokenPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{43}$`)
+
+// verifyPublic is the public Web Verify page and its check after the
+// member's Discord sign-in (PHP API only). The member's address comes from
+// the dashboard (X-BotHub-Client-IP, never from the browser); forward
+// passes it on.
+func (s *store) verifyPublic(w http.ResponseWriter, r *http.Request) {
+	if !verifyTokenPattern.MatchString(r.PathValue("token")) || s.php == nil {
+		apiError(w, 404, "error.webverify.expired")
+		return
+	}
+	var body []byte
+	if r.Method == http.MethodPost {
+		b, err := io.ReadAll(io.LimitReader(r.Body, 4096))
+		if err != nil {
+			apiError(w, 400, "error.validation.failed")
+			return
+		}
+		body = b
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	s.forward(w, r, body)
+}

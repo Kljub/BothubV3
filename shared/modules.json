@@ -1,5 +1,5 @@
 {
-  "$comment": "Module catalog. Group and module texts are i18n keys: module.category.<key>(.description), module.<key>.name / .description. The group color is set in bh-mod-card.css (.module-group-<key>).",
+  "$comment": "Module catalog. Group and module texts are i18n keys: module.category.<key>(.description), module.<key>.name / .description. The group color is set in bh-mod-card.css (.module-group-<key>). privacySection: the module stores sensitive data or sends it to third parties; its first activation adds that section to /privacy for good (settings key legal.disclosures) after the owner confirmed a warning.",
   "categories": [
     {
       "key": "utility",
@@ -133,6 +133,13 @@
       "key": "auditlog",
       "category": "security",
       "icon": "📜"
+    },
+    {
+      "key": "web-verify",
+      "category": "security",
+      "icon": "🌍",
+      "beta": true,
+      "privacySection": "webVerify"
     },
     {
       "key": "connection-roles",

@@ -94,6 +94,10 @@ func (s *store) forward(w http.ResponseWriter, r *http.Request, body []byte) {
 	if ct := r.Header.Get("Content-Type"); ct != "" {
 		req.Header.Set("Content-Type", ct)
 	}
+	// The browser's address as the dashboard saw it (Web Verify checks it).
+	if ip := r.Header.Get("X-BotHub-Client-IP"); ip != "" {
+		req.Header.Set("X-BotHub-Client-IP", truncate(ip, 64))
+	}
 	resp, err := s.php.http.Do(req)
 	if err != nil {
 		apiError(w, 502, "error.api.unreachable")

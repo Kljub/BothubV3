@@ -27,6 +27,7 @@ import { rolePrefix } from './server-auto.js';
 import { thanksMessage } from './thanks.js';
 import { linkfixMessage } from './linkfix.js';
 import { connectionsJoin } from './connections.js';
+import { ensureWebVerifyPanels, webVerifyInteraction, webVerifyJoin } from './webverify.js';
 
 export { ModuleContext } from './context.js';
 
@@ -53,6 +54,7 @@ export function bindModules(client: Client, ctx: ModuleContext, timezone: () => 
     for (const g of guilds) guard('automod', syncAutomod(ctx, g));
     guard('stickies', ensureStickies(ctx, guilds));
     guard('captcha', ensureCaptchaPanels(ctx, guilds));
+    guard('web-verify', ensureWebVerifyPanels(ctx, guilds));
     levelingVoiceInit(ctx, () => [...client.guilds.cache.values()]);
     guard('leveling-curve', Promise.resolve().then(() => relevel(ctx)));
     for (const g of guilds) antiAuditWarn(ctx, g);
@@ -71,12 +73,14 @@ export function bindModules(client: Client, ctx: ModuleContext, timezone: () => 
     for (const g of guilds) guard('automod', syncAutomod(ctx, g));
     guard('stickies', ensureStickies(ctx, guilds));
     guard('captcha', ensureCaptchaPanels(ctx, guilds));
+    guard('web-verify', ensureWebVerifyPanels(ctx, guilds));
   };
   client.on(Events.AutoModerationActionExecution, (e) => guard('automod-hit', automodHit(ctx, e)));
   client.on(Events.InteractionCreate, (i) => {
     guard('interaction', onModuleInteraction(ctx, i));
     guard('welcome-button', welcomeButtonRoute(ctx, i));
     guard('captcha', captchaInteraction(ctx, i, (g, title, text, color) => antiLog(ctx, g, title, text, color)));
+    guard('web-verify', webVerifyInteraction(ctx, i));
     achCommand(ctx, i);
   });
   client.on(Events.GuildCreate, (g) => {
@@ -127,6 +131,7 @@ export function bindModules(client: Client, ctx: ModuleContext, timezone: () => 
     guard('member-add', join.catch(() => null).then((info) => onMemberAdd(ctx, m, info)));
     guard('anticontrol', antiJoin(ctx, m));
     guard('connections', connectionsJoin(ctx, m));
+    guard('web-verify', webVerifyJoin(ctx, m));
   });
   client.on(Events.GuildMemberRemove, (m) => {
     guard('member-remove', onMemberRemove(ctx, m));

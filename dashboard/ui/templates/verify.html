@@ -1,0 +1,53 @@
+{{/* Public member page of Web Verify (/verify/<token>, /verify/callback).
+     Receives a verifyPageView (internal/web/webverify.go). */}}
+
+{{define "title"}}{{.Data.Bot.BotName}}{{end}}
+
+{{define "verify_layout"}}{{$de := eq .Data.Lang "de"}}<!doctype html>
+<html lang="{{.Data.Lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>{{with .Data.Bot.BotName}}{{.}} · {{end}}BotHub</title>
+<link rel="stylesheet" href="/static/css/bothub.css?v={{.AssetVersion}}">
+</head>
+<body class="auth" data-theme="{{.Theme}}">
+<main class="auth-card invite-card">
+  {{with .Data.Bot.AvatarURL}}<img class="invite-avatar" src="{{.}}" alt="" width="80" height="80">{{else}}<span class="invite-avatar invite-avatar-empty" aria-hidden="true">🌍</span>{{end}}
+  {{with .Data.Bot.BotName}}<h2>{{.}}</h2>{{end}}
+  {{if .Data.Result}}{{$r := .Data.Result}}
+    {{if eq $r.Status "passed"}}
+    <div class="alert alert-success">{{if $de}}Du bist verifiziert. Du kannst diese Seite schließen und zu Discord zurückkehren. Die Rollen kommen in wenigen Sekunden.{{else}}You are verified. You can close this page and go back to Discord. The roles follow within a few seconds.{{end}}</div>
+    {{else if eq $r.Status "review"}}
+    <div class="alert alert-warning">{{if $de}}Danke! Das Server-Team prüft deine Verifizierung noch und schaltet dich frei.{{else}}Thank you! The server team still checks your verification and will let you in.{{end}}</div>
+    {{else if eq $r.Status "retry"}}
+    <div class="alert alert-warning">{{if $de}}Wir haben einen VPN, Proxy oder Tor erkannt. Schalte ihn aus und versuche es dann noch mal.{{else}}We found a VPN, proxy or Tor. Please turn it off and try again.{{end}}</div>
+    <a class="btn btn-primary btn-block" href="/verify/{{.Data.Token}}/start">{{if $de}}Noch mal versuchen{{else}}Try again{{end}}</a>
+    {{else}}
+    <div class="alert alert-danger">{{if $de}}Die Verifizierung war nicht erfolgreich. Wende dich bei Fragen an das Server-Team.{{else}}The verification did not succeed. Please contact the server team if you have questions.{{end}}</div>
+    {{end}}
+  {{else if eq .Data.Error "expired"}}
+    <div class="alert alert-warning">{{if $de}}Dieser Link ist abgelaufen oder wurde schon benutzt. Drücke im Server noch mal auf „Verifizieren“.{{else}}This link expired or was used already. Press "Verify" on the server again.{{end}}</div>
+  {{else if eq .Data.Error "denied"}}
+    <div class="alert alert-warning">{{if $de}}Du hast die Anmeldung abgebrochen. Es wurde nichts geprüft.{{else}}You cancelled the sign-in. Nothing was checked.{{end}}</div>
+    <a class="btn btn-primary btn-block" href="/verify/{{.Data.Token}}/start">{{if $de}}Noch mal versuchen{{else}}Try again{{end}}</a>
+  {{else if eq .Data.Error "wrong_account"}}
+    <div class="alert alert-danger">{{if $de}}Du hast dich mit einem anderen Discord-Konto angemeldet als dem, das den Link bekommen hat.{{else}}You signed in with another Discord account than the one that got the link.{{end}}</div>
+    <a class="btn btn-primary btn-block" href="/verify/{{.Data.Token}}/start">{{if $de}}Mit dem richtigen Konto anmelden{{else}}Sign in with the right account{{end}}</a>
+  {{else if eq .Data.Error "tries"}}
+    <div class="alert alert-danger">{{if $de}}Zu viele Versuche mit diesem Link. Drücke im Server noch mal auf „Verifizieren“.{{else}}Too many tries with this link. Press "Verify" on the server again.{{end}}</div>
+  {{else if eq .Data.Error "failed"}}
+    <div class="alert alert-danger">{{if $de}}Discord hat die Anmeldung nicht bestätigt. Versuch es gleich noch mal.{{else}}Discord did not confirm the sign-in. Please try again.{{end}}</div>
+    <a class="btn btn-primary btn-block" href="/verify/{{.Data.Token}}/start">{{if $de}}Noch mal versuchen{{else}}Try again{{end}}</a>
+  {{else}}
+    <p>{{if $de}}Bestätige mit deinem Discord-Konto, dass du ein echter Mensch bist, um Zugang zum Server zu bekommen.{{else}}Confirm with your Discord account that you are a real person to get access to the server.{{end}}</p>
+    <p class="muted">{{if $de}}Dabei prüft der Bot deine IP-Adresse auf VPN, Proxy und Tor und vergleicht sie mit anderen Konten auf diesem Server. Die Adresse wird nicht im Klartext gespeichert, nur als verschlüsselter Prüfwert, und nach Ablauf der Frist gelöscht.{{if .Data.Bot.VPNCheck}} Für die VPN-Prüfung geht die Adresse an proxycheck.io.{{end}} Der Bot liest von Discord nur deine Nutzer-ID.{{else}}The bot checks your IP address for VPN, proxy and Tor and compares it with other accounts on this server. The address is not stored in plain text, only as an encrypted check value, and is deleted after the retention time.{{if .Data.Bot.VPNCheck}} For the VPN check the address is sent to proxycheck.io.{{end}} From Discord the bot only reads your user ID.{{end}}</p>
+    <p class="hint">{{if $de}}Mehr dazu in der <a href="/privacy?lang=de#web-verify">Datenschutzerklärung</a>. Mit „Verifizieren“ startest du die Prüfung.{{else}}More in the <a href="/privacy?lang=en#web-verify">Privacy Policy</a>. "Verify" starts the check.{{end}}</p>
+    <a class="btn btn-primary btn-block" href="/verify/{{.Data.Token}}/start">{{if $de}}Mit Discord anmelden und verifizieren{{else}}Sign in with Discord and verify{{end}}</a>
+  {{end}}
+  <p class="legal-links"><a href="/terms">{{if $de}}Nutzungsbedingungen{{else}}Terms of Service{{end}}</a> · <a href="/privacy">{{if $de}}Datenschutz{{else}}Privacy{{end}}</a></p>
+</main>
+</body>
+</html>
+{{end}}

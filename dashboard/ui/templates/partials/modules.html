@@ -25,17 +25,39 @@
   <div class="module-card-top">
     {{if .Beta}}<span class="card-badges"><span class="beta">{{t "modules.beta"}}</span></span>{{end}}
     <span class="module-card-icon" aria-hidden="true">{{.Icon}}</span>
-    <form class="module-card-toggle" hx-put="/bot/{{.BotID}}/modules/{{.Key}}" hx-trigger="change" hx-target="#module-{{.Key}}" hx-swap="outerHTML swap:250ms">
+    <form class="module-card-toggle" hx-put="/bot/{{.BotID}}/modules/{{.Key}}" hx-trigger="change" hx-target="#module-{{.Key}}" hx-swap="outerHTML swap:250ms"{{if and .PrivacySection (not .Disclosed)}} data-privacy-warn="privacy-warn-{{.Key}}"{{end}}>
       <input type="checkbox" class="toggle toggle-sm" name="enabled" value="true" {{if .Enabled}}checked{{end}}
         aria-label="{{t "modules.toggle" "name" (t (printf "module.%s.name" .Key))}}">
+      {{if and .PrivacySection (not .Disclosed)}}<input type="hidden" name="privacy_ack" value="true" disabled>{{end}}
     </form>
   </div>
+  {{if and .PrivacySection (not .Disclosed)}}{{template "privacy_warn" .}}{{end}}
   <div class="module-card-body">
     <h3>{{t (printf "module.%s.name" .Key)}}</h3>
     <p class="muted" title="{{t (printf "module.%s.description" .Key)}}">{{t (printf "module.%s.description" .Key)}}</p>
     <a class="module-card-edit" href="/bots/modules/{{.Key}}">{{t "modules.edit"}}</a>
   </div>
 </article>
+{{end}}
+
+{{/* Warning before the first activation of a module with a privacy section
+     (modules.json privacySection): switching it on adds that section to
+     /privacy for good. app.js opens it from the toggle (data-privacy-warn);
+     "Activate" sends privacy_ack, which the API requires. */}}
+{{define "privacy_warn"}}
+<dialog id="privacy-warn-{{.Key}}" class="modal" aria-labelledby="privacy-warn-{{.Key}}-title">
+  <header class="modal-header">
+    <h2 id="privacy-warn-{{.Key}}-title">{{t "privacy_warn.title"}}</h2>
+    <button type="button" class="icon-btn" data-privacy-cancel aria-label="{{t "admin.close"}}">×</button>
+  </header>
+  <p>{{t "privacy_warn.text" "name" (t (printf "module.%s.name" .Key))}}</p>
+  <p class="muted">{{t (printf "privacy_warn.section.%s" .PrivacySection)}}</p>
+  <p class="hint">{{t "privacy_warn.keep"}} <a href="/privacy#{{.Key}}" target="_blank" rel="noopener">{{t "privacy_warn.preview"}}</a></p>
+  <div class="modal-actions">
+    <button type="button" class="btn btn-primary btn-sm" data-privacy-confirm>{{t "privacy_warn.confirm"}}</button>
+    <button type="button" class="btn btn-sm" data-privacy-cancel>{{t "privacy_warn.cancel"}}</button>
+  </div>
+</dialog>
 {{end}}
 
 {{/* Toggle response: the card plus the group's counter, swapped out of band. */}}

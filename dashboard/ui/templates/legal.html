@@ -124,6 +124,7 @@
 <p>Für Konten im Dashboard: Benutzername, optional E-Mail-Adresse, Passwort nur als Hash (Argon2id), Daten der Zwei-Faktor-Anmeldung (verschlüsselt) bzw. Passkeys (öffentlicher Schlüssel), ein technisch notwendiges Sitzungs-Cookie sowie im Server-Protokoll Zeitpunkt, IP-Adresse und Browser-Kennung von Anmeldungen und Änderungen. Es gibt keine Tracking- oder Werbe-Cookies.</p>
 <h3>c) Plugins und externe Dienste</h3>
 <p>Wenn Server-Administratoren Funktionen nutzen, die externe Dienste einbinden (z. B. Bildgenerierung, Medienserver, Wetterdaten, Liedtexte, Musik), werden genau die dafür nötigen Eingaben an diesen Dienst übermittelt, etwa ein Suchbegriff, ein Prompt oder ein Bild. Dafür gelten zusätzlich die Datenschutzerklärungen dieser Anbieter. Plugins laufen abgeschottet und haben keinen direkten Zugriff auf die Datenbank.</p>
+{{if (index .Disclosures "webVerify").Since}}{{template "privacy_webverify_de" .}}{{end}}
 
 <h2>3. Zwecke und Rechtsgrundlagen</h2>
 <ul>
@@ -239,6 +240,7 @@
 <p>For dashboard accounts: user name, optional e-mail address, password only as a hash (Argon2id), two-factor sign-in data (encrypted) or passkeys (public key), a strictly necessary session cookie, and in the server log the time, IP address and browser identifier of sign-ins and changes. There are no tracking or advertising cookies.</p>
 <h3>c) Plugins and third-party services</h3>
 <p>When server administrators use features that rely on third-party services (for example image generation, media servers, weather data, lyrics, music), exactly the input needed is sent to that service, such as a search term, a prompt or an image. Their privacy policies apply in addition. Plugins run isolated and have no direct access to the database.</p>
+{{if (index .Disclosures "webVerify").Since}}{{template "privacy_webverify_en" .}}{{end}}
 
 <h2>3. Purposes and legal bases</h2>
 <ul>
@@ -276,4 +278,37 @@
 
 <h2>10. Changes</h2>
 <p>We update this policy when features or the law change. The current version is always on this page.</p>
+{{end}}
+
+{{/* Module sections (modules.json privacySection). Shown from the first
+     activation of the module on, also when it is off again: data stored
+     while it ran stays explained until it is deleted. */}}
+{{define "privacy_webverify_de"}}
+<h3 id="web-verify">d) Web-Verifizierung (Schutz vor VPN, Proxy und Zweitkonten)</h3>
+<p>Server-Administratoren können neue Mitglieder auf einer Seite dieses Dienstes verifizieren lassen. Dabei verarbeiten wir:</p>
+<ul>
+  <li>deine Discord-Nutzer-ID aus der Anmeldung mit Discord (Bereich „identify“; das Zugriffstoken wird sofort danach widerrufen und nicht gespeichert);</li>
+  <li>die IP-Adresse, mit der du die Seite aufrufst: Wir prüfen, ob sie zu Tor, einem VPN, Proxy oder Rechenzentrum gehört, und leiten daraus das Land ab;</li>
+  <li>einen Prüfwert der Adresse (HMAC-SHA-256 mit einem geheimen Schlüssel, je Server verschieden, bei IPv6 das /64-Netz). Die Adresse selbst speichern wir nicht. Mit dem Prüfwert erkennen wir, ob sich andere Konten auf demselben Server von derselben Adresse verifiziert haben;</li>
+  <li>das Ergebnis (bestanden, Prüfung durch das Server-Team, abgelehnt), die Gründe und ggf. die IDs übereinstimmender Konten. Das Server-Team sieht diese Angaben im Protokoll-Kanal seines Servers.</li>
+</ul>
+<p><strong>Zweck und Rechtsgrundlage:</strong> Schutz des Servers vor Raids, Spam, Zweitkonten und dem Umgehen von Banns (Art. 6 Abs. 1 lit. f DSGVO, berechtigtes Interesse der Server-Administratoren und ihrer Mitglieder). Die Daten dienen nur diesem Zweck, nicht der Werbung oder einer Profilbildung darüber hinaus.</p>
+<p><strong>Empfänger:</strong> Zur VPN- und Länderprüfung kann die IP-Adresse an <a href="https://proxycheck.io/privacy" rel="noopener">proxycheck.io</a> übermittelt werden, wenn der Server sie eingeschaltet hat; dafür gilt zusätzlich die Datenschutzerklärung dieses Anbieters. Die Liste der Tor-Ausgänge laden wir von check.torproject.org, dabei wird keine Adresse von dir übertragen.</p>
+<p><strong>Speicherdauer:</strong> Prüfwerte werden nach der Frist gelöscht, die der Server einstellt (1 bis 365 Tage, Standard 30 Tage), Verifizierungs-Links und ihr Ergebnis nach 7 Tagen.</p>
+<p><strong>Widerspruch:</strong> Du kannst der Verarbeitung widersprechen, indem du die Verifizierung nicht startest; der Server kann dich dann allerdings nicht freischalten. Für Auskunft oder Löschung wende dich an das Server-Team oder an den Betreiber (siehe 1).</p>
+{{end}}
+
+{{define "privacy_webverify_en"}}
+<h3 id="web-verify">d) Web verification (protection against VPNs, proxies and second accounts)</h3>
+<p>Server administrators can have new members verify on a page of this Service. We then process:</p>
+<ul>
+  <li>your Discord user ID from the sign-in with Discord (scope "identify"; the access token is revoked right after and not stored);</li>
+  <li>the IP address you open the page from: we check whether it belongs to Tor, a VPN, a proxy or a data center, and derive the country from it;</li>
+  <li>a check value of the address (HMAC-SHA-256 with a secret key, different per server; for IPv6 the /64 network). We do not store the address itself. The check value shows whether other accounts on the same server verified from the same address;</li>
+  <li>the result (passed, review by the server team, refused), the reasons and, where applicable, the IDs of matching accounts. The server team sees these in the log channel of their server.</li>
+</ul>
+<p><strong>Purpose and legal basis:</strong> protecting the server against raids, spam, second accounts and ban evasion (Art. 6(1)(f) GDPR, legitimate interest of the server administrators and their members). The data serves only this purpose, not advertising or any further profiling.</p>
+<p><strong>Recipients:</strong> for the VPN and country check the IP address may be sent to <a href="https://proxycheck.io/privacy" rel="noopener">proxycheck.io</a> when the server turned it on; that provider's privacy policy applies in addition. We download the list of Tor exits from check.torproject.org; no address of yours is sent there.</p>
+<p><strong>Retention:</strong> check values are deleted after the period the server sets (1 to 365 days, 30 days by default), verification links and their result after 7 days.</p>
+<p><strong>Objection:</strong> you can object by not starting the verification; the server then cannot let you in, though. For access or deletion, contact the server team or the operator (see 1).</p>
 {{end}}

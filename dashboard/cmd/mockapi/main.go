@@ -266,6 +266,8 @@ func main() {
 	// Auto Assign Roles: the public member page and its sign-in (the Discord code is the proof).
 	mux.HandleFunc("GET /api/v1/connect/{app}", s.connectPublic)
 	mux.HandleFunc("POST /api/v1/connect/{app}/link", s.connectPublic)
+	mux.HandleFunc("GET /api/v1/verify/{token}", s.verifyPublic)
+	mux.HandleFunc("POST /api/v1/verify/{token}/check", s.verifyPublic)
 	mux.HandleFunc("GET /api/v1/admin/invite-settings", s.auth(s.getInviteSettings))
 	mux.HandleFunc("PUT /api/v1/admin/invite-settings", s.auth(s.putInviteSettings))
 	mux.HandleFunc("GET /api/v1/admin/legal", s.auth(s.getAdminLegal))

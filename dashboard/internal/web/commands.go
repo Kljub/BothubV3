@@ -161,6 +161,8 @@ type moduleHeaderView struct {
 	Category string
 	ModuleInfo
 	Enabled bool
+	// Disclosed: the module's privacy section is on /privacy already.
+	Disclosed bool
 }
 
 func (s *Server) moduleCommands(r *http.Request, botID int64, module string) ([]commandView, error) {
@@ -226,13 +228,13 @@ func (s *Server) handleModuleState(w http.ResponseWriter, r *http.Request, p Pag
 		s.fail(w, r, p, &api.Error{Status: http.StatusNotFound, Key: "error.module.unknown"})
 		return
 	}
-	state, err := s.api.SetBotModule(r.Context(), session(r), id, info.Key, r.PostFormValue("enabled") == "true")
+	state, err := s.api.SetBotModule(r.Context(), session(r), id, info.Key, r.PostFormValue("enabled") == "true", r.PostFormValue("privacy_ack") == "true")
 	if err != nil {
 		s.fail(w, r, p, err)
 		return
 	}
 	s.render(w, http.StatusOK, "module_item", "module_header_fragment",
-		withData(p, moduleHeaderView{BotID: id, Category: category, ModuleInfo: info, Enabled: state.Enabled}))
+		withData(p, moduleHeaderView{BotID: id, Category: category, ModuleInfo: info, Enabled: state.Enabled, Disclosed: s.disclosed(r, info)}))
 }
 
 // handleCommandState enables or disables one command and returns its row.

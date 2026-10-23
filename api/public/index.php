@@ -21,6 +21,7 @@ use BotHub\Internal\RunStore;
 use BotHub\Internal\RecoveryKey;
 use BotHub\Internal\TwitchAuthStore;
 use BotHub\Internal\ConnectionStore;
+use BotHub\Internal\WebVerifyStore;
 use BotHub\Internal\DataStore;
 use BotHub\Internal\BotBackup;
 use BotHub\Internal\SdkPolicyStore;
@@ -216,6 +217,8 @@ if (str_starts_with($path, '/internal/')) {
             new RunStore($pdo),
             new RecoveryKey($pdo),
             new ConnectionStore($pdo, SecretBox::loadOrCreate()),
+            new WebVerifyStore($pdo, SecretBox::loadOrCreate(), $secrets, getenv('DATA_DIR') ?: '/data'),
+            mb_substr((string) ($_SERVER['HTTP_X_BOTHUB_CLIENT_IP'] ?? ''), 0, 64),
         );
         [$status, $out] = $router->handle($method, $path, $body, $raw === '' ? null : json_decode($raw, false), $_GET);
     } catch (\Throwable $e) {

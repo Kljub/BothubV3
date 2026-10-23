@@ -20,6 +20,8 @@ type legalInfo struct {
 	UpdatedAt *string `json:"updatedAt"`
 	// AdminEmail: the admin account's e-mail (fallback contact).
 	AdminEmail string `json:"adminEmail,omitempty"`
+	// Disclosures: privacy sections of modules (PHP API, read only).
+	Disclosures map[string]json.RawMessage `json:"disclosures,omitempty"`
 }
 
 func (s *store) readLegal(r *http.Request) (legalInfo, bool) {
@@ -99,6 +101,7 @@ func (s *store) putAdminLegal(w http.ResponseWriter, r *http.Request, sid string
 		}
 	}
 	in.AdminEmail = ""
+	in.Disclosures = nil
 	s.mu.Lock()
 	s.legal = in
 	s.mu.Unlock()
