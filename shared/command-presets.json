@@ -18096,6 +18096,736 @@
       }
     },
     {
+      "module": "counting",
+      "group": "Counting",
+      "name": "count next",
+      "title": "Count Next",
+      "description": "Shows the next number of a counting channel",
+      "graph": {
+        "schemaVersion": 1,
+        "nodes": [
+          {
+            "id": "trigger",
+            "type": "trigger.slash",
+            "typeVersion": 1,
+            "config": {
+              "command_name": "count next",
+              "description": "Shows the next number of a counting channel"
+            },
+            "position": {
+              "x": 120,
+              "y": 240
+            }
+          },
+          {
+            "id": "option_channel",
+            "type": "option.channel",
+            "typeVersion": 1,
+            "config": {
+              "name": "channel",
+              "description": "The counting channel (this one when empty)",
+              "required": false,
+              "variable": "channel"
+            },
+            "position": {
+              "x": 120,
+              "y": 110
+            }
+          },
+          {
+            "id": "step1",
+            "type": "action.counting_info",
+            "typeVersion": 1,
+            "config": {
+              "channel": "{option_channel}",
+              "variable": "cnt"
+            },
+            "position": {
+              "x": 440,
+              "y": 240
+            }
+          },
+          {
+            "id": "step2",
+            "type": "action.send_message",
+            "typeVersion": 1,
+            "config": {
+              "message": {
+                "mode": "normal",
+                "content": "🔢 Next number in {cnt.channel}: **{cnt}**\nRecord: **{cnt.record}** · Saves: **{cnt.saves}** · Last: {cnt.last_user}"
+              },
+              "target": "reply"
+            },
+            "position": {
+              "x": 760,
+              "y": 240
+            }
+          },
+          {
+            "id": "error",
+            "type": "utility.error_handler",
+            "typeVersion": 1,
+            "config": {
+              "variable": "error"
+            },
+            "position": {
+              "x": 120,
+              "y": 520
+            }
+          },
+          {
+            "id": "error_reply",
+            "type": "action.send_message",
+            "typeVersion": 1,
+            "config": {
+              "message": {
+                "mode": "normal",
+                "content": "❌ {error}"
+              },
+              "target": "reply",
+              "ephemeral": true
+            },
+            "position": {
+              "x": 440,
+              "y": 520
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": {
+              "node": "option_channel",
+              "port": "option"
+            },
+            "to": {
+              "node": "trigger",
+              "port": "options"
+            }
+          },
+          {
+            "from": {
+              "node": "trigger",
+              "port": "next"
+            },
+            "to": {
+              "node": "step1",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "step1",
+              "port": "next"
+            },
+            "to": {
+              "node": "step2",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "error",
+              "port": "next"
+            },
+            "to": {
+              "node": "error_reply",
+              "port": "in"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "module": "counting",
+      "group": "Counting",
+      "name": "count top",
+      "title": "Count Top",
+      "description": "The members who counted the most",
+      "graph": {
+        "schemaVersion": 1,
+        "nodes": [
+          {
+            "id": "trigger",
+            "type": "trigger.slash",
+            "typeVersion": 1,
+            "config": {
+              "command_name": "count top",
+              "description": "The members who counted the most"
+            },
+            "position": {
+              "x": 120,
+              "y": 240
+            }
+          },
+          {
+            "id": "step1",
+            "type": "action.counting_leaderboard",
+            "typeVersion": 1,
+            "config": {
+              "limit": 10,
+              "variable": "top"
+            },
+            "position": {
+              "x": 440,
+              "y": 240
+            }
+          },
+          {
+            "id": "step2",
+            "type": "action.send_message",
+            "typeVersion": 1,
+            "config": {
+              "message": {
+                "mode": "normal",
+                "content": "**🔢 Top counters**\n{top}"
+              },
+              "target": "reply"
+            },
+            "position": {
+              "x": 760,
+              "y": 240
+            }
+          },
+          {
+            "id": "error",
+            "type": "utility.error_handler",
+            "typeVersion": 1,
+            "config": {
+              "variable": "error"
+            },
+            "position": {
+              "x": 120,
+              "y": 520
+            }
+          },
+          {
+            "id": "error_reply",
+            "type": "action.send_message",
+            "typeVersion": 1,
+            "config": {
+              "message": {
+                "mode": "normal",
+                "content": "❌ {error}"
+              },
+              "target": "reply",
+              "ephemeral": true
+            },
+            "position": {
+              "x": 440,
+              "y": 520
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": {
+              "node": "trigger",
+              "port": "next"
+            },
+            "to": {
+              "node": "step1",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "step1",
+              "port": "next"
+            },
+            "to": {
+              "node": "step2",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "error",
+              "port": "next"
+            },
+            "to": {
+              "node": "error_reply",
+              "port": "in"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "module": "counting",
+      "group": "Counting",
+      "name": "count me",
+      "title": "Count Me",
+      "description": "How many numbers you or a member counted",
+      "graph": {
+        "schemaVersion": 1,
+        "nodes": [
+          {
+            "id": "trigger",
+            "type": "trigger.slash",
+            "typeVersion": 1,
+            "config": {
+              "command_name": "count me",
+              "description": "How many numbers you or a member counted"
+            },
+            "position": {
+              "x": 120,
+              "y": 240
+            }
+          },
+          {
+            "id": "option_user",
+            "type": "option.user",
+            "typeVersion": 1,
+            "config": {
+              "name": "user",
+              "description": "The member (you when empty)",
+              "required": false,
+              "variable": "user"
+            },
+            "position": {
+              "x": 120,
+              "y": 110
+            }
+          },
+          {
+            "id": "step1",
+            "type": "action.counting_member",
+            "typeVersion": 1,
+            "config": {
+              "user": "{option_user}",
+              "variable": "me"
+            },
+            "position": {
+              "x": 440,
+              "y": 240
+            }
+          },
+          {
+            "id": "step2",
+            "type": "action.send_message",
+            "typeVersion": 1,
+            "config": {
+              "message": {
+                "mode": "normal",
+                "content": "🔢 <@{me.user}> counted **{me}** right numbers and **{me.wrong}** wrong ones (place {me.rank})."
+              },
+              "target": "reply"
+            },
+            "position": {
+              "x": 760,
+              "y": 240
+            }
+          },
+          {
+            "id": "error",
+            "type": "utility.error_handler",
+            "typeVersion": 1,
+            "config": {
+              "variable": "error"
+            },
+            "position": {
+              "x": 120,
+              "y": 520
+            }
+          },
+          {
+            "id": "error_reply",
+            "type": "action.send_message",
+            "typeVersion": 1,
+            "config": {
+              "message": {
+                "mode": "normal",
+                "content": "❌ {error}"
+              },
+              "target": "reply",
+              "ephemeral": true
+            },
+            "position": {
+              "x": 440,
+              "y": 520
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": {
+              "node": "option_user",
+              "port": "option"
+            },
+            "to": {
+              "node": "trigger",
+              "port": "options"
+            }
+          },
+          {
+            "from": {
+              "node": "trigger",
+              "port": "next"
+            },
+            "to": {
+              "node": "step1",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "step1",
+              "port": "next"
+            },
+            "to": {
+              "node": "step2",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "error",
+              "port": "next"
+            },
+            "to": {
+              "node": "error_reply",
+              "port": "in"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "module": "counting",
+      "group": "Counting",
+      "name": "count-staff set",
+      "title": "Count Staff Set",
+      "description": "Sets the count of a counting channel (Staff)",
+      "graph": {
+        "schemaVersion": 1,
+        "nodes": [
+          {
+            "id": "trigger",
+            "type": "trigger.slash",
+            "typeVersion": 1,
+            "config": {
+              "command_name": "count-staff set",
+              "description": "Sets the count of a counting channel (Staff)",
+              "permissions": {
+                "allowed_roles": [
+                  {
+                    "id": "everyone"
+                  }
+                ],
+                "banned_roles": [],
+                "required_permissions": [
+                  "manage_messages"
+                ],
+                "banned_channels": [],
+                "hide_without_permission": true
+              }
+            },
+            "position": {
+              "x": 120,
+              "y": 240
+            }
+          },
+          {
+            "id": "option_number",
+            "type": "option.number",
+            "typeVersion": 1,
+            "config": {
+              "name": "number",
+              "description": "The count; members continue with the next number",
+              "required": true,
+              "variable": "number"
+            },
+            "position": {
+              "x": 120,
+              "y": 110
+            }
+          },
+          {
+            "id": "option_channel",
+            "type": "option.channel",
+            "typeVersion": 1,
+            "config": {
+              "name": "channel",
+              "description": "The counting channel (this one when empty)",
+              "required": false,
+              "variable": "channel"
+            },
+            "position": {
+              "x": 380,
+              "y": 110
+            }
+          },
+          {
+            "id": "step1",
+            "type": "action.counting_set",
+            "typeVersion": 1,
+            "config": {
+              "channel": "{option_channel}",
+              "number": "{option_number}",
+              "variable": "cnt"
+            },
+            "position": {
+              "x": 440,
+              "y": 240
+            }
+          },
+          {
+            "id": "step2",
+            "type": "action.send_message",
+            "typeVersion": 1,
+            "config": {
+              "message": {
+                "mode": "normal",
+                "content": "✅ {cnt.channel} is at **{option_number}** now. The next number is **{cnt}**."
+              },
+              "target": "reply",
+              "ephemeral": true
+            },
+            "position": {
+              "x": 760,
+              "y": 240
+            }
+          },
+          {
+            "id": "error",
+            "type": "utility.error_handler",
+            "typeVersion": 1,
+            "config": {
+              "variable": "error"
+            },
+            "position": {
+              "x": 120,
+              "y": 520
+            }
+          },
+          {
+            "id": "error_reply",
+            "type": "action.send_message",
+            "typeVersion": 1,
+            "config": {
+              "message": {
+                "mode": "normal",
+                "content": "❌ {error}"
+              },
+              "target": "reply",
+              "ephemeral": true
+            },
+            "position": {
+              "x": 440,
+              "y": 520
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": {
+              "node": "option_number",
+              "port": "option"
+            },
+            "to": {
+              "node": "trigger",
+              "port": "options"
+            }
+          },
+          {
+            "from": {
+              "node": "option_channel",
+              "port": "option"
+            },
+            "to": {
+              "node": "trigger",
+              "port": "options"
+            }
+          },
+          {
+            "from": {
+              "node": "trigger",
+              "port": "next"
+            },
+            "to": {
+              "node": "step1",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "step1",
+              "port": "next"
+            },
+            "to": {
+              "node": "step2",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "error",
+              "port": "next"
+            },
+            "to": {
+              "node": "error_reply",
+              "port": "in"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "module": "counting",
+      "group": "Counting",
+      "name": "count-staff reset",
+      "title": "Count Staff Reset",
+      "description": "Starts a counting channel again at 1 (Staff)",
+      "graph": {
+        "schemaVersion": 1,
+        "nodes": [
+          {
+            "id": "trigger",
+            "type": "trigger.slash",
+            "typeVersion": 1,
+            "config": {
+              "command_name": "count-staff reset",
+              "description": "Starts a counting channel again at 1 (Staff)",
+              "permissions": {
+                "allowed_roles": [
+                  {
+                    "id": "everyone"
+                  }
+                ],
+                "banned_roles": [],
+                "required_permissions": [
+                  "manage_messages"
+                ],
+                "banned_channels": [],
+                "hide_without_permission": true
+              }
+            },
+            "position": {
+              "x": 120,
+              "y": 240
+            }
+          },
+          {
+            "id": "option_channel",
+            "type": "option.channel",
+            "typeVersion": 1,
+            "config": {
+              "name": "channel",
+              "description": "The counting channel (this one when empty)",
+              "required": false,
+              "variable": "channel"
+            },
+            "position": {
+              "x": 120,
+              "y": 110
+            }
+          },
+          {
+            "id": "step1",
+            "type": "action.counting_set",
+            "typeVersion": 1,
+            "config": {
+              "channel": "{option_channel}",
+              "number": "0",
+              "variable": "cnt"
+            },
+            "position": {
+              "x": 440,
+              "y": 240
+            }
+          },
+          {
+            "id": "step2",
+            "type": "action.send_message",
+            "typeVersion": 1,
+            "config": {
+              "message": {
+                "mode": "normal",
+                "content": "✅ {cnt.channel} starts again. The next number is **1**."
+              },
+              "target": "reply",
+              "ephemeral": true
+            },
+            "position": {
+              "x": 760,
+              "y": 240
+            }
+          },
+          {
+            "id": "error",
+            "type": "utility.error_handler",
+            "typeVersion": 1,
+            "config": {
+              "variable": "error"
+            },
+            "position": {
+              "x": 120,
+              "y": 520
+            }
+          },
+          {
+            "id": "error_reply",
+            "type": "action.send_message",
+            "typeVersion": 1,
+            "config": {
+              "message": {
+                "mode": "normal",
+                "content": "❌ {error}"
+              },
+              "target": "reply",
+              "ephemeral": true
+            },
+            "position": {
+              "x": 440,
+              "y": 520
+            }
+          }
+        ],
+        "edges": [
+          {
+            "from": {
+              "node": "option_channel",
+              "port": "option"
+            },
+            "to": {
+              "node": "trigger",
+              "port": "options"
+            }
+          },
+          {
+            "from": {
+              "node": "trigger",
+              "port": "next"
+            },
+            "to": {
+              "node": "step1",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "step1",
+              "port": "next"
+            },
+            "to": {
+              "node": "step2",
+              "port": "in"
+            }
+          },
+          {
+            "from": {
+              "node": "error",
+              "port": "next"
+            },
+            "to": {
+              "node": "error_reply",
+              "port": "in"
+            }
+          }
+        ]
+      }
+    },
+    {
       "module": "bookmarks",
       "group": "Bookmarks",
       "name": "bookmark",

@@ -1,5 +1,35 @@
 {
   "$comment": "Plain-language explanations of failed blocks, shown in playbacks, on the Errors page and (English) to the bot owner in Discord. Keys: error.run.* (run errors) and discord.<code>[.<kind>] (Discord API error codes; kind = roles, moderation, message, channel, voice). {placeholders} come from the error params; {block} is the block name. Missing key: the error's own message is shown.",
+  "error.run.number_out_of_range": {
+    "en": {
+      "text": "The number {value} is outside what this style can show ({min} to {max}).",
+      "fix": "Roman numerals go from 1 to 3999. Pick another style or check the number first with a Comparison block."
+    },
+    "de": {
+      "text": "Die Zahl {value} liegt außerhalb dessen, was diese Darstellung kann ({min} bis {max}).",
+      "fix": "Römische Zahlen gehen von 1 bis 3999. Wähle eine andere Darstellung oder prüfe die Zahl vorher mit einem Vergleich-Block."
+    }
+  },
+  "error.run.webhook_channel": {
+    "en": {
+      "text": "This channel cannot send messages as someone else (no webhooks here).",
+      "fix": "Sending as a member or with an own name works in text, announcement, forum and voice channels and their threads. Pick one of those or send as the bot."
+    },
+    "de": {
+      "text": "In diesem Kanal kann nicht als jemand anderes gesendet werden (keine Webhooks).",
+      "fix": "Senden als Mitglied oder mit eigenem Namen geht in Text-, Ankündigungs-, Forum- und Sprachkanälen und ihren Threads. Wähle einen davon oder sende als Bot."
+    }
+  },
+  "error.run.not_own_message": {
+    "en": {
+      "text": "The message {value} was sent by a webhook the bot does not own, so it cannot be edited.",
+      "fix": "Only messages the bot sent itself, also \"as someone\", can be edited. Use the message ID from the Send Message block that sent it."
+    },
+    "de": {
+      "text": "Die Nachricht {value} kam von einem fremden Webhook und kann nicht bearbeitet werden.",
+      "fix": "Bearbeiten geht nur bei Nachrichten, die der Bot selbst gesendet hat, auch \"als jemand\". Nimm die Nachrichten-ID aus dem Senden-Block, der sie geschickt hat."
+    }
+  },
   "error.run.not_a_number": {
     "en": {
       "text": "The field \"{field}\" got \"{value}\", which is not a number.",

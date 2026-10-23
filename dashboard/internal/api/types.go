@@ -26,6 +26,10 @@ type Me struct {
 	Permissions []string `json:"permissions"`
 	// Warnings for this user, e.g. "env_password_plain" (admins).
 	Warnings []string `json:"warnings"`
+	// Sign in with Discord: on for the instance, and the user's linked account.
+	DiscordLogin  bool   `json:"discordLogin"`
+	DiscordLinked bool   `json:"discordLinked"`
+	DiscordName   string `json:"discordName"`
 }
 
 // IsAdmin: an instance admin (admin area, every bot). Without the
@@ -326,6 +330,24 @@ type SMTPUpdate struct {
 	Password    *string `json:"password,omitempty"`
 	FromAddress string  `json:"fromAddress"`
 	FromName    string  `json:"fromName"`
+}
+
+// DiscordLoginSettings: sign in with Discord (Admin → Security Policies).
+type DiscordLoginSettings struct {
+	Enabled      bool   `json:"enabled"`
+	ClientID     string `json:"clientId"`
+	SecretSet    bool   `json:"secretSet"`
+	TrustKnownIP bool   `json:"trustKnownIp"`
+	TrustDays    int    `json:"trustDays"`
+}
+
+// DiscordLoginUpdate changes them. A nil Secret keeps the stored one.
+type DiscordLoginUpdate struct {
+	Enabled      bool    `json:"enabled"`
+	ClientID     string  `json:"clientId"`
+	Secret       *string `json:"secret,omitempty"`
+	TrustKnownIP bool    `json:"trustKnownIp"`
+	TrustDays    int     `json:"trustDays"`
 }
 
 // TwoFactorSetup is a pending TOTP secret; it becomes active after EnableTwoFactor.

@@ -178,6 +178,8 @@ type store struct {
 	roleSeq        int64
 	userSeq        int64
 	smtp           smtpData
+	discordLogin   discordLoginSettings
+	discordStates  map[string]discordState
 	activePorts    [3]int // ports the running instance uses (public, api, redis)
 }
 
@@ -201,6 +203,7 @@ func main() {
 	s := &store{
 		defaultLocale: "en",
 		tickets:       map[string]loginTicket{},
+		discordStates: map[string]discordState{},
 		sessions:      map[string]*sessionData{},
 		devices:       map[string]*mobileDevice{},
 		pairings:      map[string]*mobilePairing{},
@@ -235,6 +238,7 @@ func main() {
 	go s.runMemorySampler()
 	go s.runStorageSampler()
 	s.loadSMTP()
+	s.loadDiscordLogin()
 	s.updater = newUpdater()
 	go s.runAutoUpdates()
 	// BOTHUB_ADMIN_PASSWORD may be plain text or an Argon2id hash
@@ -312,6 +316,14 @@ func main() {
 	mux.HandleFunc("DELETE /api/v1/mobile/device", s.auth(s.mobileUnpair))
 	// BotHub Guard (guard.go).
 	mux.HandleFunc("POST /api/v1/auth/login/guard", s.loginGuard)
+	mux.HandleFunc("GET /api/v1/auth/discord", s.discordLoginStatus)
+	mux.HandleFunc("POST /api/v1/auth/discord/begin", s.discordBegin)
+	mux.HandleFunc("POST /api/v1/auth/discord/finish", s.audited("login_discord", "login_failed", []string{"error.auth.discord_unknown"}, s.discordFinish))
+	mux.HandleFunc("POST /api/v1/auth/discord/link/begin", s.auth(s.discordLinkBegin))
+	mux.HandleFunc("POST /api/v1/auth/discord/link/finish", s.auth(s.auditedAuth("discord_linked", s.discordLinkFinish)))
+	mux.HandleFunc("DELETE /api/v1/auth/discord/link", s.auth(s.auditedAuth("discord_unlinked", s.discordUnlink)))
+	mux.HandleFunc("GET /api/v1/admin/discord-login", s.auth(s.getDiscordLogin))
+	mux.HandleFunc("PUT /api/v1/admin/discord-login", s.auth(s.putDiscordLogin))
 	mux.HandleFunc("GET /api/v1/mobile/approvals", s.auth(s.mobileApprovals))
 	mux.HandleFunc("POST /api/v1/mobile/approvals/{aid}", s.auth(s.mobileDecide))
 	mux.HandleFunc("GET /api/v1/auth/sessions", s.auth(s.listSessions))
@@ -752,7 +764,8 @@ func (s *store) meFor(userID int64, csrf string) map[string]any {
 	if slices.Contains(perms, "admin.access") && s.updateState.behind > 0 && s.srvSettings.AutoUpdate == "check" {
 		warnings = append(warnings, "update_available")
 	}
-	return map[string]any{"id": u.ID, "username": u.Username, "email": u.Email, "twoFactorEnabled": u.totpSecret != "",
+	return map[string]any{"id": u.ID, "username": u.Username, "email": u.Email, "twoFactorEnabled": u.totpSecret != "", "discordName": u.discordName,
+		"discordLinked": u.discordID != "", "discordLogin": s.discordLoginReady(),
 		"locale": u.localeOr(s.defaultLocale), "theme": u.themeOr(), "roleId": u.RoleID, "permissions": perms, "warnings": warnings, "csrfToken": csrf}
 }
 

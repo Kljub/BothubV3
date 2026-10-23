@@ -342,21 +342,23 @@ export class Repo {
   // ---------- variables ----------
 
   varStore(botId: number): VarStore {
+    // Prepared once per bot: variable blocks are the hottest path of a run.
+    const get = this.db.prepare('SELECT value FROM variables WHERE bot_id = ? AND scope = ? AND scope_id = ? AND name = ?');
+    const set = this.db.prepare(
+      `INSERT INTO variables (bot_id, scope, scope_id, name, value, updated_at) VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+    );
+    const del = this.db.prepare('DELETE FROM variables WHERE bot_id = ? AND scope = ? AND scope_id = ? AND name = ?');
     return {
       get: (scope, scopeId, name) => {
-        const row = this.db.prepare('SELECT value FROM variables WHERE bot_id = ? AND scope = ? AND scope_id = ? AND name = ?').get(botId, scope, scopeId, name) as Row | undefined;
+        const row = get.get(botId, scope, scopeId, name) as Row | undefined;
         return row ? String(row.value) : undefined;
       },
       set: (scope, scopeId, name, value) => {
-        this.db
-          .prepare(
-            `INSERT INTO variables (bot_id, scope, scope_id, name, value, updated_at) VALUES (?, ?, ?, ?, ?, ?)
-             ON CONFLICT DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
-          )
-          .run(botId, scope, scopeId, name, value, now());
+        set.run(botId, scope, scopeId, name, value, now());
       },
       delete: (scope, scopeId, name) => {
-        this.db.prepare('DELETE FROM variables WHERE bot_id = ? AND scope = ? AND scope_id = ? AND name = ?').run(botId, scope, scopeId, name);
+        del.run(botId, scope, scopeId, name);
       },
     };
   }

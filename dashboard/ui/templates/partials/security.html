@@ -69,6 +69,18 @@
       <div><button type="submit" class="btn btn-primary btn-sm">{{t "security.password.save"}}</button></div>
     </form>
   </details>
+  {{if or .DiscordLogin .DiscordLinked}}
+  <div class="settings-row" data-setting>
+    <span class="settings-row-text"><strong>{{t "security.discord.title"}}</strong>
+      <span class="hint">{{if .DiscordLinked}}{{t "security.discord.linked" "name" .DiscordName}}{{else}}{{t "security.discord.hint"}}{{end}}</span>
+      <span id="discord-link-error"></span></span>
+    {{if .DiscordLinked}}
+    <button type="button" class="btn btn-danger-soft btn-sm" hx-post="/account/discord/unlink" hx-swap="none" hx-confirm="{{t "security.discord.unlink_confirm"}}">{{t "security.discord.unlink"}}</button>
+    {{else}}
+    <button type="button" class="btn btn-primary btn-sm" hx-post="/account/discord/link" hx-swap="none">{{t "security.discord.link"}}</button>
+    {{end}}
+  </div>
+  {{end}}
 </div>
 
 <h3 class="settings-group">{{t "security.twofa.title"}}</h3>

@@ -266,5 +266,8 @@ func (s *store) loginPasskeyFinish(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	q := r.URL.Query()
+	s.mu.Lock()
+	s.trustIP(s.userByID(who), r)
+	s.mu.Unlock()
 	s.startSession(w, r, 200, who, sessionOpts{Remember: q.Get("remember") == "1", DeviceKey: q.Get("deviceKey")})
 }

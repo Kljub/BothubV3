@@ -157,6 +157,7 @@ func (s *store) loginTOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	delete(s.tickets, in.Ticket)
+	s.trustIP(u, r)
 	s.mu.Unlock()
 	logins.succeeded(ip, name)
 	s.startSession(w, r, 200, u.ID, t.opts)

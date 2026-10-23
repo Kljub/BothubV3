@@ -57,6 +57,9 @@ type mockUser struct {
 	totpSecret       string   // active secret; empty = 2FA off
 	pendingSecret    string   // set by setup, active after enable
 	recovery         []string // hashes of the unused recovery codes
+	discordID        string   // linked Discord account (sign in with Discord)
+	discordName      string
+	trustedIPs       map[string]time.Time // ipHash -> last sign-in with 2FA from there
 }
 
 func (u *mockUser) localeOr(fallback string) string {

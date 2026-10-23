@@ -19,6 +19,8 @@ type authForm struct {
 	Error    string
 	// CanRegister: self-registration is on (link to /register).
 	CanRegister bool
+	// Discord: sign in with Discord is on (button below the form).
+	Discord bool
 }
 
 func (s *Server) handleSetupPage(w http.ResponseWriter, r *http.Request) {
@@ -66,7 +68,7 @@ func (s *Server) handleLoginPage(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/setup", http.StatusSeeOther)
 		return
 	}
-	s.render(w, http.StatusOK, "login", "auth_layout", withData(p, authForm{CanRegister: s.api.RegistrationOpen(r.Context())}))
+	s.render(w, http.StatusOK, "login", "auth_layout", withData(p, authForm{CanRegister: s.api.RegistrationOpen(r.Context()), Discord: s.api.DiscordLoginOn(r.Context())}))
 }
 
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
@@ -84,6 +86,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		form.Error = s.apiErrorText(p, err)
+		form.Discord = s.api.DiscordLoginOn(r.Context())
 		s.render(w, apiErr.Status, "login", "auth_layout", withData(p, form))
 		return
 	}
@@ -479,6 +482,12 @@ func (s *Server) handleAdminSection(w http.ResponseWriter, r *http.Request, p Pa
 		}
 		data["Security"] = sec
 		data["Recovery"] = s.recoveryView(r, p)
+		dl, err := s.api.DiscordLoginSettings(r.Context(), session(r))
+		if err != nil {
+			s.fail(w, r, p, err)
+			return
+		}
+		data["DiscordLogin"] = discordLoginView{DiscordLoginSettings: dl, RedirectURI: discordRedirectURI(r)}
 	}
 	// The admin popup loads sections via htmx; a direct visit gets a full page.
 	if isHTMX(r) {

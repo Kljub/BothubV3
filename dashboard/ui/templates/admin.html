@@ -26,6 +26,7 @@
   {{template "registration_settings" .Registration}}
 {{else if eq .Section "security_policies"}}
   {{template "security_policies" .Security}}
+  {{template "discord_login_settings" .DiscordLogin}}
   {{template "recovery_box" .Recovery}}
 {{else if eq .Section "email"}}
   {{template "email_settings" .}}
@@ -913,6 +914,49 @@ docker compose up -d --build</pre>
 {{end}}</textarea>
       <span class="hint">{{t "security_policies.blocklist_hint" "ip" .YourIP}}</span>
     </label>
+  </section>
+  <div class="autosave-fallback"><button type="submit" class="btn btn-primary">{{t "action.save"}}</button></div>
+</form>
+{{end}}
+
+{{/* Sign in with Discord: an own Discord application of the admin
+     (internal/web/discordlogin.go). Accounts are never created by it. */}}
+{{define "discord_login_settings"}}
+<div id="discord-login-flash"></div>
+<form class="form" hx-post="/admin/discord-login" hx-swap="none" data-autosave>
+  <section class="section">
+    <header class="section-head"><h3>{{t "discord_login.title"}}</h3></header>
+    <p class="hint">{{t "discord_login.hint"}}</p>
+    <div class="form">
+      <label class="toggle-row">
+        <span><strong>{{t "discord_login.enabled"}}</strong><span class="hint">{{t "discord_login.enabled_hint"}}</span></span>
+        <input type="checkbox" class="toggle" name="enabled" value="true" {{if .Enabled}}checked{{end}}>
+      </label>
+      <label class="field">{{t "discord_login.client_id"}}
+        <input name="client_id" value="{{.ClientID}}" inputmode="numeric" pattern="\d{17,20}" maxlength="20" autocomplete="off" class="input-medium mono">
+      </label>
+      <label class="field">{{t "discord_login.client_secret"}}
+        <input type="password" name="client_secret" autocomplete="new-password" maxlength="200" class="input-medium" data-clear-on="bothub:reset-forms"
+          placeholder="{{if .SecretSet}}{{t "discord_login.secret_set"}}{{end}}">
+        <span class="hint">{{t "discord_login.client_secret_hint"}}</span>
+      </label>
+      <div class="field">{{t "discord_login.redirect"}}
+        <div class="copy-field"><code class="mono">{{.RedirectURI}}</code><button type="button" class="btn btn-sm" data-copy="{{.RedirectURI}}" data-copy-done="{{t "module_page.webhooks.copied"}}">{{t "module_page.webhooks.copy"}}</button></div>
+        <span class="hint">{{t "discord_login.redirect_hint"}}</span>
+      </div>
+    </div>
+  </section>
+  <section class="section">
+    <header class="section-head"><h3>{{t "discord_login.twofa"}}</h3></header>
+    <div class="form">
+      <label class="toggle-row">
+        <span><strong>{{t "discord_login.trust_known_ip"}}</strong><span class="hint">{{t "discord_login.trust_known_ip_hint"}}</span></span>
+        <input type="checkbox" class="toggle" name="trust_known_ip" value="true" {{if .TrustKnownIP}}checked{{end}}>
+      </label>
+      <label class="field">{{t "discord_login.trust_days"}}
+        <input type="number" name="trust_days" min="1" max="365" value="{{.TrustDays}}" class="input-small">
+      </label>
+    </div>
   </section>
   <div class="autosave-fallback"><button type="submit" class="btn btn-primary">{{t "action.save"}}</button></div>
 </form>

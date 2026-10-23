@@ -1,0 +1,8 @@
+{{define "title"}}{{t "login.discord_continue"}}{{end}}
+
+{{/* Back from Discord: moves on to a same-site address, where the session
+     cookie (SameSite=Strict) is sent again (internal/web/discordlogin.go). */}}
+{{define "content"}}
+<h2>{{t "login.discord_continue"}}</h2>
+<p><a class="btn btn-primary btn-block" href="{{.Data}}" data-auto-continue>{{t "login.discord_continue_link"}}</a></p>
+{{end}}

@@ -15,6 +15,7 @@ import * as eco from '../modules/economy.js';
 import { afkOf, clearAfk, setAfk } from '../modules/afk.js';
 import { bookmark, bookmarkLines, bookmarksOf, removeBookmark } from '../modules/bookmarks.js';
 import { giveThanks, thanksOf, thanksRank, thanksTop, ThanksError } from '../modules/thanks.js';
+import { channelCount, countingChannels, countTop, memberCount, setCount, type ChannelCount } from '../modules/counting.js';
 import type { DiscordData } from './handlers.js';
 import * as ach from '../modules/achievements.js';
 import { lockdown, unlock } from '../modules/anticontrol.js';
@@ -56,6 +57,28 @@ function achUser(run: Run, node: GraphNode): string {
 
 function limitOf(run: Run, node: GraphNode): number {
   return Math.min(50, Math.max(1, Math.floor(Number(run.str(node, 'limit')) || 10)));
+}
+
+/** The counting channel of a block: the field, else the run's channel, else the server's first counting channel. */
+function countingChannel(ctx: ModuleContext, run: Run, node: GraphNode): string {
+  const guild = guildOf(run).id;
+  const value = run.str(node, 'channel').trim();
+  if (value) return snowflake(value, 'channel');
+  const channels = countingChannels(ctx, guild);
+  const here = run.vars.get('channel.id') ?? '';
+  const id = channels.includes(here) ? here : channels[0];
+  if (!id) throw new GraphError('error.run.module_failed', { message: 'This server has no counting channel. Add one on the Counting module page.' });
+  return id;
+}
+
+function countResults(run: Run, node: GraphNode, c: ChannelCount | null, channel: string): void {
+  if (!c) throw new GraphError('error.run.module_failed', { message: `<#${channel}> is not a counting channel.` });
+  run.setResult(node, '', c.next);
+  run.setResult(node, '.count', c.count);
+  run.setResult(node, '.record', c.record);
+  run.setResult(node, '.saves', c.saves);
+  run.setResult(node, '.last_user', c.lastUser ? `<@${c.lastUser}>` : '—');
+  run.setResult(node, '.channel', `<#${c.channel}>`);
 }
 
 /** "24.12.", "24.12.1990", "1990-12-24", "24/12", "24/12/1990" -> {day, month, year}. */
@@ -385,6 +408,42 @@ export function moduleHandlers(repo: Repo, botId: number, secret: (key: string) 
         run.setResult(node, '', state ? 'true' : 'false');
         run.setResult(node, '.reason', state?.reason ?? '');
         run.setResult(node, '.since', state ? `<t:${Math.floor(state.since / 1000)}:R>` : '');
+      },
+    ],
+    // --- Counting ---
+    [
+      'action.counting_info',
+      (node, run) => {
+        const channel = countingChannel(ctx, run, node);
+        countResults(run, node, channelCount(ctx, guildOf(run).id, channel), channel);
+      },
+    ],
+    [
+      'action.counting_set',
+      (node, run) => {
+        const channel = countingChannel(ctx, run, node);
+        const n = Number(run.str(node, 'number').trim() || 0);
+        if (!Number.isFinite(n) || n < 0) throw new GraphError('error.run.not_a_number', { field: 'number', value: run.str(node, 'number') });
+        countResults(run, node, setCount(ctx, guildOf(run).id, channel, n), channel);
+      },
+    ],
+    [
+      'action.counting_member',
+      (node, run) => {
+        const user = userOf(run, node);
+        const s = memberCount(ctx, guildOf(run).id, user);
+        run.setResult(node, '', s.ok);
+        run.setResult(node, '.wrong', s.wrong);
+        run.setResult(node, '.rank', s.rank || '—');
+        run.setResult(node, '.user', user);
+      },
+    ],
+    [
+      'action.counting_leaderboard',
+      (node, run) => {
+        const rows = countTop(ctx, guildOf(run).id, limitOf(run, node));
+        const medal = ['🥇', '🥈', '🥉'];
+        run.setResult(node, '', rows.map((r, i) => `${medal[i] ?? `**${i + 1}.**`} <@${r.userId}> · ${r.ok} 🔢`).join('\n') || 'Nobody has counted yet.');
       },
     ],
     // --- Thanks ---

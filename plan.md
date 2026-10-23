@@ -233,6 +233,16 @@ Entschieden 2026-10-22: Kern-Modul, kein Plugin. Grund: IP-Daten, OAuth und Alt-
 | Prüfungen: Tor-Liste, VPN/Proxy/Hosting und Land über proxycheck.io (Secret `PROXYCHECK_API_KEY`), Alt-Abgleich über HMAC pro Server (IPv6 als /64) | 🔄 Code und Tests fertig |
 | Aktionen (erneut versuchen, Prüfen mit Buttons, Sperren), Log, Rollen, automatisches Löschen nach Frist (auch bei ausgeschaltetem Modul) | 🔄 Code und Tests fertig; Whitelist-Rolle und Bypass für Mods noch offen |
 
+### Phase 4c – Anmelden mit Discord
+
+Entschieden 2026-10-23 (User): eigene Discord-Application nur für den Login, Einstellungen in Admin → Sicherheitsrichtlinien. Ein Discord-Konto legt nie ein BotHub-Konto an; jeder User verknüpft Discord in seinen Kontoeinstellungen. 2FA bleibt bei einer neuen IP; von einer IP, an der sich das Konto in den letzten N Tagen mit 2FA oder Passkey angemeldet hat, entfällt sie (Schalter und Tage einstellbar). Gespeichert werden nur Hashes der IPs.
+
+| Teil | Status |
+|---|---|
+| Gateway: Einstellungen, Begin/Finish mit state und PKCE, Token sofort widerrufen, Verknüpfen/Trennen, bekannte IPs (`cmd/mockapi/discordlogin.go`) | 🔄 |
+| API: Settings-Key `discord` (Secret verschlüsselt), Spalten `discord_id`, `discord_name`, `trusted_ips` (Migration 0053) | 🔄 |
+| Dashboard: Button auf der Login-Seite, Weiterleitungsseite (SameSite=Strict), Zeile in Konto → Sicherheit, Admin-Formular | 🔄 |
+
 ### Phase 5 – AMP-Template
 
 Zurückgestellt (User, 2026-09-28). Die Architektur bleibt trotzdem AMP-tauglich: ein Datenordner, Adressen nur aus ENV, ein öffentlicher Port.

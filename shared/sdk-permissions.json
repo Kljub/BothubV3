@@ -2084,6 +2084,28 @@
       "category": "social"
     },
     {
+      "key": "modules.link-media.read",
+      "group": "modules",
+      "risk": "medium",
+      "calls": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "implemented": [
+        "module.get",
+        "module.getId",
+        "module.getName",
+        "module.isEnabled",
+        "module.getConfig"
+      ],
+      "module": "link-media",
+      "scope": "module",
+      "category": "social"
+    },
+    {
       "key": "modules.free-games.read",
       "group": "modules",
       "risk": "medium",

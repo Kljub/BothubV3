@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { openDb } from '../core/db.js';
 import { Repo } from '../core/repo.js';
 import { buildMessage, fill, idIn, idsIn, ModuleContext, passes, reactionOf, sameEmoji } from './context.js';
-import { count, type CountState } from './games.js';
+import { count, countValue, type CountState } from './counting.js';
 import { rolesToRestore } from './members.js';
 import { keywordMatch, mediaViolation } from './messages.js';
 
@@ -79,12 +79,59 @@ test('media channels', () => {
 test('counting rules', () => {
   const s: CountState = { count: 4, lastUser: 'a', lastAt: 0 };
   assert.deepEqual(count(s, 'hello', 'b', 10_000, {}), { kind: 'ignore' });
-  assert.deepEqual(count(s, ' 5 ', 'b', 10_000, {}), { kind: 'ok', state: { count: 5, lastUser: 'b', lastAt: 10_000 }, expected: 6 });
+  const ok = count(s, ' 5 ', 'b', 10_000, {});
+  assert.deepEqual(ok, { kind: 'ok', state: { count: 5, lastUser: 'b', lastAt: 10_000, record: 5, saves: 0 }, expected: 6, milestone: false, record: false });
   assert.equal(count(s, '5', 'a', 10_000, {}).kind, 'twice');
   assert.equal(count(s, '5', 'a', 10_000, { allowTwice: true }).kind, 'ok');
-  assert.deepEqual(count(s, '7', 'b', 10_000, {}), { kind: 'wrong', state: s, expected: 5 });
-  assert.deepEqual(count(s, '7', 'b', 10_000, { resetOnFail: true }), { kind: 'wrong', state: { count: 0, lastUser: null, lastAt: 10_000 }, expected: 1 });
-  assert.equal(count({ ...s, lastAt: 8000 }, '5', 'b', 10_000, { cooldown: true }).kind, 'cooldown');
+  assert.equal(count({ ...s, lastAt: 8000 }, '5', 'b', 10_000, { cooldownSeconds: 5 }).kind, 'cooldown');
+  assert.equal(count({ ...s, lastAt: 4000 }, '5', 'b', 10_000, { cooldownSeconds: 5 }).kind, 'ok');
+
+  // After a wrong number: start again, back to the checkpoint, or keep going.
+  assert.deepEqual(count(s, '7', 'b', 10_000, { onFail: 'keep' }), { kind: 'wrong', state: s, expected: 5, at: 4 });
+  const reset = count(s, '7', 'b', 10_000, {});
+  assert.equal(reset.kind === 'wrong' && reset.state.count, 0);
+  assert.equal(reset.kind === 'wrong' && reset.expected, 1);
+  const back = count({ ...s, count: 257 }, '1', 'b', 10_000, { onFail: 'checkpoint', checkpointEvery: 100 });
+  assert.equal(back.kind === 'wrong' && back.state.count, 200);
+  assert.equal(back.kind === 'wrong' && back.at, 257, 'where it broke');
+
+  // Saves: used instead of a mistake, come back every saveEvery numbers.
+  const saved = count({ ...s, saves: 2 }, '9', 'b', 10_000, { saves: 2 });
+  assert.equal(saved.kind, 'saved');
+  assert.equal(saved.kind === 'saved' && saved.state.count, 4);
+  assert.equal(saved.kind === 'saved' && saved.state.saves, 1);
+  const earned = count({ count: 99, lastUser: 'a', lastAt: 0, saves: 1 }, '100', 'b', 1, { saves: 2, saveEvery: 100 });
+  assert.equal(earned.kind === 'ok' && earned.state.saves, 2);
+  const full = count({ count: 99, lastUser: 'a', lastAt: 0, saves: 2 }, '100', 'b', 1, { saves: 2, saveEvery: 100 });
+  assert.equal(full.kind === 'ok' && full.state.saves, 2, 'never above the starting saves');
+
+  // Milestones and records.
+  const m = count({ count: 99, lastUser: 'a', lastAt: 0 }, '100', 'b', 1, {}, 100);
+  assert.equal(m.kind === 'ok' && m.milestone, true);
+  const rec = count({ count: 10, lastUser: 'a', lastAt: 0, record: 10 }, '11', 'b', 1, {});
+  assert.equal(rec.kind === 'ok' && rec.record, true);
+  const after = count({ count: 11, lastUser: 'a', lastAt: 0, record: 11 }, '12', 'b', 1, {});
+  assert.equal(after.kind === 'ok' && after.record, true, 'each new best only once per number');
+  const first = count({ count: 0, lastUser: null, lastAt: 0, record: 0 }, '1', 'b', 1, {});
+  assert.equal(first.kind === 'ok' && first.record, false, 'no record message in the first round');
+});
+
+test('counting with maths', () => {
+  assert.equal(countValue('6*7', true), 42);
+  assert.equal(countValue('6x7', true), 42);
+  assert.equal(countValue('(2+3)^2', true), 25);
+  assert.equal(countValue('100 / 4 + 1', true), 26);
+  assert.equal(countValue('10 % 4', true), 2);
+  assert.equal(countValue('-3 + 10', true), 7);
+  assert.equal(countValue('7/2', true), null, 'not a whole number');
+  assert.equal(countValue('6*7', false), null, 'maths off');
+  assert.equal(countValue('1/0', true), null);
+  assert.equal(countValue('2^^3', true), null);
+  assert.equal(countValue('((((((((((((1))))))))))))', true), null, 'too deep');
+  assert.equal(countValue('hi 5', true), null);
+  assert.equal(countValue('42', false), 42);
+  const s: CountState = { count: 41, lastUser: 'a', lastAt: 0 };
+  assert.equal(count(s, '6*7', 'b', 1, { maths: true }).kind, 'ok');
 });
 
 test('sticky roles filter', () => {
@@ -385,6 +432,27 @@ test('twitter link fix', async () => {
   const r = fixLinks('look https://x.com/ann/status/123?s=20 and <https://twitter.com/b/status/9> https://x.com/home', 'vxtwitter');
   assert.deepEqual(r.links, ['https://vxtwitter.com/ann/status/123']);
   assert.equal(r.text, 'look https://vxtwitter.com/ann/status/123 and <https://twitter.com/b/status/9> https://x.com/home');
+});
+
+test('link to media: post links, service page, upload limit', async () => {
+  const { findLinks, mediaOf, uploadLimit } = await import('./linkmedia.js');
+  const text = 'see https://www.instagram.com/reel/C1abcDEF_2/?igsh=xyz and https://instagram.com/ann.b/p/Cxyz123/ '
+    + '<https://www.instagram.com/p/Hidden1/> https://instagram.com/ann https://vm.tiktok.com/ZMabc123/ '
+    + 'https://www.reddit.com/r/aww/comments/1abcd2/cute_cat/?share=1 https://instagram.com/reels/C1abcDEF_2';
+  const all = findLinks(text, ['instagram', 'tiktok', 'reddit']);
+  assert.deepEqual(all.map((l) => l.fixed), ['https://kkinstagram.com/reel/C1abcDEF_2', 'https://kkinstagram.com/p/Cxyz123', 'https://tnktok.com/t/ZMabc123'], 'max. 3, in order, the reels repeat counted once');
+  assert.equal(all[0]!.original, 'https://www.instagram.com/reel/C1abcDEF_2/?igsh=xyz');
+  assert.deepEqual(findLinks(text, ['reddit'], { reddit: 'vxreddit.com' }).map((l) => l.fixed), ['https://vxreddit.com/r/aww/comments/1abcd2/cute_cat']);
+  assert.deepEqual(findLinks(text, ['instagram'], { instagram: 'bad host/x' })[0]!.fixed, 'https://kkinstagram.com/reel/C1abcDEF_2', 'an invalid host falls back to the default');
+  assert.deepEqual(findLinks('https://bsky.app/profile/ann.bsky.social/post/3kabc12', ['bluesky']).map((l) => l.fixed), ['https://bskx.app/profile/ann.bsky.social/post/3kabc12']);
+  assert.deepEqual(findLinks('||https://instagram.com/p/Cxyz123||', ['instagram']).map((l) => l.original), ['https://instagram.com/p/Cxyz123'], 'spoiler bars are not part of the link');
+
+  assert.equal(mediaOf('<meta property="og:image" content="https://cdn.example/a.jpg"><meta content="https://cdn.example/v.mp4?a=1&amp;b=2" property="og:video">'), 'https://cdn.example/v.mp4?a=1&b=2', 'video before picture, attributes in any order');
+  assert.equal(mediaOf('<meta name="twitter:image" content="https://cdn.example/b.png">'), 'https://cdn.example/b.png');
+  assert.equal(mediaOf('<meta property="og:video" content="http://cdn.example/v.mp4">'), null, 'https only');
+  assert.equal(uploadLimit(0), 10 * 1024 * 1024);
+  assert.equal(uploadLimit(2), 50 * 1024 * 1024);
+  assert.equal(uploadLimit(3), 100 * 1024 * 1024);
 });
 
 test('welcome and leave: account age and membership placeholders', async () => {

@@ -275,6 +275,72 @@
           ]
         }
       },
+      "sender": {
+        "type": "string",
+        "enum": [
+          "bot",
+          "member",
+          "custom"
+        ],
+        "default": "bot",
+        "x-labelKey": "builder.cfg.sender",
+        "x-enumKey": "builder.enum.sender",
+        "x-hintKey": "builder.cfg.sender_hint",
+        "x-showIf": {
+          "target": [
+            "command_channel",
+            "channel"
+          ]
+        }
+      },
+      "sender_user": {
+        "type": "string",
+        "maxLength": 200,
+        "default": "{user.id}",
+        "x-labelKey": "builder.cfg.sender_user",
+        "x-hintKey": "builder.cfg.ref_hint",
+        "x-ref": "member",
+        "x-showIf": {
+          "target": [
+            "command_channel",
+            "channel"
+          ],
+          "sender": [
+            "member"
+          ]
+        }
+      },
+      "sender_name": {
+        "type": "string",
+        "maxLength": 200,
+        "x-labelKey": "builder.cfg.sender_name",
+        "x-placeholder": "Announcer",
+        "x-showIf": {
+          "target": [
+            "command_channel",
+            "channel"
+          ],
+          "sender": [
+            "custom"
+          ]
+        }
+      },
+      "sender_avatar": {
+        "type": "string",
+        "maxLength": 500,
+        "x-labelKey": "builder.cfg.sender_avatar",
+        "x-placeholder": "https://…/avatar.png",
+        "x-hintKey": "builder.cfg.sender_avatar_hint",
+        "x-showIf": {
+          "target": [
+            "command_channel",
+            "channel"
+          ],
+          "sender": [
+            "custom"
+          ]
+        }
+      },
       "delete_after": {
         "type": "string",
         "maxLength": 20,

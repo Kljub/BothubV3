@@ -467,6 +467,58 @@ func (c *Client) DeletePasskey(ctx context.Context, s Session, id string) error 
 	return err
 }
 
+// --- sign in with Discord ---
+
+// DiscordLoginOn: the login page shows the Discord button.
+func (c *Client) DiscordLoginOn(ctx context.Context) bool {
+	var out struct {
+		Enabled bool `json:"enabled"`
+	}
+	_, err := c.do(ctx, Session{}, http.MethodGet, "/api/v1/auth/discord", nil, &out)
+	return err == nil && out.Enabled
+}
+
+// DiscordBegin starts a sign-in (s empty) or links the signed-in user's
+// Discord account (link); it returns the state and the Discord address.
+func (c *Client) DiscordBegin(ctx context.Context, s Session, link bool, redirectURI string, opts LoginOptions) (state, address string, err error) {
+	var out struct{ State, URL string }
+	path, in := "/api/v1/auth/discord/begin", map[string]any{"redirectUri": redirectURI, "remember": opts.Remember, "deviceKey": opts.DeviceKey}
+	if link {
+		path, in = "/api/v1/auth/discord/link/begin", map[string]any{"redirectUri": redirectURI}
+	}
+	_, err = c.do(ctx, s, http.MethodPost, path, in, &out)
+	return out.State, out.URL, err
+}
+
+// DiscordFinish ends a sign-in; error.auth.totp_required asks for 2FA like Login.
+func (c *Client) DiscordFinish(ctx context.Context, state, code string) (Me, Response, error) {
+	var me Me
+	resp, err := c.do(ctx, Session{}, http.MethodPost, "/api/v1/auth/discord/finish", map[string]string{"state": state, "code": code}, &me)
+	return me, resp, err
+}
+
+func (c *Client) DiscordLinkFinish(ctx context.Context, s Session, state, code string) error {
+	_, err := c.do(ctx, s, http.MethodPost, "/api/v1/auth/discord/link/finish", map[string]string{"state": state, "code": code}, nil)
+	return err
+}
+
+func (c *Client) DiscordUnlink(ctx context.Context, s Session) error {
+	_, err := c.do(ctx, s, http.MethodDelete, "/api/v1/auth/discord/link", nil, nil)
+	return err
+}
+
+func (c *Client) DiscordLoginSettings(ctx context.Context, s Session) (DiscordLoginSettings, error) {
+	var out DiscordLoginSettings
+	_, err := c.do(ctx, s, http.MethodGet, "/api/v1/admin/discord-login", nil, &out)
+	return out, err
+}
+
+func (c *Client) UpdateDiscordLoginSettings(ctx context.Context, s Session, in DiscordLoginUpdate) (DiscordLoginSettings, error) {
+	var out DiscordLoginSettings
+	_, err := c.do(ctx, s, http.MethodPut, "/api/v1/admin/discord-login", in, &out)
+	return out, err
+}
+
 // --- email (SMTP) ---
 
 func (c *Client) SMTPSettings(ctx context.Context, s Session) (SMTPSettings, error) {

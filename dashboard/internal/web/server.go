@@ -184,6 +184,9 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("POST /register", s.handleRegister)
 	mux.HandleFunc("POST /login/totp", s.handleLoginTOTP)
 	mux.HandleFunc("POST /login/guard", s.handleLoginGuard)
+	mux.HandleFunc("POST /login/discord", s.handleDiscordLogin)
+	mux.HandleFunc("GET /login/discord/callback", s.handleDiscordCallback)
+	mux.HandleFunc("GET /login/discord/complete", s.handleDiscordComplete)
 
 	// Pages behind login.
 	auth := func(h authHandler) http.Handler { return s.requireAuth(h) }
@@ -295,6 +298,9 @@ func (s *Server) routes() http.Handler {
 	mux.Handle("PUT /bot/{id}/modules/{key}/commands/{name}", auth(s.handleCommandState))
 	mux.Handle("PUT /bot/{id}/plugins/{plugin}", auth(s.handleSetPlugin))
 	// Mobile app: pair phones by QR code (Settings → Mobile App).
+	mux.Handle("POST /account/discord/link", auth(s.handleDiscordLink))
+	mux.Handle("POST /account/discord/unlink", auth(s.handleDiscordUnlink))
+	mux.Handle("GET /account/discord/complete", auth(s.handleDiscordLinkComplete))
 	mux.Handle("GET /account/mobile", auth(s.handleMobile))
 	mux.Handle("GET /account/mobile/list", auth(s.handleMobileList))
 	mux.Handle("GET /account/guard", auth(s.handleGuard))
@@ -374,6 +380,7 @@ func (s *Server) routes() http.Handler {
 	mux.Handle("POST /admin/invite", auth(s.handleInviteSettings))
 	mux.Handle("POST /admin/registration", auth(s.handleRegistrationSettings))
 	mux.Handle("POST /admin/security", auth(s.handleSecuritySettings))
+	mux.Handle("POST /admin/discord-login", auth(s.handleDiscordLoginSettings))
 	mux.Handle("POST /admin/recovery-key", auth(s.handleNewRecoveryKey))
 	mux.Handle("PUT /bot/{id}/guild-access", auth(s.handleGuildAccess))
 	mux.Handle("GET /admin/sdk-policies", auth(s.handleSdkPolicySearch))

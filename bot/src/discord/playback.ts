@@ -149,7 +149,9 @@ export function preflight(nodes: GraphNode[], me: GuildMember | null, channel: S
     if (n.disabled || out.length >= 20) continue;
     // Blocks sending to another channel are checked there by Discord; only the run's channel here.
     if (typeof n.config.channel === 'string' && n.config.channel !== '' && n.type === 'action.send_message') continue;
-    const missing = needs(n.type).filter((f) => !perms?.has(f));
+    const need = needs(n.type);
+    if (n.type === 'action.send_message' && (n.config.sender === 'member' || n.config.sender === 'custom')) need.push(P.ManageWebhooks);
+    const missing = need.filter((f) => !perms?.has(f));
     if (missing.length) {
       out.push({ node: n.id, text: `The bot is missing ${missing.map((f) => NAMES.find(([v]) => v === f)?.[1] ?? '?').join(', ')} here.` });
       continue;

@@ -299,6 +299,11 @@
       "icon": "🐦"
     },
     {
+      "key": "link-media",
+      "category": "social",
+      "icon": "🎬"
+    },
+    {
       "key": "free-games",
       "category": "social",
       "icon": "🎮",

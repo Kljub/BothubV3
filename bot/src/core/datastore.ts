@@ -50,8 +50,24 @@ export function validDataValue(type: string, value: string): boolean {
 }
 
 export function dataStore(db: Db, botId: number): DataStore {
+  // Prepared on first use, then kept: variable blocks are the hottest path of a run.
+  const lazy = (sql: string) => {
+    let st: ReturnType<Db['prepare']> | undefined;
+    return () => (st ??= db.prepare(sql));
+  };
+  const q = {
+    definition: lazy('SELECT id, type, owner, per_server, default_value FROM data_variables WHERE bot_id = ? AND key = ?'),
+    value: lazy('SELECT value FROM data_values WHERE variable_id = ? AND server_id = ? AND owner_id = ?'),
+    exists: lazy('SELECT 1 FROM data_values WHERE variable_id = ? AND server_id = ? AND owner_id = ?'),
+    count: lazy('SELECT COUNT(*) AS n FROM data_values WHERE variable_id = ?'),
+    upsert: lazy(
+      `INSERT INTO data_values (variable_id, server_id, owner_id, value, updated_at) VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+    ),
+    remove: lazy('DELETE FROM data_values WHERE variable_id = ? AND server_id = ? AND owner_id = ?'),
+  };
   const definition = (key: string): Definition | undefined => {
-    const row = db.prepare('SELECT id, type, owner, per_server, default_value FROM data_variables WHERE bot_id = ? AND key = ?').get(botId, key) as Row | undefined;
+    const row = q.definition().get(botId, key) as Row | undefined;
     if (!row) return undefined;
     return { id: Number(row.id), type: String(row.type), owner: String(row.owner), perServer: Number(row.per_server) === 1, defaultValue: String(row.default_value) };
   };
@@ -82,7 +98,7 @@ export function dataStore(db: Db, botId: number): DataStore {
       } catch {
         return def.defaultValue; // e.g. a member variable in a timed event
       }
-      const row = db.prepare('SELECT value FROM data_values WHERE variable_id = ? AND server_id = ? AND owner_id = ?').get(def.id, server, owner) as Row | undefined;
+      const row = q.value().get(def.id, server, owner) as Row | undefined;
       return row ? String(row.value) : def.defaultValue;
     },
     set(key, ctx, value) {
@@ -91,20 +107,17 @@ export function dataStore(db: Db, botId: number): DataStore {
       if (!validDataValue(def.type, value)) throw new GraphError('error.run.data_wrong_type', { value: key, type: def.type });
       const [server, owner] = where(def, ctx);
       // A new row only while the variable is below its limit; changing a value always works.
-      const exists = db.prepare('SELECT 1 FROM data_values WHERE variable_id = ? AND server_id = ? AND owner_id = ?').get(def.id, server, owner);
+      const exists = q.exists().get(def.id, server, owner);
       if (!exists) {
-        const count = Number((db.prepare('SELECT COUNT(*) AS n FROM data_values WHERE variable_id = ?').get(def.id) as { n: number }).n);
+        const count = Number((q.count().get(def.id) as { n: number }).n);
         if (count >= MAX_VALUES_PER_VARIABLE) throw new GraphError('error.run.data_limit', { value: key, max: MAX_VALUES_PER_VARIABLE });
       }
-      db.prepare(
-        `INSERT INTO data_values (variable_id, server_id, owner_id, value, updated_at) VALUES (?, ?, ?, ?, ?)
-         ON CONFLICT DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
-      ).run(def.id, server, owner, value, new Date().toISOString());
+      q.upsert().run(def.id, server, owner, value, new Date().toISOString());
     },
     delete(key, ctx) {
       const def = known(key);
       const [server, owner] = where(def, ctx);
-      db.prepare('DELETE FROM data_values WHERE variable_id = ? AND server_id = ? AND owner_id = ?').run(def.id, server, owner);
+      q.remove().run(def.id, server, owner);
     },
     clear(key, guildId) {
       const def = known(key);

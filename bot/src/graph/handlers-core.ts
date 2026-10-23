@@ -8,6 +8,7 @@ import { mask } from '../core/secrets-global.js';
 import { GraphError, StopLoop, type Handler, type Run } from './interpreter.js';
 import type { GraphNode } from './types.js';
 import { parseDuration, snowflake } from './util.js';
+import { formatNumber, parseNumber, type NumberLocale, type NumberStyle } from './numbers.js';
 import type { DataContext, DataStore } from '../core/datastore.js';
 
 export type Scope = 'run' | 'user' | 'server' | 'global';
@@ -235,6 +236,12 @@ function manipulate(run: Run, node: GraphNode): string {
       return input.replace(/[\\*_~`|>@#]/g, (c) => `\\${c}`);
     case 'unsanitize':
       return input.replace(/\\([\\*_~`|>@#])/g, '$1');
+    case 'format_number': {
+      const locale: NumberLocale = run.raw(node, 'number_locale') === 'de' ? 'de' : 'en';
+      const decimals = run.str(node, 'decimals').trim();
+      const style = String(run.raw(node, 'number_style') ?? 'grouped') as NumberStyle;
+      return formatNumber(parseNumber(input, locale), style, locale, decimals === '' ? null : Math.max(0, Math.min(Math.trunc(Number(decimals)) || 0, 10)));
+    }
     default:
       throw new GraphError('error.run.unsupported_operation', { value: op });
   }

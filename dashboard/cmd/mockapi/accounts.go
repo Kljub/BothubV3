@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"maps"
 	"net/http"
 	"strconv"
 	"strings"
@@ -189,6 +190,7 @@ func (s *store) persistUser(u *mockUser) {
 		"username": u.Username, "email": u.Email, "roleId": u.RoleID, "passwordHash": u.passwordHash,
 		"locale": u.locale, "theme": u.theme, "totpSecret": u.totpSecret, "totpPending": u.pendingSecret,
 		"recoveryCodes": append([]string{}, u.recovery...), "lastLoginAt": u.LastLoginAt, "uiPrefs": u.uiPrefs,
+		"discordId": u.discordID, "discordName": u.discordName, "trustedIps": maps.Clone(u.trustedIPs),
 	}
 	id := u.ID
 	go s.phpSync(http.MethodPut, "/internal/accounts/users/"+strconv.FormatInt(id, 10), body)
@@ -234,19 +236,22 @@ func (s *store) loadAccounts() {
 	}
 	var in struct {
 		Users []struct {
-			ID            int64      `json:"id"`
-			Username      string     `json:"username"`
-			Email         *string    `json:"email"`
-			RoleID        int64      `json:"roleId"`
-			PasswordHash  string     `json:"passwordHash"`
-			Locale        string     `json:"locale"`
-			Theme         string     `json:"theme"`
-			TotpSecret    string     `json:"totpSecret"`
-			TotpPending   string     `json:"totpPending"`
-			RecoveryCodes []string   `json:"recoveryCodes"`
-			CreatedAt     string     `json:"createdAt"`
-			LastLoginAt   *time.Time `json:"lastLoginAt"`
-			UIPrefs       uiPrefs    `json:"uiPrefs"`
+			ID            int64                `json:"id"`
+			Username      string               `json:"username"`
+			Email         *string              `json:"email"`
+			RoleID        int64                `json:"roleId"`
+			PasswordHash  string               `json:"passwordHash"`
+			Locale        string               `json:"locale"`
+			Theme         string               `json:"theme"`
+			TotpSecret    string               `json:"totpSecret"`
+			TotpPending   string               `json:"totpPending"`
+			RecoveryCodes []string             `json:"recoveryCodes"`
+			CreatedAt     string               `json:"createdAt"`
+			LastLoginAt   *time.Time           `json:"lastLoginAt"`
+			UIPrefs       uiPrefs              `json:"uiPrefs"`
+			DiscordID     string               `json:"discordId"`
+			DiscordName   string               `json:"discordName"`
+			TrustedIPs    map[string]time.Time `json:"trustedIps"`
 		} `json:"users"`
 		Roles    []*role `json:"roles"`
 		Passkeys []struct {
@@ -320,7 +325,8 @@ func (s *store) loadAccounts() {
 	for _, u := range in.Users {
 		created, _ := time.Parse(time.RFC3339Nano, u.CreatedAt)
 		s.users = append(s.users, &mockUser{ID: u.ID, Username: u.Username, Email: u.Email, RoleID: u.RoleID, CreatedAt: created, LastLoginAt: u.LastLoginAt,
-			passwordHash: u.PasswordHash, locale: u.Locale, theme: u.Theme, totpSecret: u.TotpSecret, pendingSecret: u.TotpPending, recovery: u.RecoveryCodes, uiPrefs: u.UIPrefs})
+			passwordHash: u.PasswordHash, locale: u.Locale, theme: u.Theme, totpSecret: u.TotpSecret, pendingSecret: u.TotpPending, recovery: u.RecoveryCodes, uiPrefs: u.UIPrefs,
+			discordID: u.DiscordID, discordName: u.DiscordName, trustedIPs: u.TrustedIPs})
 		s.userSeq = max(s.userSeq, u.ID)
 	}
 	s.passkeys.mu.Lock()

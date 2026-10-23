@@ -1,0 +1,99 @@
+{
+  "module": "link-media",
+  "fields": [
+    {
+      "key": "platforms",
+      "type": "choices",
+      "options": [
+        "instagram",
+        "tiktok",
+        "reddit",
+        "bluesky"
+      ],
+      "default": [
+        "instagram"
+      ],
+      "max": 4,
+      "required": true
+    },
+    {
+      "key": "mode",
+      "type": "select",
+      "options": [
+        "replace",
+        "reply"
+      ],
+      "default": "replace",
+      "hint": true
+    },
+    {
+      "key": "media",
+      "type": "select",
+      "options": [
+        "upload",
+        "embed"
+      ],
+      "default": "upload",
+      "hint": true
+    },
+    {
+      "key": "keepLink",
+      "type": "bool",
+      "default": true,
+      "hint": true
+    },
+    {
+      "key": "channels",
+      "type": "channels",
+      "channelTypes": [
+        "text",
+        "announcement",
+        "forum"
+      ],
+      "max": 50,
+      "hint": true
+    },
+    {
+      "key": "ignoreBots",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "services",
+      "type": "section",
+      "hint": true
+    },
+    {
+      "key": "instagramHost",
+      "type": "text",
+      "default": "kkinstagram.com",
+      "max": 100,
+      "pattern": "^[a-z0-9.-]+\\.[a-z]{2,}$",
+      "plain": true
+    },
+    {
+      "key": "tiktokHost",
+      "type": "text",
+      "default": "tnktok.com",
+      "max": 100,
+      "pattern": "^[a-z0-9.-]+\\.[a-z]{2,}$",
+      "plain": true
+    },
+    {
+      "key": "redditHost",
+      "type": "text",
+      "default": "rxddit.com",
+      "max": 100,
+      "pattern": "^[a-z0-9.-]+\\.[a-z]{2,}$",
+      "plain": true
+    },
+    {
+      "key": "blueskyHost",
+      "type": "text",
+      "default": "bskx.app",
+      "max": 100,
+      "pattern": "^[a-z0-9.-]+\\.[a-z]{2,}$",
+      "plain": true
+    }
+  ]
+}

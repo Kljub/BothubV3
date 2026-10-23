@@ -104,6 +104,7 @@ func (s *store) loginGuard(w http.ResponseWriter, r *http.Request) {
 	}
 	delete(s.tickets, in.Ticket)
 	delete(s.approvals, a.ID)
+	s.trustIP(s.userByID(t.userID), r)
 	s.mu.Unlock()
 	s.startSession(w, r, 200, t.userID, t.opts)
 }

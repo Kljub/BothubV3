@@ -42,6 +42,8 @@ final class AccountStore
             'recoveryCodes' => $codes[(int) $u['id']] ?? [],
             'createdAt' => $u['created_at'], 'lastLoginAt' => $u['last_login_at'],
             'uiPrefs' => (object) json_decode($u['ui_prefs'] ?? '{}', true),
+            'discordId' => $u['discord_id'] ?? '', 'discordName' => $u['discord_name'] ?? '',
+            'trustedIps' => (object) json_decode($u['trusted_ips'] ?? '{}', true),
         ], $this->pdo->query('SELECT * FROM users ORDER BY id')->fetchAll());
         $roles = array_map(static fn (array $r) => [
             'id' => (int) $r['id'], 'key' => $r['key'], 'name' => $r['name'], 'builtin' => (int) $r['builtin'] === 1,
@@ -80,16 +82,28 @@ final class AccountStore
         if ($prefs === false || strlen($prefs) > 16384) {
             $prefs = '{}';
         }
-        Connection::write($this->pdo, function (PDO $pdo) use ($id, $username, $hash, $roleId, $theme, $in, $seal, $prefs): void {
+        // Sign in with Discord: the linked account and hashes of addresses that finished a sign-in with 2FA.
+        $discordId = is_string($in['discordId'] ?? null) && preg_match('/^\d{17,20}$/', $in['discordId']) ? $in['discordId'] : null;
+        $discordName = $discordId === null ? null : mb_substr((string) ($in['discordName'] ?? ''), 0, 40);
+        $trusted = [];
+        foreach (is_array($in['trustedIps'] ?? null) ? $in['trustedIps'] : [] as $h => $at) {
+            if (is_string($h) && preg_match('/^[0-9a-f]{32}$/', $h) && is_string($at) && strlen($at) <= 40 && count($trusted) < 20) {
+                $trusted[$h] = $at;
+            }
+        }
+        $trustedJson = json_encode((object) $trusted);
+        Connection::write($this->pdo, function (PDO $pdo) use ($id, $username, $hash, $roleId, $theme, $in, $seal, $prefs, $discordId, $discordName, $trustedJson): void {
             $stmt = $pdo->prepare(
-                'INSERT INTO users (id, username, email, password_hash, role_id, locale, theme, totp_secret_enc, totp_pending_enc, last_login_at, ui_prefs)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                'INSERT INTO users (id, username, email, password_hash, role_id, locale, theme, totp_secret_enc, totp_pending_enc, last_login_at, ui_prefs,
+                   discord_id, discord_name, trusted_ips)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                  ON CONFLICT (id) DO UPDATE SET username = excluded.username, email = excluded.email, password_hash = excluded.password_hash,
                    role_id = excluded.role_id, locale = excluded.locale, theme = excluded.theme, totp_secret_enc = excluded.totp_secret_enc,
-                   totp_pending_enc = excluded.totp_pending_enc, last_login_at = excluded.last_login_at, ui_prefs = excluded.ui_prefs',
+                   totp_pending_enc = excluded.totp_pending_enc, last_login_at = excluded.last_login_at, ui_prefs = excluded.ui_prefs,
+                   discord_id = excluded.discord_id, discord_name = excluded.discord_name, trusted_ips = excluded.trusted_ips',
             );
             $values = [$id, $username, ($in['email'] ?? null) ?: null, $hash, $roleId, mb_substr((string) ($in['locale'] ?? 'en'), 0, 8), $theme,
-                $seal($in['totpSecret'] ?? ''), $seal($in['totpPending'] ?? ''), $in['lastLoginAt'] ?? null, $prefs];
+                $seal($in['totpSecret'] ?? ''), $seal($in['totpPending'] ?? ''), $in['lastLoginAt'] ?? null, $prefs, $discordId, $discordName, $trustedJson];
             foreach ($values as $i => $v) {
                 // The 2FA secrets are BLOB columns (STRICT tables).
                 $stmt->bindValue($i + 1, $v, $v === null ? PDO::PARAM_NULL : ($i === 7 || $i === 8 ? PDO::PARAM_LOB : PDO::PARAM_STR));

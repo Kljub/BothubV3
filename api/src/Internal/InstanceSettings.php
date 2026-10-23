@@ -12,16 +12,16 @@ use PDO;
  * Instance settings the gateway owns (settings key "server": domain, ports,
  * session hours, upload limit, automatic updates, restart policy; key
  * "registration": self-registration on/off and its role; key "smtp": the
- * mail server). The gateway validates them; this store only keeps them
+ * mail server; key "discord": sign in with Discord). The gateway validates them; this store only keeps them
  * across restarts. The SMTP password is encrypted (secret_enc, SecretBox),
  * never in the JSON value.
  * Internal routes only: GET /internal/settings/{key} ({value}), PUT (the object).
  */
 final class InstanceSettings
 {
-    private const KEYS = ['server', 'registration', 'smtp', 'security'];
-    /** Keys whose "password" field goes into secret_enc. */
-    private const SECRET = ['smtp'];
+    private const KEYS = ['server', 'registration', 'smtp', 'security', 'discord'];
+    /** Keys whose "password" field goes into secret_enc (SMTP password, client secret of the Discord sign-in). */
+    private const SECRET = ['smtp', 'discord'];
 
     public function __construct(private readonly PDO $pdo, private readonly ?SecretBox $box = null)
     {

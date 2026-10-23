@@ -78,7 +78,8 @@
           "base64_decode",
           "json_stringify",
           "sanitize",
-          "unsanitize"
+          "unsanitize",
+          "format_number"
         ],
         "default": "uppercase",
         "x-labelKey": "builder.cfg.operation",
@@ -197,6 +198,57 @@
           "operation": [
             "split",
             "join"
+          ]
+        }
+      },
+      "number_style": {
+        "type": "string",
+        "enum": [
+          "grouped",
+          "compact",
+          "ordinal",
+          "words",
+          "roman",
+          "binary",
+          "hex"
+        ],
+        "default": "grouped",
+        "x-labelKey": "builder.cfg.number_style",
+        "x-enumKey": "builder.enum.number_style",
+        "x-showIf": {
+          "operation": [
+            "format_number"
+          ]
+        }
+      },
+      "number_locale": {
+        "type": "string",
+        "enum": [
+          "en",
+          "de"
+        ],
+        "default": "en",
+        "x-labelKey": "builder.cfg.number_locale",
+        "x-enumKey": "builder.enum.number_locale",
+        "x-showIf": {
+          "operation": [
+            "format_number"
+          ]
+        }
+      },
+      "decimals": {
+        "type": "string",
+        "maxLength": 40,
+        "x-labelKey": "builder.cfg.decimals",
+        "x-hintKey": "builder.cfg.decimals_hint",
+        "x-placeholder": "2",
+        "x-showIf": {
+          "number_style": [
+            "grouped",
+            "compact"
+          ],
+          "operation": [
+            "format_number"
           ]
         }
       },

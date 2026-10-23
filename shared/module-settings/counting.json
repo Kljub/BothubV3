@@ -16,7 +16,8 @@
         "normal",
         "webhook"
       ],
-      "default": "normal"
+      "default": "normal",
+      "hint": true
     },
     {
       "key": "react",
@@ -39,19 +40,71 @@
       }
     },
     {
+      "key": "maths",
+      "type": "bool",
+      "default": false,
+      "hint": true
+    },
+    {
       "key": "allowTwice",
       "type": "bool",
       "default": false
     },
     {
-      "key": "cooldown",
-      "type": "bool",
-      "default": false
+      "key": "cooldownSeconds",
+      "type": "number",
+      "min": 0,
+      "max": 3600,
+      "default": 0,
+      "hint": true
     },
     {
-      "key": "resetOnFail",
+      "key": "talk",
       "type": "bool",
-      "default": false
+      "default": true,
+      "hint": true
+    },
+    {
+      "key": "s_mistakes",
+      "type": "section"
+    },
+    {
+      "key": "onFail",
+      "type": "select",
+      "options": [
+        "reset",
+        "checkpoint",
+        "keep"
+      ],
+      "default": "reset"
+    },
+    {
+      "key": "checkpointEvery",
+      "type": "number",
+      "min": 1,
+      "max": 1000000,
+      "default": 100,
+      "showIf": {
+        "onFail": [
+          "checkpoint"
+        ]
+      }
+    },
+    {
+      "key": "saves",
+      "type": "number",
+      "min": 0,
+      "max": 20,
+      "default": 0,
+      "hint": true
+    },
+    {
+      "key": "saveEvery",
+      "type": "number",
+      "min": 0,
+      "max": 1000000,
+      "default": 100,
+      "hint": true
     },
     {
       "key": "errors",
@@ -67,7 +120,7 @@
           "true"
         ]
       },
-      "default": "{user.mention}, wrong number! The next number is **{count.next}**.",
+      "default": "{user.mention} broke the count at **{count}**! The next number is **{count.next}**.",
       "vars": [
         "user",
         "user.mention",
@@ -78,7 +131,34 @@
         "server.id",
         "members",
         "count",
-        "count.next"
+        "count.next",
+        "record",
+        "saves"
+      ]
+    },
+    {
+      "key": "saveMessage",
+      "type": "text",
+      "max": 300,
+      "showIf": {
+        "errors": [
+          "true"
+        ]
+      },
+      "default": "{user.mention}, wrong number! A save kept the count alive ({saves} left). The next number is **{count.next}**.",
+      "vars": [
+        "user",
+        "user.mention",
+        "user.name",
+        "user.id",
+        "user.avatar",
+        "server",
+        "server.id",
+        "members",
+        "count",
+        "count.next",
+        "record",
+        "saves"
       ]
     },
     {
@@ -101,7 +181,9 @@
         "server.id",
         "members",
         "count",
-        "count.next"
+        "count.next",
+        "record",
+        "saves"
       ]
     },
     {
@@ -124,7 +206,357 @@
         "server.id",
         "members",
         "count",
-        "count.next"
+        "count.next",
+        "record",
+        "saves"
+      ]
+    },
+    {
+      "key": "s_milestones",
+      "type": "section"
+    },
+    {
+      "key": "milestoneEvery",
+      "type": "number",
+      "min": 0,
+      "max": 1000000,
+      "default": 0,
+      "hint": true
+    },
+    {
+      "key": "milestoneMessage",
+      "type": "text",
+      "max": 300,
+      "default": "🎉 {user.mention} reached **{count}**!",
+      "vars": [
+        "user",
+        "user.mention",
+        "user.name",
+        "user.id",
+        "user.avatar",
+        "server",
+        "server.id",
+        "members",
+        "count",
+        "count.next",
+        "record",
+        "saves"
+      ]
+    },
+    {
+      "key": "milestoneRole",
+      "type": "role",
+      "hint": true
+    },
+    {
+      "key": "recordMessage",
+      "type": "text",
+      "max": 300,
+      "default": "🏆 New record for this channel: **{count}**!",
+      "hint": true,
+      "vars": [
+        "user",
+        "user.mention",
+        "user.name",
+        "user.id",
+        "user.avatar",
+        "server",
+        "server.id",
+        "members",
+        "count",
+        "count.next",
+        "record",
+        "saves"
+      ]
+    },
+    {
+      "key": "boards",
+      "type": "list",
+      "max": 10,
+      "titleField": "name",
+      "hint": true,
+      "item": [
+        {
+          "key": "name",
+          "type": "text",
+          "max": 60,
+          "default": "Counting",
+          "required": true,
+          "plain": true
+        },
+        {
+          "key": "enabled",
+          "type": "bool",
+          "default": true
+        },
+        {
+          "key": "channels",
+          "type": "channels",
+          "channelTypes": [
+            "text"
+          ],
+          "max": 10
+        },
+        {
+          "key": "mode",
+          "type": "select",
+          "options": [
+            "normal",
+            "webhook"
+          ],
+          "default": "normal",
+          "hint": true
+        },
+        {
+          "key": "react",
+          "type": "bool",
+          "default": true,
+          "showIf": {
+            "mode": [
+              "normal"
+            ]
+          }
+        },
+        {
+          "key": "emoji",
+          "type": "emojis",
+          "max": 1,
+          "showIf": {
+            "mode": [
+              "normal"
+            ]
+          }
+        },
+        {
+          "key": "maths",
+          "type": "bool",
+          "default": false,
+          "hint": true
+        },
+        {
+          "key": "allowTwice",
+          "type": "bool",
+          "default": false
+        },
+        {
+          "key": "cooldownSeconds",
+          "type": "number",
+          "min": 0,
+          "max": 3600,
+          "default": 0,
+          "hint": true
+        },
+        {
+          "key": "talk",
+          "type": "bool",
+          "default": true,
+          "hint": true
+        },
+        {
+          "key": "s_mistakes",
+          "type": "section"
+        },
+        {
+          "key": "onFail",
+          "type": "select",
+          "options": [
+            "reset",
+            "checkpoint",
+            "keep"
+          ],
+          "default": "reset"
+        },
+        {
+          "key": "checkpointEvery",
+          "type": "number",
+          "min": 1,
+          "max": 1000000,
+          "default": 100,
+          "showIf": {
+            "onFail": [
+              "checkpoint"
+            ]
+          }
+        },
+        {
+          "key": "saves",
+          "type": "number",
+          "min": 0,
+          "max": 20,
+          "default": 0,
+          "hint": true
+        },
+        {
+          "key": "saveEvery",
+          "type": "number",
+          "min": 0,
+          "max": 1000000,
+          "default": 100,
+          "hint": true
+        },
+        {
+          "key": "errors",
+          "type": "bool",
+          "default": true
+        },
+        {
+          "key": "wrongMessage",
+          "type": "text",
+          "max": 300,
+          "showIf": {
+            "errors": [
+              "true"
+            ]
+          },
+          "default": "{user.mention} broke the count at **{count}**! The next number is **{count.next}**.",
+          "vars": [
+            "user",
+            "user.mention",
+            "user.name",
+            "user.id",
+            "user.avatar",
+            "server",
+            "server.id",
+            "members",
+            "count",
+            "count.next",
+            "record",
+            "saves"
+          ]
+        },
+        {
+          "key": "saveMessage",
+          "type": "text",
+          "max": 300,
+          "showIf": {
+            "errors": [
+              "true"
+            ]
+          },
+          "default": "{user.mention}, wrong number! A save kept the count alive ({saves} left). The next number is **{count.next}**.",
+          "vars": [
+            "user",
+            "user.mention",
+            "user.name",
+            "user.id",
+            "user.avatar",
+            "server",
+            "server.id",
+            "members",
+            "count",
+            "count.next",
+            "record",
+            "saves"
+          ]
+        },
+        {
+          "key": "twiceMessage",
+          "type": "text",
+          "max": 300,
+          "showIf": {
+            "errors": [
+              "true"
+            ]
+          },
+          "default": "{user.mention}, you cannot count twice in a row.",
+          "vars": [
+            "user",
+            "user.mention",
+            "user.name",
+            "user.id",
+            "user.avatar",
+            "server",
+            "server.id",
+            "members",
+            "count",
+            "count.next",
+            "record",
+            "saves"
+          ]
+        },
+        {
+          "key": "cooldownMessage",
+          "type": "text",
+          "max": 300,
+          "showIf": {
+            "errors": [
+              "true"
+            ]
+          },
+          "default": "{user.mention}, slow down! Wait a few seconds.",
+          "vars": [
+            "user",
+            "user.mention",
+            "user.name",
+            "user.id",
+            "user.avatar",
+            "server",
+            "server.id",
+            "members",
+            "count",
+            "count.next",
+            "record",
+            "saves"
+          ]
+        },
+        {
+          "key": "s_milestones",
+          "type": "section"
+        },
+        {
+          "key": "milestoneEvery",
+          "type": "number",
+          "min": 0,
+          "max": 1000000,
+          "default": 0,
+          "hint": true
+        },
+        {
+          "key": "milestoneMessage",
+          "type": "text",
+          "max": 300,
+          "default": "🎉 {user.mention} reached **{count}**!",
+          "vars": [
+            "user",
+            "user.mention",
+            "user.name",
+            "user.id",
+            "user.avatar",
+            "server",
+            "server.id",
+            "members",
+            "count",
+            "count.next",
+            "record",
+            "saves"
+          ]
+        },
+        {
+          "key": "milestoneRole",
+          "type": "role",
+          "hint": true
+        },
+        {
+          "key": "recordMessage",
+          "type": "text",
+          "max": 300,
+          "default": "🏆 New record for this channel: **{count}**!",
+          "hint": true,
+          "vars": [
+            "user",
+            "user.mention",
+            "user.name",
+            "user.id",
+            "user.avatar",
+            "server",
+            "server.id",
+            "members",
+            "count",
+            "count.next",
+            "record",
+            "saves"
+          ]
+        }
       ]
     }
   ]

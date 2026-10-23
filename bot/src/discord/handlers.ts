@@ -19,6 +19,7 @@ import type { GraphNode } from '../graph/types.js';
 import { parseDuration, snowflake, snowflakes } from '../graph/util.js';
 import type { CaseAction, ModCase, Repo } from '../core/repo.js';
 import { buildMessage, hasBody } from './message.js';
+import { canUseWebhook, forgetWebhook, ownWebhook, webhookOf } from './webhooks.js';
 import type { VoiceManager } from './voice.js';
 import { cardFile, cardVars, renderCard } from '../cards/cards.js';
 import { lookupResults, lookupTwitch, twitchVars } from './twitch-lookup.js';
@@ -217,6 +218,44 @@ export async function cardPlaceholders(repo: Repo, run: Run, message: unknown): 
   }
 }
 
+/** Name and picture of "Send as": a member, or own ones; null sends as the bot. */
+async function senderOf(run: Run, node: GraphNode): Promise<{ username: string; avatarURL?: string } | null> {
+  const mode = String(run.raw(node, 'sender') ?? 'bot');
+  if (mode === 'member') {
+    const m = await memberOf(run, node, 'sender_user');
+    return { username: m.displayName, avatarURL: m.displayAvatarURL({ size: 256 }) };
+  }
+  if (mode === 'custom') {
+    const username = run.str(node, 'sender_name').trim().slice(0, 80);
+    if (!username) throw new GraphError('error.run.missing_value', { field: 'sender_name' });
+    const avatar = run.str(node, 'sender_avatar').trim();
+    if (avatar && !/^https?:\/\/\S+$/i.test(avatar)) throw new GraphError('error.run.bad_url', { value: avatar });
+    return avatar ? { username, avatarURL: avatar } : { username };
+  }
+  return null;
+}
+
+/** Posts through the bot's webhook of the channel; a webhook deleted on Discord is made again once. */
+async function sendAs(run: Run, channel: SendableChannels, as: { username: string; avatarURL?: string }, payload: Record<string, unknown>): Promise<Message> {
+  if (!canUseWebhook(channel)) throw new GraphError('error.run.missing_permissions', { message: 'Sending as someone needs the Manage Webhooks permission in this channel.' });
+  for (let attempt = 0; ; attempt++) {
+    const target = await discord(run, () => ownWebhook(channel));
+    if (!target) throw new GraphError('error.run.webhook_channel', { value: channel.id });
+    try {
+      run.countDiscordCall();
+      return await target.hook.send({ ...payload, ...as, threadId: target.threadId } as never);
+    } catch (err) {
+      const e = err as { code?: number; message?: string };
+      if (e.code === 10015 && attempt === 0) {
+        forgetWebhook(target.hook.channelId);
+        continue;
+      }
+      if (e.code === 50013) throw new GraphError('error.run.missing_permissions', { message: e.message });
+      throw new GraphError('error.run.discord', { message: e.message ?? String(err), code: e.code });
+    }
+  }
+}
+
 async function sendMessage(node: GraphNode, run: Run): Promise<void> {
   const d = data(run);
   const payload = buildMessage(run, node, d.customId) as Record<string, unknown> & { flags?: number };
@@ -250,13 +289,17 @@ async function sendMessage(node: GraphNode, run: Run): Promise<void> {
       sent = await discord(run, () => to.reply(payload as never));
       break;
     }
-    case 'command_channel':
+    case 'command_channel': {
       if (!d.channel) throw new GraphError('error.run.no_channel');
-      sent = await discord(run, () => d.channel!.send(payload as never) as Promise<Message>);
+      const ch = d.channel;
+      const as = await senderOf(run, node);
+      sent = as ? await sendAs(run, ch, as, payload) : await discord(run, () => ch.send(payload as never) as Promise<Message>);
       break;
+    }
     case 'channel': {
       const ch = await channelOf(run, run.str(node, 'channel'), 'channel');
-      sent = await discord(run, () => ch.send(payload as never) as Promise<Message>);
+      const as = await senderOf(run, node);
+      sent = as ? await sendAs(run, ch, as, payload) : await discord(run, () => ch.send(payload as never) as Promise<Message>);
       break;
     }
     case 'dm': {
@@ -267,7 +310,12 @@ async function sendMessage(node: GraphNode, run: Run): Promise<void> {
     }
     case 'edit': {
       const msg = await messageOf(run, node, 'edit_message');
-      sent = await discord(run, () => msg.edit(payload as never));
+      // A message the bot sent "as someone" belongs to its webhook; only that webhook can edit it.
+      const own = msg.webhookId ? await webhookOf(d.client, msg.channel, msg.webhookId) : null;
+      if (msg.webhookId && !own) throw new GraphError('error.run.not_own_message', { value: msg.id });
+      sent = own
+        ? await discord(run, () => own.hook.editMessage(msg, { ...payload, threadId: own.threadId } as never))
+        : await discord(run, () => msg.edit(payload as never));
       break;
     }
     default:

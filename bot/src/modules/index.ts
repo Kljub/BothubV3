@@ -9,7 +9,8 @@ import { syncBotProfiles } from './botprofile.js';
 import { cacheInvites, inviteChanged, inviteJoin, inviteLeave, levelingLeave, levelingMessage, levelingVoiceInit, relevel, prepareReactionRoles, reactionRoles, suggestionMessage, suggestionVote } from './community.js';
 import { automodHit, automodMessage, syncAutomod } from './automod.js';
 import type { ModuleContext } from './context.js';
-import { onCountingMessage, onStarReaction } from './games.js';
+import { onStarReaction } from './games.js';
+import { onCountingMessage } from './counting.js';
 import { onBan, onMemberAdd, onMemberRemove, onMemberUpdate, welcomeButtonRoute, welcomeFirstMessage } from './members.js';
 import { ensureStickies, onMessage } from './messages.js';
 import { globalChat, tempVoice } from './social.js';
@@ -26,6 +27,7 @@ import { bindAuditLog } from './auditlog.js';
 import { rolePrefix } from './server-auto.js';
 import { thanksMessage } from './thanks.js';
 import { linkfixMessage } from './linkfix.js';
+import { linkMediaMessage } from './linkmedia.js';
 import { connectionsJoin } from './connections.js';
 import { ensureWebVerifyPanels, webVerifyInteraction, webVerifyJoin } from './webverify.js';
 
@@ -100,6 +102,7 @@ export function bindModules(client: Client, ctx: ModuleContext, timezone: () => 
     guard('honeypot', honeypotMessage(ctx, msg));
     guard('automod-media', automodMessage(ctx, msg));
     guard('twitter-linkfix', linkfixMessage(ctx, msg));
+    guard('link-media', linkMediaMessage(ctx, msg));
     guard('economy-messages', messageReward(ctx, msg));
     guard('afk', afkMessage(ctx, msg));
     guard('thanks', thanksMessage(ctx, msg));

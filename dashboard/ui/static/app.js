@@ -923,11 +923,19 @@ async function proveDevice() {
   return proof.ok;
 }
 
+// Back from Discord: go on to the same-site address (templates/discord_continue.html).
+document.addEventListener('DOMContentLoaded', () => {
+  const next = document.querySelector('a[data-auto-continue]');
+  if (next) location.replace(next.href);
+});
+
 // Sign-in form: make the device key first, then send the form.
 document.addEventListener('submit', async (event) => {
   const form = event.target.closest('[data-login-form]');
   if (!form || form.dataset.keyReady) return;
   event.preventDefault();
+  // A second button (Sign in with Discord) sends the same form elsewhere.
+  if (event.submitter?.hasAttribute('formaction')) form.action = event.submitter.formAction;
   form.elements.device_key.value = await newDeviceKey();
   form.dataset.keyReady = '1';
   form.submit();
