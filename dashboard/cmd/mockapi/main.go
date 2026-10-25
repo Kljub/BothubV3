@@ -56,10 +56,24 @@ type bot struct {
 }
 
 type commandCounts struct {
-	Slash   int            `json:"slash"`
-	User    int            `json:"user"`
-	Message int            `json:"message"`
-	Groups  map[string]int `json:"groups"`
+	Slash   int         `json:"slash"`
+	User    int         `json:"user"`
+	Message int         `json:"message"`
+	Groups  countGroups `json:"groups"`
+}
+
+// countGroups: active commands per group. Tolerant: anything that is not an
+// object of numbers (e.g. [] from PHP for an empty one) is no groups; the
+// bot list must never fail over a count.
+type countGroups map[string]int
+
+func (g *countGroups) UnmarshalJSON(data []byte) error {
+	var m map[string]int
+	if json.Unmarshal(data, &m) != nil {
+		m = nil
+	}
+	*g = m
+	return nil
 }
 
 type botIntents struct {

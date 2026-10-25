@@ -91,10 +91,23 @@ type Bot struct {
 // CommandCounts: main commands per kind at Discord and the active commands
 // per module ("<key>") and plugin ("plugin:<id>").
 type CommandCounts struct {
-	Slash   int            `json:"slash"`
-	User    int            `json:"user"`
-	Message int            `json:"message"`
-	Groups  map[string]int `json:"groups"`
+	Slash   int         `json:"slash"`
+	User    int         `json:"user"`
+	Message int         `json:"message"`
+	Groups  CountGroups `json:"groups"`
+}
+
+// CountGroups: active commands per group; anything that is not an object of
+// numbers (e.g. []) reads as no groups, so a count never breaks a page.
+type CountGroups map[string]int
+
+func (g *CountGroups) UnmarshalJSON(data []byte) error {
+	var m map[string]int
+	if json.Unmarshal(data, &m) != nil {
+		m = nil
+	}
+	*g = m
+	return nil
 }
 
 // Discord's limits per application (also in bot/src/discord/commands.ts).

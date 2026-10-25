@@ -327,7 +327,8 @@ final class BotStore
             // Privileged intents allowed in the Developer Portal (null until the bot started once).
             'intents' => is_string($r['intents'] ?? null) ? json_decode($r['intents'], true) : null,
             // Registered at Discord (written by the bot): {slash, user, message, groups, at}; null until the first registration.
-            'commandCounts' => is_string($r['command_counts'] ?? null) ? json_decode($r['command_counts'], true) : null,
+            // Decoded as objects: an empty "groups" must stay {} (as an array it would be [], which the gateway cannot read).
+            'commandCounts' => is_string($r['command_counts'] ?? null) ? json_decode($r['command_counts']) : null,
             'presence' => in_array($r['presence_status'] ?? null, ['online', 'idle', 'dnd', 'invisible'], true) ? $r['presence_status'] : 'online',
         ];
     }
