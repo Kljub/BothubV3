@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -133,6 +134,53 @@ func (s *store) getProfile(w http.ResponseWriter, r *http.Request, b *bot) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	writeJSON(w, 200, s.profileJSON(b.ID))
+}
+
+// profileWait: how long the bot list waits for profiles not read yet.
+const profileWait = 2 * time.Second
+
+// warmProfiles reads the profiles not read yet (banner, Verified Bot badge)
+// before the bot list answers. They live in memory only, so after a restart
+// of the gateway (an update) the list would show the tiles without banner
+// and check until the next refresh; open pages get live notes instead of
+// polling, which may not come soon. Slow answers go on in the background
+// (tried again after a minute).
+func (s *store) warmProfiles() {
+	s.mu.Lock()
+	var todo []*bot
+	for id := int64(1); id < s.nextID; id++ {
+		if b, ok := s.bots[id]; ok {
+			if p := s.profileOf(b.ID); !p.synced && time.Since(p.syncTried) > time.Minute {
+				p.syncTried = time.Now()
+				todo = append(todo, b)
+			}
+		}
+	}
+	s.mu.Unlock()
+	if len(todo) == 0 {
+		return
+	}
+	var wg sync.WaitGroup
+	for _, b := range todo {
+		wg.Add(1)
+		go func(b *bot) {
+			defer wg.Done()
+			ctx, cancel := context.WithTimeout(context.Background(), profileLoadTimeout)
+			defer cancel()
+			if err := s.loadProfile(ctx, b); err != nil {
+				log.Printf("profile of bot %d: %v", b.ID, err)
+			}
+		}(b)
+	}
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(profileWait):
+	}
 }
 
 // loadProfile reads avatar, banner and "About me" from Discord.

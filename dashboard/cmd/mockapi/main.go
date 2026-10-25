@@ -865,6 +865,7 @@ func (s *store) listBots(w http.ResponseWriter, r *http.Request, sid string) {
 			return
 		}
 	}
+	s.warmProfiles()
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	me := s.sessUser(sid)
@@ -882,15 +883,6 @@ func (s *store) listBots(w http.ResponseWriter, r *http.Request, sid string) {
 			c.BannerURL, c.Verified = p.banner, p.verified
 			if c.Presence == "" {
 				c.Presence = s.presenceOf(b.ID).Status
-			}
-			// Banner not read yet: from Discord in the background (the next poll shows it).
-			if !p.synced && time.Since(p.syncTried) > time.Minute {
-				p.syncTried = time.Now()
-				go func(b *bot) {
-					ctx, cancel := context.WithTimeout(context.Background(), profileLoadTimeout)
-					defer cancel()
-					_ = s.loadProfile(ctx, b)
-				}(b)
 			}
 			items = append(items, c)
 		}
