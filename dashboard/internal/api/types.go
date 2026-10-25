@@ -84,7 +84,24 @@ type Bot struct {
 	LastProblem *BotProblem `json:"lastProblem,omitempty"`
 	// Privileged intents allowed in the Developer Portal; nil until the bot started once.
 	Intents *BotIntents `json:"intents,omitempty"`
+	// Commands as registered at Discord (written by the bot); nil until the first registration.
+	CommandCounts *CommandCounts `json:"commandCounts,omitempty"`
 }
+
+// CommandCounts: main commands per kind at Discord and the active commands
+// per module ("<key>") and plugin ("plugin:<id>").
+type CommandCounts struct {
+	Slash   int            `json:"slash"`
+	User    int            `json:"user"`
+	Message int            `json:"message"`
+	Groups  map[string]int `json:"groups"`
+}
+
+// Discord's limits per application (also in bot/src/discord/commands.ts).
+const (
+	SlashLimit = 100
+	MenuLimit  = 15
+)
 
 type BotIntents struct {
 	Presence       bool `json:"presence"`

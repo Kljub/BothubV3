@@ -216,7 +216,7 @@ func (s *Server) handleBot(w http.ResponseWriter, r *http.Request, p Page) {
 			s.fail(w, r, p, err)
 			return
 		}
-		data["Plugins"] = plugins
+		data["Plugins"] = withCommands(plugins, countsOf(p, id))
 	case "cowork":
 		v, err := s.coworkView(r, p, id, "")
 		if err != nil {
@@ -259,7 +259,7 @@ func (s *Server) handleBot(w http.ResponseWriter, r *http.Request, p Page) {
 		data["Access"] = s.accessView(r, id)
 	case "modules":
 		// Modules apply to all guilds of the bot, so there is no guild choice.
-		cats, err := s.moduleCategories(r, id)
+		cats, err := s.moduleCategories(r, id, countsOf(p, id))
 		if err != nil {
 			s.fail(w, r, p, err)
 			return

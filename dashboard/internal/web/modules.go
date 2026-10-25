@@ -83,10 +83,25 @@ type categoryView struct {
 	Active, Total int
 	Modules       []moduleView
 	Closed        bool // closed by this user for this bot (remembered per account and bot)
+	// Active commands of the group's modules (CommandCounts of the bot); -1 until the bot registered once.
+	Commands int
+}
+
+// countsOf: what the bot registered at Discord (from the bot list of the page), or nil.
+func countsOf(p Page, botID int64) *api.CommandCounts {
+	for _, b := range p.Bots {
+		if b.ID == botID {
+			return b.CommandCounts
+		}
+	}
+	if p.SelectedBot != nil && p.SelectedBot.ID == botID {
+		return p.SelectedBot.CommandCounts
+	}
+	return nil
 }
 
 // moduleCategories merges the catalog with the bot's module states.
-func (s *Server) moduleCategories(r *http.Request, botID int64) ([]categoryView, error) {
+func (s *Server) moduleCategories(r *http.Request, botID int64, counts *api.CommandCounts) ([]categoryView, error) {
 	states, err := s.api.ListBotModules(r.Context(), session(r), botID)
 	if err != nil {
 		return nil, err
@@ -102,10 +117,16 @@ func (s *Server) moduleCategories(r *http.Request, botID int64) ([]categoryView,
 	}
 	cats := make([]categoryView, 0, len(s.modules))
 	for _, c := range s.modules {
-		cv := categoryView{Key: c.Key, Icon: c.Icon, Total: len(c.Modules), Closed: slices.Contains(closed, c.Key)}
+		cv := categoryView{Key: c.Key, Icon: c.Icon, Total: len(c.Modules), Closed: slices.Contains(closed, c.Key), Commands: -1}
+		if counts != nil {
+			cv.Commands = 0
+		}
 		for _, m := range c.Modules {
 			if enabled[m.Key] {
 				cv.Active++
+			}
+			if counts != nil {
+				cv.Commands += counts.Groups[m.Key]
 			}
 			_, disclosed := disclosures[m.PrivacySection]
 			cv.Modules = append(cv.Modules, moduleView{BotID: botID, Category: c.Key, ModuleInfo: m, Enabled: enabled[m.Key], Disclosed: m.PrivacySection != "" && disclosed})
@@ -172,7 +193,7 @@ func (s *Server) handleSetModule(w http.ResponseWriter, r *http.Request, p Page)
 		s.fail(w, r, p, err)
 		return
 	}
-	cats, err := s.moduleCategories(r, id)
+	cats, err := s.moduleCategories(r, id, countsOf(p, id))
 	if err != nil {
 		s.fail(w, r, p, err)
 		return
@@ -196,6 +217,19 @@ func (s *Server) handleSetModule(w http.ResponseWriter, r *http.Request, p Page)
 type pluginView struct {
 	BotID int64
 	api.InstalledPlugin
+	// Active commands of the plugin (CommandCounts of the bot); -1 until the bot registered once.
+	Commands int
+}
+
+// withCommands fills in the active commands of each plugin.
+func withCommands(views []pluginView, counts *api.CommandCounts) []pluginView {
+	for i := range views {
+		views[i].Commands = -1
+		if counts != nil {
+			views[i].Commands = counts.Groups["plugin:"+views[i].ID]
+		}
+	}
+	return views
 }
 
 // Category of the plugin (bothub.json "category"; utility when none), for
@@ -237,7 +271,7 @@ func (s *Server) handleSetPlugin(w http.ResponseWriter, r *http.Request, p Page)
 		s.fail(w, r, p, err)
 		return
 	}
-	s.render(w, http.StatusOK, "bot", "plugin_card_fragment", withData(p, pluginView{BotID: id, InstalledPlugin: pl}))
+	s.render(w, http.StatusOK, "bot", "plugin_card_fragment", withData(p, withCommands([]pluginView{{BotID: id, InstalledPlugin: pl}}, countsOf(p, id))[0]))
 }
 
 // handleModuleItem renders the content page of one module or plugin:

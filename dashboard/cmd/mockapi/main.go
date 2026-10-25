@@ -50,7 +50,16 @@ type bot struct {
 	LastProblem *botProblem `json:"lastProblem,omitempty"`
 	// Privileged intents allowed in the Developer Portal (written by the bot).
 	Intents *botIntents `json:"intents,omitempty"`
-	token   string
+	// Registered at Discord (written by the bot).
+	CommandCounts *commandCounts `json:"commandCounts,omitempty"`
+	token         string
+}
+
+type commandCounts struct {
+	Slash   int            `json:"slash"`
+	User    int            `json:"user"`
+	Message int            `json:"message"`
+	Groups  map[string]int `json:"groups"`
 }
 
 type botIntents struct {

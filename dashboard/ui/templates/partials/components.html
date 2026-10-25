@@ -212,3 +212,12 @@
 {{define "icon_search"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>{{end}}
 
 {{define "icon_smile"}}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/></svg>{{end}}
+
+{{define "command_limit"}}
+{{/* Top bar: main slash commands of the selected bot at Discord out of 100
+     (menus in the tooltip); amber from 90, red at the limit. */}}
+<a class="topbar-btn command-limit{{if ge .Slash 100}} command-limit-full{{else if ge .Slash 90}} command-limit-near{{end}}" href="/bots/custom-commands"
+  title="{{t "topbar.commands_hint" "slash" .Slash "user" .User "message" .Message}}" aria-label="{{t "topbar.commands_hint" "slash" .Slash "user" .User "message" .Message}}">
+  <span class="command-limit-label">{{t "topbar.commands"}}</span><strong>{{.Slash}}</strong><span class="muted">/ 100</span>
+</a>
+{{end}}

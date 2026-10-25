@@ -31,3 +31,10 @@
   background: none; border: 0; border-radius: var(--radius-sm); cursor: pointer;
 }
 .lang-menu button:hover, .lang-menu button[aria-current="true"] { background: var(--surface-2); }
+
+/* Commands of the selected bot at Discord: "Commands 34 / 100". */
+.command-limit { text-decoration: none; font-variant-numeric: tabular-nums; }
+.command-limit strong { color: var(--text); }
+.command-limit-near strong { color: var(--yellow); }
+.command-limit-full strong { color: var(--red); }
+@media (max-width: 640px) { .command-limit-label { display: none; } }

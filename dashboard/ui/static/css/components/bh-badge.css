@@ -26,3 +26,4 @@
 .badge-running { background: var(--green); color: #0f0f0f; }
 .badge-stopped { background: var(--red); color: #0f0f0f; }
 .badge-error { background: var(--yellow); color: #0f0f0f; }
+.pill-commands { margin-left: 4px; color: var(--text-2); background: var(--surface-2); }

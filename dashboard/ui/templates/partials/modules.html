@@ -18,7 +18,10 @@
 </details>
 {{end}}
 
-{{define "group_count"}}<span class="pill-count" id="group-count-{{.Key}}">{{t "modules.active" "active" .Active "total" .Total}}</span>{{end}}
+{{define "group_count"}}<span class="pill-count" id="group-count-{{.Key}}">{{t "modules.active" "active" .Active "total" .Total}}</span>{{template "group_commands" .}}{{end}}
+
+{{/* Active commands of the group's modules, as the bot registered them. */}}
+{{define "group_commands"}}{{if ge .Commands 0}}<span class="pill-count pill-commands" id="group-commands-{{.Key}}" title="{{t "modules.commands_hint"}}">{{t "modules.commands" "count" .Commands}}</span>{{end}}{{end}}
 
 {{define "module_card"}}
 <article class="card module-card {{if .Enabled}}module-card-on{{else}}module-card-off{{end}}" id="module-{{.Key}}">
@@ -79,6 +82,7 @@
   <div class="module-card-body">
     <h3>{{.Name}}</h3>
     <p class="muted" title="{{.Description}}">{{.Description}}</p>
+    {{if gt .Commands 0}}<span class="pill-count pill-commands" title="{{t "modules.commands_hint"}}">{{t "modules.commands" "count" .Commands}}</span>{{end}}
     <a class="module-card-edit" href="/bots/plugins/{{.ID}}">{{t "modules.edit"}}</a>
   </div>
 </article>

@@ -122,6 +122,7 @@
     <header class="topbar">
       <h1 class="topbar-title">{{template "title" .}}</h1>
       <div class="topbar-actions">
+        {{with .SelectedBot}}{{with .CommandCounts}}{{template "command_limit" .}}{{end}}{{end}}
         <button type="button" class="topbar-btn" data-tour-start>{{template "icon_compass"}}<span>{{t "topbar.start_tour"}}</span></button>
         <details class="lang-switch">
           <summary class="topbar-btn">{{template "icon_globe"}}<span>{{upper .Locale}}</span></summary>

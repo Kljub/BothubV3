@@ -17,7 +17,7 @@ use PDO;
 final class BotStore
 {
     private const COLUMNS = "b.id, b.name, b.application_id, b.avatar_url, b.status, b.status_error_key,
-        b.token_enc IS NOT NULL AS token_set, b.autostart, b.created_at, b.started_at, b.owner_id, b.intents,
+        b.token_enc IS NOT NULL AS token_set, b.autostart, b.created_at, b.started_at, b.owner_id, b.intents, b.command_counts,
         (SELECT json_group_array(json_object('userId', m.user_id, 'role', m.role, 'permissions', json(m.permissions))) FROM bot_members m WHERE m.bot_id = b.id) AS members,
         (SELECT COUNT(*) FROM bot_guilds g WHERE g.bot_id = b.id AND g.left_at IS NULL) AS guild_count,
         (SELECT json_extract(p.presence, '$.status') FROM bot_profiles p WHERE p.bot_id = b.id) AS presence_status,
@@ -326,6 +326,8 @@ final class BotStore
             'lastProblem' => self::problem($r['last_problem'] ?? null),
             // Privileged intents allowed in the Developer Portal (null until the bot started once).
             'intents' => is_string($r['intents'] ?? null) ? json_decode($r['intents'], true) : null,
+            // Registered at Discord (written by the bot): {slash, user, message, groups, at}; null until the first registration.
+            'commandCounts' => is_string($r['command_counts'] ?? null) ? json_decode($r['command_counts'], true) : null,
             'presence' => in_array($r['presence_status'] ?? null, ['online', 'idle', 'dnd', 'invisible'], true) ? $r['presence_status'] : 'online',
         ];
     }

@@ -177,6 +177,11 @@ export class Repo {
     this.db.prepare('UPDATE bots SET intents = ? WHERE id = ?').run(JSON.stringify({ ...intents, at: now() }), id);
   }
 
+  /** What the bot registered at Discord (bots.command_counts). */
+  setCommandCounts(id: number, counts: { slash: number; user: number; message: number; groups: Record<string, number> }): void {
+    this.db.prepare('UPDATE bots SET command_counts = ? WHERE id = ?').run(JSON.stringify({ ...counts, at: now() }), id);
+  }
+
   /** Replaces the guild cache: listed guilds are in, all others are left. */
   syncGuilds(botId: number, guilds: { id: string; name: string; iconUrl: string | null; memberCount: number }[]): void {
     write(this.db, () => {
@@ -242,6 +247,14 @@ export class Repo {
   moduleOn(botId: number, key: string): boolean {
     const row = this.db.prepare('SELECT enabled FROM bot_modules WHERE bot_id = ? AND module_key = ?').get(botId, key) as Row | undefined;
     return row !== undefined && Number(row.enabled) === 1;
+  }
+
+  /** Plugins that run for a bot: on for the instance and not off for the bot. */
+  activePlugins(botId: number): Set<string> {
+    const rows = this.db
+      .prepare('SELECT plugin_id FROM plugin_installs i WHERE i.enabled = 1 AND NOT EXISTS (SELECT 1 FROM bot_plugin_disabled d WHERE d.bot_id = ? AND d.plugin_id = i.plugin_id)')
+      .all(botId) as Row[];
+    return new Set(rows.map((r) => String(r.plugin_id)));
   }
 
   disabledModules(botId: number): Set<string> {

@@ -84,7 +84,7 @@ async function main(): Promise<void> {
 
   // The key is read when a bot starts: the API may create it after us.
   const secretKey = () => loadSecretKey(config.dataDir);
-  manager = new BotManager(repo, { repo, defs, limits, plugins, secretKey, runErrors: readShared<RunErrorTexts>(config, 'run-errors.json'), presetModules: new Map(readShared<{ commands: { name: string; module: string }[] }>(config, 'command-presets.json').commands.map((c) => [c.name, c.module])), control: (id, op) => void manager!.enqueue(id, () => manager!.control(id, op)).catch((err) => log.error('bot control failed', { botId: id, err })) }, secretKey);
+  manager = new BotManager(repo, { repo, defs, limits, plugins, secretKey, runErrors: readShared<RunErrorTexts>(config, 'run-errors.json'), presetModules: presetModules(readShared<{ commands: { name: string; module: string }[] }>(config, 'command-presets.json').commands, readShared<{ modules: { key: string }[] }>(config, 'modules.json').modules.map((m) => m.key)), control: (id, op) => void manager!.enqueue(id, () => manager!.control(id, op)).catch((err) => log.error('bot control failed', { botId: id, err })) }, secretKey);
   await manager.startAll();
   // Task manager of the plugins (dashboard): rows every 5 s; only one core reports.
   if (ROLE === 'main') startTaskReports(plugins);
@@ -136,3 +136,18 @@ main().catch((err) => {
   log.error('bot process failed', { err });
   process.exit(1);
 });
+
+/**
+ * Module (catalog key of modules.json) of each command preset. Some presets
+ * use older names ("ticket-system", "giveaways", "servermanagement").
+ */
+function presetModules(presets: { name: string; module: string }[], keys: string[]): Map<string, string> {
+  const norm = (k: string) => k.toLowerCase().replace(/-system$/, '').replace(/-/g, '').replace(/s$/, '');
+  const byNorm = new Map(keys.map((k) => [norm(k), k]));
+  const out = new Map<string, string>();
+  for (const p of presets) {
+    const key = byNorm.get(norm(p.module));
+    if (key) out.set(p.name, key);
+  }
+  return out;
+}

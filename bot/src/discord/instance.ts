@@ -299,6 +299,8 @@ export class BotInstance {
       log.error('plugins failed', { botId: this.botId, err });
     }
     this.pluginBlocks();
+    // A plugin switched on or off: its commands come or go at Discord.
+    if (sync) await this.reload();
   }
 
   /** Task manager: end or restart one plugin, then the engine gets its blocks again. */
@@ -525,14 +527,21 @@ export class BotInstance {
     const disabled = this.deps.repo.disabledModules(this.botId);
     this.moderation.reload(disabled);
     this.commands.clear();
+    const presetModules = this.deps.presetModules ?? new Map<string, string>();
+    const plugins = this.deps.repo.activePlugins(this.botId);
     for (const cmd of this.deps.repo.commands(this.botId, 'command')) {
+      // Commands of a plugin that is off (for the bot or the instance) are off too.
+      if (cmd.pluginId && !plugins.has(cmd.pluginId)) continue;
       if (cmd.builtin && cmd.moduleKey && disabled.has(cmd.moduleKey)) continue;
+      // A module's command copy is off with its module, like the built-in one.
+      const module = !cmd.pluginId && cmd.presetName ? presetModules.get(cmd.presetName) : undefined;
+      if (module && disabled.has(module)) continue;
       const s = settingsOf(cmd);
       const key = s.commandType === 'slash' ? s.name.trim().split(/\s+/).join(' ') : `${s.commandType}:${s.menuName}`;
       if (!this.commands.has(key)) this.commands.set(key, cmd);
     }
     this.groupedNames = this.deps.repo.moduleOn(this.botId, 'command-groups')
-      ? groupedNames([...this.commands.values()], (cmd) => commandGroup(cmd, this.deps.presetModules ?? new Map()))
+      ? groupedNames([...this.commands.values()], (cmd) => commandGroup(cmd, presetModules))
       : new Map();
     this.groupedKeys = new Map([...this.commands].filter(([, cmd]) => this.groupedNames.has(cmd.id)).map(([key, cmd]) => [this.groupedNames.get(cmd.id)!, key]));
     this.events.clear();
@@ -668,6 +677,25 @@ export class BotInstance {
     return sources;
   }
 
+  /**
+   * Counts for the dashboard: main commands per kind as sent to Discord, and
+   * the active commands per module ("<key>") and plugin ("plugin:<id>").
+   */
+  private saveCommandCounts(body: Record<string, unknown>[]): void {
+    const presetModules = this.deps.presetModules ?? new Map<string, string>();
+    const groups: Record<string, number> = {};
+    for (const cmd of this.commands.values()) {
+      const key = cmd.pluginId ? `plugin:${cmd.pluginId}` : commandGroup(cmd, presetModules);
+      if (key) groups[key] = (groups[key] ?? 0) + 1;
+    }
+    const count = (type: number) => body.filter((c) => c.type === type).length;
+    try {
+      this.deps.repo.setCommandCounts(this.botId, { slash: count(1), user: count(2), message: count(3), groups });
+    } catch (err) {
+      log.warn('command counts not saved', { botId: this.botId, err });
+    }
+  }
+
   /** PUT the full command list; skipped when nothing changed. */
   private async registerCommands(): Promise<void> {
     const c = this.client;
@@ -682,6 +710,7 @@ export class BotInstance {
       this.choiceSources(),
       this.groupedNames,
     );
+    this.saveCommandCounts(body);
     const hash = createHash('sha256').update(JSON.stringify(body)).digest('hex');
     if (hash === this.registeredHash) return;
     try {
