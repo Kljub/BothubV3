@@ -84,7 +84,7 @@ async function main(): Promise<void> {
 
   // The key is read when a bot starts: the API may create it after us.
   const secretKey = () => loadSecretKey(config.dataDir);
-  manager = new BotManager(repo, { repo, defs, limits, plugins, secretKey, runErrors: readShared<RunErrorTexts>(config, 'run-errors.json'), control: (id, op) => void manager!.enqueue(id, () => manager!.control(id, op)).catch((err) => log.error('bot control failed', { botId: id, err })) }, secretKey);
+  manager = new BotManager(repo, { repo, defs, limits, plugins, secretKey, runErrors: readShared<RunErrorTexts>(config, 'run-errors.json'), presetModules: new Map(readShared<{ commands: { name: string; module: string }[] }>(config, 'command-presets.json').commands.map((c) => [c.name, c.module])), control: (id, op) => void manager!.enqueue(id, () => manager!.control(id, op)).catch((err) => log.error('bot control failed', { botId: id, err })) }, secretKey);
   await manager.startAll();
   // Task manager of the plugins (dashboard): rows every 5 s; only one core reports.
   if (ROLE === 'main') startTaskReports(plugins);

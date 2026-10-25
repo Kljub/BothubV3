@@ -142,10 +142,83 @@ export function cooldownOf(v: unknown): number {
 }
 
 /**
- * Discord accepts 100 top-level commands (+ menus); onOverflow gets the number left out.
+ * Group of a command for the module "Group commands": the module of a
+ * built-in command or of a module command copy, or the plugin. Own
+ * commands: null (they keep their names).
+ */
+export function commandGroup(cmd: CommandRow, presetModules: ReadonlyMap<string, string>): string | null {
+  if (cmd.moduleKey) return cmd.moduleKey;
+  if (cmd.pluginId) return cmd.pluginId.replace(/^plugin_/, '');
+  if (cmd.presetName) return presetModules.get(cmd.presetName) ?? null;
+  return null;
+}
+
+/** Discord's limit of subcommands (and subcommand groups) under one main command. */
+const MAX_SUBCOMMANDS = 25;
+
+/**
+ * Module "Group commands": the slash commands of one module (or plugin)
+ * become subcommands of one main command named after it, so they count
+ * once against Discord's 100: /kick -> /moderation kick, /economy-add ->
+ * /economy add, /ticket open stays. Returns the new name per command ID.
+ * Left as they are: groups with one command, names of three words, a main
+ * name an own command already uses, and what does not fit into 25.
+ */
+export function groupedNames(cmds: CommandRow[], groupOf: (cmd: CommandRow) => string | null): Map<number, string> {
+  const slash = cmds.filter((c) => settingsOf(c).commandType === 'slash');
+  const partsOf = (c: CommandRow) => settingsOf(c).name.trim().toLowerCase().split(/\s+/);
+  const groups = new Map<string, CommandRow[]>();
+  for (const c of slash) {
+    const g = groupOf(c);
+    const root = g?.toLowerCase().replace(/[^a-z0-9_-]/g, '-').slice(0, 32);
+    if (!root) continue;
+    groups.set(root, [...(groups.get(root) ?? []), c]);
+  }
+  const renamed = new Map<number, string>();
+  for (const [root, members] of groups) {
+    if (members.length < 2) continue;
+    // An own command (or one of another group) already has this main name.
+    if (slash.some((c) => !members.includes(c) && partsOf(c)[0] === root)) continue;
+    const prefixes = [...new Set([root, root.replace(/s$/, '')])].map((p) => `${p}-`);
+    const taken = new Set<string>();
+    const entries = new Set<string>();
+    const planned: [CommandRow, string[]][] = [];
+    for (const c of members) {
+      const parts = partsOf(c);
+      let next: string[];
+      if (parts[0] === root) next = parts.length === 1 ? [root, root] : parts;
+      else if (parts.length === 1) {
+        const prefix = prefixes.find((p) => parts[0]!.startsWith(p) && parts[0]!.length > p.length);
+        next = [root, prefix ? parts[0]!.slice(prefix.length) : parts[0]!];
+      } else if (parts.length === 2) next = [root, parts[0]!, parts[1]!];
+      else continue;
+      planned.push([c, next]);
+    }
+    for (const [c, next] of planned) {
+      const full = next.join(' ');
+      // Second word: one entry of the main command (a subcommand or a group).
+      if (taken.has(full) || (!entries.has(next[1]!) && entries.size >= MAX_SUBCOMMANDS)) continue;
+      // A subcommand and a group of the same name cannot be both.
+      if (next.length === 2 ? planned.some(([, n]) => n.length === 3 && n[1] === next[1]) : planned.some(([, n]) => n.length === 2 && n[1] === next[1])) continue;
+      taken.add(full);
+      entries.add(next[1]!);
+      if (full !== partsOf(c).join(' ')) renamed.set(c.id, full);
+    }
+  }
+  return renamed;
+}
+
+/** Discord's limits per application: top-level slash commands, user menus, message menus. */
+export const COMMAND_LIMITS = { slash: 100, user: 15, message: 15 } as const;
+
+/**
+ * Discord accepts 100 top-level slash commands (subcommands count once, with
+ * their root) and 15 user and 15 message menus, each limit on its own;
+ * onOverflow gets the names left out ("/name", "user menu: name").
  * allDm: the DM Commands module is on, every command is offered in DMs too.
  */
-export function buildCommands(cmds: CommandRow[], onOverflow?: (dropped: number) => void, allDm = false, sources: ChoiceSources = {}): Record<string, unknown>[] {
+export function buildCommands(cmds: CommandRow[], onOverflow?: (dropped: string[]) => void, allDm = false, sources: ChoiceSources = {}, names: ReadonlyMap<number, string> = new Map()): Record<string, unknown>[] {
+  const nameOf = (cmd: CommandRow) => names.get(cmd.id) ?? settingsOf(cmd).name;
   const top = new Map<string, Record<string, unknown>>();
   const menus: Record<string, unknown>[] = [];
   const menuNames = new Set<string>();
@@ -155,7 +228,7 @@ export function buildCommands(cmds: CommandRow[], onOverflow?: (dropped: number)
   const subRoots = new Set<string>();
   for (const cmd of cmds) {
     const s = settingsOf(cmd);
-    const parts = s.name.trim().split(/\s+/);
+    const parts = nameOf(cmd).trim().split(/\s+/);
     if (s.commandType === 'slash' && parts.length > 1) subRoots.add(parts[0]!);
   }
 
@@ -183,7 +256,7 @@ export function buildCommands(cmds: CommandRow[], onOverflow?: (dropped: number)
       continue;
     }
 
-    const parts = s.name.trim().split(/\s+/);
+    const parts = nameOf(cmd).trim().split(/\s+/);
     const options = optionJson({ nodes: cmd.graph.nodes }, cmd, sources);
     const description = (s.description || parts.join(' ')).slice(0, 100);
     let root = top.get(parts[0]!);
@@ -212,9 +285,16 @@ export function buildCommands(cmds: CommandRow[], onOverflow?: (dropped: number)
       if (!groupOptions.some((o) => o.name === parts[2])) groupOptions.push(sub);
     }
   }
-  const all = [...top.values(), ...menus];
-  if (all.length > 100) onOverflow?.(all.length - 100);
-  return all.slice(0, 100);
+  const slash = [...top.values()];
+  const users = menus.filter((m) => m.type === ApplicationCommandType.User);
+  const messages = menus.filter((m) => m.type === ApplicationCommandType.Message);
+  const dropped = [
+    ...slash.slice(COMMAND_LIMITS.slash).map((c) => `/${c.name}`),
+    ...users.slice(COMMAND_LIMITS.user).map((c) => `user menu: ${c.name}`),
+    ...messages.slice(COMMAND_LIMITS.message).map((c) => `message menu: ${c.name}`),
+  ];
+  if (dropped.length) onOverflow?.(dropped);
+  return [...slash.slice(0, COMMAND_LIMITS.slash), ...users.slice(0, COMMAND_LIMITS.user), ...messages.slice(0, COMMAND_LIMITS.message)];
 }
 
 /** Resolves pseudo roles (e.g. the moderation module's moderators); undefined = a normal role. */

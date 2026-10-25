@@ -35,7 +35,7 @@ import type { PluginManager } from '../sdk/manager.js';
 import type { DiscordApiDeps } from '../sdk/discord-api.js';
 import type { Graph, GraphNode, NodeDefinition } from '../graph/types.js';
 import { endGiveaway } from '../modules/giveaway.js';
-import { buildCommands, choiceSource, denied, hideRepliesOf, settingsOf, type ChoiceSources, type Permissions, type PseudoRoles } from './commands.js';
+import { buildCommands, choiceSource, commandGroup, denied, groupedNames, hideRepliesOf, settingsOf, type ChoiceSources, type Permissions, type PseudoRoles } from './commands.js';
 import { discordHandlers, type DiscordData } from './handlers.js';
 import { buildMessage, hasBody } from './message.js';
 import { VoiceManager } from './voice.js';
@@ -103,6 +103,8 @@ export interface InstanceDeps {
   control?: (botId: number, op: 'stop' | 'restart') => void;
   /** shared/run-errors.json: plain-language reasons of failed blocks. */
   runErrors?: RunErrorTexts;
+  /** shared/command-presets.json: module of each preset name (module "Group commands"). */
+  presetModules?: ReadonlyMap<string, string>;
 }
 
 interface RunMeta {
@@ -150,6 +152,10 @@ export class BotInstance {
   /** Voice connections of this bot (plugins, later music); set while logged in. */
   voice: VoiceManager | undefined;
   private commands = new Map<string, CommandRow>();
+  // Module "Group commands": the name registered at Discord per command ID,
+  // and back from that name to the command's own key.
+  private groupedNames = new Map<number, string>();
+  private groupedKeys = new Map<string, string>();
   private events = new Map<string, CommandRow[]>();
   private timed: { cmd: CommandRow; cron: Cron }[] = [];
   private ticker: NodeJS.Timeout | undefined;
@@ -525,6 +531,10 @@ export class BotInstance {
       const key = s.commandType === 'slash' ? s.name.trim().split(/\s+/).join(' ') : `${s.commandType}:${s.menuName}`;
       if (!this.commands.has(key)) this.commands.set(key, cmd);
     }
+    this.groupedNames = this.deps.repo.moduleOn(this.botId, 'command-groups')
+      ? groupedNames([...this.commands.values()], (cmd) => commandGroup(cmd, this.deps.presetModules ?? new Map()))
+      : new Map();
+    this.groupedKeys = new Map([...this.commands].filter(([, cmd]) => this.groupedNames.has(cmd.id)).map(([key, cmd]) => [this.groupedNames.get(cmd.id)!, key]));
     this.events.clear();
     for (const ev of this.deps.repo.commands(this.botId, 'event')) {
       if (!ev.eventType) continue;
@@ -664,9 +674,13 @@ export class BotInstance {
     if (!c?.application) return;
     const body = buildCommands(
       [...this.commands.values()],
-      (dropped) => this.deps.repo.logCode(this.botId, 'WAR-2008', { module: 'commands', problem: `Discord allows 100 commands; ${dropped} were not registered` }),
+      (dropped) => this.deps.repo.logCode(this.botId, 'WAR-2008', {
+        module: 'commands',
+        problem: `Discord allows 100 slash commands (subcommands count with their main command) and 15 menus of each kind; not registered: ${dropped.slice(0, 10).join(', ')}${dropped.length > 10 ? ` and ${dropped.length - 10} more` : ''}. Turn off unused commands or group them as subcommands (e.g. "/tools a", "/tools b")`,
+      }),
       this.deps.repo.moduleOn(this.botId, 'dm-commands'),
       this.choiceSources(),
+      this.groupedNames,
     );
     const hash = createHash('sha256').update(JSON.stringify(body)).digest('hex');
     if (hash === this.registeredHash) return;
@@ -714,7 +728,10 @@ export class BotInstance {
   private async onInteraction(i: Interaction): Promise<void> {
     guardValue(i.token, 16 * 60_000);
     this.deps.repo.touchBot(this.botId);
-    if (i.isChatInputCommand()) return this.onCommand(i, [i.commandName, i.options.getSubcommandGroup(false), i.options.getSubcommand(false)].filter(Boolean).join(' '));
+    if (i.isChatInputCommand()) {
+      const name = [i.commandName, i.options.getSubcommandGroup(false), i.options.getSubcommand(false)].filter(Boolean).join(' ');
+      return this.onCommand(i, this.groupedKeys.get(name) ?? name);
+    }
     if (i.isUserContextMenuCommand()) return this.onCommand(i, `user:${i.commandName}`);
     if (i.isMessageContextMenuCommand()) return this.onCommand(i, `message:${i.commandName}`);
     // Plugin components and modals (custom_id p:…) go to their plugin.

@@ -8,7 +8,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { dbKey, isPlain, openDb, rawKey, schemaVersion, waitForSchema } from './db.js';
 import { Repo, type CommandRow } from './repo.js';
 import { decrypt, encrypt } from './secrets.js';
-import { buildCommands, denied, permissionBit, settingsOf } from '../discord/commands.js';
+import { buildCommands, commandGroup, denied, groupedNames, permissionBit, settingsOf } from '../discord/commands.js';
 import { discordHandlers } from '../discord/handlers.js';
 import { moduleHandlers } from '../discord/handlers-modules.js';
 import { extraHandlers } from '../discord/handlers-extra.js';
@@ -145,6 +145,58 @@ test('subcommands win over a plain command of the same name, in any order', () =
     assert.equal(body.length, 1);
     assert.deepEqual((body[0]!.options as { name: string; type: number }[]).map((o) => [o.name, o.type]), [['show', 1], ['add', 1]]);
   }
+});
+
+test('limits: 100 slash commands and 15 menus of each kind, each on its own; the dropped ones are named', () => {
+  const trigger = (type: string, config: Record<string, unknown>, id: number) => asRow({ name: `c${id}`, description: 'x', graph: { schemaVersion: 1, nodes: [{ id: 't', type, typeVersion: 1, config }], edges: [] } as unknown as Graph }, id);
+  const rows = [
+    ...Array.from({ length: 100 }, (_, i) => trigger('trigger.slash', { command_name: `cmd${i}`, description: 'x' }, i + 1)),
+    // Subcommands count once, with their root.
+    ...Array.from({ length: 5 }, (_, i) => trigger('trigger.slash', { command_name: `grp sub${i}`, description: 'x' }, 200 + i)),
+    ...Array.from({ length: 16 }, (_, i) => trigger('trigger.slash', { command_type: 'user', menu_name: `User ${i}` }, 300 + i)),
+    ...Array.from({ length: 3 }, (_, i) => trigger('trigger.slash', { command_type: 'message', menu_name: `Msg ${i}` }, 400 + i)),
+  ];
+  let dropped: string[] = [];
+  const body = buildCommands(rows, (d) => (dropped = d));
+  assert.equal(body.filter((c) => c.type === 1).length, 100);
+  assert.equal(body.filter((c) => c.type === 2).length, 15);
+  assert.equal(body.filter((c) => c.type === 3).length, 3, 'menus are not cut by the slash limit');
+  assert.deepEqual(dropped, ['/grp', 'user menu: User 15'], 'the root of the subcommands is the 101st');
+});
+
+test('group commands: module commands become subcommands of one command per module', () => {
+  const row = (name: string, id: number, extra: Partial<CommandRow> = {}): CommandRow => ({
+    ...asRow({ name, description: name, graph: { schemaVersion: 1, nodes: [{ id: 't', type: 'trigger.slash', typeVersion: 1, config: { command_name: name, description: name } }], edges: [] } as unknown as Graph }, id),
+    ...extra,
+  });
+  const modules = new Map([['kick', 'moderation'], ['ban', 'moderation'], ['economy-add', 'economy'], ['balance', 'economy'], ['ticket open', 'ticket'], ['ticket close', 'ticket'], ['membercount', 'server-management']]);
+  const rows = [
+    row('kick', 1, { presetName: 'kick' }), row('ban', 2, { presetName: 'ban' }),
+    row('economy-add', 3, { presetName: 'economy-add' }), row('balance', 4, { presetName: 'balance' }),
+    row('ticket open', 5, { presetName: 'ticket open' }), row('ticket close', 6, { presetName: 'ticket close' }),
+    row('membercount', 7, { presetName: 'membercount' }),
+    row('rps', 8, { pluginId: 'plugin_rps' }), row('rps-duel', 9, { pluginId: 'plugin_rps' }),
+    row('hello', 10),
+    // An own command named like a module: that module stays as it is.
+    row('giveaway-create', 11, { moduleKey: 'giveaway', builtin: true }), row('giveaway-end', 12, { moduleKey: 'giveaway', builtin: true }), row('giveaway', 13),
+  ];
+  const names = groupedNames(rows, (c) => commandGroup(c, modules));
+  assert.deepEqual(Object.fromEntries(names), {
+    1: 'moderation kick', 2: 'moderation ban',
+    3: 'economy add', 4: 'economy balance',
+    8: 'rps rps', 9: 'rps duel',
+  }, 'ticket already under its name, one-command modules and own commands keep theirs');
+  const body = buildCommands(rows, undefined, false, {}, names);
+  const top = body.map((c) => c.name).sort();
+  assert.deepEqual(top, ['economy', 'giveaway', 'giveaway-create', 'giveaway-end', 'hello', 'membercount', 'moderation', 'rps', 'ticket']);
+  const mod = body.find((c) => c.name === 'moderation')!;
+  assert.deepEqual((mod.options as { name: string }[]).map((o) => o.name), ['kick', 'ban']);
+
+  // More than 25: the rest keeps its own names.
+  const many = Array.from({ length: 30 }, (_, i) => row(`m${i}`, 100 + i, { moduleKey: 'big', builtin: true }));
+  const big = groupedNames(many, (c) => commandGroup(c, new Map()));
+  assert.equal(big.size, 25);
+  assert.equal(buildCommands(many, undefined, false, {}, big).length, 6, '1 main command + 5 left over');
 });
 
 test('every command preset becomes a valid application command', () => {

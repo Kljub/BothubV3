@@ -34,6 +34,10 @@ export interface CommandRow {
   moduleKey: string | null;
   eventType: string | null;
   graph: Graph;
+  /** Module command copy: the preset's name (shared/command-presets.json); plugin command: its file. */
+  presetName?: string | null;
+  /** Command of a plugin. */
+  pluginId?: string | null;
 }
 
 export interface RunTrace {
@@ -209,7 +213,7 @@ export class Repo {
   commands(botId: number, kind: CommandRow['kind']): CommandRow[] {
     const rows = this.db
       .prepare(
-        `SELECT id, kind, name, description, builtin, module_key, event_type, graph FROM commands
+        `SELECT id, kind, name, description, builtin, module_key, event_type, graph, preset_name, plugin_id FROM commands
          WHERE bot_id = ? AND kind = ? AND enabled = 1 AND deleted_at IS NULL ORDER BY id`,
       )
       .all(botId, kind) as Row[];
@@ -226,6 +230,8 @@ export class Repo {
         moduleKey: (r.module_key as string | null) ?? null,
         eventType: (r.event_type as string | null) ?? null,
         graph,
+        presetName: (r.preset_name as string | null) ?? null,
+        pluginId: (r.plugin_id as string | null) ?? null,
       });
     }
     return out;

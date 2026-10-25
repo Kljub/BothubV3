@@ -120,6 +120,11 @@
       "icon": "📩"
     },
     {
+      "key": "command-groups",
+      "category": "security",
+      "icon": "🗂️"
+    },
+    {
       "key": "auto-purge",
       "category": "security",
       "icon": "🧹"
