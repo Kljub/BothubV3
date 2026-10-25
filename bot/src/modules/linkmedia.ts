@@ -1,11 +1,14 @@
 // Link to Media: Instagram, TikTok, Reddit and Bluesky post links become the
 // post's video or picture. An embed service (kkinstagram, tnktok, rxddit,
 // bskx; host set per platform) answers Discord's crawler with the media
-// address: "upload" fetches that file and attaches it, "embed" only swaps the
-// link host so Discord shows the service's player. "replace" deletes the
+// address: "upload" attaches the file, "embed" only swaps the link host so
+// Discord shows the service's player. Uploads come from yt-dlp first (in the
+// bot image for music; gets Instagram videos the services no longer can),
+// then from the set host and the other known services of the platform. "replace" deletes the
 // original and posts again with the member's name and picture (own webhook),
 // "reply" answers below it and hides the original's preview.
 
+import { spawn } from 'node:child_process';
 import { lookup } from 'node:dns/promises';
 import https from 'node:https';
 import { isIP } from 'node:net';
@@ -22,6 +25,14 @@ export const DEFAULT_HOSTS: Record<Platform, string> = {
   tiktok: 'tnktok.com',
   reddit: 'rxddit.com',
   bluesky: 'bskx.app',
+};
+
+// Tried after the set host when a download fails (services go down often).
+const FALLBACK_HOSTS: Record<Platform, string[]> = {
+  instagram: ['kkinstagram.com', 'eeinstagram.com', 'vxinstagram.com'],
+  tiktok: ['tnktok.com', 'vxtiktok.com'],
+  reddit: ['rxddit.com', 'vxreddit.com'],
+  bluesky: ['bskx.app', 'fxbsky.app'],
 };
 
 // <link> (embed suppressed by the author) is left alone. Each pattern gives
@@ -45,6 +56,14 @@ const PATTERNS: Record<Platform, { re: RegExp; path: (m: RegExpExecArray) => str
   },
 };
 
+// The post at the platform itself, for yt-dlp.
+const ORIGIN: Record<Platform, string> = {
+  instagram: 'https://www.instagram.com/',
+  tiktok: 'https://www.tiktok.com/',
+  reddit: 'https://www.reddit.com/',
+  bluesky: 'https://bsky.app/',
+};
+
 const MAX_LINKS = 3;
 const MAX_PAGE = 512 * 1024;
 // Discord's crawler: the services answer it with the media tags.
@@ -56,6 +75,8 @@ export interface FoundLink {
   original: string;
   /** The same post at the embed service. */
   fixed: string;
+  /** Path of the post at any service of the platform. */
+  path: string;
 }
 
 /** The post links of a text (max. 3, in order, no repeats). */
@@ -67,7 +88,8 @@ export function findLinks(text: string, platforms: Platform[], hosts: Partial<Re
     const host = validHost(hosts[platform]) ?? DEFAULT_HOSTS[platform];
     p.re.lastIndex = 0;
     for (let m = p.re.exec(text); m; m = p.re.exec(text)) {
-      found.push({ platform, original: m[0], fixed: `https://${host}/${p.path(m)}`, at: m.index });
+      const path = p.path(m);
+      found.push({ platform, original: m[0], fixed: `https://${host}/${path}`, path, at: m.index });
     }
   }
   found.sort((a, b) => a.at - b.at);
@@ -79,8 +101,12 @@ function validHost(v: unknown): string | null {
   return typeof v === 'string' && /^[a-z0-9.-]+\.[a-z]{2,}$/.test(v.trim().toLowerCase()) ? v.trim().toLowerCase() : null;
 }
 
-/** The media address of a service page: video first, else the picture. */
-export function mediaOf(html: string): string | null {
+/**
+ * The media address of a service page: video first, else the picture.
+ * Relative addresses count from the page. video: the page promises a video
+ * (a picture behind it is only the cover, not the post).
+ */
+export function mediaOf(html: string, page: string): { url: string; video: boolean } | null {
   const tags: Record<string, string> = {};
   for (const tag of html.match(/<meta\s[^>]*>/gi) ?? []) {
     const name = /(?:property|name)\s*=\s*["']([^"']+)["']/i.exec(tag)?.[1]?.toLowerCase();
@@ -90,7 +116,14 @@ export function mediaOf(html: string): string | null {
   const pick = ['og:video:secure_url', 'og:video:url', 'og:video', 'twitter:player:stream', 'og:image:secure_url', 'og:image', 'twitter:image'];
   for (const key of pick) {
     const v = tags[key];
-    if (v && /^https:\/\//i.test(v)) return v;
+    if (!v) continue;
+    let url: URL;
+    try {
+      url = new URL(v, page);
+    } catch {
+      continue;
+    }
+    if (url.protocol === 'https:') return { url: url.href, video: !key.includes('image') };
   }
   return null;
 }
@@ -176,23 +209,67 @@ let running = 0;
 const MAX_RUNNING = 4;
 
 /** The post's video or picture as a file, or null (then the embed link is used). */
-async function download(link: FoundLink, maxBytes: number, spoiler: boolean): Promise<AttachmentBuilder | null> {
+export async function download(link: FoundLink, maxBytes: number, spoiler: boolean): Promise<AttachmentBuilder | null> {
   if (running >= MAX_RUNNING) return null;
   running++;
   try {
-    const page = await fetchPublic(link.fixed, Math.max(MAX_PAGE, maxBytes), 10_000);
-    if (!page) return null;
-    let media: Fetched | null = page;
-    if (!EXT[page.type]) {
-      const address = page.type === 'text/html' && page.body.length <= MAX_PAGE ? mediaOf(page.body.toString('utf8')) : null;
-      media = address ? await fetchPublic(address, maxBytes, 25_000) : null;
+    const video = await ytdlpVideo(ORIGIN[link.platform] + link.path, maxBytes);
+    if (video) return new AttachmentBuilder(video, { name: `${spoiler ? 'SPOILER_' : ''}${link.platform}.mp4` });
+    const first = new URL(link.fixed).hostname;
+    for (const host of [first, ...FALLBACK_HOSTS[link.platform].filter((h) => h !== first)]) {
+      const media = await mediaFrom(`https://${host}/${link.path}`, maxBytes);
+      if (media) return new AttachmentBuilder(media.body, { name: `${spoiler ? 'SPOILER_' : ''}${link.platform}.${EXT[media.type]}` });
     }
-    const ext = media && EXT[media.type];
-    if (!media || !ext || !media.body.length) return null;
-    return new AttachmentBuilder(media.body, { name: `${spoiler ? 'SPOILER_' : ''}${link.platform}.${ext}` });
+    return null;
   } finally {
     running--;
   }
+}
+
+const YTDLP = process.env.YTDLP_PATH || 'yt-dlp';
+let ytdlpMissing = false;
+
+/** The post's video as one mp4 (video and sound in one file) through yt-dlp, or null (no video, too big, no yt-dlp). */
+function ytdlpVideo(url: string, maxBytes: number): Promise<Buffer | null> {
+  if (ytdlpMissing) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    const p = spawn(YTDLP, ['--no-warnings', '--no-playlist', '--no-part', '-f', 'b[ext=mp4][vcodec!=none][acodec!=none]/b[ext=mp4]', '--max-filesize', String(maxBytes), '-o', '-', url], { stdio: ['ignore', 'pipe', 'ignore'] });
+    const chunks: Buffer[] = [];
+    let size = 0;
+    let done = false;
+    const finish = (v: Buffer | null) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      if (!v) p.kill('SIGKILL');
+      resolve(v);
+    };
+    const timer = setTimeout(() => finish(null), 45_000);
+    p.stdout.on('data', (c: Buffer) => {
+      size += c.length;
+      if (size > maxBytes) finish(null);
+      else chunks.push(c);
+    });
+    p.on('error', () => {
+      ytdlpMissing = true;
+      finish(null);
+    });
+    p.on('close', (code) => finish(code === 0 && size > 0 ? Buffer.concat(chunks) : null));
+  });
+}
+
+/** The video or picture behind one service page, or null. */
+async function mediaFrom(page: string, maxBytes: number): Promise<Fetched | null> {
+  const got = await fetchPublic(page, Math.max(MAX_PAGE, maxBytes), 10_000);
+  if (!got) return null;
+  let media: Fetched | null = got;
+  if (!EXT[got.type]) {
+    const address = got.type === 'text/html' && got.body.length <= MAX_PAGE ? mediaOf(got.body.toString('utf8'), got.url.href) : null;
+    media = address ? await fetchPublic(address.url, maxBytes, 25_000) : null;
+    // Promised a video, sent a picture: the service got only the cover.
+    if (media && address!.video && !media.type.startsWith('video/')) media = null;
+  }
+  return media && EXT[media.type] && media.body.length ? media : null;
 }
 
 interface LinkMediaConfig {

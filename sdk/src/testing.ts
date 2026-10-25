@@ -889,7 +889,12 @@ export function createTestContext(options: TestContextOptions = {}): TestContext
     },
     utils: {
       uuid: () => crypto.randomUUID(),
-      random: (min = 0, max = 1) => min + Math.random() * (max - min),
+      // Like the bot (sdk/host): a whole number from min to max, both included.
+      random: (min = 0, max = 1) => {
+        const lo = Math.ceil(Number(min));
+        const hi = Math.floor(Number(max));
+        return hi > lo ? lo + Math.floor(Math.random() * (hi - lo + 1)) : lo;
+      },
       hash: (text: string) => { let h = 0; for (const c of String(text)) h = (h * 31 + c.codePointAt(0)!) | 0; return (h >>> 0).toString(16); },
       formatDate: (date: string | number | Date, locale = 'en') => new Date(date).toLocaleString(locale),
       formatDuration: (ms: number) => `${Math.round(ms / 1000)}s`,

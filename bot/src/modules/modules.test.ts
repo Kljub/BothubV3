@@ -447,9 +447,11 @@ test('link to media: post links, service page, upload limit', async () => {
   assert.deepEqual(findLinks('https://bsky.app/profile/ann.bsky.social/post/3kabc12', ['bluesky']).map((l) => l.fixed), ['https://bskx.app/profile/ann.bsky.social/post/3kabc12']);
   assert.deepEqual(findLinks('||https://instagram.com/p/Cxyz123||', ['instagram']).map((l) => l.original), ['https://instagram.com/p/Cxyz123'], 'spoiler bars are not part of the link');
 
-  assert.equal(mediaOf('<meta property="og:image" content="https://cdn.example/a.jpg"><meta content="https://cdn.example/v.mp4?a=1&amp;b=2" property="og:video">'), 'https://cdn.example/v.mp4?a=1&b=2', 'video before picture, attributes in any order');
-  assert.equal(mediaOf('<meta name="twitter:image" content="https://cdn.example/b.png">'), 'https://cdn.example/b.png');
-  assert.equal(mediaOf('<meta property="og:video" content="http://cdn.example/v.mp4">'), null, 'https only');
+  const page = 'https://svc.example/reel/C1';
+  assert.deepEqual(mediaOf('<meta property="og:image" content="https://cdn.example/a.jpg"><meta content="https://cdn.example/v.mp4?a=1&amp;b=2" property="og:video">', page), { url: 'https://cdn.example/v.mp4?a=1&b=2', video: true }, 'video before picture, attributes in any order');
+  assert.deepEqual(mediaOf('<meta name="twitter:image" content="https://cdn.example/b.png">', page), { url: 'https://cdn.example/b.png', video: false });
+  assert.deepEqual(mediaOf('<meta property="og:video" content="/videos/C1/1">', page), { url: 'https://svc.example/videos/C1/1', video: true }, 'relative to the page');
+  assert.equal(mediaOf('<meta property="og:video" content="http://cdn.example/v.mp4">', page), null, 'https only');
   assert.equal(uploadLimit(0), 10 * 1024 * 1024);
   assert.equal(uploadLimit(2), 50 * 1024 * 1024);
   assert.equal(uploadLimit(3), 100 * 1024 * 1024);
